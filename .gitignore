@@ -1,0 +1,27 @@
+# Build artifacts
+*.exe
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# IDE and editor files
+.vscode/
+*.code-workspace
+.idea/
+*.suo
+*.user
+
+# MSYS2 and MinGW
+/c/msys64/
+
+# Logs and test files
+*.log
+test.txt
