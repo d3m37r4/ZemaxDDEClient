@@ -10,6 +10,16 @@
 // Декларация внешней функции
 extern LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
 
+ImFont* AddSystemFont(float size_pixels) {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    char fontPath[MAX_PATH];
+    GetWindowsDirectoryA(fontPath, MAX_PATH);
+    strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
+
+    return io.Fonts->AddFontFromFileTTF(fontPath, size_pixels);
+}
+
 int main() {
     if (!glfwInit()) {
         return -1;
@@ -27,9 +37,18 @@ int main() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    // Загрузка шрифта
+    io.Fonts->Clear(); // Очищаем стандартный шрифт ImGui
+    ImFont* mainFont = AddSystemFont(17.0f); // Загружаем Segoe UI
+
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
+
+    // Пересоздаём текстуры шрифта
+    ImGui_ImplOpenGL3_DestroyFontsTexture();
+    ImGui_ImplOpenGL3_CreateFontsTexture();
 
     // Создание окна для DDE
     WNDCLASSEXA wndclass = { sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL };
@@ -94,23 +113,18 @@ int main() {
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        // Сайдбар слева (200px шириной, фиксированной высоты без границ)
         ImGui::BeginChild("Sidebar", ImVec2(200, window_size.y - 20), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
-        // Стиль для кнопок сайдбара
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 10));
 
-        if (ImGui::Button("Menu Item 1", ImVec2(-1, 0))) selectedMenuItem = 0;
+        if (ImGui::Button("Optical system information", ImVec2(-1, 0))) selectedMenuItem = 0;
         if (ImGui::Button("Menu Item 2", ImVec2(-1, 0))) selectedMenuItem = 1;
         if (ImGui::Button("Menu Item 3", ImVec2(-1, 0))) selectedMenuItem = 2;
         
         ImGui::PopStyleVar(2);
         ImGui::EndChild();
 
-        // Вертикальный разделитель
         ImGui::SameLine();
-        // ImGui::Separator();
-        // ImGui::SameLine();
 
         // Основное содержимое
         ImGui::BeginChild("Content", ImVec2(0, -1), true);
@@ -118,6 +132,11 @@ int main() {
         // Отображаем контент в зависимости от выбранного пункта
         switch (selectedMenuItem) {
             case 0:
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 10));
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
+                ImGui::PopStyleVar();
+                ImGui::Spacing();
+
                 ImGui::TextWrapped("Get Radius of Surface");
                 ImGui::Spacing();
                 
@@ -222,6 +241,7 @@ int main() {
         CloseHandle(hThread);
         DestroyWindow(hwndDDE);
     }
+    
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
