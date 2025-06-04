@@ -3,6 +3,12 @@
 #include <imgui_impl_opengl3.h>
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
+#include <windows.h>
+#include "zemax_dde.h"
+#include <string>
+
+// Декларация внешней функции
+extern LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
 
 int main() {
     if (!glfwInit()) {
@@ -24,6 +30,26 @@ int main() {
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
+
+    // Создание окна для DDE
+    WNDCLASSEXA wndclass = { sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL };
+    RegisterClassExA(&wndclass);
+    HWND hwndDDE = CreateWindowA("ZEMAX_DDE_Client", "DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+    if (!hwndDDE || !initialize_dde(hwndDDE)) {
+        MessageBoxA(NULL, "Failed to initialize DDE", "Error", MB_OK | MB_ICONERROR);
+        DestroyWindow(hwndDDE);
+        glfwTerminate();
+        return -1;
+    }
+
+    // Запуск потока для обработки сообщений
+    HANDLE hThread = CreateThread(NULL, 0, DDEMessageThread, hwndDDE, 0, NULL);
+    if (!hThread) {
+        MessageBoxA(NULL, "Failed to create DDE thread", "Error", MB_OK | MB_ICONERROR);
+        DestroyWindow(hwndDDE);
+        glfwTerminate();
+        return -1;
+    }
 
     int selectedMenuItem = 0;
     bool show_about_popup = false;
@@ -92,11 +118,21 @@ int main() {
         // Отображаем контент в зависимости от выбранного пункта
         switch (selectedMenuItem) {
             case 0:
-                ImGui::TextWrapped("Content for Menu Item 1");
+                ImGui::TextWrapped("Get Radius of Surface");
                 ImGui::Spacing();
-                if (ImGui::Button("Action Button")) {
-                    // Действие при нажатии
+                
+                static char surface[128] = "1"; // Поле для ввода номера поверхности
+                static std::string result = "Enter surface number and click Get Radius"; // Результат
+                
+                ImGui::Text("Surface Number:");
+                ImGui::InputText("##Surface", surface, IM_ARRAYSIZE(surface), ImGuiInputTextFlags_CharsDecimal);
+                
+                if (ImGui::Button("Get Radius")) {
+                    const char* radius_str = send_zemax_request(surface);
+                    result = radius_str ? radius_str : "No data";
                 }
+                
+                ImGui::Text("Radius: %s", result.c_str());
                 break;
                 
             case 1:
@@ -180,6 +216,12 @@ int main() {
     }
 
     // Очистка
+    if (hwndDDE) {
+        PostMessage(hwndDDE, WM_DESTROY, 0, 0);
+        WaitForSingleObject(hThread, 1000);
+        CloseHandle(hThread);
+        DestroyWindow(hwndDDE);
+    }
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -189,4 +231,3 @@ int main() {
 
     return 0;
 }
-

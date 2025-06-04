@@ -73,6 +73,7 @@ build_project() {
     
     g++ -o "$OUTPUT_EXE" \
         "${SOURCE_FILES[@]}" \
+        -I"$SRC_DIR" \
         -I"$IMGUI_DIR" \
         -I"$IMGUI_DIR/backends" \
         -I"$MINGW_INCLUDE" \

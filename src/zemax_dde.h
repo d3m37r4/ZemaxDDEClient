@@ -1,13 +1,14 @@
 #ifndef ZEMAX_DDE_H
 #define ZEMAX_DDE_H
 
-#include <string>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-std::string send_z_surface(const char* surface, const char* sampling, const char* path);
+const char* send_zemax_request(const char* item);
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+int initialize_dde(HWND hwnd);
+DWORD WINAPI DDEMessageThread(LPVOID lpParam);
 
 #ifdef __cplusplus
 }
