@@ -1,27 +1,59 @@
-# Build artifacts
+################################
+# Build Outputs
+################################
+
+# Binary executables
 *.exe
-*.o
-*.obj
+*.dll
+*.so
+*.dylib
+
+# Static libraries
 *.a
 *.lib
-*.dll
 
-# Temporary files
+# Object files and intermediates
+*.o
+*.obj
+
+# Dear ImGui artifacts
+[iI]mgui.ini
+
+# Build directories
+/[bB]uild*/
+/[bB]in*/
+/[dD]ist*/
+
+
+################################
+# Development Environments
+################################
+
+# Visual Studio and VSCode
+/.vs/
+/.vscode/
+/*.sln
+/*.vcxproj*
+/*.suo
+/*.user
+
+# JetBrains IDEs
+/.idea/
+/*.code-workspace
+
+
+################################
+# System/Temporary Files
+################################
+
+# MSYS2 environment (MinGW)
+/[Cc]/msys64/
+
+# Logs and debug files
+*.log
+
+# Editor/OS temporary files
 *.tmp
 *.bak
 *.swp
 *~
-
-# IDE and editor files
-.vscode/
-*.code-workspace
-.idea/
-*.suo
-*.user
-
-# MSYS2 and MinGW
-/c/msys64/
-
-# Logs and test files
-*.log
-test.txt
