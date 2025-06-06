@@ -8,10 +8,8 @@
 #include <string>
 #include <vector>
 
-// Декларация внешней функции
 extern LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
 
-// Реализация функции для добавления сообщений в лог
 std::vector<std::string> debug_log;
 void AddDebugLog(const char* message) {
     debug_log.push_back(std::string(message));
@@ -45,19 +43,19 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-    // Загрузка шрифта
-    io.Fonts->Clear(); // Очищаем стандартный шрифт ImGui
-    ImFont* mainFont = AddSystemFont(17.0f); // Загружаем Segoe UI
+    // Load Font
+    io.Fonts->Clear(); // Clear standart fonts ImGui
+    ImFont* mainFont = AddSystemFont(17.0f); // Load Segoe UI
 
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    // Пересоздаём текстуры шрифта
+    // Font
     ImGui_ImplOpenGL3_DestroyFontsTexture();
     ImGui_ImplOpenGL3_CreateFontsTexture();
 
-    // Переменные для DDE, инициализируются при нажатии кнопки
+    // For DDE
     HWND hwndDDE = NULL;
     HANDLE hThread = NULL;
     bool dde_initialized = false;
@@ -92,9 +90,9 @@ int main() {
             ImGui::EndMainMenuBar();
         }
 
-        // Основное окно контента
-        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight()); // Убрали смещение на строку статуса
-        ImVec2 window_size = ImVec2(io.DisplaySize.x, io.DisplaySize.y - ImGui::GetFrameHeight()); // Убрали высоту строки статуса
+        // Main content
+        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
+        ImVec2 window_size = ImVec2(io.DisplaySize.x, io.DisplaySize.y - ImGui::GetFrameHeight());
         ImGui::SetNextWindowPos(window_pos);
         ImGui::SetNextWindowSize(window_size);
 
@@ -105,21 +103,33 @@ int main() {
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        // Сайдбар слева (200px шириной, фиксированной высоты без границ)
+        // Sidebar (Left) noborder, width 200 px
         ImGui::BeginChild("Sidebar", ImVec2(200, window_size.y), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 10));
 
-        // Строка статуса DDE
-        if (!dde_initialized) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // Красный
-            ImGui::Text("DDE: Not Initialized");
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f)); // Зелёный
-            ImGui::Text("DDE: Initialized");
-        }
+        ImGui::BeginChild("DDE Status Frame", ImVec2(200, 60), true, ImGuiWindowFlags_NoScrollbar); // Height 60px
+        ImGui::Text("DDE Status:");
         ImGui::SameLine();
-        if (ImGui::Button("Init DDE")) {
+
+        // Status
+        char status_text[32];
+        strncpy_s(status_text, dde_initialized ? "Initialized" : "Not Initialized", sizeof(status_text));
+        ImGui::PushStyleColor(ImGuiCol_Text, dde_initialized ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // Green or red?
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::InputText("##DDEStatus", status_text, sizeof(status_text), ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopItemWidth();
+        ImGui::PopStyleVar(1);
+        ImGui::PopStyleColor();
+
+        // Button 'Init DDE'
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
+        float button_height = ImGui::GetFrameHeight();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.3f, 0.0f, 1.0f));
+        if (ImGui::Button("Init DDE", ImVec2(-1, button_height))) {
             debug_log.push_back("Attempting to initialize DDE...");
             if (!hwndDDE) {
                 WNDCLASSEXA wndclass = { sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL };
@@ -128,7 +138,8 @@ int main() {
                 if (!hwndDDE) {
                     debug_log.push_back("Failed to create DDE window");
                     MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
-                    ImGui::PopStyleColor();
+                    ImGui::PopStyleVar(3);
+                    ImGui::EndChild();
                     ImGui::EndChild();
                     continue;
                 }
@@ -141,7 +152,8 @@ int main() {
                     MessageBoxA(NULL, "Failed to create DDE thread", "Error", MB_OK | MB_ICONERROR);
                     DestroyWindow(hwndDDE);
                     hwndDDE = NULL;
-                    ImGui::PopStyleColor();
+                    ImGui::PopStyleVar(3);
+                    ImGui::EndChild();
                     ImGui::EndChild();
                     continue;
                 }
@@ -155,9 +167,12 @@ int main() {
                 debug_log.push_back("Failed to initialize DDE.");
             }
         }
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor(3); // Reset colors of button (Button, ButtonHovered, ButtonActive)
+        ImGui::PopStyleVar(); // Init DDE
 
-        ImGui::Spacing(); // Добавим небольшой отступ перед кнопками
+        ImGui::EndChild(); // Конец блока в рамке
+
+        ImGui::Spacing(); // Небольшой отступ перед кнопками
 
         if (ImGui::Button("Optical system information", ImVec2(-1, 0))) selectedMenuItem = 0;
         if (ImGui::Button("Menu Item 2", ImVec2(-1, 0))) selectedMenuItem = 1;
@@ -166,7 +181,6 @@ int main() {
         ImGui::PopStyleVar(2);
         ImGui::EndChild();
 
-        // Вертикальный разделитель
         ImGui::SameLine();
 
         // Основное содержимое
@@ -181,7 +195,6 @@ int main() {
                 ImGui::Spacing();
 
                 if (dde_initialized) {
-                    // Отображаем данные системы
                     SystemData* sys_data = GetSystemData();
                     ImGui::Text("Lens Name: %s", sys_data->lensname);
                     ImGui::Text("File Name: %s", sys_data->filename);
@@ -194,8 +207,8 @@ int main() {
                     ImGui::TextWrapped("Get Radius of Surface");
                     ImGui::Spacing();
 
-                    static char surface[128] = "1"; // Поле для ввода номера поверхности
-                    static std::string result = "Enter surface number and click Get Radius"; // Результат
+                    static char surface[128] = "1";
+                    static std::string result = "Enter surface number and click Get Radius";
 
                     ImGui::Text("Surface Number:");
                     ImGui::InputText("##Surface", surface, IM_ARRAYSIZE(surface), ImGuiInputTextFlags_CharsDecimal);
@@ -240,7 +253,6 @@ int main() {
         ImGui::EndChild();
         ImGui::End();
 
-        // Всплывающие окна
         if (show_about_popup) {
             ImGui::OpenPopup("About");
             show_about_popup = false;
@@ -309,6 +321,7 @@ int main() {
         CloseHandle(hThread);
         DestroyWindow(hwndDDE);
     }
+    
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
