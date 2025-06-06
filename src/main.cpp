@@ -6,9 +6,16 @@
 #include <windows.h>
 #include "zemax_dde.h"
 #include <string>
+#include <vector>
 
 // Декларация внешней функции
 extern LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+
+// Реализация функции для добавления сообщений в лог
+std::vector<std::string> debug_log;
+void AddDebugLog(const char* message) {
+    debug_log.push_back(std::string(message));
+}
 
 ImFont* AddSystemFont(float size_pixels) {
     ImGuiIO& io = ImGui::GetIO();
@@ -50,26 +57,10 @@ int main() {
     ImGui_ImplOpenGL3_DestroyFontsTexture();
     ImGui_ImplOpenGL3_CreateFontsTexture();
 
-    // Создание окна для DDE
-    WNDCLASSEXA wndclass = { sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL };
-    RegisterClassExA(&wndclass);
-    HWND hwndDDE = CreateWindowA("ZEMAX_DDE_Client", "DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
-    if (!hwndDDE || !initialize_dde(hwndDDE)) {
-        MessageBoxA(NULL, "Failed to initialize DDE", "Error", MB_OK | MB_ICONERROR);
-        DestroyWindow(hwndDDE);
-        glfwTerminate();
-        return -1;
-    }
-
-    // Запуск потока для обработки сообщений
-    HANDLE hThread = CreateThread(NULL, 0, DDEMessageThread, hwndDDE, 0, NULL);
-    if (!hThread) {
-        MessageBoxA(NULL, "Failed to create DDE thread", "Error", MB_OK | MB_ICONERROR);
-        DestroyWindow(hwndDDE);
-        glfwTerminate();
-        return -1;
-    }
-
+    // Переменные для DDE, инициализируются при нажатии кнопки
+    HWND hwndDDE = NULL;
+    HANDLE hThread = NULL;
+    bool dde_initialized = false;
     int selectedMenuItem = 0;
     bool show_about_popup = false;
     bool show_features_popup = false;
@@ -101,8 +92,9 @@ int main() {
             ImGui::EndMainMenuBar();
         }
 
-        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
-        ImVec2 window_size = ImVec2(io.DisplaySize.x, io.DisplaySize.y - ImGui::GetFrameHeight());
+        // Основное окно контента
+        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight()); // Убрали смещение на строку статуса
+        ImVec2 window_size = ImVec2(io.DisplaySize.x, io.DisplaySize.y - ImGui::GetFrameHeight()); // Убрали высоту строки статуса
         ImGui::SetNextWindowPos(window_pos);
         ImGui::SetNextWindowSize(window_size);
 
@@ -113,9 +105,59 @@ int main() {
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        ImGui::BeginChild("Sidebar", ImVec2(200, window_size.y - 20), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
+        // Сайдбар слева (200px шириной, фиксированной высоты без границ)
+        ImGui::BeginChild("Sidebar", ImVec2(200, window_size.y), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 10));
+
+        // Строка статуса DDE
+        if (!dde_initialized) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f)); // Красный
+            ImGui::Text("DDE: Not Initialized");
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f)); // Зелёный
+            ImGui::Text("DDE: Initialized");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Init DDE")) {
+            debug_log.push_back("Attempting to initialize DDE...");
+            if (!hwndDDE) {
+                WNDCLASSEXA wndclass = { sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL };
+                RegisterClassExA(&wndclass);
+                hwndDDE = CreateWindowA("ZEMAX_DDE_Client", "DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+                if (!hwndDDE) {
+                    debug_log.push_back("Failed to create DDE window");
+                    MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
+                    ImGui::PopStyleColor();
+                    ImGui::EndChild();
+                    continue;
+                }
+                debug_log.push_back("DDE window created");
+            }
+            if (!hThread) {
+                hThread = CreateThread(NULL, 0, DDEMessageThread, hwndDDE, 0, NULL);
+                if (!hThread) {
+                    debug_log.push_back("Failed to create DDE thread");
+                    MessageBoxA(NULL, "Failed to create DDE thread", "Error", MB_OK | MB_ICONERROR);
+                    DestroyWindow(hwndDDE);
+                    hwndDDE = NULL;
+                    ImGui::PopStyleColor();
+                    ImGui::EndChild();
+                    continue;
+                }
+                debug_log.push_back("DDE thread created");
+            }
+            if (initialize_dde(hwndDDE)) {
+                dde_initialized = true;
+                debug_log.push_back("DDE initialized successfully.");
+            } else {
+                dde_initialized = false;
+                debug_log.push_back("Failed to initialize DDE.");
+            }
+        }
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing(); // Добавим небольшой отступ перед кнопками
 
         if (ImGui::Button("Optical system information", ImVec2(-1, 0))) selectedMenuItem = 0;
         if (ImGui::Button("Menu Item 2", ImVec2(-1, 0))) selectedMenuItem = 1;
@@ -124,6 +166,7 @@ int main() {
         ImGui::PopStyleVar(2);
         ImGui::EndChild();
 
+        // Вертикальный разделитель
         ImGui::SameLine();
 
         // Основное содержимое
@@ -137,21 +180,46 @@ int main() {
                 ImGui::PopStyleVar();
                 ImGui::Spacing();
 
-                ImGui::TextWrapped("Get Radius of Surface");
-                ImGui::Spacing();
-                
-                static char surface[128] = "1"; // Поле для ввода номера поверхности
-                static std::string result = "Enter surface number and click Get Radius"; // Результат
-                
-                ImGui::Text("Surface Number:");
-                ImGui::InputText("##Surface", surface, IM_ARRAYSIZE(surface), ImGuiInputTextFlags_CharsDecimal);
-                
-                if (ImGui::Button("Get Radius")) {
-                    const char* radius_str = send_zemax_request(surface);
-                    result = radius_str ? radius_str : "No data";
+                if (dde_initialized) {
+                    // Отображаем данные системы
+                    SystemData* sys_data = GetSystemData();
+                    ImGui::Text("Lens Name: %s", sys_data->lensname);
+                    ImGui::Text("File Name: %s", sys_data->filename);
+                    ImGui::Text("Number of Surfaces: %d", sys_data->numsurfs);
+                    const char* units_str[] = {"mm", "cm", "in", "Meters"};
+                    ImGui::Text("Units: %s", units_str[sys_data->units]);
+
+                    ImGui::Spacing();
+                    ImGui::Separator();
+                    ImGui::TextWrapped("Get Radius of Surface");
+                    ImGui::Spacing();
+
+                    static char surface[128] = "1"; // Поле для ввода номера поверхности
+                    static std::string result = "Enter surface number and click Get Radius"; // Результат
+
+                    ImGui::Text("Surface Number:");
+                    ImGui::InputText("##Surface", surface, IM_ARRAYSIZE(surface), ImGuiInputTextFlags_CharsDecimal);
+                    
+                    if (ImGui::Button("Get Radius")) {
+                        debug_log.push_back("Sending radius request for surface: " + std::string(surface));
+                        const char* radius_str = send_zemax_request(surface);
+                        result = radius_str ? radius_str : "No data";
+                        debug_log.push_back("Radius result: " + result);
+                    }
+                    
+                    ImGui::Text("Radius: %s", result.c_str());
+                } else {
+                    ImGui::Text("Please initialize DDE first.");
                 }
-                
-                ImGui::Text("Radius: %s", result.c_str());
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Text("Debug Log:");
+                ImGui::BeginChild("DebugLog", ImVec2(0, 100), true);
+                for (const auto& log : debug_log) {
+                    ImGui::Text("%s", log.c_str());
+                }
+                ImGui::EndChild();
                 break;
                 
             case 1:
@@ -241,7 +309,6 @@ int main() {
         CloseHandle(hThread);
         DestroyWindow(hwndDDE);
     }
-    
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
