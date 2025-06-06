@@ -1,6 +1,26 @@
 # ZemaxDDEClient
 A C++ GUI test application for interacting with Zemax via DDE (Dynamic Data Exchange).
 
+<details>
+<summary><b>About DDE and Zemax Interaction</b></summary>
+
+### What is DDE?
+Dynamic Data Exchange (DDE) is a Windows interprocess communication protocol that enables data exchange between applications. Two applications can establish a DDE link:
+- **Server** (Zemax in this case) - provides data
+- **Client** (your application) - requests and receives data
+
+Zemax implements a DDE server interface, allowing external applications to access optical design data and functionality.
+
+### How ZemaxDDEClient Works
+This project is a DDE client that:
+1. Establishes DDE connection with Zemax as server
+2. Sends data requests (e.g., optical system parameters)
+3. Receives and processes responses from Zemax
+
+## Documentation Reference
+For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in official Zemax documentation.
+</details>
+
 ## Prerequisites
 - MSYS2 with MinGW-w64 (`g++` 15.1.0 or later).
 - GLFW: `pacman -S mingw-w64-x86_64-glfw`.
