@@ -11,7 +11,7 @@ A C++ GUI test application for interacting with Zemax via DDE (Dynamic Data Exch
 1. Clone the repository:
    ```bash
    git clone --recurse-submodules https://github.com/dmitry/ZemaxDDEClient.git
-   cd zemax_dde_client
+   cd ZemaxDDEClient
 2. Install MSYS2 and dependencies:
    ```bash
     pacman -Syu
