@@ -163,8 +163,7 @@ int main() {
         ImGui::Spacing(); // Небольшой отступ перед кнопками
 
         if (ImGui::Button("Optical system information", ImVec2(-1, 0))) selectedMenuItem = 0;
-        if (ImGui::Button("Menu Item 2", ImVec2(-1, 0))) selectedMenuItem = 1;
-        if (ImGui::Button("Menu Item 3", ImVec2(-1, 0))) selectedMenuItem = 2;
+        if (ImGui::Button("Local error analysis \nof aspherical surface", ImVec2(-1, 0))) selectedMenuItem = 1;
         
         ImGui::PopStyleVar(2);
         ImGui::EndChild();
@@ -176,7 +175,7 @@ int main() {
         
         // Отображаем контент в зависимости от выбранного пункта
         switch (selectedMenuItem) {
-            case 0:
+            case 0: {
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 10));
                 ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
                 ImGui::PopStyleVar();
@@ -232,20 +231,16 @@ int main() {
                 }
                 ImGui::EndChild();
                 break;
-                
-            case 1:
-                ImGui::TextWrapped("Content for Menu Item 2");
+            }    
+            case 1: {
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 10));
+                ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "LOCAL ERROR ANALYSIS FOR ASPHERICAL SURFACE");
+                ImGui::PopStyleVar();
                 ImGui::Spacing();
-                static float slider_value = 0.5f;
-                ImGui::SliderFloat("Parameter", &slider_value, 0.0f, 1.0f);
+
+                ImGui::Text("text");
                 break;
-                
-            case 2:
-                ImGui::TextWrapped("Content for Menu Item 3");
-                ImGui::Spacing();
-                static bool checkbox_value = true;
-                ImGui::Checkbox("Enable feature", &checkbox_value);
-                break;
+            }
         }
         
         ImGui::EndChild();
