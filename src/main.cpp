@@ -134,7 +134,8 @@ int main() {
             if (!hwndDDE) {
                 WNDCLASSEXA wndclass = { sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL };
                 RegisterClassExA(&wndclass);
-                hwndDDE = CreateWindowA("ZEMAX_DDE_Client", "DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+                hwndDDE = CreateWindowExA(0, "ZEMAX_DDE_Client", "DDE Client", 0, 0, 0, 0, 0, 
+                                        HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
                 if (!hwndDDE) {
                     debug_log.push_back("Failed to create DDE window");
                     MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
@@ -145,20 +146,7 @@ int main() {
                 }
                 debug_log.push_back("DDE window created");
             }
-            if (!hThread) {
-                hThread = CreateThread(NULL, 0, DDEMessageThread, hwndDDE, 0, NULL);
-                if (!hThread) {
-                    debug_log.push_back("Failed to create DDE thread");
-                    MessageBoxA(NULL, "Failed to create DDE thread", "Error", MB_OK | MB_ICONERROR);
-                    DestroyWindow(hwndDDE);
-                    hwndDDE = NULL;
-                    ImGui::PopStyleVar(3);
-                    ImGui::EndChild();
-                    ImGui::EndChild();
-                    continue;
-                }
-                debug_log.push_back("DDE thread created");
-            }
+            // Удаляем создание потока, так как оно не используется корректно без DDEMessageThread
             if (initialize_dde(hwndDDE)) {
                 dde_initialized = true;
                 debug_log.push_back("DDE initialized successfully.");
@@ -219,7 +207,7 @@ int main() {
                         result = radius_str ? radius_str : "No data";
                         debug_log.push_back("Radius result: " + result);
                     }
-                    
+                   
                     ImGui::Text("Radius: %s", result.c_str());
                 } else {
                     ImGui::Text("Please initialize DDE first.");
@@ -227,7 +215,17 @@ int main() {
 
                 ImGui::Spacing();
                 ImGui::Separator();
+                
                 ImGui::Text("Debug Log:");
+                // Кнопка для копирования дебаг-лога
+                if (ImGui::Button("Copy Debug Log")) {
+                    std::string log_text;
+                    for (const auto& log : debug_log) {
+                        log_text += log + "\n";
+                    }
+                    ImGui::SetClipboardText(log_text.c_str());
+                    AddDebugLog("Debug log copied to clipboard.");
+                }
                 ImGui::BeginChild("DebugLog", ImVec2(0, 100), true);
                 for (const auto& log : debug_log) {
                     ImGui::Text("%s", log.c_str());
