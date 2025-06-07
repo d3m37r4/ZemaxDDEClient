@@ -30,7 +30,7 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
 ## Setup
 1. Clone the repository:
    ```bash
-   git clone --recurse-submodules https://github.com/dmitry/ZemaxDDEClient.git
+   git clone --recurse-submodules https://github.com/d3m37r4/ZemaxDDEClient.git
    cd ZemaxDDEClient
 2. Install MSYS2 and dependencies:
    ```bash
