@@ -30,6 +30,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
 int initialize_dde(HWND hwnd);
 DWORD WINAPI DDEMessageThread(LPVOID lpParam);
 int get_system_data();
+void close_dde(HWND hwnd);
+void PostRequestMessage(char* szItem, HWND hwndServer, HWND hwnd);
+void WaitForData(HWND hwnd);
+char* GetString(char* szBuffer, int n, char* szSubString);
 
 // Функция для добавления сообщений в лог (реализуется в main.cpp)
 void AddDebugLog(const char* message);

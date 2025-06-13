@@ -1,31 +1,22 @@
 #include <windows.h>
 #include <dde.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 #include "zemax_dde.h"
 
-#define DDE_TIMEOUT 5000
+#define DDE_TIMEOUT 5000 // Уменьшаем таймаут
 static HWND hwndServer = NULL;
 static int GotData = 0;
 static char szGlobalBuffer[5000];
 
-// Глобальные переменные для числа поверхностей и единиц измерения
+// Глобальные переменные
 int numsurfs = 0;
 int unitflag = 0;
 
-// Структура для хранения данных системы
-static SystemData system_data = {0};
+static SystemData system_data = {0, 0, "", "", 0, 0, 0.0, 0.0, 0.0};
 
-// Функции
-LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
-void WaitForData(HWND hwnd);
-void PostRequestMessage(char* szItem, HWND hwndServer, HWND hwnd);
-DWORD WINAPI DDEMessageThread(LPVOID lpParam);
-char *GetString(char *szBuffer, int n, char *szSubString);
-
-// Функция для извлечения подстроки
-char *GetString(char *szBuffer, int n, char *szSubString) {
-    char *p = szBuffer;
+char* GetString(char* szBuffer, int n, char* szSubString) {
+    char* p = szBuffer;
     int count = 0;
 
     szSubString[0] = '\0';
@@ -44,34 +35,29 @@ char *GetString(char *szBuffer, int n, char *szSubString) {
     return szSubString;
 }
 
-// Получение данных о системе
 int get_system_data() {
     if (!hwndServer) return 0;
 
-    // Сбрасываем данные
     ResetSystemData();
-
-    // Обновляем линзу
     PostRequestMessage("GetRefresh", hwndServer, hwndServer);
     if (!GotData) {
         AddDebugLog("Failed to refresh system");
         return 0;
     }
 
-    // Получаем имя линзы
     szGlobalBuffer[0] = '\0';
     GotData = 0;
     PostRequestMessage("GetName", hwndServer, hwndServer);
     if (GotData) {
         strncpy(system_data.lensname, szGlobalBuffer, sizeof(system_data.lensname) - 1);
         system_data.lensname[sizeof(system_data.lensname) - 1] = '\0';
-        if (strlen(system_data.lensname) >= 2) system_data.lensname[strlen(system_data.lensname) - 2] = '\0'; // Убираем CR-LF
+        if (strlen(system_data.lensname) >= 2) system_data.lensname[strlen(system_data.lensname) - 2] = '\0';
         AddDebugLog("Lens name received");
     } else {
         AddDebugLog("Failed to get lens name");
+        return 0;
     }
 
-    // Получаем имя файла
     szGlobalBuffer[0] = '\0';
     GotData = 0;
     PostRequestMessage("GetFile", hwndServer, hwndServer);
@@ -82,9 +68,9 @@ int get_system_data() {
         AddDebugLog("File name received");
     } else {
         AddDebugLog("Failed to get file name");
+        return 0;
     }
 
-    // Получаем данные системы
     szGlobalBuffer[0] = '\0';
     GotData = 0;
     PostRequestMessage("GetSystem", hwndServer, hwndServer);
@@ -102,7 +88,6 @@ int get_system_data() {
     }
 }
 
-// Инициализация DDE
 int initialize_dde(HWND hwnd) {
     if (hwndServer) return 1;
 
@@ -115,12 +100,12 @@ int initialize_dde(HWND hwnd) {
 
     AddDebugLog("Sending WM_DDE_INITIATE");
     SendMessageTimeout(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)hwnd, MAKELONG(aApp, aTop), 
-                       SMTO_NORMAL, DDE_TIMEOUT, NULL);
+                       SMTO_ABORTIFHUNG, DDE_TIMEOUT, NULL); // Изменяем на SMTO_ABORTIFHUNG
 
     GlobalDeleteAtom(aApp);
     GlobalDeleteAtom(aTop);
 
-    // Ждём ответа на инициализацию
+    // Асинхронное ожидание в потоке
     MSG msg;
     DWORD startTime = GetTickCount();
     while (GetTickCount() - startTime < DDE_TIMEOUT && !hwndServer) {
@@ -130,7 +115,7 @@ int initialize_dde(HWND hwnd) {
             AddDebugLog(log);
             DispatchMessage(&msg);
         }
-        Sleep(10);
+        Sleep(1); // Ещё меньше задержка
     }
 
     if (!hwndServer) {
@@ -142,11 +127,17 @@ int initialize_dde(HWND hwnd) {
     snprintf(log, sizeof(log), "DDE server connected: %p", hwndServer);
     AddDebugLog(log);
 
-    // Получаем данные о системе
     return get_system_data();
 }
 
-// Отправка запроса в Zemax
+void close_dde(HWND hwnd) {
+    if (hwndServer) {
+        PostMessage(hwndServer, WM_DDE_TERMINATE, (WPARAM)hwnd, 0L);
+        hwndServer = NULL;
+        AddDebugLog("DDE connection terminated");
+    }
+}
+
 const char* send_zemax_request(const char* item) {
     static char result[256] = "";
     char request[256];
@@ -177,10 +168,9 @@ const char* send_zemax_request(const char* item) {
     return result;
 }
 
-// Обработка сообщений
 LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
     static int SystemIsValid = 0;
-    ATOM aApp, aTop, aItem;
+    ATOM aItem;
     DDEACK DdeAck;
     DDEDATA *pDdeData;
     GLOBALHANDLE hDdeData;
@@ -254,6 +244,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
             if (pDdeData->fAckReq == TRUE) {
                 wStatus = *((WORD *)&DdeAck);
                 if (!PostMessage((HWND)wParam, WM_DDE_ACK, (WPARAM)hwnd, PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
+                    char log[512];
+                    snprintf(log, sizeof(log), "Failed to send WM_DDE_ACK, error: %lu", GetLastError());
+                    AddDebugLog(log);
                     GlobalDeleteAtom(aItem);
                     GlobalUnlock(hDdeData);
                     GlobalFree(hDdeData);
@@ -293,16 +286,24 @@ void WaitForData(HWND hwnd) {
     while ((GetTickCount() - dwTime < DDE_TIMEOUT) && !GotData) {
         MSG msg;
         while (PeekMessage(&msg, hwnd, WM_DDE_FIRST, WM_DDE_LAST, PM_REMOVE)) {
+            char log[512];
+            snprintf(log, sizeof(log), "Processing message: %u", msg.message);
+            AddDebugLog(log);
             DispatchMessage(&msg);
         }
-        Sleep(10);
+        Sleep(1);
+    }
+    if (!GotData) {
+        AddDebugLog("WaitForData timed out");
     }
 }
 
 void PostRequestMessage(char* szItem, HWND hwndServer, HWND hwnd) {
     ATOM aItem = GlobalAddAtom(szItem);
     if (!PostMessage(hwndServer, WM_DDE_REQUEST, (WPARAM)hwnd, PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
-        AddDebugLog("Failed to post DDE request");
+        char log[512];
+        snprintf(log, sizeof(log), "Failed to post DDE request, error: %lu", GetLastError());
+        AddDebugLog(log);
         GlobalDeleteAtom(aItem);
         return;
     }
@@ -319,7 +320,6 @@ DWORD WINAPI DDEMessageThread(LPVOID lpParam) {
     return 0;
 }
 
-// Функции для доступа к данным
 SystemData* GetSystemData() {
     return &system_data;
 }
