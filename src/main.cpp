@@ -7,9 +7,8 @@
 #include <string>
 #include <vector>
 #include <ctime>
-#include "zemax_dde.h"
-
-extern LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+#include <stdexcept>
+#include "dde_client.h"
 
 std::vector<std::string> debug_log;
 void AddDebugLog(const char* message) {
@@ -26,6 +25,12 @@ ImFont* AddSystemFont(float size_pixels) {
     GetWindowsDirectoryA(fontPath, MAX_PATH);
     strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
     return io.Fonts->AddFontFromFileTTF(fontPath, size_pixels);
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
+    LRESULT result = ZemaxDDE::handleDDEMessages(hwnd, iMsg, wParam, lParam);
+    if (result != 0) return result;
+    return DefWindowProcW(hwnd, iMsg, wParam, lParam);
 }
 
 int main() {
@@ -50,13 +55,28 @@ int main() {
     ImGui_ImplOpenGL3_CreateFontsTexture();
 
     HWND hwndDDE = NULL;
-    HANDLE hThread = NULL;
     bool dde_initialized = false;
+
+    // Создаем окно для DDE
+    WNDCLASSEXW wndclass = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0,
+                             GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ZEMAX_DDE_Client", NULL };
+    RegisterClassExW(&wndclass);
+    hwndDDE = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+    if (!hwndDDE) {
+        AddDebugLog("Failed to create DDE window");
+        MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
+        glfwTerminate();
+        return -1;
+    }
+    AddDebugLog("DDE window created");
 
     int selectedMenuItem = 0;
     bool show_about_popup = false;
     bool show_features_popup = false;
     bool show_updates_popup = false;
+    int surface_number = 1;
+    float radius = 0.0f;
+    char errorMsg[256] = "";
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -123,57 +143,18 @@ int main() {
         if (ImGui::Button(dde_initialized ? "Close DDE" : "Init DDE", ImVec2(-1, button_height))) {
             AddDebugLog(dde_initialized ? "Attempting to close DDE..." : "Attempting to initialize DDE...");
             if (!dde_initialized) {
-                if (!hwndDDE) {
-                    WNDCLASSEXA wndclass = { 
-                        sizeof(WNDCLASSEXA), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0, 
-                        GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ZEMAX_DDE_Client", NULL 
-                    };
-                    RegisterClassExA(&wndclass);
-                    hwndDDE = CreateWindowExA(0, "ZEMAX_DDE_Client", "DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
-                    if (!hwndDDE) {
-                        AddDebugLog("Failed to create DDE window");
-                        MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
-                        ImGui::PopStyleColor(3);
-                        ImGui::PopStyleVar();
-                        ImGui::EndChild();
-                        ImGui::EndChild();
-                        continue;
-                    }
-                    AddDebugLog("DDE window created");
-                    // Запускаем поток обработки сообщений
-                    hThread = CreateThread(NULL, 0, DDEMessageThread, hwndDDE, 0, NULL);
-                    if (!hThread) {
-                        AddDebugLog("Failed to create DDE message thread");
-                        DestroyWindow(hwndDDE);
-                        hwndDDE = NULL;
-                        continue;
-                    }
-                }
-                bool init_success = false;
-                for (int attempt = 0; attempt < 2 && !init_success; ++attempt) {
-                    if (initialize_dde(hwndDDE)) {
-                        init_success = true;
-                        dde_initialized = true;
-                        AddDebugLog("DDE initialized successfully.");
-                    } else {
-                        std::string msg = "DDE initialization attempt " + std::to_string(attempt + 1) + " failed.";
-                        AddDebugLog(msg.c_str()); // Используем .c_str() для преобразования
-                        Sleep(100);
-                    }
-                }
-                if (!init_success) {
-                    AddDebugLog("Failed to initialize DDE after retries.");
+                try {
+                    ZemaxDDE::initiateDDE(hwndDDE);
+                    dde_initialized = true;
+                    AddDebugLog("DDE initialized successfully.");
+                } catch (const std::runtime_error& e) {
+                    AddDebugLog(e.what());
+                    dde_initialized = false;
                 }
             } else {
-                close_dde(hwndDDE);
+                ZemaxDDE::terminateDDE();
                 dde_initialized = false;
                 AddDebugLog("DDE connection closed.");
-                if (hThread) {
-                    PostThreadMessage(GetThreadId(hThread), WM_QUIT, 0, 0);
-                    WaitForSingleObject(hThread, 1000);
-                    CloseHandle(hThread);
-                    hThread = NULL;
-                }
             }
         }
         ImGui::PopStyleColor(3);
@@ -197,7 +178,29 @@ int main() {
                 ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
                 ImGui::PopStyleVar();
                 ImGui::Spacing();
-                ImGui::Text("text 1");
+
+                ImGui::InputInt("Surface Number", &surface_number);
+                if (surface_number < 1) surface_number = 1;
+
+                if (ImGui::Button("Get Radius")) {
+                    if (dde_initialized) {
+                        try {
+                            radius = static_cast<float>(ZemaxDDE::getSurfaceRadius(hwndDDE, surface_number));
+                            strcpy_s(errorMsg, "");
+                            AddDebugLog(("Radius of Surface " + std::to_string(surface_number) + ": " + std::to_string(radius)).c_str());
+                        } catch (const std::runtime_error& e) {
+                            strcpy_s(errorMsg, e.what());
+                            AddDebugLog(e.what());
+                        }
+                    } else {
+                        strcpy_s(errorMsg, "DDE not initialized");
+                        AddDebugLog("DDE not initialized");
+                    }
+                }
+
+                ImGui::Text("Radius of Surface %d: %.4f", surface_number, radius);
+                if (errorMsg[0]) ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error: %s", errorMsg);
+
                 break;
             }
             case 1: {
@@ -213,7 +216,6 @@ int main() {
 
         ImGui::Spacing();
 
-        // Debug
         ImGui::BeginChild("DebugLog", ImVec2(0, debug_log_height), true);
         if (ImGui::Button("Copy Debug Log")) {
             std::string log_text;
@@ -272,14 +274,10 @@ int main() {
     }
 
     if (hwndDDE) {
-        PostMessage(hwndDDE, WM_DESTROY, 0, 0);
-        if (hThread) {
-            WaitForSingleObject(hThread, 1000);
-            CloseHandle(hThread);
-        }
+        ZemaxDDE::terminateDDE();
         DestroyWindow(hwndDDE);
     }
-    
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
