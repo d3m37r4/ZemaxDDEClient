@@ -32,25 +32,31 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
    ```bash
    git clone --recurse-submodules https://github.com/d3m37r4/ZemaxDDEClient.git
    cd ZemaxDDEClient
+   ```
 2. Install MSYS2 and dependencies:
    ```bash
     pacman -Syu
     pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-glfw
+    ```
 3. Initialize submodules (if not cloned with --recurse-submodules):
     ```bash
     git submodule update --init --recursive
-
+    ```
 4. Set up environment in Git Bash:
    ```bash
     export PATH=/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH
     export LIBRARY_PATH=/c/msys64/mingw64/lib:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=/c/msys64/mingw64/include:$CPLUS_INCLUDE_PATH
-   
+    ```
+
 ## Build
    ```bash
-    chmod +x build.sh
-    ./build.sh
-```
+   chmod +x build.sh
+   # Default build (GUI mode, no console)
+   ./build.sh
+   # Build with debugging (console mode)
+   BUILD_DEBUG=1 ./build.sh
+   ```
 
 ## Run
 1. Launch Zemax

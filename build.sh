@@ -16,7 +16,11 @@ MINGW_INCLUDE="$MINGW_DIR/include"
 MINGW_LIB="$MINGW_DIR/lib"
 
 # Compiler flags
-CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -DUNICODE -D_UNICODE"
+GUI_FLAG="-mwindows" # Default GUI mode enabled
+if [ "$BUILD_DEBUG" = "1" ]; then
+    GUI_FLAG="" # Disable GUI mode for console debugging
+fi
+CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -DUNICODE -D_UNICODE $GUI_FLAG"
 LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32"
 
 # =============================================
@@ -25,8 +29,6 @@ LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32"
 SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
     "$SRC_DIR/dde_client.cpp"
-    # "$SRC_DIR/zemax_dde.h"
-    # "$SRC_DIR/zemax_dde.c"
     "$IMGUI_DIR/imgui.cpp"
     "$IMGUI_DIR/imgui_draw.cpp"
     "$IMGUI_DIR/imgui_tables.cpp"
