@@ -4,7 +4,7 @@
 # Configurable Variables
 # =============================================
 SRC_DIR="src"
-IMGUI_DIR="$SRC_DIR/imgui"
+IMGUI_DIR="$SRC_DIR/lib/imgui"
 OUTPUT_BASE="ZemaxDDEClient"
 BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
 OUTPUT_EXE="${OUTPUT_BASE}_${BUILD_NUMBER}.exe"
