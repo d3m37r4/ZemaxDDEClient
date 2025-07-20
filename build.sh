@@ -29,6 +29,7 @@ LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32"
 SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
     "$SRC_DIR/dde_client.cpp"
+    "$SRC_DIR/gui.cpp"
     "$IMGUI_DIR/imgui.cpp"
     "$IMGUI_DIR/imgui_draw.cpp"
     "$IMGUI_DIR/imgui_tables.cpp"
