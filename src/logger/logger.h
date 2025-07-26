@@ -13,5 +13,6 @@ public:
 
 private:
     std::vector<std::string> logs;
+    static const char* LOG_TIME_FORMAT;     // Time format const
 };
 #endif

@@ -197,7 +197,7 @@ void GuiManager::render() {
 
     ImGui::BeginChild("DebugLogHeader", ImVec2(0, ImGui::GetFrameHeightWithSpacing()), false,
                     ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-                    
+
     ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "Debug");
     ImGui::SameLine();
     ImGui::SetCursorPosX(ImGui::GetWindowWidth() 
@@ -228,7 +228,8 @@ void GuiManager::render() {
     const auto& logEntries = logger.getLogs();
 
     for (const auto& log : logEntries) {
-        ImGui::TextUnformatted(log.c_str());
+        // ImGui::TextUnformatted(log.c_str());
+        ImGui::Text("%s", log.c_str()); // Замените TextUnformatted
     }
     if (logEntries.size() > last_log_size) {
         ImGui::SetScrollHereY(1.0f);
