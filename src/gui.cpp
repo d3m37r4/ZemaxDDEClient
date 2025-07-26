@@ -1,45 +1,57 @@
 #include <stdexcept>
+#include <windows.h>
+#include <string>
+#include <ctime>
 #include "lib/imgui/imgui.h"
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
-#include <windows.h>
 #include "dde_client.h"
 #include "gui.h"
-#include <ctime>
 
-void GuiManager::AddDebugLog(const char* msg) {
-    if (ZemaxDDE::debug_log) {
-        time_t now = time(0);
-        char timestamp[26];
-        ctime_s(timestamp, sizeof(timestamp), &now);
-        timestamp[24] = '\0'; // Удаляем символ новой строки
-        ZemaxDDE::debug_log->push_back(std::string(timestamp) + " " + msg);
-    }
-}
-
-GuiManager::GuiManager(GLFWwindow* win, HWND hwndDDE) : window(win), hwndDDE(hwndDDE), dde_initialized(false), selectedMenuItem(0), surface_number(1), radius(0.0f), show_about_popup(false), show_features_popup(false), show_updates_popup(false), debug_log(nullptr) {
+GuiManager::GuiManager(GLFWwindow* win, HWND hwndDDE)
+    : window(win)
+    , hwndDDE(hwndDDE)
+    , dde_initialized(false)
+    , selectedMenuItem(0)
+    , surface_number(1)
+    , radius(0.0f)
+    , show_about_popup(false)
+    , show_features_popup(false)
+    , show_updates_popup(false)
+    , logger()
+{
+    if (!window) throw std::runtime_error("Invalid GLFW window");
     errorMsg[0] = '\0';
-    if (debug_log) AddDebugLog((std::string("GuiManager created with hwndDDE: ") + std::to_string((uintptr_t)hwndDDE)).c_str());
+    logger.addLog("GuiManager created with hwndDDE: " + std::to_string((uintptr_t)hwndDDE));
 }
 
 GuiManager::~GuiManager() {
-    ImGui_ImplOpenGL3_DestroyDeviceObjects();
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    if (window) {
+        ImGui_ImplOpenGL3_DestroyDeviceObjects();
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+    }
 }
 
 void GuiManager::initialize() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImFont* font = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 17.0f);
-    ImGui::StyleColorsDark();
+
+    ImGuiIO& io = ImGui::GetIO();
+    char fontPath[MAX_PATH];
+    GetWindowsDirectoryA(fontPath, MAX_PATH);
+    strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 17.0f);
+    if (!font) logger.addLog("Failed to load font segoeui.ttf");
+
+    // ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
     ImGui_ImplOpenGL3_CreateDeviceObjects();
-}
 
+    logger.addLog("GUI initialized");
+}
 
 void GuiManager::render() {
     ImGui_ImplOpenGL3_NewFrame();
@@ -107,14 +119,14 @@ void GuiManager::render() {
             if (!dde_initialized) {
                 ZemaxDDE::initiateDDE(hwndDDE);
                 dde_initialized = true;
-                if (debug_log) AddDebugLog("DDE connection established successfully");
+                logger.addLog("DDE connection established successfully");
             } else {
                 ZemaxDDE::terminateDDE();
                 dde_initialized = false;
-                if (debug_log) AddDebugLog("DDE connection terminated");
+                logger.addLog("DDE connection terminated");
             }
         } catch (const std::runtime_error& e) {
-            if (debug_log) AddDebugLog((std::string("DDE Error: ") + e.what()).c_str());
+            logger.addLog((std::string("DDE Error: ") + e.what()).c_str());
             setErrorMsg(e.what());
         }
     }
@@ -150,16 +162,18 @@ void GuiManager::render() {
                             setErrorMsg("Invalid surface number");
                             return;
                         }
-                        if (debug_log) AddDebugLog((std::string("Calling getSurfaceRadius with hwndDDE: ") + std::to_string((uintptr_t)hwndDDE)).c_str());
+
+                        logger.addLog("Calling getSurfaceRadius with hwndDDE: " + std::to_string((uintptr_t)hwndDDE));
+
                         float radius = ZemaxDDE::getSurfaceRadius(hwndDDE, surface_number);
                         setRadius(radius);
-                        if (debug_log) AddDebugLog(("Radius retrieved: " + std::to_string(radius)).c_str());
+                        logger.addLog("Radius retrieved: " + std::to_string(radius));
                     } else {
                         setErrorMsg("DDE not initialized");
                     }
                 } catch (const std::runtime_error& e) {
-                    if (debug_log) AddDebugLog((std::string("Error: ") + e.what()).c_str());
                     setErrorMsg(e.what());
+                    logger.addLog((std::string("Error: ") + e.what()).c_str());
                 }
             }
 
@@ -181,22 +195,46 @@ void GuiManager::render() {
 
     ImGui::Spacing();
 
-    ImGui::BeginChild("DebugLog", ImVec2(0, debug_log_height), true);
+    ImGui::BeginChild("DebugLogHeader", ImVec2(0, ImGui::GetFrameHeightWithSpacing()), false,
+                    ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                    
+    ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "Debug");
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(ImGui::GetWindowWidth() 
+    - ImGui::CalcTextSize("Copy Debug Log").x 
+    - ImGui::GetStyle().FramePadding.x * 2);
+
     if (ImGui::Button("Copy Debug Log")) {
-        if (debug_log) {
-            std::string log_text;
-            for (const auto& log : *debug_log) {
-                log_text += log + "\n";
-            }
-            ImGui::SetClipboardText(log_text.c_str());
-            if (debug_log) AddDebugLog(("Debug log copied to clipboard at " + std::string(__TIME__)).c_str());
+        std::string log_text;
+        for (const auto& log : logger.getLogs()) {
+            log_text += log + "\n";
         }
+
+        ImGui::SetClipboardText(log_text.c_str());
+
+        time_t now = time(0);
+        char timestamp[26];
+        ctime_s(timestamp, sizeof(timestamp), &now);
+        timestamp[24] = '\0';
+
+        logger.addLog(std::string("Debug log copied to clipboard at ") + timestamp);
     }
-    if (debug_log) {
-        for (const auto& log : *debug_log) {
-            ImGui::TextUnformatted(log.c_str());
-        }
+
+    ImGui::EndChild();
+
+    ImGui::BeginChild("DebugLogContent", ImVec2(0, debug_log_height - ImGui::GetFrameHeightWithSpacing()), true);
+
+    static size_t last_log_size = 0;
+    const auto& logEntries = logger.getLogs();
+
+    for (const auto& log : logEntries) {
+        ImGui::TextUnformatted(log.c_str());
     }
+    if (logEntries.size() > last_log_size) {
+        ImGui::SetScrollHereY(1.0f);
+        last_log_size = logEntries.size();
+    }
+
     ImGui::EndChild();
 
     ImGui::End();
@@ -259,8 +297,4 @@ void GuiManager::setErrorMsg(const char* msg) {
 
 bool GuiManager::shouldClose() const {
     return glfwWindowShouldClose(window);
-}
-
-void GuiManager::setDebugLog(std::vector<std::string>& log) {
-    debug_log = &log;
 }

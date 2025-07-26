@@ -17,11 +17,13 @@ MINGW_LIB="$MINGW_DIR/lib"
 
 # Compiler flags
 GUI_FLAG="-mwindows" # Default GUI mode enabled
-if [ "$BUILD_DEBUG" = "1" ]; then
+if [ -n "$BUILD_DEBUG" ] && [ "$BUILD_DEBUG" = "1" ]; then
     GUI_FLAG="" # Disable GUI mode for console debugging
 fi
 CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -DUNICODE -D_UNICODE $GUI_FLAG"
-LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32"
+# флаг -02 для оптимизации
+# CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -O2 -DUNICODE -D_UNICODE $GUI_FLAG"
+LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
 
 # =============================================
 # Source Files Configuration
@@ -30,6 +32,7 @@ SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
     "$SRC_DIR/dde_client.cpp"
     "$SRC_DIR/gui.cpp"
+    "$SRC_DIR/logger/logger.cpp"
     "$IMGUI_DIR/imgui.cpp"
     "$IMGUI_DIR/imgui_draw.cpp"
     "$IMGUI_DIR/imgui_tables.cpp"
