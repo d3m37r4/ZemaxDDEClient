@@ -13,7 +13,7 @@ void Logger::addLog(const std::string& message) {
     setlocale(LC_TIME, "");     // Устанавливаем локаль, на всякий случай
     if (localtime_s(&ltm, &now) == 0) {
         char timestamp[25];
-        if (strftime(timestamp, sizeof(timestamp), "[%H:%M:%S - %d.%m.%Y]", &ltm) > 0) {
+        if (strftime(timestamp, sizeof(timestamp), LOG_TIME_FORMAT, &ltm) > 0) {
             logs.push_back(std::string(timestamp) + " " + message);
         } else {
             logs.push_back("[strftime failed] " + message);
