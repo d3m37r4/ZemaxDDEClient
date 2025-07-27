@@ -4,7 +4,7 @@
 #include <windows.h>
 #include "logger/logger.h"
 #include "dde_client.h"
-#include "gui.h"
+#include "gui/gui.h"
 
 Logger logger;
 
@@ -41,7 +41,7 @@ int main() {
 
     logger.addLog((std::string("DDE window created with handle: ") + std::to_string((uintptr_t)hwndDDE)).c_str());
 
-    GuiManager gui(window, hwndDDE);
+    gui::GuiManager gui(window, hwndDDE);
     gui.initialize();
 
     while (!gui.shouldClose()) {

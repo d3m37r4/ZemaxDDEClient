@@ -21,7 +21,7 @@ if [ -n "$BUILD_DEBUG" ] && [ "$BUILD_DEBUG" = "1" ]; then
     GUI_FLAG="" # Disable GUI mode for console debugging
 fi
 CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -DUNICODE -D_UNICODE $GUI_FLAG"
-# флаг -02 для оптимизации
+# Flag '-02' for optimization
 # CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -O2 -DUNICODE -D_UNICODE $GUI_FLAG"
 LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
 
@@ -31,7 +31,9 @@ LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
 SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
     "$SRC_DIR/dde_client.cpp"
-    "$SRC_DIR/gui.cpp"
+    "$SRC_DIR/gui/gui_init.cpp"
+    "$SRC_DIR/gui/gui_render.cpp"
+    "$SRC_DIR/gui/gui_utils.cpp"
     "$SRC_DIR/logger/logger.cpp"
     "$IMGUI_DIR/imgui.cpp"
     "$IMGUI_DIR/imgui_draw.cpp"
@@ -82,6 +84,7 @@ build_project() {
     g++ -o "$OUTPUT_EXE" \
         "${SOURCE_FILES[@]}" \
         -I"$SRC_DIR" \
+        -I"$SRC_DIR/gui" \
         -I"$IMGUI_DIR" \
         -I"$IMGUI_DIR/backends" \
         -I"$MINGW_INCLUDE" \
