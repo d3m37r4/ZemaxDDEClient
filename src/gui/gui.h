@@ -35,7 +35,6 @@ namespace gui {
             int surface_number{1};
             float radius{0.0f};
             bool show_about_popup{false};
-            bool show_features_popup{false};
             bool show_updates_popup{false};
     };
 }

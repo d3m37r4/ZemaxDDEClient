@@ -15,21 +15,17 @@ namespace gui {
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
-                ImGui::MenuItem("Menu item 1");
-                ImGui::MenuItem("Menu item 2");
-                ImGui::MenuItem("Menu item 3");
+                ImGui::MenuItem("Open *.ZMX file with Zemax");
+                ImGui::MenuItem("Preferences");
+                ImGui::Separator();
+                if (ImGui::MenuItem("Exit")) glfwSetWindowShouldClose(window, true);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Info")) {
-                if (ImGui::MenuItem("Software features")) show_features_popup = true;
                 if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
                 if (ImGui::MenuItem("About")) show_about_popup = true;
                 ImGui::EndMenu();
             }
-
-            float quit_button_width = 48.0f;
-            ImGui::SetCursorPosX(ImGui::GetWindowWidth() + quit_button_width - ImGui::GetCursorPosX() - ImGui::GetStyle().FramePadding.x);
-            if (ImGui::Button("Quit", ImVec2(quit_button_width, 0))) glfwSetWindowShouldClose(window, true);
             ImGui::EndMainMenuBar();
         }
 
@@ -146,6 +142,7 @@ namespace gui {
                 ImGui::PopStyleVar();
                 ImGui::Spacing();
                 ImGui::Text("text 2");
+
                 break;
             }
         }
@@ -199,7 +196,6 @@ namespace gui {
         ImGui::End();
 
         if (show_about_popup) { ImGui::OpenPopup("About"); show_about_popup = false; }
-        if (show_features_popup) { ImGui::OpenPopup("Software Features"); show_features_popup = false; }
         if (show_updates_popup) { ImGui::OpenPopup("Check for Updates"); show_updates_popup = false; }
 
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -212,15 +208,15 @@ namespace gui {
             ImGui::EndPopup();
         }
 
-        if (ImGui::BeginPopupModal("Software Features", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Software Features:");
-            ImGui::BulletText("Feature 1");
-            ImGui::BulletText("Feature 2");
-            ImGui::BulletText("Feature 3");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
+        // if (ImGui::BeginPopupModal("Software Features", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        //     ImGui::Text("Software Features:");
+        //     ImGui::BulletText("Feature 1");
+        //     ImGui::BulletText("Feature 2");
+        //     ImGui::BulletText("Feature 3");
+        //     ImGui::Separator();
+        //     if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+        //     ImGui::EndPopup();
+        // }
 
         if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::Text("Your software is up to date!");

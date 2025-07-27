@@ -15,7 +15,6 @@ namespace gui {
         , surface_number(1)
         , radius(0.0f)
         , show_about_popup(false)
-        , show_features_popup(false)
         , show_updates_popup(false)
         , logger()
     {
