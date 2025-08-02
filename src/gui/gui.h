@@ -3,6 +3,8 @@
 
 #include <GLFW/glfw3.h>
 #include <windows.h>
+#include "components/gui_popups.h"
+#include "components/gui_menu_bar.h"
 #include "logger/logger.h"
 
 class ImGuiIO;                                                  // Forward declaration for ImGui usage
@@ -15,6 +17,13 @@ namespace gui {
 
             void initialize();
             void render();
+
+            void setPopupPosition();
+            void renderAboutPopup();
+            void renderUpdatesPopup();
+
+            void renderMenuBar();
+
             void setDDEStatus(bool initialized);
             void setSelectedMenuItem(int item);
             void setSurfaceNumber(int num);
@@ -34,8 +43,8 @@ namespace gui {
             int selectedMenuItem{0};
             int surface_number{1};
             float radius{0.0f};
-            bool show_about_popup{false};
-            bool show_updates_popup{false};
+            bool show_updates_popup{false};                     // Display flag for popup 'Check for Updates'
+            bool show_about_popup{false};                       // Display flag for popup 'Check for About'
     };
 }
 #endif // GUI_H

@@ -10,17 +10,17 @@ namespace gui {
     GuiManager::GuiManager(GLFWwindow* win, HWND hwndDDE)
         : window(win)
         , hwndDDE(hwndDDE)
+        , logger()
         , dde_initialized(false)
         , selectedMenuItem(0)
         , surface_number(1)
         , radius(0.0f)
-        , show_about_popup(false)
         , show_updates_popup(false)
-        , logger()
+        , show_about_popup(false)
     {
         if (!window) throw std::runtime_error("Invalid GLFW window");
         errorMsg[0] = '\0';
-        logger.addLog("GuiManager created with hwndDDE: " + std::to_string((uintptr_t)hwndDDE));
+        logger.addLog("GuiManager created with handle (hwndDDE): " + std::to_string((uintptr_t)hwndDDE));
     }
 
     GuiManager::~GuiManager() {
@@ -43,6 +43,8 @@ namespace gui {
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 17.0f);
         if (!font) logger.addLog("Failed to load font segoeui.ttf");
 
+        // ImGui::StyleColorsClassic();
+        // ImGui::StyleColorsLight();
         // ImGui::StyleColorsDark();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 130");

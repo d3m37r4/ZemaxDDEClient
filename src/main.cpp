@@ -25,21 +25,35 @@ int main() {
     glfwSwapInterval(1);
 
     HWND hwndDDE = NULL;
-    bool dde_initialized = false;
-
+#ifdef DEBUG_LOG
+    logger.addLog("Application starting");
+#endif
     WNDCLASSEXW wndclass = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0,
                              GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ZEMAX_DDE_Client", NULL };
+#ifdef DEBUG_LOG
+    logger.addLog("Registering window class");
+    if (!RegisterClassExW(&wndclass)) {
+        logger.addLog("Failed to register window class");
+        return -1;
+    }
+    logger.addLog("Creating DDE window");
+#else
     RegisterClassExW(&wndclass);
+#endif
+
     hwndDDE = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
     if (!hwndDDE) {
         MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
+    #ifdef DEBUG_LOG
         logger.addLog("Failed to create DDE window");
+    #endif
         glfwTerminate();
-        
         return -1;
     }
 
-    logger.addLog((std::string("DDE window created with handle: ") + std::to_string((uintptr_t)hwndDDE)).c_str());
+#ifdef DEBUG_LOG
+    logger.addLog("DDE window created with handle (hwndDDE): " + std::to_string((uintptr_t)hwndDDE));
+#endif
 
     gui::GuiManager gui(window, hwndDDE);
     gui.initialize();
