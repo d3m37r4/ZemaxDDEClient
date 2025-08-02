@@ -8,15 +8,15 @@
 
 namespace gui {
     GuiManager::GuiManager(GLFWwindow* win, HWND hwndDDE)
-        : window(win)
-        , hwndDDE(hwndDDE)
-        , dde_initialized(false)
-        , selectedMenuItem(0)
-        , surface_number(1)
-        , radius(0.0f)
-        , show_about_popup(false)
-        , show_updates_popup(false)
-        , logger()
+        : window(win), 
+        hwndDDE(hwndDDE), 
+        dde_initialized(false), 
+        selectedMenuItem(0), 
+        surface_number(1), 
+        radius(0.0f), 
+        show_updates_popup(false), 
+        show_about_popup(false), 
+        logger()
     {
         if (!window) throw std::runtime_error("Invalid GLFW window");
         errorMsg[0] = '\0';
@@ -36,6 +36,7 @@ namespace gui {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
+        // Load fonts
         ImGuiIO& io = ImGui::GetIO();
         char fontPath[MAX_PATH];
         GetWindowsDirectoryA(fontPath, MAX_PATH);

@@ -5,11 +5,11 @@
 #include "logger/logger.h"
 
 namespace ZemaxDDE {
-    void initiateDDE(HWND hwnd);
-    double getSurfaceRadius(HWND hwnd, int surfaceNumber);
     LRESULT handleDDEMessages(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+    void initiateDDE(HWND hwnd);
     void terminateDDE();
     extern Logger logger;
+    double getSurfaceRadius(HWND hwnd, int surfaceNumber);
 }
 
 #endif // DDE_CLIENT_H

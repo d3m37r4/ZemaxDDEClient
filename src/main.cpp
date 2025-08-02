@@ -24,29 +24,26 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    HWND hwndDDE = NULL;
-    bool dde_initialized = false;
-
     WNDCLASSEXW wndclass = { sizeof(WNDCLASSEXW), CS_HREDRAW | CS_VREDRAW, WndProc, 0, 0,
                              GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ZEMAX_DDE_Client", NULL };
     RegisterClassExW(&wndclass);
-    hwndDDE = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+    HWND hwndDDE = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+
     if (!hwndDDE) {
         MessageBoxA(NULL, "Failed to create DDE window", "Error", MB_OK | MB_ICONERROR);
         logger.addLog("Failed to create DDE window");
         glfwTerminate();
-        
         return -1;
     }
 
     logger.addLog((std::string("DDE window created with handle: ") + std::to_string((uintptr_t)hwndDDE)).c_str());
 
-    gui::GuiManager gui(window, hwndDDE);
-    gui.initialize();
+    gui::GuiManager gui1(window, hwndDDE);
+    gui1.initialize();
 
-    while (!gui.shouldClose()) {
+    while (!gui1.shouldClose()) {
         glfwPollEvents();
-        gui.render();
+        gui1.render();
         glfwSwapBuffers(window);
     }
 

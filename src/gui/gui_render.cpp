@@ -6,6 +6,9 @@
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 #include "dde_client.h"
 #include "gui.h"
+#include <thread>
+#include <future>  // Для std::async
+#include <mutex>   // Для синхронизации
 
 namespace gui {
     void GuiManager::render() {
@@ -13,21 +16,7 @@ namespace gui {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Menu")) {
-                ImGui::MenuItem("Open *.ZMX file with Zemax");
-                ImGui::MenuItem("Preferences");
-                ImGui::Separator();
-                if (ImGui::MenuItem("Exit")) glfwSetWindowShouldClose(window, true);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Info")) {
-                if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
-                if (ImGui::MenuItem("About")) show_about_popup = true;
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
+        renderMenuBar();
 
         ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
         float total_available_height = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeight();
@@ -68,22 +57,65 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.3f, 0.0f, 1.0f));
+        // if (ImGui::Button(dde_initialized ? "Close DDE" : "Init DDE", ImVec2(-1, button_height))) {
+        //     try {
+        //         if (!dde_initialized) {
+        //             ZemaxDDE::initiateDDE(hwndDDE);
+        //             dde_initialized = true;
+        //             logger.addLog("DDE connection established successfully");
+        //         } else {
+        //             ZemaxDDE::terminateDDE();
+        //             dde_initialized = false;
+        //             logger.addLog("DDE connection terminated");
+        //         }
+        //     } catch (const std::runtime_error& e) {
+        //         logger.addLog((std::string("DDE Error: ") + e.what()).c_str());
+        //         setErrorMsg(e.what());
+        //     }
+        // }
         if (ImGui::Button(dde_initialized ? "Close DDE" : "Init DDE", ImVec2(-1, button_height))) {
             try {
                 if (!dde_initialized) {
-                    ZemaxDDE::initiateDDE(hwndDDE);
-                    dde_initialized = true;
-                    logger.addLog("DDE connection established successfully");
+                    if (!IsWindow(hwndDDE)) {
+                        logger.addLog("Zemax window not found");
+                        setErrorMsg("Zemax window unavailable");
+                        return;
+                    }
+                    logger.addLog("Starting DDE initiation");
+                    auto future = std::async(std::launch::async, [this]() {
+                        try {
+                            logger.addLog("Initiating DDE connection");
+                            ZemaxDDE::initiateDDE(this->hwndDDE);
+                            return true;  // Успешное завершение
+                        } catch (const std::runtime_error& e) {
+                            logger.addLog(("DDE Error: " + std::string(e.what())).c_str());
+                            setErrorMsg(e.what());
+                            return false;  // Ошибка
+                        }
+                    });
+
+                    // Проверка таймаута (5 секунд)
+                    if (future.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
+                        logger.addLog("DDE initiation timed out");
+                        setErrorMsg("DDE connection timeout");
+                    } else {
+                        bool success = future.get();
+                        if (success) {
+                            dde_initialized = true;
+                            logger.addLog("DDE connection established");
+                        }
+                    }
                 } else {
                     ZemaxDDE::terminateDDE();
                     dde_initialized = false;
                     logger.addLog("DDE connection terminated");
                 }
             } catch (const std::runtime_error& e) {
-                logger.addLog((std::string("DDE Error: ") + e.what()).c_str());
+                logger.addLog(("DDE Error: " + std::string(e.what())).c_str());
                 setErrorMsg(e.what());
             }
         }
+
         ImGui::PopStyleColor(3);
         ImGui::PopStyleVar();
 
@@ -184,7 +216,7 @@ namespace gui {
 
         for (const auto& log : logEntries) {
             // ImGui::TextUnformatted(log.c_str());
-            ImGui::Text("%s", log.c_str()); // Замените TextUnformatted
+            ImGui::Text("%s", log.c_str());
         }
         if (logEntries.size() > last_log_size) {
             ImGui::SetScrollHereY(1.0f);
@@ -195,35 +227,9 @@ namespace gui {
 
         ImGui::End();
 
-        if (show_about_popup) { ImGui::OpenPopup("About"); show_about_popup = false; }
-        if (show_updates_popup) { ImGui::OpenPopup("Check for Updates"); show_updates_popup = false; }
-
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
-        if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("ZemaxDDEClient\nVersion 1.0\n\n(c) 2023 Your Company");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
-
-        // if (ImGui::BeginPopupModal("Software Features", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        //     ImGui::Text("Software Features:");
-        //     ImGui::BulletText("Feature 1");
-        //     ImGui::BulletText("Feature 2");
-        //     ImGui::BulletText("Feature 3");
-        //     ImGui::Separator();
-        //     if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-        //     ImGui::EndPopup();
-        // }
-
-        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Your software is up to date!");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
+        setPopupPosition();
+        renderUpdatesPopup();
+        renderAboutPopup();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
