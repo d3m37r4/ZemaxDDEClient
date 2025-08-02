@@ -13,21 +13,7 @@ namespace gui {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Menu")) {
-                ImGui::MenuItem("Open *.ZMX file with Zemax");
-                ImGui::MenuItem("Preferences");
-                ImGui::Separator();
-                if (ImGui::MenuItem("Exit")) glfwSetWindowShouldClose(window, true);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Info")) {
-                if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
-                if (ImGui::MenuItem("About")) show_about_popup = true;
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
+        renderMenuBar();
 
         ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
         float total_available_height = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeight();
@@ -195,35 +181,9 @@ namespace gui {
 
         ImGui::End();
 
-        if (show_about_popup) { ImGui::OpenPopup("About"); show_about_popup = false; }
-        if (show_updates_popup) { ImGui::OpenPopup("Check for Updates"); show_updates_popup = false; }
-
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
-        if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("ZemaxDDEClient\nVersion 1.0\n\n(c) 2023 Your Company");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
-
-        // if (ImGui::BeginPopupModal("Software Features", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        //     ImGui::Text("Software Features:");
-        //     ImGui::BulletText("Feature 1");
-        //     ImGui::BulletText("Feature 2");
-        //     ImGui::BulletText("Feature 3");
-        //     ImGui::Separator();
-        //     if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-        //     ImGui::EndPopup();
-        // }
-
-        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Your software is up to date!");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
+        setPopupPosition();
+        renderUpdatesPopup();
+        renderAboutPopup();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -16,13 +16,25 @@ MINGW_INCLUDE="$MINGW_DIR/include"
 MINGW_LIB="$MINGW_DIR/lib"
 
 # Compiler flags
-GUI_FLAG="-mwindows" # Default GUI mode enabled
-if [ -n "$BUILD_DEBUG" ] && [ "$BUILD_DEBUG" = "1" ]; then
-    GUI_FLAG="" # Disable GUI mode for console debugging
+BUILD_DEBUG="${BUILD_DEBUG:-0}"             # Debug mode (1 - on, 0 - off)
+BUILD_OPTIMIZE="${BUILD_OPTIMIZE:-0}"       # Optimize mode (0 - off, 1 - on with -O2, 2 - on with -O3)
+
+# Base compiler flags by default
+CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -mwindows -DUNICODE -D_UNICODE"
+
+# Adjust flags based on build modes
+if [ "$BUILD_DEBUG" = "1" ]; then
+    CXX_FLAGS="${CXX_FLAGS//-mwindows/}"
+    CXX_FLAGS="$CXX_FLAGS -DDEBUG_LOG"
 fi
-CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -DUNICODE -D_UNICODE $GUI_FLAG"
-# Flag '-02' for optimization
-# CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -O2 -DUNICODE -D_UNICODE $GUI_FLAG"
+
+# Add optimization if BUILD_OPTIMIZE is enabled
+if [ "$BUILD_OPTIMIZE" = "1" ]; then
+    CXX_FLAGS="$CXX_FLAGS -O2"
+elif [ "$BUILD_OPTIMIZE" = "2" ]; then
+    CXX_FLAGS="$CXX_FLAGS -O3"
+fi
+
 LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
 
 # =============================================
@@ -31,9 +43,11 @@ LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
 SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
     "$SRC_DIR/dde_client.cpp"
+    "$SRC_DIR/gui/gui_utils.cpp"
+    "$SRC_DIR/gui/components/gui_popups.cpp"
+    "$SRC_DIR/gui/components/gui_menu_bar.cpp"
     "$SRC_DIR/gui/gui_init.cpp"
     "$SRC_DIR/gui/gui_render.cpp"
-    "$SRC_DIR/gui/gui_utils.cpp"
     "$SRC_DIR/logger/logger.cpp"
     "$IMGUI_DIR/imgui.cpp"
     "$IMGUI_DIR/imgui_draw.cpp"
