@@ -1,6 +1,5 @@
 #include <stdexcept>
 #include <string>
-#include <ctime>
 #include "lib/imgui/imgui.h"
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
@@ -20,7 +19,6 @@ namespace gui {
         // TODO: Move to 'gui.h' as static constexpr for reuse
         float sidebar_width = 200.0f;
         float sidebar_height = 250.0f;
-        float debug_log_height = 100.0f;
         float content_height = 450.0f;
 
         ImGui::SetNextWindowPos(window_pos);
@@ -135,49 +133,7 @@ namespace gui {
         ImGui::EndChild();
 
         ImGui::Spacing();
-
-        ImGui::BeginChild("DebugLogHeader", ImVec2(0, ImGui::GetFrameHeightWithSpacing()), false,
-                        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
-        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "Debug");
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() 
-        - ImGui::CalcTextSize("Copy Debug Log").x 
-        - ImGui::GetStyle().FramePadding.x * 2);
-
-        if (ImGui::Button("Copy Debug Log")) {
-            std::string log_text;
-            for (const auto& log : logger.getLogs()) {
-                log_text += log + "\n";
-            }
-
-            ImGui::SetClipboardText(log_text.c_str());
-
-            time_t now = time(0);
-            char timestamp[26];
-            ctime_s(timestamp, sizeof(timestamp), &now);
-            timestamp[24] = '\0';
-
-            logger.addLog(std::string("Debug log copied to clipboard at ") + timestamp);
-        }
-
-        ImGui::EndChild();
-
-        ImGui::BeginChild("DebugLogContent", ImVec2(0, debug_log_height - ImGui::GetFrameHeightWithSpacing()), true);
-
-        static size_t last_log_size = 0;
-        const auto& logEntries = logger.getLogs();
-
-        for (const auto& log : logEntries) {
-            // ImGui::TextUnformatted(log.c_str());
-            ImGui::Text("%s", log.c_str()); // Замените TextUnformatted
-        }
-        if (logEntries.size() > last_log_size) {
-            ImGui::SetScrollHereY(1.0f);
-            last_log_size = logEntries.size();
-        }
-
-        ImGui::EndChild();
+        renderDebugLogFrame();
 
         ImGui::End();
 
