@@ -18,11 +18,12 @@ namespace gui {
             void initialize();
             void render();
 
-            void renderMenuBar();
+            void renderDebugLogFrame();
             void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
-            void renderDebugLogFrame();
+            void renderDDEStatusFrame();
+            void renderMenuBar();
 
             void setDDEStatus(bool initialized);
             void setSelectedMenuItem(int item);

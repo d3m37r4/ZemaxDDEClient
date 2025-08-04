@@ -46,6 +46,7 @@ SOURCE_FILES=(
     "$SRC_DIR/gui/gui_utils.cpp"
     "$SRC_DIR/gui/components/gui_debug_log.cpp"
     "$SRC_DIR/gui/components/gui_popups.cpp"
+    "$SRC_DIR/gui/components/gui_dde_status.cpp"
     "$SRC_DIR/gui/components/gui_menu_bar.cpp"
     "$SRC_DIR/gui/gui_init.cpp"
     "$SRC_DIR/gui/gui_render.cpp"

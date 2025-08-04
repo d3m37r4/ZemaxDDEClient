@@ -33,45 +33,8 @@ namespace gui {
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 10));
 
-        ImGui::BeginChild("DDE Status Frame", ImVec2(sidebar_width, 60), true, ImGuiWindowFlags_NoScrollbar);
-        ImGui::Text("DDE Status:");
-        ImGui::SameLine();
+        renderDDEStatusFrame();
 
-        char status_text[32];
-        strncpy_s(status_text, dde_initialized ? "Initialized" : "Not Initialized", sizeof(status_text));
-        ImGui::PushStyleColor(ImGuiCol_Text, dde_initialized ? ImVec4(0.0f, 1.0f, 0.0f, 1.0f) : ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-        ImGui::InputText("##DDEStatus", status_text, sizeof(status_text), ImGuiInputTextFlags_ReadOnly);
-        ImGui::PopItemWidth();
-        ImGui::PopStyleVar(1);
-        ImGui::PopStyleColor();
-
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 2));
-        float button_height = ImGui::GetFrameHeight();
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.5f, 0.0f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.3f, 0.0f, 1.0f));
-        if (ImGui::Button(dde_initialized ? "Close DDE" : "Init DDE", ImVec2(-1, button_height))) {
-            try {
-                if (!dde_initialized) {
-                    ZemaxDDE::initiateDDE(hwndDDE);
-                    dde_initialized = true;
-                    logger.addLog("DDE connection established successfully");
-                } else {
-                    ZemaxDDE::terminateDDE();
-                    dde_initialized = false;
-                    logger.addLog("DDE connection terminated");
-                }
-            } catch (const std::runtime_error& e) {
-                logger.addLog((std::string("DDE Error: ") + e.what()).c_str());
-                setErrorMsg(e.what());
-            }
-        }
-        ImGui::PopStyleColor(3);
-        ImGui::PopStyleVar();
-
-        ImGui::EndChild();
         ImGui::Spacing();
 
         if (ImGui::Button("Optical system information", ImVec2(-1, 0))) selectedMenuItem = 0;
