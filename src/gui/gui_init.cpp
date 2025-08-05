@@ -40,7 +40,7 @@ namespace gui {
         char fontPath[MAX_PATH];
         GetWindowsDirectoryA(fontPath, MAX_PATH);
         strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
-        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 17.0f);
+        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 18.0f);
         if (!font) logger.addLog("Failed to load font segoeui.ttf");
 
         // ImGui::StyleColorsClassic();
