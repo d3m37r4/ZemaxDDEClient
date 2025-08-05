@@ -5,8 +5,8 @@
 
 namespace gui {
     // Constants defining frame size
-    static constexpr float DDE_STATUS_FRAME_WIDTH = 200.0f;
-    static constexpr float DDE_STATUS_FRAME_HEIGHT = 60.0f;
+    static constexpr float DDE_STATUS_FRAME_WIDTH = 0.0f;       // Automatic width
+    static constexpr float DDE_STATUS_FRAME_HEIGHT = 0.0f;      // Automatic height
 
     // Status text color
     static constexpr ImVec4 DDE_STATUS_COLOR_CONNECTED = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);            // Green
