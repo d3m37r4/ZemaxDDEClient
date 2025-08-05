@@ -56,6 +56,12 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
    ./build.sh
    # Build with debugging (console mode)
    BUILD_DEBUG=1 ./build.sh
+   # Build with optimization level 2
+   BUILD_OPTIMIZE=1 ./build.sh
+   # Build with optimization level 3
+   BUILD_OPTIMIZE=2 ./build.sh
+   # One of possible combined options: Build with debugging and optimization level 2
+   BUILD_DEBUG=1 BUILD_OPTIMIZE=1 ./build.sh
    ```
 
 ## Run
