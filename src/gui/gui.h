@@ -23,6 +23,7 @@ namespace gui {
             void renderAboutPopup();
             void renderUpdatesPopup();
             void renderDDEStatusFrame();
+            void renderSidebar();
             void renderMenuBar();
 
             void setDDEStatus(bool initialized);

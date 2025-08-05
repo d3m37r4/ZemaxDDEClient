@@ -17,8 +17,6 @@ namespace gui {
         ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
         float total_available_height = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeight();
         // TODO: Move to 'gui.h' as static constexpr for reuse
-        float sidebar_width = 200.0f;
-        float sidebar_height = 250.0f;
         float content_height = 450.0f;
 
         ImGui::SetNextWindowPos(window_pos);
@@ -29,20 +27,7 @@ namespace gui {
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, sidebar_height), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 10));
-
-        renderDDEStatusFrame();
-
-        ImGui::Spacing();
-
-        if (ImGui::Button("Optical system information", ImVec2(-1, 0))) selectedMenuItem = 0;
-        if (ImGui::Button("Local error analysis\nfor aspherical surface", ImVec2(-1, 0))) selectedMenuItem = 1;
-
-        ImGui::PopStyleVar(2);
-        ImGui::EndChild();
-
+        renderSidebar();
         ImGui::SameLine();
 
         ImGui::BeginChild("Content", ImVec2(0, content_height), true);
