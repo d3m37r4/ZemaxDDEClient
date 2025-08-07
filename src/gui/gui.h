@@ -3,8 +3,6 @@
 
 #include <GLFW/glfw3.h>
 #include <windows.h>
-#include "components/gui_popups.h"
-#include "components/gui_menu_bar.h"
 #include "logger/logger.h"
 
 class ImGuiIO;                                                  // Forward declaration for ImGui usage
@@ -25,6 +23,7 @@ namespace gui {
             void renderDDEStatusFrame();
             void renderSidebar();
             void renderMenuBar();
+            void renderContent();
 
             void setDDEStatus(bool initialized);
             void setSelectedMenuItem(int item);

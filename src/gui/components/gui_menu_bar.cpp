@@ -1,6 +1,6 @@
 #include "lib/imgui/imgui.h"
-#include "gui/gui.h"
 #include "gui/components/gui_menu_bar.h"
+#include "gui/gui.h"
 
 namespace gui {
     void GuiManager::renderMenuBar() {

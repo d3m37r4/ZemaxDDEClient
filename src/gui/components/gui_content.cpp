@@ -1,35 +1,14 @@
 #include <stdexcept>
 #include <string>
 #include "lib/imgui/imgui.h"
-#include "lib/imgui/backends/imgui_impl_glfw.h"
-#include "lib/imgui/backends/imgui_impl_opengl3.h"
 #include "dde_client.h"
-#include "gui.h"
+#include "gui/components/gui_content.h"
+#include "gui/gui.h"
 
 namespace gui {
-    void GuiManager::render() {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        renderMenuBar();
-
-        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
-        float total_available_height = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeight();
+    void GuiManager::renderContent() {
         // TODO: Move to 'gui.h' as static constexpr for reuse
         float content_height = 450.0f;
-
-        ImGui::SetNextWindowPos(window_pos);
-        ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, total_available_height));
-
-        ImGui::Begin("Main Content", nullptr, 
-            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
-            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
-            ImGuiWindowFlags_NoBringToFrontOnFocus);
-
-        renderSidebar();
-        ImGui::SameLine();
-
         ImGui::BeginChild("Content", ImVec2(0, content_height), true);
         switch (selectedMenuItem) {
             case 0: {
@@ -79,17 +58,5 @@ namespace gui {
             }
         }
         ImGui::EndChild();
-
-        ImGui::Spacing();
-        renderDebugLogFrame();
-
-        ImGui::End();
-
-        setPopupPosition();
-        renderUpdatesPopup();
-        renderAboutPopup();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 }
