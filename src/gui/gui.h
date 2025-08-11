@@ -15,6 +15,19 @@ namespace gui {
 
             void initialize();
             void render();
+
+            void renderDebugLogFrame();
+            void setPopupPosition();
+            void renderAboutPopup();
+            void renderUpdatesPopup();
+            void renderDDEStatusFrame();
+            void renderSidebar();
+            void renderMenuBar();
+            void renderContent();
+
+            void renderPageOpticalSystemInfo();
+            void renderPageLocalSurfaceErrors();
+
             void setDDEStatus(bool initialized);
             void setSelectedMenuItem(int item);
             void setSurfaceNumber(int num);
@@ -34,8 +47,8 @@ namespace gui {
             int selectedMenuItem{0};
             int surface_number{1};
             float radius{0.0f};
-            bool show_about_popup{false};
-            bool show_updates_popup{false};
+            bool show_updates_popup{false};                     // Display flag for popup 'Check for Updates'
+            bool show_about_popup{false};                       // Display flag for popup 'Check for About'
     };
 }
 #endif // GUI_H
