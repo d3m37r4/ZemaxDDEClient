@@ -16,7 +16,7 @@ namespace gui {
         ImGui::SetNextWindowPos(window_pos);
         ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, total_available_height));
 
-        ImGui::Begin("Main Content", nullptr, 
+        ImGui::Begin("Layout", nullptr, 
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | 
             ImGuiWindowFlags_NoBringToFrontOnFocus);
