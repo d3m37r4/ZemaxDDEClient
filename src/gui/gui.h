@@ -25,6 +25,9 @@ namespace gui {
             void renderMenuBar();
             void renderContent();
 
+            void renderPageOpticalSystemInfo();
+            void renderPageLocalSurfaceErrors();
+
             void setDDEStatus(bool initialized);
             void setSelectedMenuItem(int item);
             void setSurfaceNumber(int num);

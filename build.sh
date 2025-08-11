@@ -50,6 +50,8 @@ SOURCE_FILES=(
     "$SRC_DIR/gui/components/gui_sidebar.cpp"
     "$SRC_DIR/gui/components/gui_menu_bar.cpp"
     "$SRC_DIR/gui/components/gui_content.cpp"
+    "$SRC_DIR/gui/content_pages/gui_page_optical_system_info.cpp"
+    "$SRC_DIR/gui/content_pages/gui_page_local_surface_errors.cpp"
     "$SRC_DIR/gui/gui_init.cpp"
     "$SRC_DIR/gui/gui_container.cpp"
     "$SRC_DIR/logger/logger.cpp"

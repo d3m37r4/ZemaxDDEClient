@@ -16,7 +16,7 @@ namespace gui {
         ImGui::Spacing();
 
         if (ImGui::Button("Optical system information", ImVec2(-1.0f, 0.0f))) selectedMenuItem = 0;
-        if (ImGui::Button("Local error analysis\nfor aspherical surface", ImVec2(-1.0f, 0.0f))) selectedMenuItem = 1;
+        if (ImGui::Button("Local surface errors", ImVec2(-1.0f, 0.0f))) selectedMenuItem = 1;
 
         ImGui::PopStyleVar(2);
         ImGui::EndChild();
