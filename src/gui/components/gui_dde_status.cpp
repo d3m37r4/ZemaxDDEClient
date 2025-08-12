@@ -2,7 +2,7 @@
 #include <string>
 #include "lib/imgui/imgui.h"
 #include "components/gui_dde_status.h"
-#include "dde_client.h"
+#include "dde/dde_zemax_handler.h"
 #include "gui.h"
 
 namespace gui {

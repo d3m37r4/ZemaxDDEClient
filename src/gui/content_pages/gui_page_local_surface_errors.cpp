@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <string>
 #include "lib/imgui/imgui.h"
-#include "dde_client.h"
+#include "dde/dde_zemax_handler.h"
 #include "gui/content_pages/gui_page_local_surface_errors.h"
 #include "gui/gui.h"
 

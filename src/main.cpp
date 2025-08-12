@@ -3,7 +3,7 @@
 #include <GL/gl.h>
 #include <windows.h>
 #include "logger/logger.h"
-#include "dde_client.h"
+#include "dde/dde_zemax_handler.h"
 #include "gui/gui.h"
 
 Logger logger;

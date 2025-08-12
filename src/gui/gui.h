@@ -28,10 +28,8 @@ namespace gui {
             void renderPageOpticalSystemInfo();
             void renderPageLocalSurfaceErrors();
 
-            void setDDEStatus(bool initialized);
-            void setSelectedMenuItem(int item);
-            void setSurfaceNumber(int num);
             void setRadius(float r);
+            
             void setErrorMsg(const char* msg);
             bool shouldClose() const;
 
