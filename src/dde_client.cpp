@@ -1,8 +1,6 @@
-#include <dde.h>
 #include <stdexcept>
-#include <cstdio>       // TODO: убрать
-#include <cstring>      // TODO: убрать
 #include <string>
+#include <dde.h>
 #include "dde_client.h"
 
 namespace ZemaxDDE {
@@ -10,8 +8,9 @@ namespace ZemaxDDE {
 
     static HWND hwndServer = NULL;
     static bool GotData = false;
-    static char szBuffer[5000];
-    static char szItem[256], szTest[256];
+    static char szBuffer[5000] = {0};
+    static char szItem[256] = {0};
+    static char szTest[256] = {0};
 
     char* GetString(char* szBuffer, int n, char* szSubString) {
         int i = 0, j = 0, k = 0;
@@ -88,7 +87,6 @@ namespace ZemaxDDE {
             throw std::runtime_error("DDE connection to Zemax not established");
         }
 
-        std::memset(szBuffer, 0, sizeof(szBuffer));
         GotData = false;
 
         char request[256];
