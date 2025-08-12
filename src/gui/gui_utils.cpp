@@ -1,18 +1,6 @@
 #include "gui.h"
 
 namespace gui {
-    void GuiManager::setDDEStatus(bool initialized) {
-        dde_initialized = initialized;
-    }
-
-    void GuiManager::setSelectedMenuItem(int item) {
-        selectedMenuItem = item;
-    }
-
-    void GuiManager::setSurfaceNumber(int num) {
-        surface_number = num;
-    }
-
     void GuiManager::setRadius(float r) {
         radius = r;
     }
