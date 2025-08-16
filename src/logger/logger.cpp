@@ -1,10 +1,7 @@
-#include <ctime>
 #ifdef DEBUG_LOG
     #include <iostream>
 #endif
 #include "logger.h"
-
-const char* Logger::LOG_TIME_FORMAT = "[%d.%m.%Y - %H:%M:%S]";      // Define format of log time output
 
 Logger::Logger() {}                                                 // Initialization of the Logger class.
 

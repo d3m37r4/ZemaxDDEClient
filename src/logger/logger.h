@@ -13,6 +13,6 @@ class Logger {
 
     private:
         std::vector<std::string> logs;
-        static const char* LOG_TIME_FORMAT;     // Time format const
+        static inline const char* LOG_TIME_FORMAT = "[%d.%m.%Y - %H:%M:%S]";     // Time format const
     };
 #endif
