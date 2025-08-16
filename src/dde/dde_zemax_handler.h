@@ -31,6 +31,7 @@ namespace ZemaxDDE {
     void getFileName(HWND hwnd);
     void getSystemData(HWND hwnd);
     void getFieldData(HWND hwnd, int fieldIndex);
+    void getWaveData(HWND hwnd, int waveIndex);
 
     extern HWND hwndServer;
     extern bool GotData;
