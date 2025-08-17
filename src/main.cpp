@@ -117,7 +117,6 @@ int main() {
         ZemaxDDE::ZemaxDDEClient* client = (ZemaxDDE::ZemaxDDEClient*)GetWindowLongPtr(hwndClient, GWLP_USERDATA);
         if (client) {
             client->terminateDDE();
-            logger.addLog("DDE connection terminated 2");
             delete client;
             SetWindowLongPtr(hwndClient, GWLP_USERDATA, 0);
         }
