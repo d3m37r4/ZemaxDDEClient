@@ -252,15 +252,6 @@ namespace ZemaxDDE {
                 }
                 return 0;
             }
-            case WM_DDE_TERMINATE: {
-                // terminateDDE();
-                PostMessageW(zemaxDDEServer, WM_DDE_TERMINATE, (WPARAM)zemaxDDEClient, 0L);
-                zemaxDDEServer = NULL;
-#ifdef DEBUG_LOG
-                logger.addLog("DDE connection terminated 1");
-#endif
-                return 0;
-            }
         }
         return 0;
     }
