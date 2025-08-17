@@ -8,7 +8,7 @@ namespace gui {
             if (ImGui::BeginMenu("Menu")) {
                 ImGui::MenuItem("Open *.ZMX file with Zemax");
                 ImGui::Separator();
-                if (ImGui::MenuItem("Exit", "Alt+F4")) glfwSetWindowShouldClose(window, true);
+                if (ImGui::MenuItem("Exit", "Alt+F4")) glfwSetWindowShouldClose(glfwWindow, true);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Info")) {

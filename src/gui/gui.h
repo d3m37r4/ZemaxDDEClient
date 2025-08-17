@@ -3,6 +3,7 @@
 
 #include <GLFW/glfw3.h>
 #include <windows.h>
+#include "dde/dde_zemax_client.h"
 #include "logger/logger.h"
 
 class ImGuiIO;                                                  // Forward declaration for ImGui usage
@@ -10,7 +11,7 @@ class ImGuiIO;                                                  // Forward decla
 namespace gui {
     class GuiManager {
         public: 
-            GuiManager(GLFWwindow* window, HWND hwndDDE = nullptr);
+            GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient);
             ~GuiManager();
 
             void initialize();
@@ -36,8 +37,9 @@ namespace gui {
         private: 
             static constexpr int ERROR_MSG_SIZE = 256;          // Size of the error message buffer
 
-            GLFWwindow* window;                                 // Pointer to the GLFW window handle
-            HWND hwndDDE;                                       // Handle to the DDE window
+            GLFWwindow* glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
+            HWND hwndClient;                                    // DDE client window handle
+            ZemaxDDE::ZemaxDDEClient* zemaxDDEClient;           // Pointer to a DDE client instance
             Logger logger;                                      // Logger instance for tracking events
             
             char errorMsg[ERROR_MSG_SIZE]{0};                   // Buffer for error messages

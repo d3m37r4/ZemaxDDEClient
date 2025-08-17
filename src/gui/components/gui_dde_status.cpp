@@ -1,8 +1,7 @@
 #include <stdexcept>
 #include <string>
-#include "lib/imgui/imgui.h"
 #include "components/gui_dde_status.h"
-#include "dde/dde_zemax_handler.h"
+#include "dde/dde_zemax_client.h"
 #include "gui.h"
 
 namespace gui {
@@ -25,16 +24,16 @@ namespace gui {
         if (ImGui::Button(dde_initialized ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             try {
                 if (!dde_initialized) {
-                    ZemaxDDE::initiateDDE(hwndDDE);
+                    zemaxDDEClient->initiateDDE();
                     dde_initialized = true;
-                    logger.addLog("DDE connection established successfully");
+                    logger.addLog("(GUI MSG) DDE connection established successfully");
                 } else {
-                    ZemaxDDE::terminateDDE();
+                    zemaxDDEClient->terminateDDE();
                     dde_initialized = false;
-                    logger.addLog("DDE connection terminated");
+                    logger.addLog("(GUI MSG) DDE connection terminated");
                 }
             } catch (const std::runtime_error& e) {
-                logger.addLog((std::string("DDE Error: ") + e.what()).c_str());
+                logger.addLog((std::string("(GUI MSG) DDE Error: ") + e.what()).c_str());
                 setErrorMsg(e.what());
             }
         }

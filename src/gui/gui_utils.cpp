@@ -15,6 +15,6 @@ namespace gui {
     }
 
     bool GuiManager::shouldClose() const {
-        return window ? glfwWindowShouldClose(window) : true;
+        return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true;
     }
 }

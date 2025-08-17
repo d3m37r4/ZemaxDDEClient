@@ -42,7 +42,9 @@ LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
 # =============================================
 SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
-    "$SRC_DIR/dde/dde_zemax_handler.cpp"
+    "$SRC_DIR/dde/dde_zemax_client_core.cpp"
+    "$SRC_DIR/dde/dde_zemax_client_data.cpp"
+    "$SRC_DIR/dde/dde_zemax_utils.cpp"
     "$SRC_DIR/gui/gui_utils.cpp"
     "$SRC_DIR/gui/components/gui_debug_log.cpp"
     "$SRC_DIR/gui/components/gui_popups.cpp"

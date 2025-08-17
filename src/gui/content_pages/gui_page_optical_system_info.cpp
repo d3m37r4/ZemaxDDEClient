@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <string>
 #include "lib/imgui/imgui.h"
-#include "dde/dde_zemax_handler.h"
+#include "dde/dde_zemax_client.h"
 #include "gui/content_pages/gui_page_optical_system_info.h"
 #include "gui/gui.h"
 
@@ -12,22 +12,22 @@ namespace gui {
 
         try {
             if (dde_initialized) {
-                ZemaxDDE::getLensName(hwndDDE);
-                ZemaxDDE::getFileName(hwndDDE);
-                ZemaxDDE::getSystemData(hwndDDE);
-                ZemaxDDE::getFieldData(hwndDDE, 0);
-                for (int i = 1; i <= ZemaxDDE::opticalSystem.numFields; i++) {
-                    ZemaxDDE::getFieldData(hwndDDE, i);
-                }
-
-                ImGui::Text("Lens Name: %s", ZemaxDDE::opticalSystem.lensName);
-                ImGui::Text("File Name: %s", ZemaxDDE::opticalSystem.fileName);
-                ImGui::Text("Number of Surfaces: %d", ZemaxDDE::opticalSystem.numSurfs);
-                ImGui::Text("Units: %d", ZemaxDDE::opticalSystem.units); // TODO: Добавить перевод (0=mm, 1=cm, 2=in, 3=m)
-                ImGui::Text("Number of Fields: %d (Type %d)", ZemaxDDE::opticalSystem.numFields, ZemaxDDE::opticalSystem.fieldType);
-                for (int i = 1; i <= ZemaxDDE::opticalSystem.numFields; i++) {
-                    ImGui::Text("Field %d: X=%.4E, Y=%.4E", i, ZemaxDDE::opticalSystem.xField[i], ZemaxDDE::opticalSystem.yField[i]);
-                }
+                zemaxDDEClient->getLensName();
+                zemaxDDEClient->getFileName();
+                zemaxDDEClient->getSystemData();
+                zemaxDDEClient->getFieldData(0);
+                // for (int i = 1; i <= ZemaxDDE::opticalSystem.numFields; i++) {
+                //     zemaxDDEClient->getFieldData(i);
+                // }
+                const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData();
+                ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
+                ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
+                // ImGui::Text("Number of Surfaces: %d", zemaxDDEClient->getNumSurfaces());
+                // ImGui::Text("Units: %d", ZemaxDDE::opticalSystem.units); // TODO: Добавить перевод (0=mm, 1=cm, 2=in, 3=m)
+                // ImGui::Text("Number of Fields: %d (Type %d)", ZemaxDDE::opticalSystem.numFields, ZemaxDDE::opticalSystem.fieldType);
+                // for (int i = 1; i <= ZemaxDDE::opticalSystem.numFields; i++) {
+                //     ImGui::Text("Field %d: X=%.4E, Y=%.4E", i, ZemaxDDE::opticalSystem.xField[i], ZemaxDDE::opticalSystem.yField[i]);
+                // }
             } else {
                 setErrorMsg("DDE not initialized");
             }

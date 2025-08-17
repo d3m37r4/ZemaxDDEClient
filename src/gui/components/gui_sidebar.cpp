@@ -1,4 +1,3 @@
-#include "lib/imgui/imgui.h"
 #include "gui/components/gui_sidebar.h"
 #include "gui/gui.h"
 
