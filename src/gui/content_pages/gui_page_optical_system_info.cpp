@@ -9,34 +9,53 @@ namespace gui {
     void GuiManager::renderPageOpticalSystemInfo() {
         ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
         ImGui::Spacing();
-
-        try {
-            if (dde_initialized) {
+        if (dde_initialized) {
+            ImGui::Text("Information about the current optical system:");  
+            try {
                 zemaxDDEClient->getLensName();
                 zemaxDDEClient->getFileName();
                 zemaxDDEClient->getSystemData();
                 zemaxDDEClient->getFieldData(0);
-                // for (int i = 1; i <= ZemaxDDE::opticalSystem.numFields; i++) {
+                // for (int i = 1; i <= opticalSystem.numFields; i++) {
                 //     zemaxDDEClient->getFieldData(i);
                 // }
-                const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData();
+                const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData();               
                 ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
                 ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
-                // ImGui::Text("Number of Surfaces: %d", zemaxDDEClient->getNumSurfaces());
-                // ImGui::Text("Units: %d", ZemaxDDE::opticalSystem.units); // TODO: Добавить перевод (0=mm, 1=cm, 2=in, 3=m)
-                // ImGui::Text("Number of Fields: %d (Type %d)", ZemaxDDE::opticalSystem.numFields, ZemaxDDE::opticalSystem.fieldType);
-                // for (int i = 1; i <= ZemaxDDE::opticalSystem.numFields; i++) {
-                //     ImGui::Text("Field %d: X=%.4E, Y=%.4E", i, ZemaxDDE::opticalSystem.xField[i], ZemaxDDE::opticalSystem.yField[i]);
-                // }
-            } else {
-                setErrorMsg("DDE not initialized");
+                ImGui::Text("Number of Surfaces: %d", opticalSystem.numSurfs);
+                ImGui::Text("Units: %d", opticalSystem.numSurfs); // TODO: Добавить перевод (0=mm, 1=cm, 2=in, 3=m)
+                ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
+
+                    // Создаем раскрывающийся спойлер
+                if (ImGui::CollapsingHeader("Field data")) {
+                    if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
+                        ImGui::TableSetupColumn("#");
+                        ImGui::TableSetupColumn("X-Field");
+                        ImGui::TableSetupColumn("Y-Field");
+                        ImGui::TableHeadersRow();
+
+                        for (int i = 1; i <= opticalSystem.numFields; i++) {
+                            // ImGui::Text("Field %d: X=%.4E, Y=%.4E", i, opticalSystem.xField[i], opticalSystem.yField[i]);
+
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0);
+                            ImGui::Text("%d", i);
+                            ImGui::TableSetColumnIndex(1);
+                            ImGui::Text("%.4f", opticalSystem.xField[i]);
+                            ImGui::TableSetColumnIndex(2);
+                            ImGui::Text("%.4f", opticalSystem.yField[i]);
+                        }
+                        ImGui::EndTable();
+                    }
+                }
+
+            } catch (const std::runtime_error& e) {
+                setErrorMsg(e.what());
+                logger.addLog((std::string("Error: ") + e.what()).c_str());
             }
-        } catch (const std::runtime_error& e) {
-            setErrorMsg(e.what());
-            logger.addLog((std::string("Error: ") + e.what()).c_str());
+        } else {
+            ImGui::Text("To get data, initialize a DDE connection with Zemax server.");
         }
-
-
         // ImGui::InputInt("Surface Number", &surface_number);
         // if (surface_number < 1) surface_number = 1;
 

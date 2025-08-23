@@ -72,6 +72,7 @@ namespace ZemaxDDE {
         DDEDATA* pDdeData;
         ATOM aItem;
         UINT_PTR uiLow, uiHi;
+        std::string buffer;
 #ifdef DEBUG_LOG
         logger.addLog("Received DDE message = " + std::to_string(iMsg));
 #endif
@@ -81,11 +82,11 @@ namespace ZemaxDDE {
                     UnpackDDElParam(WM_DDE_ACK, lParam, &uiLow, &uiHi);
                     FreeDDElParam(WM_DDE_ACK, lParam);
                     zemaxDDEServer = (HWND)wParam;
+                    GlobalDeleteAtom((ATOM)uiLow);
+                    GlobalDeleteAtom((ATOM)uiHi);
 #ifdef DEBUG_LOG 
                     logger.addLog("Message 'DDE_ACK' received, ZemaxDDEServer = " + std::to_string((uintptr_t)zemaxDDEServer));
 #endif
-                    GlobalDeleteAtom((ATOM)uiLow);
-                    GlobalDeleteAtom((ATOM)uiHi);
                 }
                 return 0;
             }
@@ -95,42 +96,43 @@ namespace ZemaxDDE {
                 hDdeData = (GLOBALHANDLE)(uintptr_t)uiLow;
                 pDdeData = (DDEDATA*)GlobalLock(hDdeData);
                 aItem = (ATOM)uiHi;
-
                 DdeAck.bAppReturnCode = 0;
                 DdeAck.reserved = 0;
                 DdeAck.fBusy = FALSE;
                 DdeAck.fAck = FALSE;
 
                 if (pDdeData->cfFormat == CF_TEXT) {
-                    wchar_t wItem[256];
-                    GlobalGetAtomNameW(aItem, wItem, sizeof(wItem) / sizeof(wchar_t));
-                    WideCharToMultiByte(CP_ACP, 0, wItem, -1, requestItemBuffer, sizeof(requestItemBuffer), NULL, NULL);
+                    char item[512]; 
+                    wchar_t wItem[512];
+                    GlobalGetAtomNameW(aItem, wItem, sizeof(wItem));
+                    WideCharToMultiByte(CP_ACP, 0, wItem, -1, item, sizeof(item), NULL, NULL);
 
-                    std::string dde_item_str(requestItemBuffer);
+                    std::string dde_item_str(item);
                     std::vector<std::string> item_tokens = ZemaxDDE::tokenize(dde_item_str);
-
                     std::string command_token = "";
+                    
                     if (!item_tokens.empty()) {
                         command_token = item_tokens[0];
                     }
 
                     isDataReceived = true;
-                    bufferString = (char*)pDdeData->Value;
-                    logger.addLog("Message 'DDE_DATA' received, content = " + bufferString);
+                    buffer = (char*)pDdeData->Value;
+
+                    logger.addLog("Message 'DDE_DATA' received, content = " + buffer);
 
                     if (command_token == "GetSurfaceData") {
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetName") {
-                        opticalSystem.lensName = bufferString;
+                        opticalSystem.lensName = buffer;
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetFile") {
-                        opticalSystem.fileName = bufferString;
+                        opticalSystem.fileName = buffer;
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetSystem") {
-                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(bufferString);
+                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(buffer);
                         if (buffer_tokens.size() >= 2) {
                             try {
                                 opticalSystem.numSurfs = std::stoi(buffer_tokens[0]);
@@ -157,7 +159,7 @@ namespace ZemaxDDE {
                             }
                         }
 
-                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(bufferString);
+                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(buffer);
                         if (fn == 0) {
                             if (buffer_tokens.size() >= 2) {
                                 try {
@@ -200,7 +202,7 @@ namespace ZemaxDDE {
                             }
                         }
 
-                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(bufferString);
+                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(buffer);
                         if (wn == 0) {
                             if (buffer_tokens.size() >= 2) {
                                 try {

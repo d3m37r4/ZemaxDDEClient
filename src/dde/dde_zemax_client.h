@@ -39,8 +39,6 @@ namespace ZemaxDDE {
         HWND zemaxDDEServer = NULL;
         HWND zemaxDDEClient = NULL;
         bool isDataReceived = false;
-        std::string bufferString;
-        char requestItemBuffer[256] = {0};
 
         void sendPostRequest(const char* request);
         void waitForData();
