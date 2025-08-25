@@ -103,6 +103,30 @@ int main() {
     ZemaxDDE::ZemaxDDEClient* zemaxDDEClient = new ZemaxDDE::ZemaxDDEClient(hwndClient);
     SetWindowLongPtr(hwndClient, GWLP_USERDATA, (LONG_PTR)zemaxDDEClient);
 
+    // Register callback to send requests after DDE connection
+    zemaxDDEClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
+        try {
+            client->getSystemData();
+            client->getFieldData();
+
+            int numFields = client->getOpticalSystemData().numFields;
+            if (numFields < 0) {
+                logger.addLog("Invalid numFields value: " + std::to_string(numFields) + ". Skipping field requests.");
+                return;
+            }
+
+            for (int i = 1; i <= numFields; ++i) {
+                client->getFieldByIndex(i);
+            }
+
+            client->getWaveData(0);
+            client->getLensName();
+            client->getFileName();
+        } catch (const std::exception& e) {
+            logger.addLog("Error requesting initial system data: " + std::string(e.what()));
+        }
+    });
+
     // Initialize GUI manager with existing DDE client
     gui::GuiManager gui(glfwWindow, hwndClient, zemaxDDEClient);
     gui.initialize();

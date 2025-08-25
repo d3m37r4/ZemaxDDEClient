@@ -9,6 +9,9 @@
 class ImGuiIO;                                                  // Forward declaration for ImGui usage
 
 namespace gui {
+    const char* getUnitString(int unitCode);
+    const char* getRayAimingTypeString(int rayAimingType);
+
     class GuiManager {
         public: 
             GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient);

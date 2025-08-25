@@ -4,46 +4,55 @@
 #include <windows.h>
 #include <string>
 #include <vector>
+#include <functional>
 #include "logger/logger.h"
 #include "dde_zemax_types.h"
 
 // DDE constants
-#define DDE_APP_NAME L"ZEMAX"   // Appname DDE
-#define DDE_TOPIC L"RayData"    // Topic DDE
-#define DDE_TIMEOUT_MS 5000     // Timeout in ms (5 sec.)
+#define DDE_APP_NAME            L"ZEMAX"        // Appname DDE
+#define DDE_TOPIC               L"RayData"      // Topic DDE
+#define DDE_TIMEOUT_MS          5000            // Timeout in ms (5 sec.)
 
 namespace ZemaxDDE {
     class ZemaxDDEClient {
-    public:
-        ZemaxDDEClient(HWND zemaxDDEClient);
-        ~ZemaxDDEClient();
+        public:
+            using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
 
-        void initiateDDE();
-        void terminateDDE();
+            ZemaxDDEClient(HWND zemaxDDEClient);
+            ~ZemaxDDEClient();
 
-        void getLensName();
-        void getFileName();
-        void getSystemData();
-        void getFieldData(int fieldIndex);
-        void getWaveData(int waveIndex);
-        void getSurfaceRadius(int surfaceNumber);
+            void initiateDDE();
+            void terminateDDE();
 
-        LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
+            void setOnDDEConnectedCallback(OnDDEConnectedCallback callback);
 
-        OpticalSystemData& getOpticalSystemData() { return opticalSystem; }
+            void getLensName();
+            void getFileName();
+            void getSystemData();
+            void getFieldData();
+            void getFieldByIndex(int fieldIndex);
+            void getWaveData(int waveIndex);
+            void getSurfaceRadius(int surfaceNumber);
 
-    private:
-        Logger logger;
-        OpticalSystemData opticalSystem;
+            LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
-        HWND zemaxDDEServer = NULL;
-        HWND zemaxDDEClient = NULL;
-        bool isDataReceived = false;
+            OpticalSystemData& getOpticalSystemData() { return opticalSystem; };
 
-        void sendPostRequest(const char* request);
-        void waitForData();
-        void checkDDEConnection();
-        void checkResponseStatus(const std::string& errorMsg);
+        private:
+            HWND zemaxDDEServer = NULL;
+            HWND zemaxDDEClient = NULL;
+
+            OnDDEConnectedCallback onDDEConnected;
+
+            Logger logger;
+            OpticalSystemData opticalSystem;
+
+            bool isDataReceived = false;
+
+            void sendPostRequest(const char* request);
+            void waitForData();
+            void checkDDEConnection();
+            void checkResponseStatus(const std::string& errorMsg);
     };
 
 }

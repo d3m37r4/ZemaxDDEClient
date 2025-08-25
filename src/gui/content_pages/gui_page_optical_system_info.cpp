@@ -10,78 +10,50 @@ namespace gui {
         ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
         ImGui::Spacing();
         if (dde_initialized) {
-            ImGui::Text("Information about the current optical system:");  
-            try {
-                zemaxDDEClient->getLensName();
-                zemaxDDEClient->getFileName();
-                zemaxDDEClient->getSystemData();
-                zemaxDDEClient->getFieldData(0);
-                // for (int i = 1; i <= opticalSystem.numFields; i++) {
-                //     zemaxDDEClient->getFieldData(i);
-                // }
-                const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData();               
-                ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
-                ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
-                ImGui::Text("Number of Surfaces: %d", opticalSystem.numSurfs);
-                ImGui::Text("Units: %d", opticalSystem.numSurfs); // TODO: Добавить перевод (0=mm, 1=cm, 2=in, 3=m)
-                ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
+            ImGui::Text("Information about current system");
+            ImGui::Spacing();
 
-                    // Создаем раскрывающийся спойлер
-                if (ImGui::CollapsingHeader("Field data")) {
-                    if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
-                        ImGui::TableSetupColumn("#");
-                        ImGui::TableSetupColumn("X-Field");
-                        ImGui::TableSetupColumn("Y-Field");
-                        ImGui::TableHeadersRow();
+            const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData(); 
+            ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
+            ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
+            ImGui::Spacing();
 
-                        for (int i = 1; i <= opticalSystem.numFields; i++) {
-                            // ImGui::Text("Field %d: X=%.4E, Y=%.4E", i, opticalSystem.xField[i], opticalSystem.yField[i]);
+            ImGui::Text("Number of Surfaces: %d", opticalSystem.numSurfs);
+            ImGui::Text("Stop Surface: %d", opticalSystem.stopSurf);
+            ImGui::Text("Global Reference Surface: %d", opticalSystem.globalRefSurf);
+            ImGui::Spacing();
 
-                            ImGui::TableNextRow();
-                            ImGui::TableSetColumnIndex(0);
-                            ImGui::Text("%d", i);
-                            ImGui::TableSetColumnIndex(1);
-                            ImGui::Text("%.4f", opticalSystem.xField[i]);
-                            ImGui::TableSetColumnIndex(2);
-                            ImGui::Text("%.4f", opticalSystem.yField[i]);
-                        }
-                        ImGui::EndTable();
+            ImGui::Text("Non-Axial Flag: %s", opticalSystem.nonAxialFlag ? "Non-Axial" : "Axial");
+            ImGui::Text("Ray Aiming Type: %s", gui::getRayAimingTypeString(opticalSystem.rayAimingType));
+            ImGui::Text("Adjust Index: %s", opticalSystem.adjustIndex ? "True" : "False");
+            ImGui::Spacing();
+
+            ImGui::Text("Units: %s", getUnitString(opticalSystem.units));
+            ImGui::Text("Temperature: %.4f °C", opticalSystem.temp);
+            ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
+            ImGui::Spacing();
+
+            ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
+            if (ImGui::CollapsingHeader("Field data")) {
+                if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
+                    ImGui::TableSetupColumn("#");
+                    ImGui::TableSetupColumn("X-Field");
+                    ImGui::TableSetupColumn("Y-Field");
+                    ImGui::TableHeadersRow();
+                    for (int i = 1; i <= opticalSystem.numFields; i++) {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("%d", i);
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%.4f", opticalSystem.xField[i]);
+                        ImGui::TableSetColumnIndex(2);
+                        ImGui::Text("%.4f", opticalSystem.yField[i]);
                     }
+                    ImGui::EndTable();
                 }
-
-            } catch (const std::runtime_error& e) {
-                setErrorMsg(e.what());
-                logger.addLog((std::string("Error: ") + e.what()).c_str());
             }
         } else {
             ImGui::Text("To get data, initialize a DDE connection with Zemax server.");
         }
-        // ImGui::InputInt("Surface Number", &surface_number);
-        // if (surface_number < 1) surface_number = 1;
-
-        // if (ImGui::Button("Get Radius")) {
-        //     try {
-        //         if (dde_initialized) {
-        //             if (surface_number <= 0) {
-        //                 setErrorMsg("Invalid surface number");
-        //                 return;
-        //             }
-
-        //             logger.addLog("Calling getSurfaceRadius with hwndDDE: " + std::to_string((uintptr_t)hwndDDE));
-
-        //             float radius = ZemaxDDE::getSurfaceRadius(hwndDDE, surface_number);
-        //             setRadius(radius);
-        //             logger.addLog("Radius retrieved: " + std::to_string(radius));
-        //         } else {
-        //             setErrorMsg("DDE not initialized");
-        //         }
-        //     } catch (const std::runtime_error& e) {
-        //         setErrorMsg(e.what());
-        //         logger.addLog((std::string("Error: ") + e.what()).c_str());
-        //     }
-        // }
-
-        // ImGui::Text("Radius of Surface %d: %.4f", surface_number, radius);
-        // if (errorMsg[0]) ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error: %s", errorMsg);
     }
 }

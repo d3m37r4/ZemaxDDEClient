@@ -10,25 +10,45 @@ namespace ZemaxDDE {
         terminateDDE();
     }
 
+    void ZemaxDDEClient::setOnDDEConnectedCallback(OnDDEConnectedCallback callback) {
+        onDDEConnected = callback;
+    }
+
     void ZemaxDDEClient::initiateDDE() {
+        if (zemaxDDEServer != NULL) {
+            logger.addLog("DDE already connected. Skipping initiate.");
+            return;
+        }
+
         zemaxDDEServer = NULL;
+
         ATOM aApp = GlobalAddAtomW(DDE_APP_NAME);
         ATOM aTop = GlobalAddAtomW(DDE_TOPIC);
         SendMessageW(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)zemaxDDEClient, MAKELONG(aApp, aTop));
 #ifdef DEBUG_LOG
-        char appName[256];
-        char topicName[256];
+        char appName[256], topicName[256];
         WideCharToMultiByte(CP_ACP, 0, DDE_APP_NAME, -1, appName, sizeof(appName), NULL, NULL);
         WideCharToMultiByte(CP_ACP, 0, DDE_TOPIC, -1, topicName, sizeof(topicName), NULL, NULL);
-        logger.addLog("Sent 'WM_DDE_INITIATE' with app = " + std::string(appName) + ", topic = " + std::string(topicName));
+        logger.addLog("DDE: Sent WM_DDE_INITIATE to app='" + std::string(appName) + "', topic='" + std::string(topicName) + "'");
 #endif
         GlobalDeleteAtom(aApp);
         GlobalDeleteAtom(aTop);
-
         checkDDEConnection();
 #ifdef DEBUG_LOG
-        logger.addLog("DDE connection established successfully");
+        if (zemaxDDEServer) {
+            logger.addLog("DDE: Connection established successfully");
+        } else {
+            logger.addLog("DDE: Connection not established yet (waiting for 'WM_DDE_ACK')");
+        }
 #endif
+        if (onDDEConnected) {
+            try {
+                onDDEConnected(this);
+            } catch (const std::exception& e) {
+                logger.addLog("Error in DDE connected callback: " + std::string(e.what()));
+                throw;
+            }
+        }
     }
 
     void ZemaxDDEClient::terminateDDE() {
@@ -109,17 +129,13 @@ namespace ZemaxDDE {
 
                     std::string dde_item_str(item);
                     std::vector<std::string> item_tokens = ZemaxDDE::tokenize(dde_item_str);
-                    std::string command_token = "";
-                    
-                    if (!item_tokens.empty()) {
-                        command_token = item_tokens[0];
-                    }
+                    std::string command_token = item_tokens.empty() ? "" : item_tokens[0];
 
                     isDataReceived = true;
                     buffer = (char*)pDdeData->Value;
-
+#ifdef DEBUG_LOG
                     logger.addLog("Message 'DDE_DATA' received, content = " + buffer);
-
+#endif
                     if (command_token == "GetSurfaceData") {
                         DdeAck.fAck = TRUE;
                     }
@@ -132,63 +148,151 @@ namespace ZemaxDDE {
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetSystem") {
-                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(buffer);
-                        if (buffer_tokens.size() >= 2) {
-                            try {
-                                opticalSystem.numSurfs = std::stoi(buffer_tokens[0]);
-                                opticalSystem.units = std::stoi(buffer_tokens[1]);
-                                DdeAck.fAck = TRUE;
-                            } catch (const std::invalid_argument& e) {
-                                logger.addLog("Error converting token to int (GetSystem in handleDDEMessages): " + std::string(e.what()));
-                            } catch (const std::out_of_range& e) {
-                                logger.addLog("Error converting token to int (GetSystem in handleDDEMessages, out of range): " + std::string(e.what()));
-                            }
-                        } else {
-                            logger.addLog("Not enough tokens for GetSystem in handleDDEMessages.");
+                        const int GET_SYSTEM_PARAMS_COUNT = 9;
+                        auto systemParams = ZemaxDDE::tokenize(buffer);
+                        int params = static_cast<int>(systemParams.size());
+
+                        if (params != GET_SYSTEM_PARAMS_COUNT) {
+                            logger.addLog("GetSystem: Invalid parameter count. Expected exactly " +
+                                        std::to_string(GET_SYSTEM_PARAMS_COUNT) + ", got " +
+                                        std::to_string(params));
+                            return 0;
+                        }
+
+                        try {
+                            // GetSystem parameter indexes
+                            enum {
+                                NUM_SURFS,                      // Number of surfaces
+                                UNIT_CODE,                      // Unit code (0=mm, 1=cm, 2=in, 3=M)
+                                STOP_SURF,                      // Stop surface number
+                                NON_AXIAL_FLAG,                 // Non-axial symmetry flag (0=axial, 1=non-axial)
+                                RAY_AIMING_TYPE,                // Ray aiming type (0=off, 1=paraxial, 2=real)
+                                ADJUST_INDEX,                   // Index adjustment flag (0=false, 1=true)
+                                TEMP,                           // Temperature
+                                PRESSURE,                       // Pressure
+                                GLOBAL_REF_SURF                 // Global reference surface
+                            };
+
+                            opticalSystem.numSurfs      = std::stoi(systemParams[NUM_SURFS]);
+                            opticalSystem.units         = std::stoi(systemParams[UNIT_CODE]);
+                            opticalSystem.stopSurf      = std::stoi(systemParams[STOP_SURF]);
+                            opticalSystem.nonAxialFlag  = std::stoi(systemParams[NON_AXIAL_FLAG]);
+                            opticalSystem.rayAimingType = std::stoi(systemParams[RAY_AIMING_TYPE]);
+                            opticalSystem.adjustIndex   = std::stoi(systemParams[ADJUST_INDEX]);
+                            opticalSystem.temp          = std::stod(systemParams[TEMP]);
+                            opticalSystem.pressure      = std::stod(systemParams[PRESSURE]);
+                            opticalSystem.globalRefSurf = std::stoi(systemParams[GLOBAL_REF_SURF]);
+                            DdeAck.fAck = TRUE;
+                        } catch (const std::invalid_argument& e) {
+                            logger.addLog("GetSystem: Invalid number format in parameter: " + std::string(e.what()));
+                            return 0;
+                        } catch (const std::out_of_range& e) {
+                            logger.addLog("GetSystem: Number out of range: " + std::string(e.what()));
+                            return 0;
+                        } catch (const std::exception& e) {
+                            logger.addLog("GetSystem: Unexpected error: " + std::string(e.what()));
+                            return 0;
                         }
                     }
                     if (command_token == "GetField") {
-                        int fn = -1;
-                        if (item_tokens.size() >= 2) {
-                            try {
-                                fn = std::stoi(item_tokens[1]);
-                            } catch (const std::invalid_argument& e) {
-                                logger.addLog("Error converting field index token to int: " + std::string(e.what()));
-                            } catch (const std::out_of_range& e) {
-                                logger.addLog("Error converting field index token to int (out of range): " + std::string(e.what()));
-                            }
+                        const int EXPECTED_COMMAND_TOKENS = 2;
+                        int params = static_cast<int>(item_tokens.size());
+
+                        if (params != EXPECTED_COMMAND_TOKENS) {
+                            logger.addLog("GetField: Invalid command format. Expected exactly " +
+                                        std::to_string(EXPECTED_COMMAND_TOKENS) + " tokens, got " +
+                                        std::to_string(params));
+                            return 0;
                         }
 
-                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(buffer);
-                        if (fn == 0) {
-                            if (buffer_tokens.size() >= 2) {
-                                try {
-                                    opticalSystem.fieldType = std::stoi(buffer_tokens[0]);
-                                    opticalSystem.numFields = std::stoi(buffer_tokens[1]);
-                                    DdeAck.fAck = TRUE;
-                                } catch (const std::invalid_argument& e) {
-                                    logger.addLog("Error converting field data token to int (index 0): " + std::string(e.what()));
-                                } catch (const std::out_of_range& e) {
-                                    logger.addLog("Error converting field data token to int (index 0, out of range): " + std::string(e.what()));
-                                }
-                            } else {
-                                logger.addLog("Not enough tokens for GetField (index 0) in handleDDEMessages.");
-                            }
-                        } else if (fn >= 1 && fn <= 11) {
-                            if (buffer_tokens.size() >= 2) {
-                                try {
-                                    opticalSystem.xField[fn] = std::stod(buffer_tokens[0]);
-                                    opticalSystem.yField[fn] = std::stod(buffer_tokens[1]);
-                                    DdeAck.fAck = TRUE;
-                                } catch (const std::invalid_argument& e) {
-                                    logger.addLog("Error converting field data token to double: " + std::string(e.what()));
-                                } catch (const std::out_of_range& e) {
-                                    logger.addLog("Error converting field data token to double (out of range): " + std::string(e.what()));
-                                }
-                            } else {
-                                logger.addLog("Not enough tokens for GetField (index > 0) in handleDDEMessages.");
-                            }
+                        int arg = -1;
+                        try {
+                            arg = std::stoi(item_tokens[1]);
+                        } catch (const std::invalid_argument&) {
+                            logger.addLog("GetField: Invalid field index '" + item_tokens[1] + "'. Not a number.");
+                            return 0;
+                        } catch (const std::out_of_range&) {
+                            logger.addLog("GetField: Field index '" + item_tokens[1] + "' is out of range (too large).");
+                            return 0;
                         }
+
+                        if (arg == 0 || (arg >= ZemaxDDE::MIN_FIELDS && arg <= ZemaxDDE::MAX_FIELDS)) {
+                            auto tokens = ZemaxDDE::tokenize(buffer);
+                            int dataCount = static_cast<int>(tokens.size());
+
+                            if(arg == 0) {
+                                const int GET_FIELD_META_COUNT = 5;     // fieldType, numFields, maxX, maxY, normalizationMethod
+                                if (dataCount != GET_FIELD_META_COUNT) {
+                                    logger.addLog("GetField: Invalid parameter count for field metadata. Expected exactly " +
+                                                std::to_string(GET_FIELD_META_COUNT) + ", got " +
+                                                std::to_string(dataCount));
+                                    return 0;
+                                }
+
+                                try {
+                                    enum  {
+                                        FIELD_TYPE,
+                                        NUM_FIELDS,
+                                        MAX_X_FIELD,
+                                        MAX_Y_FIELD,
+                                        NORMALIZATION_METHOD
+                                    };
+
+                                    opticalSystem.fieldType = std::stoi(tokens[FIELD_TYPE]);
+
+                                    int numFields = std::stoi(tokens[NUM_FIELDS]);
+                                    if (numFields < ZemaxDDE::MIN_FIELDS || numFields > ZemaxDDE::MAX_FIELDS) {
+                                        logger.addLog("GetField: Invalid numFields value: " + std::to_string(numFields) +
+                                                    ". Must be in range [" + std::to_string(ZemaxDDE::MIN_FIELDS) + ", " +
+                                                    std::to_string(ZemaxDDE::MAX_FIELDS) + "]");
+                                        return 0;
+                                    }
+
+                                    opticalSystem.numFields = numFields;
+                                    opticalSystem.maxXField = std::stod(tokens[MAX_X_FIELD]);
+                                    opticalSystem.maxYField = std::stod(tokens[MAX_Y_FIELD]);
+                                    opticalSystem.normalizationMethod = std::stoi(tokens[NORMALIZATION_METHOD]);
+                                } catch (const std::exception& e) {
+                                    logger.addLog("GetField: Failed to parse field metadata: " + std::string(e.what()));
+                                    return 0;
+                                }
+                            } else {
+                                const int GET_FIELD_DATA_COUNT = 8;     // xField, yField, weight, vDx, vDy, vCx, vCy, vAn
+                                if (dataCount != GET_FIELD_DATA_COUNT) {
+                                    logger.addLog("GetField: Invalid parameter count for field data. Expected exactly " +
+                                                std::to_string(GET_FIELD_DATA_COUNT) + ", got " +
+                                                std::to_string(dataCount));
+                                    return 0;
+                                }
+
+                                try {
+                                    enum {
+                                        XFIELD,
+                                        YFIELD,
+                                        // WEIGHT,
+                                        // VDX,
+                                        // VDY,
+                                        // VCX,
+                                        // VCY,
+                                        // VAN
+                                    };
+
+                                    opticalSystem.xField[arg] = std::stod(tokens[XFIELD]);
+                                    opticalSystem.yField[arg] = std::stod(tokens[YFIELD]);
+                                } catch (const std::exception& e) {
+                                    logger.addLog("GetField: Failed to parse data for field " + std::to_string(arg) +
+                                                ": " + std::string(e.what()));
+                                    return 0;
+                                }
+                            }
+                        } else {
+                            logger.addLog("GetField: Field index must be 0 (metadata) or in range [" + 
+                                        std::to_string(ZemaxDDE::MIN_FIELDS) + ", " +
+                                        std::to_string(ZemaxDDE::MAX_FIELDS) + "]. Got: " +
+                                        std::to_string(arg));
+                            return 0;
+                        }
+                        DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetWave") {
                         int wn = -1;
@@ -233,7 +337,6 @@ namespace ZemaxDDE {
                         }
                     }
                 }
-
                 if (pDdeData->fAckReq == TRUE) {
                     WORD wStatus = *((WORD*)&DdeAck);
                     if (!PostMessageW((HWND)wParam, WM_DDE_ACK, (WPARAM)zemaxDDEClient, PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
@@ -245,7 +348,6 @@ namespace ZemaxDDE {
                 } else {
                     GlobalDeleteAtom(aItem);
                 }
-
                 if (pDdeData->fRelease == TRUE || DdeAck.fAck == FALSE) {
                     GlobalUnlock(hDdeData);
                     GlobalFree(hDdeData);

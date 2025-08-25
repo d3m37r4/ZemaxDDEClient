@@ -47,7 +47,18 @@ namespace ZemaxDDE {
         checkResponseStatus(std::string("No response from Zemax for request = ") + request);
     }
 
-    void ZemaxDDEClient::getFieldData(int fieldIndex) {
+    void ZemaxDDEClient::getFieldData() {
+        checkDDEConnection();
+
+        isDataReceived = false;
+        char request[256];
+        snprintf(request, sizeof(request), "GetField,0");
+
+        sendPostRequest(request);
+        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+    }
+
+    void ZemaxDDEClient::getFieldByIndex(int fieldIndex) {
         checkDDEConnection();
 
         isDataReceived = false;
