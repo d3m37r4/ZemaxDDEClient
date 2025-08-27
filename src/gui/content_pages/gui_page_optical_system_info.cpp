@@ -16,19 +16,16 @@ namespace gui {
             const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData(); 
             ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
             ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
+            ImGui::Text("There are %d surfaces", opticalSystem.numSurfs);
+            ImGui::Text("The units are %s", getUnitString(opticalSystem.units));
             ImGui::Spacing();
-
-            ImGui::Text("Number of Surfaces: %d", opticalSystem.numSurfs);
             ImGui::Text("Stop Surface: %d", opticalSystem.stopSurf);
             ImGui::Text("Global Reference Surface: %d", opticalSystem.globalRefSurf);
             ImGui::Spacing();
-
             ImGui::Text("Non-Axial Flag: %s", opticalSystem.nonAxialFlag ? "Non-Axial" : "Axial");
             ImGui::Text("Ray Aiming Type: %s", gui::getRayAimingTypeString(opticalSystem.rayAimingType));
             ImGui::Text("Adjust Index: %s", opticalSystem.adjustIndex ? "True" : "False");
             ImGui::Spacing();
-
-            ImGui::Text("Units: %s", getUnitString(opticalSystem.units));
             ImGui::Text("Temperature: %.4f °C", opticalSystem.temp);
             ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
             ImGui::Spacing();
@@ -52,6 +49,7 @@ namespace gui {
                     ImGui::EndTable();
                 }
             }
+            
         } else {
             ImGui::Text("To get data, initialize a DDE connection with Zemax server.");
         }
