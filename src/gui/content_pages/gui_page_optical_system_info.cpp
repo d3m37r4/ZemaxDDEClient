@@ -9,10 +9,9 @@ namespace gui {
     void GuiManager::renderPageOpticalSystemInfo() {
         ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
         ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
         if (dde_initialized) {
-            ImGui::Text("Information about current system");
-            ImGui::Spacing();
-
             const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData(); 
             ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
             ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
@@ -29,8 +28,8 @@ namespace gui {
             ImGui::Text("Temperature: %.4f °C", opticalSystem.temp);
             ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
             ImGui::Spacing();
-
             ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
+
             if (ImGui::CollapsingHeader("Field data")) {
                 if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
                     ImGui::TableSetupColumn("#");
@@ -49,7 +48,6 @@ namespace gui {
                     ImGui::EndTable();
                 }
             }
-            
         } else {
             ImGui::Text("To get data, initialize a DDE connection with Zemax server.");
         }
