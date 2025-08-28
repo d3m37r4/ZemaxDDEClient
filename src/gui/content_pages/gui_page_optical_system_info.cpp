@@ -29,6 +29,8 @@ namespace gui {
             ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
             ImGui::Spacing();
             ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
+
+            ImGui::BeginChild("FieldDataContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
             if (ImGui::CollapsingHeader("Field data")) {
                 if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
                     ImGui::TableSetupColumn("#");
@@ -47,11 +49,14 @@ namespace gui {
                     ImGui::EndTable();
                 }
             }
+            ImGui::EndChild();
             ImGui::Spacing();
             ImGui::Text("There are %d wavelengths", opticalSystem.numWaves);
             ImGui::Text("The primary wavelength is %d", opticalSystem.primWave);
+
+            ImGui::BeginChild("WaveDataContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
             if (ImGui::CollapsingHeader("Wave data")) {
-                if (ImGui::BeginTable("WaveData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
+                if (ImGui::BeginTable("WaveDataTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
                     ImGui::TableSetupColumn("#");
                     ImGui::TableSetupColumn("Wavelength (μm)");
                     ImGui::TableSetupColumn("Weight");
@@ -68,6 +73,7 @@ namespace gui {
                     ImGui::EndTable();
                 }
             }
+            ImGui::EndChild();
         } else {
             ImGui::Text("To get data, initialize a DDE connection with Zemax server.");
         }
