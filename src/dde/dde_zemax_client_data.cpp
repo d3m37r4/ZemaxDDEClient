@@ -3,17 +3,6 @@
 #include "dde_zemax_utils.h"
 
 namespace ZemaxDDE {
-    void ZemaxDDEClient::getSurfaceRadius(int surfaceNumber) {
-        checkDDEConnection();
-
-        isDataReceived = false;
-        char request[256];
-        snprintf(request, sizeof(request), "GetSurfaceData,%d,2", surfaceNumber);
-
-        sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
-    }
-
     void ZemaxDDEClient::getLensName() {
         checkDDEConnection();
 
@@ -22,7 +11,7 @@ namespace ZemaxDDE {
         snprintf(request, sizeof(request), "GetName");
 
         sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+        checkResponseStatus(std::string("GetName: No response from Zemax for request = ") + request);
     }
 
     void ZemaxDDEClient::getFileName() {
@@ -33,7 +22,7 @@ namespace ZemaxDDE {
         snprintf(request, sizeof(request), "GetFile");
 
         sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+        checkResponseStatus(std::string("GetFile: No response from Zemax for request = ") + request);
     }
 
     void ZemaxDDEClient::getSystemData() {
@@ -44,7 +33,7 @@ namespace ZemaxDDE {
         snprintf(request, sizeof(request), "GetSystem");
 
         sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+        checkResponseStatus(std::string("GetSystem: No response from Zemax for request = ") + request);
     }
 
     void ZemaxDDEClient::getFieldData() {
@@ -55,7 +44,7 @@ namespace ZemaxDDE {
         snprintf(request, sizeof(request), "GetField,0");
 
         sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+        checkResponseStatus(std::string("GetField: No response from Zemax for request = ") + request);
     }
 
     void ZemaxDDEClient::getFieldByIndex(int fieldIndex) {
@@ -66,10 +55,21 @@ namespace ZemaxDDE {
         snprintf(request, sizeof(request), "GetField,%d", fieldIndex);
 
         sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+        checkResponseStatus(std::string("GetField: No response from Zemax for request = ") + request);
     }
 
-    void ZemaxDDEClient::getWaveData(int waveIndex) {
+    void ZemaxDDEClient::getWaveData() {
+        checkDDEConnection();
+
+        isDataReceived = false;
+        char request[256];
+        snprintf(request, sizeof(request), "GetWave,0");
+
+        sendPostRequest(request);
+        checkResponseStatus(std::string("GetWave: No response from Zemax for request = ") + request);
+    }
+
+    void ZemaxDDEClient::getWaveByIndex(int waveIndex) {
         checkDDEConnection();
 
         isDataReceived = false;
@@ -77,7 +77,17 @@ namespace ZemaxDDE {
         snprintf(request, sizeof(request), "GetWave,%d", waveIndex);
 
         sendPostRequest(request);
-        checkResponseStatus(std::string("No response from Zemax for request = ") + request);
+        checkResponseStatus(std::string("GetWave: No response from Zemax for request = ") + request);
     }
 
+    void ZemaxDDEClient::getSurfaceRadius(int surfaceNumber) {
+        checkDDEConnection();
+
+        isDataReceived = false;
+        char request[256];
+        snprintf(request, sizeof(request), "GetSurfaceData,%d,2", surfaceNumber);
+
+        sendPostRequest(request);
+        checkResponseStatus(std::string("GetSurfaceData: No response from Zemax for request = ") + request);
+    }
 }

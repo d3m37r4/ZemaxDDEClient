@@ -106,6 +106,8 @@ int main() {
     // Register callback to send requests after DDE connection
     zemaxDDEClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
         try {
+            client->getLensName();
+            client->getFileName();
             client->getSystemData();
             client->getFieldData();
 
@@ -115,13 +117,21 @@ int main() {
                 return;
             }
 
-            for (int i = 1; i <= numFields; ++i) {
+            for (int i = ZemaxDDE::MIN_FIELDS; i <= numFields; ++i) {
                 client->getFieldByIndex(i);
             }
 
-            client->getWaveData(0);
-            client->getLensName();
-            client->getFileName();
+            client->getWaveData();
+
+            int numWaves = client->getOpticalSystemData().numWaves;
+            if (numWaves < 0) {
+                logger.addLog("Invalid numWaves value: " + std::to_string(numWaves) + ". Skipping wave requests.");
+                return;
+            }
+
+            for (int i = ZemaxDDE::MIN_WAVES; i <= numWaves; ++i) {
+                client->getWaveByIndex(i);
+            }
         } catch (const std::exception& e) {
             logger.addLog("Error requesting initial system data: " + std::string(e.what()));
         }

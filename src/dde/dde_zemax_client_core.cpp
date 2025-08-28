@@ -295,46 +295,92 @@ namespace ZemaxDDE {
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetWave") {
-                        int wn = -1;
-                        if (item_tokens.size() >= 2) {
-                            try {
-                                wn = std::stoi(item_tokens[1]);
-                            } catch (const std::invalid_argument& e) {
-                                logger.addLog("Error converting wave index token to int: " + std::string(e.what()));
-                            } catch (const std::out_of_range& e) {
-                                logger.addLog("Error converting wave index token to int (out of range): " + std::string(e.what()));
-                            }
+                        const int EXPECTED_COMMAND_TOKENS = 2;
+                        int params = static_cast<int>(item_tokens.size());
+
+                        if (params != EXPECTED_COMMAND_TOKENS) {
+                            logger.addLog("GetWave: Invalid command format. Expected exactly " +
+                                        std::to_string(EXPECTED_COMMAND_TOKENS) + " tokens, got " +
+                                        std::to_string(params));
+                            return 0;
                         }
 
-                        std::vector<std::string> buffer_tokens = ZemaxDDE::tokenize(buffer);
-                        if (wn == 0) {
-                            if (buffer_tokens.size() >= 2) {
-                                try {
-                                    opticalSystem.primWave = std::stoi(buffer_tokens[0]);
-                                    opticalSystem.numWaves = std::stoi(buffer_tokens[1]);
-                                    DdeAck.fAck = TRUE;
-                                } catch (const std::invalid_argument& e) {
-                                    logger.addLog("Error converting wave data token to int (index 0): " + std::string(e.what()));
-                                } catch (const std::out_of_range& e) {
-                                    logger.addLog("Error converting wave data token to int (index 0, out of range): " + std::string(e.what()));
-                                }
-                            } else {
-                                logger.addLog("Not enough tokens for GetWave (index 0) in handleDDEMessages.");
-                            }
-                        } else if (wn >= 1 && wn <= 23) {
-                            if (!buffer_tokens.empty()) {
-                                try {
-                                    opticalSystem.waveLen[wn] = std::stod(buffer_tokens[0]);
-                                    DdeAck.fAck = TRUE;
-                                } catch (const std::invalid_argument& e) {
-                                    logger.addLog("Error converting wave data token to double: " + std::string(e.what()));
-                                } catch (const std::out_of_range& e) {
-                                    logger.addLog("Error converting wave data token to double (out of range): " + std::string(e.what()));
-                                }
-                            } else {
-                                logger.addLog("No tokens for GetWave (index > 0) in handleDDEMessages.");
-                            }
+                        int arg = -1;
+                        try {
+                            arg = std::stoi(item_tokens[1]);
+                        } catch (const std::invalid_argument&) {
+                            logger.addLog("GetWave: Invalid wave index '" + item_tokens[1] + "'. Not a number.");
+                            return 0;
+                        } catch (const std::out_of_range&) {
+                            logger.addLog("GetWave: Wave index '" + item_tokens[1] + "' is out of range (too large).");
+                            return 0;
                         }
+
+                        if (arg == 0 || (arg >= ZemaxDDE::MIN_WAVES && arg <= ZemaxDDE::MAX_WAVES)) {
+                            auto tokens = ZemaxDDE::tokenize(buffer);
+                            int dataCount = static_cast<int>(tokens.size());
+
+                            if(arg == 0) {
+                                const int GET_WAVE_META_COUNT = 2;     // primary, number
+                                if (dataCount != GET_WAVE_META_COUNT) {
+                                    logger.addLog("GetWave: Invalid parameter count for wave metadata. Expected exactly " +
+                                                std::to_string(GET_WAVE_META_COUNT) + ", got " +
+                                                std::to_string(dataCount));
+                                    return 0;
+                                }
+
+                                try {
+                                    enum  {
+                                        PRIM_WAVE,
+                                        NUM_WAVES
+                                    };
+
+                                    opticalSystem.primWave = std::stoi(tokens[PRIM_WAVE]);
+
+                                    int numWaves = std::stoi(tokens[NUM_WAVES]);
+                                    if (numWaves < ZemaxDDE::MIN_WAVES || numWaves > ZemaxDDE::MAX_WAVES) {
+                                        logger.addLog("GetWave: Invalid numWaves value: " + std::to_string(numWaves) +
+                                                    ". Must be in range [" + std::to_string(ZemaxDDE::MIN_WAVES) + ", " +
+                                                    std::to_string(ZemaxDDE::MAX_WAVES) + "]");
+                                        return 0;
+                                    }
+
+                                    opticalSystem.numWaves = numWaves;
+                                } catch (const std::exception& e) {
+                                    logger.addLog("GetWave: Failed to parse wave metadata: " + std::string(e.what()));
+                                    return 0;
+                                }
+                            } else {
+                                const int GET_WAVE_DATA_COUNT = 2;     // waveLen, weight
+                                if (dataCount != GET_WAVE_DATA_COUNT) {
+                                    logger.addLog("GetWave: Invalid parameter count for wave data. Expected exactly " +
+                                                std::to_string(GET_WAVE_DATA_COUNT) + ", got " +
+                                                std::to_string(dataCount));
+                                    return 0;
+                                }
+
+                                try {
+                                    enum {
+                                        WAVE_LENGTH,
+                                        WEIGHT,
+                                    };
+
+                                    opticalSystem.waveData[arg].value  = std::stod(tokens[WAVE_LENGTH]);
+                                    opticalSystem.waveData[arg].weight = std::stod(tokens[WEIGHT]);
+                                } catch (const std::exception& e) {
+                                    logger.addLog("GetWave: Failed to parse data for wave " + std::to_string(arg) +
+                                                ": " + std::string(e.what()));
+                                    return 0;
+                                }
+                            }
+                        } else {
+                            logger.addLog("GetWave: Wave index must be 0 (metadata) or in range [" + 
+                                        std::to_string(ZemaxDDE::MIN_WAVES) + ", " +
+                                        std::to_string(ZemaxDDE::MAX_WAVES) + "]. Got: " +
+                                        std::to_string(arg));
+                            return 0;
+                        }
+                        DdeAck.fAck = TRUE;
                     }
                 }
                 if (pDdeData->fAckReq == TRUE) {

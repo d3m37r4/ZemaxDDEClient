@@ -29,14 +29,13 @@ namespace gui {
             ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
             ImGui::Spacing();
             ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
-
             if (ImGui::CollapsingHeader("Field data")) {
                 if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
                     ImGui::TableSetupColumn("#");
                     ImGui::TableSetupColumn("X-Field");
                     ImGui::TableSetupColumn("Y-Field");
                     ImGui::TableHeadersRow();
-                    for (int i = 1; i <= opticalSystem.numFields; i++) {
+                    for (int i = ZemaxDDE::MIN_FIELDS; i <= opticalSystem.numFields; i++) {
                         ImGui::TableNextRow();
                         ImGui::TableSetColumnIndex(0);
                         ImGui::Text("%d", i);
@@ -44,6 +43,27 @@ namespace gui {
                         ImGui::Text("%.4f", opticalSystem.xField[i]);
                         ImGui::TableSetColumnIndex(2);
                         ImGui::Text("%.4f", opticalSystem.yField[i]);
+                    }
+                    ImGui::EndTable();
+                }
+            }
+            ImGui::Spacing();
+            ImGui::Text("There are %d wavelengths", opticalSystem.numWaves);
+            ImGui::Text("The primary wavelength is %d", opticalSystem.primWave);
+            if (ImGui::CollapsingHeader("Wave data")) {
+                if (ImGui::BeginTable("WaveData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
+                    ImGui::TableSetupColumn("#");
+                    ImGui::TableSetupColumn("Wavelength (μm)");
+                    ImGui::TableSetupColumn("Weight");
+                    ImGui::TableHeadersRow();
+                    for (int i = ZemaxDDE::MIN_WAVES; i <= opticalSystem.numWaves; i++) {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("%d", i);
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%.4f", opticalSystem.waveData[i].value);
+                        ImGui::TableSetColumnIndex(2);
+                        ImGui::Text("%.4f", opticalSystem.waveData[i].weight);
                     }
                     ImGui::EndTable();
                 }

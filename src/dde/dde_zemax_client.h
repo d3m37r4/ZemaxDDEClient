@@ -31,7 +31,8 @@ namespace ZemaxDDE {
             void getSystemData();
             void getFieldData();
             void getFieldByIndex(int fieldIndex);
-            void getWaveData(int waveIndex);
+            void getWaveData();
+            void getWaveByIndex(int waveIndex);
             void getSurfaceRadius(int surfaceNumber);
 
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
