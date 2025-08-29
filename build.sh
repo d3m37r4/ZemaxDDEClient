@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 # =============================================
 # Configurable Variables
@@ -44,6 +43,7 @@ LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32 -lole32 -lcomdlg32 -luui
 # =============================================
 SOURCE_FILES=(
     "$SRC_DIR/main.cpp"
+    "$SRC_DIR/application.cpp"
     "$SRC_DIR/dde/dde_zemax_client_core.cpp"
     "$SRC_DIR/dde/dde_zemax_client_data.cpp"
     "$SRC_DIR/dde/dde_zemax_utils.cpp"

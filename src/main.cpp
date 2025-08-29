@@ -5,6 +5,7 @@
 #include "logger/logger.h"
 #include "dde/dde_zemax_client.h"
 #include "gui/gui.h"
+#include "application.h"
 
 Logger logger;
 
@@ -143,6 +144,14 @@ int main() {
 
     while (!gui.shouldClose()) {
         glfwPollEvents();
+
+        // Hotkey Ctrl+O
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
+            if (ImGui::IsKeyPressed(ImGuiKey_O)) {
+                Application::openZmxFileInZemax();
+            }
+        }
+
         gui.render();
         glfwSwapBuffers(glfwWindow);
     }
