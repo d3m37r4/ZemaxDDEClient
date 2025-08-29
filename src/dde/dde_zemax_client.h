@@ -42,12 +42,8 @@ namespace ZemaxDDE {
         private:
             HWND zemaxDDEServer = NULL;
             HWND zemaxDDEClient = NULL;
-
             OnDDEConnectedCallback onDDEConnected;
-
-            Logger logger;
             OpticalSystemData opticalSystem;
-
             bool isDataReceived = false;
 
             void sendPostRequest(const char* request);
