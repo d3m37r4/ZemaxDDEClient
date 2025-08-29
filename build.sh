@@ -1,10 +1,12 @@
 #!/bin/bash
+set -x
 
 # =============================================
 # Configurable Variables
 # =============================================
 SRC_DIR="src"
 IMGUI_DIR="$SRC_DIR/lib/imgui"
+NFD_DIR="$SRC_DIR/lib/nfd"
 OUTPUT_BASE="ZemaxDDEClient"
 BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
 OUTPUT_EXE="${OUTPUT_BASE}_${BUILD_NUMBER}.exe"
@@ -20,12 +22,12 @@ BUILD_DEBUG="${BUILD_DEBUG:-0}"             # Debug mode (1 - on, 0 - off)
 BUILD_OPTIMIZE="${BUILD_OPTIMIZE:-0}"       # Optimize mode (0 - off, 1 - on with -O2, 2 - on with -O3)
 
 # Base compiler flags by default
-CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -v -mwindows -DUNICODE -D_UNICODE"
+CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -mwindows -DUNICODE -D_UNICODE -std=c++17"
 
 # Adjust flags based on build modes
 if [ "$BUILD_DEBUG" = "1" ]; then
     CXX_FLAGS="${CXX_FLAGS//-mwindows/}"
-    CXX_FLAGS="$CXX_FLAGS -DDEBUG_LOG"
+    CXX_FLAGS="$CXX_FLAGS -v -DDEBUG_LOG"
 fi
 
 # Add optimization if BUILD_OPTIMIZE is enabled
@@ -35,7 +37,7 @@ elif [ "$BUILD_OPTIMIZE" = "2" ]; then
     CXX_FLAGS="$CXX_FLAGS -O3"
 fi
 
-LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32"
+LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32 -lole32 -lcomdlg32 -luuid"
 
 # =============================================
 # Source Files Configuration
@@ -57,6 +59,8 @@ SOURCE_FILES=(
     "$SRC_DIR/gui/gui_init.cpp"
     "$SRC_DIR/gui/gui_container.cpp"
     "$SRC_DIR/logger/logger.cpp"
+    "$NFD_DIR/src/nfd_common.c"
+    "$NFD_DIR/src/nfd_win.cpp"
     "$IMGUI_DIR/imgui.cpp"
     "$IMGUI_DIR/imgui_draw.cpp"
     "$IMGUI_DIR/imgui_tables.cpp"
@@ -85,6 +89,14 @@ check_environment() {
         echo "  git submodule update --init --recursive"
         exit 1
     fi
+
+    # Verify NFD
+    if [ ! -d "$NFD_DIR" ]; then
+        echo "ERROR: NFD directory not found at $NFD_DIR"
+        echo "Did you forget to init submodules? Run:"
+        echo "  git submodule update --init --recursive"
+        exit 1
+    fi
 }
 
 # Verify source files
@@ -107,6 +119,9 @@ build_project() {
         "${SOURCE_FILES[@]}" \
         -I"$SRC_DIR" \
         -I"$SRC_DIR/gui" \
+        -I"$NFD_DIR" \
+        -I"$NFD_DIR/src" \
+        -I"$NFD_DIR/src/include" \
         -I"$IMGUI_DIR" \
         -I"$IMGUI_DIR/backends" \
         -I"$MINGW_INCLUDE" \
