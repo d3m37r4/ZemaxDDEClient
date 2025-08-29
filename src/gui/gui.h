@@ -43,7 +43,6 @@ namespace gui {
             GLFWwindow* glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
             HWND hwndClient;                                    // DDE client window handle
             ZemaxDDE::ZemaxDDEClient* zemaxDDEClient;           // Pointer to a DDE client instance
-            Logger logger;                                      // Logger instance for tracking events
             
             char errorMsg[ERROR_MSG_SIZE]{0};                   // Buffer for error messages
             bool dde_initialized{false};                        // Flag indicating DDE connection status

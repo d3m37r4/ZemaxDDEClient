@@ -3,7 +3,6 @@
 #include "lib/imgui/imgui.h"
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
-// #include "dde/dde_zemax_handler.h"
 #include "dde/dde_zemax_client.h"
 #include "gui.h"
 
@@ -12,7 +11,6 @@ namespace gui {
         : glfwWindow(glfwWindow)
         , hwndClient(hwndClient)
         , zemaxDDEClient(ddeClient)
-        , logger()
         , dde_initialized(false)
         , selectedMenuItem(0)
         , surface_number(1)
