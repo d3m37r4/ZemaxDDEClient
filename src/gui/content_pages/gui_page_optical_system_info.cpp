@@ -17,19 +17,11 @@ namespace gui {
             ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());
             ImGui::Text("There are %d surfaces", opticalSystem.numSurfs);
             ImGui::Text("The units are %s", getUnitString(opticalSystem.units));
-            ImGui::Spacing();
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
             ImGui::Text("Stop Surface: %d", opticalSystem.stopSurf);
             ImGui::Text("Global Reference Surface: %d", opticalSystem.globalRefSurf);
-            ImGui::Spacing();
-            ImGui::Text("Non-Axial Flag: %s", opticalSystem.nonAxialFlag ? "Non-Axial" : "Axial");
-            ImGui::Text("Ray Aiming Type: %s", gui::getRayAimingTypeString(opticalSystem.rayAimingType));
-            ImGui::Text("Adjust Index: %s", opticalSystem.adjustIndex ? "True" : "False");
-            ImGui::Spacing();
-            ImGui::Text("Temperature: %.4f °C", opticalSystem.temp);
-            ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
-            ImGui::Spacing();
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
             ImGui::Text("Number of Fields: %d (Type %d)", opticalSystem.numFields, opticalSystem.fieldType);
-
             ImGui::BeginChild("FieldDataContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
             if (ImGui::CollapsingHeader("Field data")) {
                 if (ImGui::BeginTable("FieldData", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
@@ -50,10 +42,9 @@ namespace gui {
                 }
             }
             ImGui::EndChild();
-            ImGui::Spacing();
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
             ImGui::Text("There are %d wavelengths", opticalSystem.numWaves);
             ImGui::Text("The primary wavelength is %d", opticalSystem.primWave);
-
             ImGui::BeginChild("WaveDataContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
             if (ImGui::CollapsingHeader("Wave data")) {
                 if (ImGui::BeginTable("WaveDataTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersInnerV)) {
@@ -74,6 +65,13 @@ namespace gui {
                 }
             }
             ImGui::EndChild();
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGui::Text("Non-Axial Flag: %s", opticalSystem.nonAxialFlag ? "Non-Axial" : "Axial");
+            ImGui::Text("Ray Aiming Type: %s", gui::getRayAimingTypeString(opticalSystem.rayAimingType));
+            ImGui::Text("Adjust Index: %s", opticalSystem.adjustIndex ? "True" : "False");
+            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGui::Text("Temperature: %.4f °C", opticalSystem.temp);
+            ImGui::Text("Pressure: %.4f atm", opticalSystem.pressure);
         } else {
             ImGui::Text("To get data, initialize a DDE connection with Zemax server.");
         }
