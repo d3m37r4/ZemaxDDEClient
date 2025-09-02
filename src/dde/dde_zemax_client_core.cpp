@@ -384,7 +384,8 @@ namespace ZemaxDDE {
                     }
                 }
                 if (pDdeData->fAckReq == TRUE) {
-                    WORD wStatus = *((WORD*)&DdeAck);
+                    WORD wStatus;
+                    memcpy(&wStatus, &DdeAck, sizeof(wStatus));
                     if (!PostMessageW((HWND)wParam, WM_DDE_ACK, (WPARAM)zemaxDDEClient, PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
                         GlobalDeleteAtom(aItem);
                         GlobalUnlock(hDdeData);
