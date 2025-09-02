@@ -1,147 +1,102 @@
 #!/bin/bash
 
-# =============================================
-# Configurable Variables
-# =============================================
-SRC_DIR="src"
-IMGUI_DIR="$SRC_DIR/lib/imgui"
-NFD_DIR="$SRC_DIR/lib/nfd"
-OUTPUT_BASE="ZemaxDDEClient"
-BUILD_NUMBER=$(date +%Y%m%d%H%M%S)
-OUTPUT_EXE="${OUTPUT_BASE}_${BUILD_NUMBER}.exe"
+# Settings
+PROJECT_NAME="ZemaxDDEClient"
+BUILD_DIR="build"
+SOURCE_DIR="."
+OUTPUT_EXE=""
 
-# MSYS2 paths (customize these if needed)
-MSYS2_ROOT="/c/msys64"
-MINGW_DIR="$MSYS2_ROOT/mingw64"
-MINGW_INCLUDE="$MINGW_DIR/include"
-MINGW_LIB="$MINGW_DIR/lib"
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Compiler flags
-BUILD_DEBUG="${BUILD_DEBUG:-0}"             # Debug mode (1 - on, 0 - off)
-BUILD_OPTIMIZE="${BUILD_OPTIMIZE:-0}"       # Optimize mode (0 - off, 1 - on with -O2, 2 - on with -O3)
-
-# Base compiler flags by default
-CXX_FLAGS="-Wall -Wextra -static-libgcc -static-libstdc++ -mwindows -DUNICODE -D_UNICODE -std=c++17"
-
-# Adjust flags based on build modes
-if [ "$BUILD_DEBUG" = "1" ]; then
-    CXX_FLAGS="${CXX_FLAGS//-mwindows/}"
-    CXX_FLAGS="$CXX_FLAGS -v -DDEBUG_LOG"
+# Help
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: $0 [debug|release] [optimize=1|2]"
+    echo "  $0               -> Release build"
+    echo "  $0 debug         -> Debug build"
+    echo "  $0 release       -> Release build"
+    echo "  $0 optimize=2    -> Release + -O3"
+    echo "  $0 debug optimize=1 -> Debug + -O2"
+    exit 0
 fi
 
-# Add optimization if BUILD_OPTIMIZE is enabled
-if [ "$BUILD_OPTIMIZE" = "1" ]; then
-    CXX_FLAGS="$CXX_FLAGS -O2"
-elif [ "$BUILD_OPTIMIZE" = "2" ]; then
-    CXX_FLAGS="$CXX_FLAGS -O3"
-fi
+# Building types
+CMAKE_BUILD_TYPE="Release"
+EXTRA_CMAKE_ARGS=()
+EXTRA_BUILD_ARGS=()
 
-LINK_FLAGS="-lglfw3 -lopengl32 -lgdi32 -luser32 -limm32 -lole32 -lcomdlg32 -luuid"
-
-# =============================================
-# Source Files Configuration
-# =============================================
-SOURCE_FILES=(
-    "$SRC_DIR/main.cpp"
-    "$SRC_DIR/application.cpp"
-    "$SRC_DIR/dde/dde_zemax_client_core.cpp"
-    "$SRC_DIR/dde/dde_zemax_client_data.cpp"
-    "$SRC_DIR/dde/dde_zemax_utils.cpp"
-    "$SRC_DIR/gui/gui_utils.cpp"
-    "$SRC_DIR/gui/components/gui_debug_log.cpp"
-    "$SRC_DIR/gui/components/gui_popups.cpp"
-    "$SRC_DIR/gui/components/gui_dde_status.cpp"
-    "$SRC_DIR/gui/components/gui_sidebar.cpp"
-    "$SRC_DIR/gui/components/gui_menu_bar.cpp"
-    "$SRC_DIR/gui/components/gui_content.cpp"
-    "$SRC_DIR/gui/content_pages/gui_page_optical_system_info.cpp"
-    "$SRC_DIR/gui/content_pages/gui_page_local_surface_errors.cpp"
-    "$SRC_DIR/gui/gui_init.cpp"
-    "$SRC_DIR/gui/gui_container.cpp"
-    "$SRC_DIR/logger/logger.cpp"
-    "$NFD_DIR/src/nfd_common.c"
-    "$NFD_DIR/src/nfd_win.cpp"
-    "$IMGUI_DIR/imgui.cpp"
-    "$IMGUI_DIR/imgui_draw.cpp"
-    "$IMGUI_DIR/imgui_tables.cpp"
-    "$IMGUI_DIR/imgui_widgets.cpp"
-    "$IMGUI_DIR/backends/imgui_impl_glfw.cpp"
-    "$IMGUI_DIR/backends/imgui_impl_opengl3.cpp"
-)
-
-# =============================================
-# Build Process
-# =============================================
-
-# Check environment
-check_environment() {
-    # Verify MSYS2 paths
-    if [ ! -d "$MINGW_INCLUDE" ]; then
-        echo "ERROR: MinGW include directory not found at $MINGW_INCLUDE"
-        echo "Please set correct MSYS2_ROOT in build.sh or install MSYS2"
-        exit 1
-    fi
-
-    # Verify ImGui
-    if [ ! -d "$IMGUI_DIR" ]; then
-        echo "ERROR: ImGui directory not found at $IMGUI_DIR"
-        echo "Did you forget to init submodules? Run:"
-        echo "  git submodule update --init --recursive"
-        exit 1
-    fi
-
-    # Verify NFD
-    if [ ! -d "$NFD_DIR" ]; then
-        echo "ERROR: NFD directory not found at $NFD_DIR"
-        echo "Did you forget to init submodules? Run:"
-        echo "  git submodule update --init --recursive"
-        exit 1
-    fi
-}
-
-# Verify source files
-check_source_files() {
-    for file in "${SOURCE_FILES[@]}"; do
-        if [ ! -f "$file" ]; then
-            echo "ERROR: Source file not found: $file"
+for arg in "$@"; do
+    case "$arg" in
+        debug|Debug|DEBUG)
+            CMAKE_BUILD_TYPE="Debug"
+            ;;
+        release|Release|RELEASE)
+            CMAKE_BUILD_TYPE="Release"
+            ;;
+        optimize=1)
+            EXTRA_CMAKE_ARGS+=("-DBUILD_OPTIMIZE=1")
+            ;;
+        optimize=2)
+            EXTRA_CMAKE_ARGS+=("-DBUILD_OPTIMIZE=2")
+            ;;
+        --clean|-clean|clean)
+            echo -e "${YELLOW}=== Cleaning build directory ===${NC}"
+            rm -rf "$BUILD_DIR"
+            ;;
+        *)
+            echo -e "${RED}Unknown argument: $arg${NC}"
+            echo "Use $0 --help for usage"
             exit 1
-        fi
-    done
-}
+            ;;
+    esac
+done
 
-# Main build function
-build_project() {
-    echo "=== Building $OUTPUT_EXE ==="
-    echo "Compiler: $(g++ --version | head -n1)"
-    echo "Build timestamp: $(date)"
-    
-    g++ -o "$OUTPUT_EXE" \
-        "${SOURCE_FILES[@]}" \
-        -I"$SRC_DIR" \
-        -I"$SRC_DIR/gui" \
-        -I"$NFD_DIR" \
-        -I"$NFD_DIR/src" \
-        -I"$NFD_DIR/src/include" \
-        -I"$IMGUI_DIR" \
-        -I"$IMGUI_DIR/backends" \
-        -I"$MINGW_INCLUDE" \
-        -L"$MINGW_LIB" \
-        $CXX_FLAGS \
-        $LINK_FLAGS
-    
-    if [ $? -eq 0 ]; then
-        echo "=== Build successful ==="
-        echo "Output: $(pwd)/$OUTPUT_EXE"
-        echo "Size: $(du -h "$OUTPUT_EXE" | cut -f1)"
-    else
-        echo "=== Build failed ==="
-        exit 1
-    fi
-}
+BUILD_START=$(date +%s)
+echo -e "${GREEN}=== Building $PROJECT_NAME ($CMAKE_BUILD_TYPE) ===${NC}"
+echo "Build started at: $(date '+%Y-%m-%d %H:%M:%S')"
 
-# =============================================
-# Main Execution
-# =============================================
-check_environment
-check_source_files
-build_project
+# Configuration
+echo -e "${YELLOW}--- Configuring with CMake ---${NC}"
+cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" \
+    -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    "${EXTRA_CMAKE_ARGS[@]}" \
+    --fresh
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ CMake configuration failed${NC}"
+    exit 1
+fi
+
+# Building
+echo -e "${YELLOW}--- Building project ---${NC}"
+cmake --build "$BUILD_DIR" "${EXTRA_BUILD_ARGS[@]}"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Build failed${NC}"
+    exit 1
+fi
+
+# Step 3: Find the newest EXE
+OUTPUT_EXE=$(find "$BUILD_DIR/bin" -name "${PROJECT_NAME}_*.exe" -type f -printf '%T@ %p\n' | sort -n | tail -n1 | cut -d' ' -f2-)
+
+if [ -z "$OUTPUT_EXE" ]; then
+    echo -e "${RED}❌ Executable not found in $BUILD_DIR/bin${NC}"
+    exit 1
+fi
+
+# Этап 4: Вывод результата
+BUILD_END=$(date +%s)
+BUILD_TIME=$((BUILD_END - BUILD_START))
+
+echo -e "${GREEN}=== Build successful ===${NC}"
+echo "Build finished at: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "Elapsed time: ${BUILD_TIME}s"
+echo "Output: $(pwd)/$OUTPUT_EXE"
+echo "Size: $(du -h "$OUTPUT_EXE" | cut -f1)"
+
+# Опционально: запустить
+echo -e "${YELLOW}Run with: ./$OUTPUT_EXE${NC}"
