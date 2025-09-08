@@ -1,5 +1,4 @@
-#ifndef DDE_ZEMAX_TYPES_H
-#define DDE_ZEMAX_TYPES_H
+#pragma once
 
 #include <string>
 
@@ -42,4 +41,3 @@ namespace ZemaxDDE {
         Wavelength waveData[WAVE_ARRAY_SIZE] = {};
     };
 }
-#endif // DDE_ZEMAX_TYPES_H

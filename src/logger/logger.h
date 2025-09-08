@@ -1,5 +1,4 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -14,7 +13,6 @@ class Logger {
     private:
         std::vector<std::string> logs;
         static inline const char* LOG_TIME_FORMAT = "[%d.%m.%Y - %H:%M:%S]";     // Time format const
-    };
+};
 
-    extern Logger logger;
-#endif
+extern Logger logger;

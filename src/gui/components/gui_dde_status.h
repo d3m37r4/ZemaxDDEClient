@@ -1,5 +1,4 @@
-#ifndef GUI_DDE_STATUS_H
-#define GUI_DDE_STATUS_H
+#pragma once
 
 #include "lib/imgui/imgui.h"
 
@@ -22,4 +21,3 @@ namespace gui {
     static constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_HOVER = ImVec4(0.7f, 0.0f, 0.0f, 1.0f);     // Hovered state
     static constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_ACTIVE = ImVec4(0.3f, 0.0f, 0.0f, 1.0f);    // Active state
 }
-#endif // GUI_DDE_STATUS_H

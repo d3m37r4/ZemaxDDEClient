@@ -1,5 +1,4 @@
-#ifndef ZEMAX_DDE_CLIENT_H
-#define ZEMAX_DDE_CLIENT_H
+#pragma once
 
 #include <windows.h>
 #include <string>
@@ -53,4 +52,3 @@ namespace ZemaxDDE {
     };
 
 }
-#endif // ZEMAX_DDE_CLIENT_H
