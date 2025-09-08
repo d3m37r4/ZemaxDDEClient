@@ -20,7 +20,7 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        logger.addLog("(GUI MSG) DDE window created with handle hwndClient = " + std::to_string((uintptr_t)hwndClient));
+        logger.addLog("(GuiManager) Received DDE client window handle = " + std::to_string((uintptr_t)hwndClient));
     }
 
     GuiManager::~GuiManager() {
