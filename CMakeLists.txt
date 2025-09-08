@@ -58,6 +58,7 @@ configure_file(
 # Source files
 set(SOURCES
     ${SRC_DIR}/main.cpp
+    ${SRC_DIR}/app/app_init.cpp
     ${SRC_DIR}/application.cpp
     ${SRC_DIR}/dde/dde_zemax_client_core.cpp
     ${SRC_DIR}/dde/dde_zemax_client_data.cpp
@@ -102,6 +103,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_BINARY_DIR}
     ${SRC_DIR}
+    ${SRC_DIR}/app
     ${SRC_DIR}/gui
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
