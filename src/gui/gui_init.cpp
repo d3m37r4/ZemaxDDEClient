@@ -13,8 +13,6 @@ namespace gui {
         , zemaxDDEClient(ddeClient)
         , dde_initialized(false)
         , selectedMenuItem(0)
-        , surface_number(1)
-        , radius(0.0f)
         , show_updates_popup(false)
         , show_about_popup(false)
     {
@@ -22,7 +20,6 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        errorMsg[0] = '\0';
         logger.addLog("(GUI MSG) DDE window created with handle hwndClient = " + std::to_string((uintptr_t)hwndClient));
     }
 

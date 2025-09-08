@@ -34,7 +34,6 @@ namespace gui {
                 }
             } catch (const std::runtime_error& e) {
                 logger.addLog((std::string("(GUI MSG) DDE Error: ") + e.what()).c_str());
-                setErrorMsg(e.what());
             }
         }
         ImGui::PopStyleVar();
