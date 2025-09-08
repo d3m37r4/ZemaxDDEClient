@@ -27,6 +27,11 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
 - **GLFW**: `pacman -S mingw-w64-x86_64-glfw`
 - **Zemax** (running as DDE server)
 
+## 📚 Third-Party Libraries
+This project uses the following third-party libraries:
+- **[Dear ImGui](https://github.com/ocornut/imgui)** by Omar Cornut — Immediate Mode GUI
+- **[Native File Dialog (NFD)](https://github.com/mlabbe/nativefiledialog)** by Michael Labbe — Cross-platform file dialogs
+
 ## 🚀 Setup
 1. Clone the repository:
    ```bash
