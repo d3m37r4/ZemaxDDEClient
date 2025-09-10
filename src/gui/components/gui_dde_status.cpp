@@ -26,14 +26,18 @@ namespace gui {
                 if (!dde_initialized) {
                     zemaxDDEClient->initiateDDE();
                     dde_initialized = true;
-                    logger.addLog("(GUI MSG) DDE connection established successfully");
+                #ifdef DEBUG_LOG
+                    logger.addLog("[GUI] Connected to Zemax");
+                #endif
                 } else {
                     zemaxDDEClient->terminateDDE();
                     dde_initialized = false;
-                    logger.addLog("(GUI MSG) DDE connection terminated");
+                #ifdef DEBUG_LOG
+                    logger.addLog("[GUI] Disconnected from Zemax");
+                #endif
                 }
             } catch (const std::runtime_error& e) {
-                logger.addLog((std::string("(GUI MSG) DDE Error: ") + e.what()).c_str());
+                logger.addLog("[GUI] DDE connection failed: " + std::string(e.what()));
             }
         }
         ImGui::PopStyleVar();

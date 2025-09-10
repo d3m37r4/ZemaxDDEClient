@@ -17,7 +17,7 @@ namespace gui {
             for (const auto& log : logger.getLogs()) {
                 log_text += log + "\n";
             }
-            logger.addLog("Debug log copied to clipboard");
+            logger.addLog("[GUI] Debug log copied to clipboard");
             ImGui::SetClipboardText(log_text.c_str());
         }
         ImGui::EndChild();

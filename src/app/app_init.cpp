@@ -9,18 +9,18 @@ AppContext* initializeApplication() {
 
     // Initialize GLFW
     if (!glfwInit()) {
-        logger.addLog("Failed to initialize GLFW");
+        logger.addLog("[APP] Failed to initialize GLFW");
         delete ctx;
         return nullptr;
     }
 
-    logger.addLog("GLFW initialized successfully.");
+    logger.addLog("[APP] GLFW initialized");
 
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
     ctx->glfwWindow = glfwCreateWindow(800, 600, "ZemaxDDEClient", NULL, NULL);
 
     if (!ctx->glfwWindow) {
-        logger.addLog("Failed to create GLFW window.");
+        logger.addLog("[APP] Failed to create GLFW window");
         glfwTerminate();
         delete ctx;
         return nullptr;
@@ -29,7 +29,7 @@ AppContext* initializeApplication() {
     glfwMakeContextCurrent(ctx->glfwWindow);
     glfwSwapInterval(1);
 
-    logger.addLog("Application starting");
+    logger.addLog("[APP] Application starting");
 
     // Register DDE message-only window class
     WNDCLASSEXW wndClass = {};
@@ -40,29 +40,29 @@ AppContext* initializeApplication() {
     wndClass.lpszClassName = L"ZEMAX_DDE_Client";
 
     if (!RegisterClassExW(&wndClass)) {
-        logger.addLog("Failed to register DDE window class.");
+        logger.addLog("[APP] Failed to register DDE window class");
         glfwDestroyWindow(ctx->glfwWindow);
         glfwTerminate();
         delete ctx;
         return nullptr;
     }
 
-    logger.addLog("DDE window class registered.");
+    logger.addLog("[APP] DDE window class registered");
 
     // Create and associate ZemaxDDEClient with the window
-    const char* const DDE_ERROR_MSG_CREATE_WIN = "Failed to create DDE window";
-    ctx->hwndClient = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0,
-                                      HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+    ctx->hwndClient = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
 
     if (!ctx->hwndClient) {
-        MessageBoxA(NULL, DDE_ERROR_MSG_CREATE_WIN, "Error", MB_OK | MB_ICONERROR);
-        logger.addLog(DDE_ERROR_MSG_CREATE_WIN);
+        MessageBoxA(NULL, "Failed to create DDE communication window.\n"
+                        "The application will now exit.\n\n"
+                        "Ensure no other instance is running and try again.", "Error", MB_OK | MB_ICONERROR);
+        logger.addLog("[APP] Failed to create DDE window (CreateWindowExW returned NULL)");
         glfwTerminate();
         delete ctx;
         return nullptr;
     }
 
-    logger.addLog("DDE window created with handle hwndClient = " + std::to_string((uintptr_t)ctx->hwndClient));
+    logger.addLog("[APP] DDE window created: hwndClient = " + std::to_string((uintptr_t)ctx->hwndClient));
 
     // Create and associate ZemaxDDEClient with the window
     ctx->ddeClient = new ZemaxDDE::ZemaxDDEClient(ctx->hwndClient);
@@ -78,7 +78,7 @@ AppContext* initializeApplication() {
 
             int numFields = client->getOpticalSystemData().numFields;
             if (numFields < 0) {
-                logger.addLog("Invalid numFields value: " + std::to_string(numFields) + ". Skipping field requests.");
+                logger.addLog("[DDE] Invalid numFields value: " + std::to_string(numFields) + ". Skipping field requests.");
                 return;
             }
 
@@ -90,7 +90,7 @@ AppContext* initializeApplication() {
 
             int numWaves = client->getOpticalSystemData().numWaves;
             if (numWaves < 0) {
-                logger.addLog("Invalid numWaves value: " + std::to_string(numWaves) + ". Skipping wave requests.");
+                logger.addLog("[DDE] Invalid numWaves value: " + std::to_string(numWaves) + ". Skipping wave requests.");
                 return;
             }
 
@@ -98,7 +98,7 @@ AppContext* initializeApplication() {
                 client->getWaveByIndex(i);
             }
         } catch (const std::exception& e) {
-            logger.addLog("Error requesting initial system data: " + std::string(e.what()));
+            logger.addLog("[DDE] Error requesting initial system data: " + std::string(e.what()));
         }
     });
 

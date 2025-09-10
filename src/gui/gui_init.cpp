@@ -20,7 +20,7 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        logger.addLog("(GuiManager) Received DDE client window handle = " + std::to_string((uintptr_t)hwndClient));
+        logger.addLog("[GUI] Received DDE client window handle = " + std::to_string((uintptr_t)hwndClient));
     }
 
     GuiManager::~GuiManager() {
@@ -43,7 +43,7 @@ namespace gui {
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 18.0f);
         
         if (!font) {
-            logger.addLog("(GUI MSG) Failed to load font segoeui.ttf");
+            logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
         }
 
         // ImGui::StyleColorsClassic();
@@ -53,6 +53,6 @@ namespace gui {
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 
-        logger.addLog("(GUI MSG) GUI initialized");
+        logger.addLog("[GUI] GUI initialized");
     }
 }

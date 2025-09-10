@@ -11,15 +11,24 @@ extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM 
         if (client) {
             return client->handleDDEMessages(iMsg, wParam, lParam);
         } else {
-            logger.addLog("WndProc: No ZemaxDDEClient instance associated with hwnd = " + std::to_string((uintptr_t)hwnd));
+        #ifdef DEBUG_LOG
+            logger.addLog("[APP] WndProc: No ZemaxDDEClient instance associated with hwnd = " + std::to_string((uintptr_t)hwnd));
+        #endif
         }
     }
     return DefWindowProcW(hwnd, iMsg, wParam, lParam);
 }
 
 int main() {
+    logger.addLog("[APP] Application started");
+
     AppContext* ctx = initializeApplication();
-    if (!ctx) return -1;
+    if (!ctx) {
+        logger.addLog("[APP] Application failed to initialize");
+        return -1;
+    }
+
+    logger.addLog("[APP] Main loop started");
 
     while (!ctx->gui->shouldClose()) {
         glfwPollEvents();
@@ -35,6 +44,9 @@ int main() {
         glfwSwapBuffers(ctx->glfwWindow);
     }
 
+    logger.addLog("[APP] Main loop ended");
     shutdownApplication(ctx);
+
+    logger.addLog("[APP] Application terminated");
     return 0;
 }
