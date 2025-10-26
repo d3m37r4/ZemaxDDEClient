@@ -7,24 +7,21 @@
 #include "logger/logger.h"
 #include "dde_zemax_types.h"
 
-// DDE constants
-#define DDE_APP_NAME            L"ZEMAX"        // Appname DDE
-#define DDE_TOPIC               L"RayData"      // Topic DDE
-#define DDE_TIMEOUT_MS          5000            // Timeout in ms (5 sec.)
-
 namespace ZemaxDDE {
     class ZemaxDDEClient {
         public:
-            using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
-
             ZemaxDDEClient(HWND zemaxDDEClient);
             ~ZemaxDDEClient();
 
             void initiateDDE();
             void terminateDDE();
 
+            LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
+
+            using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
             void setOnDDEConnectedCallback(OnDDEConnectedCallback callback);
 
+            // DDE Commands
             void getLensName();
             void getFileName();
             void getSystemData();
@@ -32,17 +29,27 @@ namespace ZemaxDDE {
             void getFieldByIndex(int fieldIndex);
             void getWaveData();
             void getWaveByIndex(int waveIndex);
-            void getSurfaceRadius(int surfaceNumber);
+            void getSurfaceData(int surfaceNumber, int code, int arg2 = 0);
 
-            LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
+            // Getters
+            const StorageTarget& getStorageTarget() const { return currentStorageTarget; };
+            const OpticalSystemData& getOpticalSystemData() const { return opticalSystem; };
+            const SurfaceData& getMeasuredSurface() const { return measuredSurface; };
+            const SurfaceData& getReferenceSurface() const { return referenceSurface; };
 
-            OpticalSystemData& getOpticalSystemData() { return opticalSystem; };
+            // Setters
+            void setStorageTarget(StorageTarget target) { currentStorageTarget = target; };
+            void clearMeasuredSurface() { measuredSurface = SurfaceData{}; };
+            void clearReferenceSurface() { referenceSurface = SurfaceData{}; };
 
         private:
             HWND zemaxDDEServer = NULL;
             HWND zemaxDDEClient = NULL;
             OnDDEConnectedCallback onDDEConnected;
             OpticalSystemData opticalSystem;
+            SurfaceData measuredSurface;
+            SurfaceData referenceSurface;
+            StorageTarget currentStorageTarget = StorageTarget::MEASURED;
             bool isDataReceived = false;
 
             void sendPostRequest(const char* request);
@@ -50,5 +57,4 @@ namespace ZemaxDDE {
             void checkDDEConnection();
             void checkResponseStatus(const std::string& errorMsg);
     };
-
 }

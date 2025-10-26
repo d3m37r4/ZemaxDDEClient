@@ -80,12 +80,12 @@ namespace ZemaxDDE {
         checkResponseStatus(std::string("GetWave: No response from Zemax for request = ") + request);
     }
 
-    void ZemaxDDEClient::getSurfaceRadius(int surfaceNumber) {
+    void ZemaxDDEClient::getSurfaceData(int surfaceNumber, int code, int arg2) {
         checkDDEConnection();
 
         isDataReceived = false;
         char request[256];
-        snprintf(request, sizeof(request), "GetSurfaceData,%d,2", surfaceNumber);
+        snprintf(request, sizeof(request), "GetSurfaceData,%d,%d,%d", surfaceNumber, code, arg2);
 
         sendPostRequest(request);
         checkResponseStatus(std::string("GetSurfaceData: No response from Zemax for request = ") + request);

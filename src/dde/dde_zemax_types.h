@@ -1,20 +1,22 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include "dde_zemax_const.h"
 
 namespace ZemaxDDE {
-    constexpr int MIN_FIELDS = 1;
-    constexpr int MAX_FIELDS = 12;
-
-    constexpr int MIN_WAVES  = 1;
-    constexpr int MAX_WAVES  = 24;
-
-    constexpr int FIELD_ARRAY_SIZE = MAX_FIELDS + 1;
-    constexpr int WAVE_ARRAY_SIZE  = MAX_WAVES + 1;
-
     struct Wavelength {
         double value = 0.0;
         double weight = 1.0;
+    };
+
+    struct SurfaceData {
+        int id = -1;
+        double semiDiameter = 0.0;
+        std::string type = "Unknown";
+
+        bool isValid() const { return id >= 0; };
+        double diameter() const { return 2.0 * semiDiameter; };
     };
 
     struct OpticalSystemData {
