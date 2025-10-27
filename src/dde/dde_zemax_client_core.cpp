@@ -140,51 +140,6 @@ namespace ZemaxDDE {
                 #ifdef DEBUG_LOG
                     logger.addLog("[DDE] Received 'WM_DDE_DATA', content = " + buffer);
                 #endif
-                    if (command_token == "GetSurfaceData") {
-                        auto tokens = ZemaxDDE::tokenize(buffer);
-                        // int params = static_cast<int>(tokens.size());
-
-                        int currentSurface = std::stoi(item_tokens[1]);
-                        if (currentSurface < 0 || currentSurface > opticalSystem.numSurfs) {
-                            logger.addLog("[DDE] GetSurfaceData: Invalid current surface value: " + std::to_string(currentSurface) +
-                                        ". Must be in range [" + std::to_string(0) + ", " +
-                                        std::to_string(opticalSystem.numSurfs) + "]");
-                            return 0;
-                        }
-
-                        int code = std::stoi(item_tokens[2]);
-                        if (!ZemaxDDE::SurfaceDataCode::isValid(code)) {
-                            logger.addLog("[DDE] GetSurfaceData: Invalid surface data code received: " + std::to_string(code));
-                            return 0;
-                        }
-
-                        // int arg2 = std::stoi(item_tokens[3]);
-
-                        // Selecting target storage
-                        auto& surface = (currentStorageTarget == StorageTarget::REFERENCE)
-                            ? referenceSurface
-                            : measuredSurface;
-
-                        surface.id = currentSurface;
-
-                        switch (code) {
-                            case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
-                                surface.type = tokens[0];
-                                break;
-                            }
-                            case ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER: {
-                                surface.semiDiameter = std::stod(tokens[0]);
-                                break;
-                            }
-                            default: {
-                                logger.addLog("[DDE] GetSurfaceData: Unsupported code for storage: " + std::to_string(code));
-                                return 0;
-                            }
-                        }
-
-                        DdeAck.fAck = TRUE;
-                        return 0;
-                    }
                     if (command_token == "GetName") {
                         opticalSystem.lensName = buffer;
                         DdeAck.fAck = TRUE;
@@ -428,6 +383,74 @@ namespace ZemaxDDE {
                             return 0;
                         }
                         DdeAck.fAck = TRUE;
+                    }
+                    if (command_token == "GetSurfaceData") {
+                        auto tokens = ZemaxDDE::tokenize(buffer);
+                        // int params = static_cast<int>(tokens.size());
+
+                        int currentSurface = std::stoi(item_tokens[1]);
+                        if (currentSurface < 0 || currentSurface > opticalSystem.numSurfs) {
+                            logger.addLog("[DDE] GetSurfaceData: Invalid current surface value: " + std::to_string(currentSurface) +
+                                        ". Must be in range [" + std::to_string(0) + ", " +
+                                        std::to_string(opticalSystem.numSurfs) + "]");
+                            return 0;
+                        }
+
+                        int code = std::stoi(item_tokens[2]);
+                        if (!ZemaxDDE::SurfaceDataCode::isValid(code)) {
+                            logger.addLog("[DDE] GetSurfaceData: Invalid surface data code received: " + std::to_string(code));
+                            return 0;
+                        }
+
+                        // int arg2 = std::stoi(item_tokens[3]);
+
+                        // Selecting target storage
+                        auto& surface = (currentStorageTarget == StorageTarget::NOMINAL)
+                            ? nominalSurface
+                            : tolerancedSurface;
+
+                        surface.id = currentSurface;
+
+                        switch (code) {
+                            case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
+                                surface.type = tokens[0];
+                                break;
+                            }
+                            case ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER: {
+                                surface.semiDiameter = std::stod(tokens[0]);
+                                break;
+                            }
+                            default: {
+                                logger.addLog("[DDE] GetSurfaceData: Unsupported code for storage: " + std::to_string(code));
+                                return 0;
+                            }
+                        }
+
+                        DdeAck.fAck = TRUE;
+                        return 0;
+                    }
+                    if (command_token == "GetSag") {
+                        auto tokens = ZemaxDDE::tokenize(buffer);
+                        // int params = static_cast<int>(tokens.size());
+
+                        logger.addLog("[DDE] GetSag: item_tokens[0]: " + (item_tokens[0]));
+                        logger.addLog("[DDE] GetSag: item_tokens[1]: " + (item_tokens[1]));
+                        logger.addLog("[DDE] GetSag: item_tokens[2]: " + (item_tokens[2]));
+                        logger.addLog("[DDE] GetSag: item_tokens[3]: " + (item_tokens[3]));
+
+                        int currentSurface = std::stoi(item_tokens[1]);
+                        if (currentSurface < 0 || currentSurface > opticalSystem.numSurfs) {
+                            logger.addLog("[DDE] GetSag: Invalid current surface value: " + std::to_string(currentSurface) +
+                                        ". Must be in range [" + std::to_string(0) + ", " +
+                                        std::to_string(opticalSystem.numSurfs) + "]");
+                            return 0;
+                        }
+
+                        logger.addLog("[DDE] GetSag: test: " + (buffer));
+                        return 0;
+
+                        DdeAck.fAck = TRUE;
+                        return 0;    
                     }
                 }
                 if (pDdeData->fAckReq == TRUE) {

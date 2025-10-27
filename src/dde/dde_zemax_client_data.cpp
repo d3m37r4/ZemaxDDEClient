@@ -90,4 +90,15 @@ namespace ZemaxDDE {
         sendPostRequest(request);
         checkResponseStatus(std::string("GetSurfaceData: No response from Zemax for request = ") + request);
     }
+
+    void ZemaxDDEClient::getSag(int surfaceNumber, double x, double y) {
+        checkDDEConnection();
+
+        isDataReceived = false;
+        char request[256];
+        snprintf(request, sizeof(request), "GetSag,%d,%f,%f", surfaceNumber, x, y);
+
+        sendPostRequest(request);
+        checkResponseStatus(std::string("GetSag: No response from Zemax for request = ") + request);
+    }
 }
