@@ -1,7 +1,5 @@
 #pragma once
 
-#include "lib/imgui/imgui.h"
-
 namespace gui {
     // Constants defining frame size
     static constexpr float DDE_STATUS_FRAME_WIDTH = 0.0f;       // Automatic width

@@ -1,4 +1,3 @@
-#include "gui/components/gui_sidebar.h"
 #include "gui/gui.h"
 
 namespace gui {

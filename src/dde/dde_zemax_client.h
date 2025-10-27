@@ -16,6 +16,8 @@ namespace ZemaxDDE {
             void initiateDDE();
             void terminateDDE();
 
+            bool isConnected() const { return zemaxDDEServer != NULL; }
+
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
             using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
@@ -30,26 +32,27 @@ namespace ZemaxDDE {
             void getWaveData();
             void getWaveByIndex(int waveIndex);
             void getSurfaceData(int surfaceNumber, int code, int arg2 = 0);
+            void getSag(int surfaceNumber, double x = 0.0, double y = 0.0);
 
             // Getters
-            const StorageTarget& getStorageTarget() const { return currentStorageTarget; };
-            const OpticalSystemData& getOpticalSystemData() const { return opticalSystem; };
-            const SurfaceData& getMeasuredSurface() const { return measuredSurface; };
-            const SurfaceData& getReferenceSurface() const { return referenceSurface; };
+            const StorageTarget& getStorageTarget() const { return currentStorageTarget; }
+            const OpticalSystemData& getOpticalSystemData() const { return opticalSystem; }
+            const SurfaceData& getTolerancedSurface() const { return tolerancedSurface; }
+            const SurfaceData& getNominalSurface() const { return nominalSurface; }
 
             // Setters
-            void setStorageTarget(StorageTarget target) { currentStorageTarget = target; };
-            void clearMeasuredSurface() { measuredSurface = SurfaceData{}; };
-            void clearReferenceSurface() { referenceSurface = SurfaceData{}; };
+            void setStorageTarget(StorageTarget target) { currentStorageTarget = target; }
+            void clearTolerancedSurface() { tolerancedSurface = SurfaceData{}; }
+            void clearNominalSurface() { nominalSurface = SurfaceData{}; }
 
         private:
             HWND zemaxDDEServer = NULL;
             HWND zemaxDDEClient = NULL;
             OnDDEConnectedCallback onDDEConnected;
             OpticalSystemData opticalSystem;
-            SurfaceData measuredSurface;
-            SurfaceData referenceSurface;
-            StorageTarget currentStorageTarget = StorageTarget::MEASURED;
+            SurfaceData tolerancedSurface;
+            SurfaceData nominalSurface;
+            StorageTarget currentStorageTarget = StorageTarget::TOLERANCED;
             bool isDataReceived = false;
 
             void sendPostRequest(const char* request);
