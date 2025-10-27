@@ -19,8 +19,4 @@ namespace gui {
             default: return "Unknown";
         }
     }
-
-    bool GuiManager::shouldClose() const {
-        return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true;
-    }
 }

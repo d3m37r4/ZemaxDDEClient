@@ -1,7 +1,4 @@
-#include "lib/imgui/imgui.h"
-#include "gui/components/gui_popups.h"
 #include "gui/gui.h"
-#include "version.h"
 
 namespace gui {
     void GuiManager::setPopupPosition() {

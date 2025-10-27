@@ -1,6 +1,3 @@
-#include <string>
-#include "lib/imgui/imgui.h"
-#include "components/gui_debug_log.h"
 #include "gui.h"
 
 namespace gui {

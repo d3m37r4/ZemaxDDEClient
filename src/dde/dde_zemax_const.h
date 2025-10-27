@@ -6,8 +6,8 @@ namespace ZemaxDDE {
     static constexpr int DDE_TIMEOUT_MS             = 5000;         // Timeout in ms (5 sec.)
 
     enum class StorageTarget {
-        MEASURED,
-        REFERENCE
+        TOLERANCED,
+        NOMINAL
     };
 
     constexpr int MIN_FIELDS = 1;

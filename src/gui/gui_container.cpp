@@ -1,6 +1,3 @@
-#include "lib/imgui/imgui.h"
-#include "lib/imgui/backends/imgui_impl_glfw.h"
-#include "lib/imgui/backends/imgui_impl_opengl3.h"
 #include "gui.h"
 
 namespace gui {
