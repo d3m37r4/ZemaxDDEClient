@@ -3,6 +3,19 @@
 #include "dde_zemax_client.h"
 #include "dde_zemax_utils.h"
 
+std::string cp1251_to_utf8(const char* data, size_t len) {
+    if (!data || len == 0) return {};
+    int wlen = MultiByteToWideChar(1251, 0, data, (int)len, nullptr, 0);
+    if (wlen <= 0) return {};
+    std::wstring w(wlen, L'\0');
+    MultiByteToWideChar(1251, 0, data, (int)len, &w[0], wlen);
+    int u8len = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), wlen, nullptr, 0, nullptr, nullptr);
+    if (u8len <= 0) return {};
+    std::string u8(u8len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), wlen, &u8[0], u8len, nullptr, nullptr);
+    return u8;
+}
+
 namespace ZemaxDDE {
     ZemaxDDEClient::ZemaxDDEClient(HWND zemaxDDEClient) : zemaxDDEClient(zemaxDDEClient) {}
 
@@ -145,7 +158,38 @@ namespace ZemaxDDE {
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetFile") {
-                        opticalSystem.fileName = buffer;
+                        LPBYTE pData = (LPBYTE)GlobalLock(hDdeData);
+                        if (!pData) {
+                            // DdeFreeDataHandle(hDdeData);
+                            return 0;
+                        }
+
+                        SIZE_T totalSize = GlobalSize(hDdeData);
+
+                        // === КЛЮЧЕВОЕ: пропустить 4 байта заголовка ===
+                        if (totalSize < 4) {
+                            GlobalUnlock(hDdeData);
+                            // DdeFreeDataHandle(hDdeData);
+                            return 0;
+                        }
+
+                        const char* cp1251Data = reinterpret_cast<const char*>(pData + 4);
+                        size_t len = totalSize - 4;
+
+                        // Убрать завершающие \r\n\0
+                        while (len > 0 && (cp1251Data[len - 1] == '\0' || 
+                                        cp1251Data[len - 1] == '\r' || 
+                                        cp1251Data[len - 1] == '\n')) {
+                            len--;
+                        }
+
+                        // Конвертация ТОЛЬКО данных (без заголовка!)
+                        std::string fileName = cp1251_to_utf8(cp1251Data, len);
+
+                        opticalSystem.fileName = fileName;
+                        logger.addLog("[DDE FILE]: " + fileName);
+
+                        // opticalSystem.fileName = buffer;
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetSystem") {

@@ -6,7 +6,7 @@
 
 AppContext* initializeApplication() {
     auto ctx = new AppContext();
-
+    SetConsoleOutputCP(CP_UTF8);
     // Initialize GLFW
     if (!glfwInit()) {
         logger.addLog("[APP] Failed to initialize GLFW");
