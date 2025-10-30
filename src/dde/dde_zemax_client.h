@@ -42,8 +42,8 @@ namespace ZemaxDDE {
 
             // Setters
             void setStorageTarget(StorageTarget target) { currentStorageTarget = target; }
-            void clearTolerancedSurface() { tolerancedSurface = SurfaceData{}; }
-            void clearNominalSurface() { nominalSurface = SurfaceData{}; }
+            void clearTolerancedSurface() { tolerancedSurface.clear(); }
+            void clearNominalSurface() { nominalSurface.clear(); }
 
         private:
             HWND zemaxDDEServer = NULL;

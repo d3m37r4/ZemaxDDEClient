@@ -1,23 +1,116 @@
 #include "gui/gui.h"
 
+#include <filesystem>
+#include <fstream>
+
 namespace gui {
+    void GuiManager::calculateSurfaceProfile(int surfaceNumber, int sampling) {
+        auto& targetSurface = [&]() -> const ZemaxDDE::SurfaceData& {
+            auto target = zemaxDDEClient->getStorageTarget();
+            assert(target == ZemaxDDE::StorageTarget::NOMINAL || target == ZemaxDDE::StorageTarget::TOLERANCED);
+            switch (target) {
+                case ZemaxDDE::StorageTarget::NOMINAL: return zemaxDDEClient->getNominalSurface();
+                case ZemaxDDE::StorageTarget::TOLERANCED: return zemaxDDEClient->getTolerancedSurface();
+            }
+        }();
+
+        if (!targetSurface.isValid() || targetSurface.id != surfaceNumber) {
+            logger.addLog("[GUI] No valid surface data for surface " + std::to_string(surfaceNumber));
+            return;
+        }
+
+        double semiDiameter = targetSurface.semiDiameter;
+        double step = (2.0 * semiDiameter) / (sampling - 1);
+
+        for (int i = 0; i < sampling; ++i) {
+            double x = -semiDiameter + i * step;
+            double y = 0.0; // meridional profile
+
+            zemaxDDEClient->getSag(surfaceNumber, x, y);
+        }
+    }
+
+    void GuiManager::saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface) {
+        if (surface.sagDataPoints.empty()) {
+            logger.addLog("[GUI] No sag profile data to save");
+            return;
+        }
+
+        auto tempDir = std::filesystem::temp_directory_path();
+        auto tempPath = tempDir / "ZemaxDDE_SagProfile.txt";
+
+        std::ofstream file(tempPath);
+        if (!file.is_open()) {
+            logger.addLog("[GUI] Failed to open file for writing: " + tempPath.string());
+            return;
+        }
+
+        file << "Surface 1.\n";
+        file << "Coordinate units are Millimeters.\n";
+        file << "Units are Millimeters.\n";
+        file << "Width = 2, Decenter x = 0, y = 0 Millimeters.\n";
+        file << "Cross section is oriented at an angle of 0 degrees.\n\n";
+
+        file << std::setw(15) << "X-Coordinate"
+            << std::setw(15) << "Y-Coordinate"
+            << std::setw(15) << "Sag"
+            << "\n";
+
+        for (const auto& point : surface.sagDataPoints) {
+            file << std::scientific << std::setprecision(6)
+                << std::setw(15) << point.x
+                << std::setw(15) << point.y
+                << std::setw(15) << point.sag
+                << "\n";
+        }
+
+        file.close();
+        logger.addLog("[GUI] Sag profile saved to " + tempPath.string());
+
+        ShellExecuteW(nullptr, L"open", tempPath.c_str(), nullptr, nullptr, SW_SHOW);
+    }
+
     void GuiManager::renderPageLocalSurfaceErrors() {
-        static int tolerancedSurfaceIndex = 0;
-        static int nominalSurfaceIndex = 0;
-        static int numPoints = 128;
+        auto& state = localState; // LocalSurfaceErrorState
 
         ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "LOCAL SURFACE ERRORS");
         ImGui::Spacing();
 
+        ImGui::SeparatorText("Settings");
+        ImGui::BeginChild("SettingsContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
+            ImGui::Text("Sampling:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputInt("##sampling", &state.sampling, 10, 50);
+            state.sampling = std::max(2, std::min(1024, state.sampling));
+            ImGui::SameLine(); HelpMarker("Number of points to sample along the surface diameter.\nHigher values = smoother profile, slower calculation.");
+
+            ImGui::Text("Number of cross-sections:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputInt("##num_cross_sections", &localState.numCrossSections, 1, 10);
+            localState.numCrossSections = std::max(1, localState.numCrossSections);
+            // localState.numCrossSections = std::max(1, std::min(16, localState.numCrossSections));
+            ImGui::SameLine(); HelpMarker("Number of angular sections to analyze (e.g., 0°, 45°, 90°...)");
+            if (localState.numCrossSections > 180) {
+                ImGui::TextDisabled("Warning: large number of sections may slow down performance");
+            }
+        ImGui::EndChild();
+
         ImGui::SeparatorText("Toleranced surface parameters");
         ImGui::BeginChild("TolerancedSurfaceContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
             auto& toleranced = zemaxDDEClient->getTolerancedSurface();
-            if (toleranced.isValid() && toleranced.id == tolerancedSurfaceIndex) {
+            if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
                 ImGui::Text("Optical system: %s", "null");
                 ImGui::Text("Surface index: %d", toleranced.id);
                 ImGui::Text("Surface type: %s", toleranced.type.c_str());
                 ImGui::Text("Semi-diameter: %.3f mm", toleranced.semiDiameter);
                 ImGui::Text("Diameter: %.3f mm", toleranced.diameter());
+                ImGui::Text("Surface sag data:");
+                ImGui::SameLine();
+                if (ImGui::Button("Text")) {
+                    saveSagProfileToFile(toleranced);
+                }
                 if (ImGui::Button("Clear data")) {
                     zemaxDDEClient->clearTolerancedSurface();
                 }
@@ -26,14 +119,14 @@ namespace gui {
                     ImGui::Text("Surface number:");
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##toleranced_surf_num", &tolerancedSurfaceIndex, 1, 10);
-                    tolerancedSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, tolerancedSurfaceIndex));
+                    ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
+                    state.tolerancedSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
                     if (ImGui::Button("Get toleranced surface data")) {
                         if (isDdeInitialized()) {
                             zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
-                            zemaxDDEClient->getSurfaceData(tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                            zemaxDDEClient->getSurfaceData(tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                            zemaxDDEClient->getSag(tolerancedSurfaceIndex, 1.0, 0.0);
+                            zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+                            zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                            calculateSurfaceProfile(state.tolerancedSurfaceIndex, state.sampling);
                         }
                     }
                 ImGui::EndDisabled();
@@ -44,12 +137,17 @@ namespace gui {
         ImGui::SeparatorText("Nominal surface parameters");
         ImGui::BeginChild("NominalSurfaceContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
             auto& nominal = zemaxDDEClient->getNominalSurface();
-            if (nominal.isValid() && nominal.id == nominalSurfaceIndex) {
+            if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
                 ImGui::Text("Optical system: %s", "null");
                 ImGui::Text("Surface index: %d", nominal.id);
                 ImGui::Text("Surface type: %s", nominal.type.c_str());
                 ImGui::Text("Semi-diameter: %.3f mm", nominal.semiDiameter);
                 ImGui::Text("Diameter: %.3f mm", nominal.diameter());
+                ImGui::Text("Surface sag data:");
+                ImGui::SameLine();
+                if (ImGui::Button("Text")) {
+                    saveSagProfileToFile(nominal);
+                }
                 if (ImGui::Button("Clear data")) {
                     zemaxDDEClient->clearNominalSurface();
                 }
@@ -58,28 +156,19 @@ namespace gui {
                     ImGui::Text("Surface number:");
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##nominal_surf_num", &nominalSurfaceIndex, 1, 10);
-                    nominalSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, nominalSurfaceIndex));
+                    ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
+                    state.nominalSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
                     if (ImGui::Button("Get nominal surface data")) {
                         if (isDdeInitialized()) {
                             zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
-                            zemaxDDEClient->getSurfaceData(nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                            zemaxDDEClient->getSurfaceData(nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                            zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+                            zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                            calculateSurfaceProfile(state.nominalSurfaceIndex, state.sampling);
                         }
                     }
                 ImGui::EndDisabled();
                 ImGui::TextDisabled("No data for this surface");
             }
         ImGui::EndChild();
-
-        ImGui::SeparatorText("Settings");
-        ImGui::BeginChild("SettingsContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
-            ImGui::Text("Number of points:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
-            ImGui::InputInt("##num_points", &numPoints, 10, 50);
-            numPoints = std::max(2, std::min(1024, numPoints));
-        ImGui::EndChild();
     }
-
 }

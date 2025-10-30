@@ -10,13 +10,27 @@ namespace ZemaxDDE {
         double weight = 1.0;
     };
 
+    struct SagData {
+        double x = 0.0;
+        double y = 0.0;
+        double sag = 0.0;
+        double alternateSag = 0.0;
+    };
+
     struct SurfaceData {
         int id = -1;
         double semiDiameter = 0.0;
         std::string type = "Unknown";
+        std::vector<SagData> sagDataPoints;
+        bool isValid() const { return id >= 0; }
+        double diameter() const { return 2.0 * semiDiameter; }
 
-        bool isValid() const { return id >= 0; };
-        double diameter() const { return 2.0 * semiDiameter; };
+        void clear() {
+            id = -1;
+            semiDiameter = 0.0;
+            type = "Unknown";
+            sagDataPoints.clear();
+        }
     };
 
     struct OpticalSystemData {

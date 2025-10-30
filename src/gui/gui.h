@@ -28,6 +28,7 @@
 namespace gui {
     const char* getUnitString(int unitCode);
     const char* getRayAimingTypeString(int rayAimingType);
+    void HelpMarker(const char* desc);
 
     class GuiManager {
         public: 
@@ -49,6 +50,9 @@ namespace gui {
             void renderPageOpticalSystemInfo();
             void renderPageLocalSurfaceErrors();
 
+            void calculateSurfaceProfile(int surfaceNumber, int sampling);
+            void saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface);
+
             bool shouldClose() const { return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true; }
             bool isDdeInitialized() const { return zemaxDDEClient != nullptr && zemaxDDEClient->isConnected(); }
 
@@ -57,6 +61,7 @@ namespace gui {
             HWND hwndClient;                                    // DDE client window handle
             ZemaxDDE::ZemaxDDEClient* zemaxDDEClient;           // Pointer to a DDE client instance
 
+            LocalSurfaceErrorState localState{};
             int selectedMenuItem{0};
             bool show_updates_popup{false};                     // Display flag for popup 'Check for Updates'
             bool show_about_popup{false};                       // Display flag for popup 'Check for About'

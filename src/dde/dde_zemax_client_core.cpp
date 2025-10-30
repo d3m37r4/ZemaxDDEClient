@@ -408,7 +408,6 @@ namespace ZemaxDDE {
                         auto& surface = (currentStorageTarget == StorageTarget::NOMINAL)
                             ? nominalSurface
                             : tolerancedSurface;
-
                         surface.id = currentSurface;
 
                         switch (code) {
@@ -433,11 +432,6 @@ namespace ZemaxDDE {
                         auto tokens = ZemaxDDE::tokenize(buffer);
                         // int params = static_cast<int>(tokens.size());
 
-                        logger.addLog("[DDE] GetSag: item_tokens[0]: " + (item_tokens[0]));
-                        logger.addLog("[DDE] GetSag: item_tokens[1]: " + (item_tokens[1]));
-                        logger.addLog("[DDE] GetSag: item_tokens[2]: " + (item_tokens[2]));
-                        logger.addLog("[DDE] GetSag: item_tokens[3]: " + (item_tokens[3]));
-
                         int currentSurface = std::stoi(item_tokens[1]);
                         if (currentSurface < 0 || currentSurface > opticalSystem.numSurfs) {
                             logger.addLog("[DDE] GetSag: Invalid current surface value: " + std::to_string(currentSurface) +
@@ -446,8 +440,34 @@ namespace ZemaxDDE {
                             return 0;
                         }
 
-                        logger.addLog("[DDE] GetSag: test: " + (buffer));
-                        return 0;
+                        double x = 0.0;
+                        double y = 0.0;
+
+                        try {
+                            x = std::stod(item_tokens[2]);
+                            y = std::stod(item_tokens[3]);
+                        } catch (const std::exception& e) {
+                            logger.addLog("[DDE] GetSag: Failed to parse x/y: " + std::string(e.what()));
+                            return 0;
+                        }
+                        
+                        auto values = ZemaxDDE::tokenize(buffer);
+                        if (values.empty()) {
+                            logger.addLog("[DDE] GetSag: No values in response");
+                            return 0;
+                        }
+
+                        double sag = std::stod(values[0]);
+                        double alternateSag = std::stod(values[1]);
+
+                        // Selecting target storage
+                        auto& surface = (currentStorageTarget == StorageTarget::NOMINAL)
+                            ? nominalSurface
+                            : tolerancedSurface;
+                        surface.id = currentSurface;
+                        surface.sagDataPoints.push_back({
+                            x, y, sag, alternateSag
+                        });
 
                         DdeAck.fAck = TRUE;
                         return 0;    
