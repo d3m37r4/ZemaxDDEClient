@@ -82,8 +82,13 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
             ImGui::InputInt("##sampling", &state.sampling, 10, 50);
-            state.sampling = std::max(2, std::min(1024, state.sampling));
-            ImGui::SameLine(); HelpMarker("Number of points to sample along the surface diameter.\nHigher values = smoother profile, slower calculation.");
+            state.sampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.sampling));
+            ImGui::SameLine(); 
+            std::string tooltipSampling = "Number of points to sample along the surface diameter (min=" + 
+                                  std::to_string(MIN_SAMPLING) + ", max=" + 
+                                  std::to_string(MAX_SAMPLING) + 
+                                  ").\nHigher values = smoother profile, slower calculation.";
+            HelpMarker(tooltipSampling.c_str());
 
             ImGui::Text("Number of cross-sections:");
             ImGui::SameLine();
