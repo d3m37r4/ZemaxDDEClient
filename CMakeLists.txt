@@ -60,22 +60,22 @@ configure_file(
 set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
+    ${SRC_DIR}/logger/logger.cpp
     ${SRC_DIR}/application.cpp
     ${SRC_DIR}/dde/dde_zemax_client_core.cpp
     ${SRC_DIR}/dde/dde_zemax_client_data.cpp
     ${SRC_DIR}/dde/dde_zemax_utils.cpp
-    ${SRC_DIR}/gui/gui_utils.cpp
-    ${SRC_DIR}/gui/components/gui_debug_log.cpp
-    ${SRC_DIR}/gui/components/gui_popups.cpp
-    ${SRC_DIR}/gui/components/gui_dde_status.cpp
-    ${SRC_DIR}/gui/components/gui_sidebar.cpp
-    ${SRC_DIR}/gui/components/gui_menu_bar.cpp
-    ${SRC_DIR}/gui/components/gui_content.cpp
-    ${SRC_DIR}/gui/content_pages/gui_page_optical_system_info.cpp
-    ${SRC_DIR}/gui/content_pages/gui_page_local_surface_errors.cpp
     ${SRC_DIR}/gui/gui_init.cpp
     ${SRC_DIR}/gui/gui_container.cpp
-    ${SRC_DIR}/logger/logger.cpp
+    ${SRC_DIR}/gui/gui_utils.cpp
+    ${SRC_DIR}/gui/components/gui_navbar.cpp
+    ${SRC_DIR}/gui/components/gui_sidebar.cpp
+    ${SRC_DIR}/gui/components/gui_dde_status.cpp
+    ${SRC_DIR}/gui/components/gui_content.cpp
+    ${SRC_DIR}/gui/components/gui_debug_log.cpp
+    ${SRC_DIR}/gui/components/gui_popups.cpp
+    ${SRC_DIR}/gui/content_pages/gui_page_optical_system_info.cpp
+    ${SRC_DIR}/gui/content_pages/gui_page_local_surface_errors.cpp
 )
 
 # Add ImGui source files directly

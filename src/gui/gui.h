@@ -18,12 +18,12 @@
 
 #include "dde/dde_zemax_client.h"
 
-#include "gui/components/gui_content.h"
-#include "gui/components/gui_dde_status.h"
-#include "gui/components/gui_debug_log.h"
-#include "gui/components/gui_menu_bar.h"
-#include "gui/components/gui_popups.h"
+#include "gui/components/gui_navbar.h"
 #include "gui/components/gui_sidebar.h"
+#include "gui/components/gui_dde_status.h"
+#include "gui/components/gui_content.h"
+#include "gui/components/gui_debug_log.h"
+#include "gui/components/gui_popups.h"
 #include "gui/content_pages/gui_page_local_surface_errors.h"
 #include "gui/content_pages/gui_page_optical_system_info.h"
 
@@ -40,14 +40,14 @@ namespace gui {
             void initialize();
             void render();
 
+            void renderNavbar();
+            void renderSidebar();
+            void renderDDEStatusFrame();
+            void renderContent();
             void renderDebugLogFrame();
             void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
-            void renderDDEStatusFrame();
-            void renderSidebar();
-            void renderMenuBar();
-            void renderContent();
 
             void renderPageOpticalSystemInfo();
             void renderPageLocalSurfaceErrors();
@@ -66,6 +66,9 @@ namespace gui {
 
             LocalSurfaceErrorState localState{};
             int selectedMenuItem{0};
+
+            bool showTolerancedProfileWindow{false};
+            bool showNominalProfileWindow{false};
             bool show_updates_popup{false};                     // Display flag for popup 'Check for Updates'
             bool show_about_popup{false};                       // Display flag for popup 'Check for About'
     };

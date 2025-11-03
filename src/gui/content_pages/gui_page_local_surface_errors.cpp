@@ -7,16 +7,14 @@ namespace gui {
     void GuiManager::renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
         if (!openFlag || !*openFlag) return;
         if (surface.sagDataPoints.empty()) return;
-
-        // Размер по умолчанию: 600x400
+        
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
 
-        if (!ImGui::Begin(title, openFlag, ImGuiWindowFlags_None)) {
+        if (!ImGui::Begin(title, openFlag)) {
             ImGui::End();
             return;
         }
 
-        // Подготовка данных
         std::vector<double> x_vals, y_vals;
         for (const auto& point : surface.sagDataPoints) {
             x_vals.push_back(point.x);
@@ -147,13 +145,11 @@ namespace gui {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Show profile graphic")) {
-                    state.showTolerancedProfileWindow = true;
+                    showTolerancedProfileWindow = true;
                 }
                 if (ImGui::Button("Clear data")) {
+                    showTolerancedProfileWindow = false;
                     zemaxDDEClient->clearTolerancedSurface();
-                }
-                if (state.showTolerancedProfileWindow) {
-                    renderProfileWindow("Toleranced Surface Profile", "Toleranced", toleranced, &state.showTolerancedProfileWindow);
                 }
             } else {
                 ImGui::BeginDisabled(!isDdeInitialized());
@@ -191,13 +187,11 @@ namespace gui {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Show profile graphic")) {
-                    state.showNominalProfileWindow = true;
+                    showNominalProfileWindow = true;
                 }
                 if (ImGui::Button("Clear data")) {
+                    showNominalProfileWindow = false;
                     zemaxDDEClient->clearNominalSurface();
-                }
-                if (state.showNominalProfileWindow) {
-                    renderProfileWindow("Nominal Surface Profile", "Nominal", nominal, &state.showNominalProfileWindow);
                 }
             } else {
                 ImGui::BeginDisabled(!isDdeInitialized());

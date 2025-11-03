@@ -6,22 +6,36 @@ namespace gui {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        renderMenuBar();
+        renderNavbar();
 
-        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
-        float total_available_height = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeight();
-        ImGui::SetNextWindowPos(window_pos);
-        ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, total_available_height));
+        const float menuHeight = ImGui::GetFrameHeight();
+        const ImVec2 workPos = ImVec2(0.0f, menuHeight);
+        const ImVec2 workSize = ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - menuHeight);
 
-        ImGui::Begin("Layout", nullptr, 
-            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
-            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+        ImGui::SetNextWindowPos(workPos);
+        ImGui::SetNextWindowSize(workSize);
+
+        ImGui::Begin("##MainWindow", nullptr,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoCollapse
+        );
         renderSidebar();
         ImGui::SameLine();
         renderContent();
         ImGui::Spacing();
         renderDebugLogFrame();
         ImGui::End();
+
+        if (showTolerancedProfileWindow) {
+            auto& surface = zemaxDDEClient->getTolerancedSurface();
+            if (surface.isValid()) renderProfileWindow("Toleranced Surface Profile", "Toleranced", surface, &showTolerancedProfileWindow);
+        }
+        if (showNominalProfileWindow) {
+            auto& surface = zemaxDDEClient->getNominalSurface();
+            if (surface.isValid()) renderProfileWindow("Nominal Surface Profile", "Nominal", surface, &showNominalProfileWindow);
+        }
 
         setPopupPosition();
         renderUpdatesPopup();

@@ -1,7 +1,7 @@
 #include "gui/gui.h"
 
 namespace gui {
-    void GuiManager::renderMenuBar() {
+    void GuiManager::renderNavbar() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
                 if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) Application::openZmxFileInZemax();

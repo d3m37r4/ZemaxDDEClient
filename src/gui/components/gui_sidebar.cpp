@@ -4,7 +4,7 @@ namespace gui {
     void GuiManager::renderSidebar() {
         ImGui::BeginChild("Sidebar", ImVec2(SIDEBAR_WIDTH, SIDEBAR_HEIGHT), 
         ImGuiChildFlags_AutoResizeY, 
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 10.0f));
