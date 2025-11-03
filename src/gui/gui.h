@@ -11,6 +11,8 @@
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 
+#include "lib/implot/implot.h"
+
 #include "application.h"
 #include "version.h"
 
@@ -50,6 +52,7 @@ namespace gui {
             void renderPageOpticalSystemInfo();
             void renderPageLocalSurfaceErrors();
 
+            void renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
             void calculateSurfaceProfile(int surfaceNumber, int sampling);
             void saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface);
 

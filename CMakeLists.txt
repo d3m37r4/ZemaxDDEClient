@@ -13,6 +13,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(SRC_DIR "src")
 set(IMGUI_DIR "${SRC_DIR}/lib/imgui")
+set(IMPLOT_DIR "${SRC_DIR}/lib/implot")
 set(NFD_DIR "${SRC_DIR}/lib/nfd")
 
 # MSYS2 paths (MinGW)
@@ -87,6 +88,12 @@ list(APPEND SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
+# Add ImPlot source files directly
+list(APPEND SOURCES
+    ${IMPLOT_DIR}/implot.cpp
+    ${IMPLOT_DIR}/implot_items.cpp
+)
+
 # Add NFD source files directly
 list(APPEND SOURCES
     ${NFD_DIR}/src/nfd_common.c
@@ -107,6 +114,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${SRC_DIR}/gui
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
+    ${IMPLOT_DIR}
     ${NFD_DIR}/src/include
     ${MINGW_INCLUDE}
 )

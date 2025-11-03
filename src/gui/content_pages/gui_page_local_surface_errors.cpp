@@ -4,6 +4,35 @@
 #include <fstream>
 
 namespace gui {
+    void GuiManager::renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
+        if (!openFlag || !*openFlag) return;
+        if (surface.sagDataPoints.empty()) return;
+
+        // Размер по умолчанию: 600x400
+        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+
+        if (!ImGui::Begin(title, openFlag, ImGuiWindowFlags_None)) {
+            ImGui::End();
+            return;
+        }
+
+        // Подготовка данных
+        std::vector<double> x_vals, y_vals;
+        for (const auto& point : surface.sagDataPoints) {
+            x_vals.push_back(point.x);
+            y_vals.push_back(point.sag);
+        }
+
+        if (ImPlot::BeginPlot(label, ImVec2(-1, -1))) {
+            ImPlot::SetupAxes("X (mm)", "Sag (mm)");
+            ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            ImPlot::PlotLine(label, x_vals.data(), y_vals.data(), x_vals.size());
+            ImPlot::EndPlot();
+        }
+
+        ImGui::End();
+    }
+
     void GuiManager::calculateSurfaceProfile(int surfaceNumber, int sampling) {
         auto& targetSurface = [&]() -> const ZemaxDDE::SurfaceData& {
             auto target = zemaxDDEClient->getStorageTarget();
@@ -93,11 +122,11 @@ namespace gui {
             ImGui::Text("Number of cross-sections:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::InputInt("##num_cross_sections", &localState.numCrossSections, 1, 10);
-            localState.numCrossSections = std::max(1, localState.numCrossSections);
-            // localState.numCrossSections = std::max(1, std::min(16, localState.numCrossSections));
+            ImGui::InputInt("##num_cross_sections", &state.numCrossSections, 1, 10);
+            state.numCrossSections = std::max(1, state.numCrossSections);
+            // state.numCrossSections = std::max(1, std::min(16, state.numCrossSections));
             ImGui::SameLine(); HelpMarker("Number of angular sections to analyze (e.g., 0°, 45°, 90°...)");
-            if (localState.numCrossSections > 180) {
+            if (state.numCrossSections > 180) {
                 ImGui::TextDisabled("Warning: large number of sections may slow down performance");
             }
         ImGui::EndChild();
@@ -116,8 +145,15 @@ namespace gui {
                 if (ImGui::Button("Text")) {
                     saveSagProfileToFile(toleranced);
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Show profile graphic")) {
+                    state.showTolerancedProfileWindow = true;
+                }
                 if (ImGui::Button("Clear data")) {
                     zemaxDDEClient->clearTolerancedSurface();
+                }
+                if (state.showTolerancedProfileWindow) {
+                    renderProfileWindow("Toleranced Surface Profile", "Toleranced", toleranced, &state.showTolerancedProfileWindow);
                 }
             } else {
                 ImGui::BeginDisabled(!isDdeInitialized());
@@ -153,8 +189,15 @@ namespace gui {
                 if (ImGui::Button("Text")) {
                     saveSagProfileToFile(nominal);
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Show profile graphic")) {
+                    state.showNominalProfileWindow = true;
+                }
                 if (ImGui::Button("Clear data")) {
                     zemaxDDEClient->clearNominalSurface();
+                }
+                if (state.showNominalProfileWindow) {
+                    renderProfileWindow("Nominal Surface Profile", "Nominal", nominal, &state.showNominalProfileWindow);
                 }
             } else {
                 ImGui::BeginDisabled(!isDdeInitialized());

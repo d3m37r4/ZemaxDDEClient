@@ -21,6 +21,7 @@ namespace gui {
             ImGui_ImplOpenGL3_DestroyDeviceObjects();
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplGlfw_Shutdown();
+            ImPlot::DestroyContext();
             ImGui::DestroyContext();
         }
     }
@@ -28,6 +29,7 @@ namespace gui {
     void GuiManager::initialize() {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
+        ImPlot::CreateContext();
 
         ImGuiIO& io = ImGui::GetIO();
         char fontPath[MAX_PATH];

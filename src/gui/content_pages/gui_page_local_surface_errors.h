@@ -5,6 +5,9 @@ struct LocalSurfaceErrorState {
     int nominalSurfaceIndex = 0;
     int sampling = 128;
     int numCrossSections = 1;
+
+    bool showTolerancedProfileWindow = false;
+    bool showNominalProfileWindow = false;
 };
 
 // Maximum number of sampling points along the diameter in Zemax (as per tool "Surface Sag Cross Section" from Zemax)
