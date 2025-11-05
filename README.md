@@ -30,6 +30,7 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
 ## 📚 Third-Party Libraries
 This project uses the following third-party libraries:
 - **[Dear ImGui](https://github.com/ocornut/imgui)** by Omar Cornut — Immediate Mode GUI
+- **[ImPlot](https://github.com/epezent/implot)** by Evan Pezent — 2D plotting library for Dear ImGui
 - **[Native File Dialog (NFD)](https://github.com/mlabbe/nativefiledialog)** by Michael Labbe — Cross-platform file dialogs
 
 ## 🚀 Setup

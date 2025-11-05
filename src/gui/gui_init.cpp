@@ -32,11 +32,13 @@ namespace gui {
         ImPlot::CreateContext();
 
         ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
         char fontPath[MAX_PATH];
         GetWindowsDirectoryA(fontPath, MAX_PATH);
         strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 18.0f);
-        
+
         if (!font) {
             logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
         }

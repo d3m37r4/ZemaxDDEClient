@@ -53,6 +53,8 @@ namespace gui {
             void renderPageLocalSurfaceErrors();
 
             void renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
+            void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
+            void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
             void calculateSurfaceProfile(int surfaceNumber, int sampling);
             void saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface);
 
@@ -69,6 +71,9 @@ namespace gui {
 
             bool showTolerancedProfileWindow{false};
             bool showNominalProfileWindow{false};
+            bool showComparisonWindow{false};
+            bool showErrorWindow{false};
+            
             bool show_updates_popup{false};                     // Display flag for popup 'Check for Updates'
             bool show_about_popup{false};                       // Display flag for popup 'Check for About'
     };
