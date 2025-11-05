@@ -84,6 +84,7 @@ namespace gui {
             switch (target) {
                 case ZemaxDDE::StorageTarget::NOMINAL: return zemaxDDEClient->getNominalSurface();
                 case ZemaxDDE::StorageTarget::TOLERANCED: return zemaxDDEClient->getTolerancedSurface();
+                default: throw std::runtime_error("Unexpected storage target in calculateSurfaceProfile");
             }
         }();
 
