@@ -31,6 +31,52 @@ namespace gui {
         ImGui::End();
     }
 
+    void GuiManager::renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
+        if (!openFlag || !*openFlag) return;
+
+        if (ImGui::Begin("Profile Comparison", openFlag)) {
+            std::vector<double> x_nom, y_nom, x_tol, y_tol;
+            for (const auto& p : nominal.sagDataPoints) {
+                x_nom.push_back(p.x);
+                y_nom.push_back(p.sag);
+            }
+            for (const auto& p : toleranced.sagDataPoints) {
+                x_tol.push_back(p.x);
+                y_tol.push_back(p.sag);
+            }
+
+            if (ImPlot::BeginPlot("##DetachedProfiles", ImVec2(-1, -1))) {
+                ImPlot::SetupAxes("X (mm)", "Sag (mm)");
+                ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+                ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size());
+                ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size());
+                ImPlot::EndPlot();
+            }
+        }
+        ImGui::End();
+    }
+
+    void GuiManager::renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
+        if (!openFlag || !*openFlag) return;
+        if (nominal.sagDataPoints.size() != toleranced.sagDataPoints.size()) return;
+
+        if (ImGui::Begin("Sag Error (Toleranced - Nominal)", openFlag)) {
+            std::vector<double> x, y;
+            for (size_t i = 0; i < nominal.sagDataPoints.size(); ++i) {
+                x.push_back(nominal.sagDataPoints[i].x);
+                y.push_back(nominal.sagDataPoints[i].sag - toleranced.sagDataPoints[i].sag);
+            }
+
+            if (ImPlot::BeginPlot("##DetachedError", ImVec2(-1, -1))) {
+                ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
+                ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+                ImPlot::PlotLine("Error", x.data(), y.data(), x.size());
+                ImPlot::EndPlot();
+            }
+        }
+        ImGui::End();
+    }
+
     void GuiManager::calculateSurfaceProfile(int surfaceNumber, int sampling) {
         auto& targetSurface = [&]() -> const ZemaxDDE::SurfaceData& {
             auto target = zemaxDDEClient->getStorageTarget();
@@ -99,6 +145,8 @@ namespace gui {
 
     void GuiManager::renderPageLocalSurfaceErrors() {
         auto& state = localState; // LocalSurfaceErrorState
+        auto& nominal = zemaxDDEClient->getNominalSurface();
+        auto& toleranced = zemaxDDEClient->getTolerancedSurface();
 
         ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "LOCAL SURFACE ERRORS");
         ImGui::Spacing();
@@ -131,7 +179,6 @@ namespace gui {
 
         ImGui::SeparatorText("Toleranced surface parameters");
         ImGui::BeginChild("TolerancedSurfaceContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
-            auto& toleranced = zemaxDDEClient->getTolerancedSurface();
             if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
                 ImGui::Text("Optical system: %s", "null");
                 ImGui::Text("Surface index: %d", toleranced.id);
@@ -173,7 +220,6 @@ namespace gui {
 
         ImGui::SeparatorText("Nominal surface parameters");
         ImGui::BeginChild("NominalSurfaceContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
-            auto& nominal = zemaxDDEClient->getNominalSurface();
             if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
                 ImGui::Text("Optical system: %s", "null");
                 ImGui::Text("Surface index: %d", nominal.id);
@@ -212,5 +258,91 @@ namespace gui {
                 ImGui::TextDisabled("No data for this surface");
             }
         ImGui::EndChild();
+        
+        if (nominal.isValid() && toleranced.isValid()) {
+            ImGui::SeparatorText("Profile Comparison");
+
+            if (ImGui::Button("Detach Comparison")) {
+                showComparisonWindow = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Detach Error")) {
+                showErrorWindow = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Export comparison to CSV")) {
+                nfdchar_t* savePath = nullptr;
+                nfdresult_t result = NFD_SaveDialog("csv", nullptr, &savePath);
+                if (result == NFD_OKAY) {
+                    std::ofstream file(savePath);
+                    if (file.is_open()) {
+                        std::vector<double> x_nom, y_nom, x_tol, y_tol;
+                        for (const auto& p : nominal.sagDataPoints) {
+                            x_nom.push_back(p.x);
+                            y_nom.push_back(p.sag);
+                        }
+                        for (const auto& p : toleranced.sagDataPoints) {
+                            x_tol.push_back(p.x);
+                            y_tol.push_back(p.sag);
+                        }
+                        file << "x_nom,y_nom,x_tol,y_tol,error\n";
+                        size_t n = std::min(x_nom.size(), x_tol.size());
+                        for (size_t i = 0; i < n; ++i) {
+                            double error = y_tol[i] - y_nom[i];
+                            file << x_nom[i] << "," << y_nom[i] << ","
+                                << x_tol[i] << "," << y_tol[i] << ","
+                                << error << "\n";
+                        }
+                        file.close();
+                        logger.addLog("[GUI] Comparison data saved to " + std::string(savePath));
+                    }
+                    free(savePath);
+                }
+            }
+
+            bool showProfiles = !showComparisonWindow;
+            bool showErrorPlot = !showErrorWindow;
+
+            if (showProfiles || showErrorPlot) {
+                ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
+
+                std::vector<double> x_nom, y_nom, x_tol, y_tol;
+                for (const auto& p : nominal.sagDataPoints) {
+                    x_nom.push_back(p.x);
+                    y_nom.push_back(p.sag);
+                }
+                for (const auto& p : toleranced.sagDataPoints) {
+                    x_tol.push_back(p.x);
+                    y_tol.push_back(p.sag);
+                }
+
+                if (showProfiles) {
+                    if (ImPlot::BeginPlot("##Profiles", ImVec2(-1, 200))) {
+                        ImPlot::SetupAxes("X (mm)", "Sag (mm)");
+                        ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+                        ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size());
+                        ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size());
+                        ImPlot::EndPlot();
+                    }
+                    ImGui::Spacing();
+                }
+
+                if (showErrorPlot && x_nom.size() == x_tol.size()) {
+                    if (ImPlot::BeginPlot("##Error", ImVec2(-1, 200))) {
+                        ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
+                        ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+                        std::vector<double> error;
+                        for (size_t i = 0; i < x_nom.size(); ++i) {
+                            error.push_back(y_nom[i] - y_tol[i]);
+                        }
+                        ImPlot::PlotLine("Error", x_nom.data(), error.data(), x_nom.size());
+                        ImPlot::EndPlot();
+                    }
+                }
+
+                ImGui::EndChild();
+            }
+        }
+
     }
 }
