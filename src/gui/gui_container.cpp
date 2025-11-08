@@ -8,12 +8,11 @@ namespace gui {
 
         renderNavbar();
 
-        // --- DockSpace: занимает всё пространство под меню ---
-        const float menuHeight = ImGui::GetFrameHeight();
-        ImGui::SetNextWindowPos(ImVec2(0, menuHeight));
+        const float navbarHeight = ImGui::GetFrameHeight();
+        ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
         ImGui::SetNextWindowSize(ImVec2(
             ImGui::GetIO().DisplaySize.x,
-            ImGui::GetIO().DisplaySize.y - menuHeight
+            ImGui::GetIO().DisplaySize.y - navbarHeight
         ));
         ImGui::Begin("MainDockSpace", nullptr,
             ImGuiWindowFlags_NoTitleBar |
@@ -23,41 +22,16 @@ namespace gui {
             ImGuiWindowFlags_NoBringToFrontOnFocus |
             ImGuiWindowFlags_NoNavFocus
         );
-
-        // Создаём док-пространство
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
-
+        ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
         ImGui::End();
 
-
-        // const float menuHeight = ImGui::GetFrameHeight();
-        // const ImVec2 workPos = ImVec2(0.0f, menuHeight);
-        // const ImVec2 workSize = ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - menuHeight);
-
-        // ImGui::SetNextWindowPos(workPos);
-        // ImGui::SetNextWindowSize(workSize);
-
-        // ImGui::Begin("##MainWindow", nullptr,
-        //     ImGuiWindowFlags_NoTitleBar |
-        //     ImGuiWindowFlags_NoResize |
-        //     ImGuiWindowFlags_NoMove |
-        //     ImGuiWindowFlags_NoCollapse
-        // );
-
-        ImGui::Begin("##Sidebar");
         renderSidebar();
-        ImGui::End();
-
-        // ImGui::SameLine();
-        ImGui::Begin("##Content");
         renderContent();
-        ImGui::End();
-        // ImGui::Spacing();
-ImGui::Begin("##debug");
+
+        ImGui::Begin("##Debug");
         renderDebugLogFrame();
-ImGui::End();
-        // ImGui::End();
+        ImGui::End();
 
         if (showTolerancedProfileWindow) {
             auto& surface = zemaxDDEClient->getTolerancedSurface();
@@ -67,7 +41,6 @@ ImGui::End();
             auto& surface = zemaxDDEClient->getNominalSurface();
             if (surface.isValid()) renderProfileWindow("Nominal Surface Profile", "Nominal", surface, &showNominalProfileWindow);
         }
-
         if (showComparisonWindow) {
             auto& nom = zemaxDDEClient->getNominalSurface();
             auto& tol = zemaxDDEClient->getTolerancedSurface();

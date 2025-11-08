@@ -2,14 +2,26 @@
 
 namespace gui {
     void GuiManager::renderDDEStatusFrame() {
-        ImGui::BeginChild("DDE Status Frame", ImVec2(DDE_STATUS_FRAME_WIDTH, DDE_STATUS_FRAME_HEIGHT), 
-        ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, 
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::BeginChild("DDE Status Frame", 
+            ImVec2(DDE_STATUS_FRAME_WIDTH, DDE_STATUS_FRAME_HEIGHT), 
+            ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, 
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
+        );
 
-        ImGui::Text("Zemax DDE Status:");
+        const char* label = "Zemax DDE Status:";
+        const char* value = isDdeInitialized() ? "Connected" : "Disconnected";
+
+        float availableWidth = ImGui::GetContentRegionAvail().x;
+        float labelWidth = ImGui::CalcTextSize(label).x;
+        float valueWidth = ImGui::CalcTextSize(value).x;
+        float totalWidth = labelWidth + valueWidth + 4.0f;
+        float offsetX = (availableWidth - totalWidth) * 0.5f;
+        if (offsetX > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
+
+        ImGui::TextUnformatted(label);
         ImGui::SameLine(0.0f, 4.0f);
         ImGui::PushStyleColor(ImGuiCol_Text, isDdeInitialized() ? DDE_STATUS_COLOR_CONNECTED : DDE_STATUS_COLOR_DISCONNECTED);
-        ImGui::Text(isDdeInitialized() ? "Connected" : "Disconnected");
+        ImGui::TextUnformatted(value);
         ImGui::PopStyleColor();
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
