@@ -19,6 +19,7 @@ namespace ZemaxDDE {
 
     struct SurfaceData {
         int id = -1;
+        int units = 0;
         double semiDiameter = 0.0;
         std::string type = "Unknown";
         std::vector<SagData> sagDataPoints;
@@ -27,6 +28,7 @@ namespace ZemaxDDE {
 
         void clear() {
             id = -1;
+            units = 0;
             semiDiameter = 0.0;
             type = "Unknown";
             sagDataPoints.clear();

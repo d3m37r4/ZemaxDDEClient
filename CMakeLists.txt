@@ -6,7 +6,7 @@ project(ZemaxDDEClient
     LANGUAGES      C CXX
 )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -67,6 +67,7 @@ set(SOURCES
     ${SRC_DIR}/dde/dde_zemax_utils.cpp
     ${SRC_DIR}/gui/gui_init.cpp
     ${SRC_DIR}/gui/gui_container.cpp
+    ${SRC_DIR}/gui/gui_surface_analysis.cpp
     ${SRC_DIR}/gui/gui_utils.cpp
     ${SRC_DIR}/gui/components/gui_navbar.cpp
     ${SRC_DIR}/gui/components/gui_sidebar.cpp

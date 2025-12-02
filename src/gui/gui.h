@@ -1,7 +1,11 @@
 #pragma once
 
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <string>
+#include <math.h>
+#include <algorithm>
 
 #include <windows.h>
 #include <nfd.h>
@@ -28,7 +32,7 @@
 #include "gui/content_pages/gui_page_optical_system_info.h"
 
 namespace gui {
-    const char* getUnitString(int unitCode);
+    const char* getUnitString(int unitCode, bool full = false);
     const char* getRayAimingTypeString(int rayAimingType);
     void HelpMarker(const char* desc);
 
@@ -55,7 +59,8 @@ namespace gui {
             void renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
             void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
             void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
-            void calculateSurfaceProfile(int surfaceNumber, int sampling);
+
+            void calculateSurfaceProfile(int surfaceNumber, int sampling, double angle = 0.0);
             void saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface);
 
             bool shouldClose() const { return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true; }
@@ -66,7 +71,7 @@ namespace gui {
             HWND hwndClient;                                    // DDE client window handle
             ZemaxDDE::ZemaxDDEClient* zemaxDDEClient;           // Pointer to a DDE client instance
 
-            LocalSurfaceErrorState localState{};
+            LocalSurfaceErrorsPageState surfaceErrorsPageState{};
             int selectedMenuItem{0};
 
             bool showTolerancedProfileWindow{false};

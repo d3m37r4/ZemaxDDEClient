@@ -409,6 +409,7 @@ namespace ZemaxDDE {
                             ? nominalSurface
                             : tolerancedSurface;
                         surface.id = currentSurface;
+                        surface.units = opticalSystem.units;
 
                         switch (code) {
                             case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{

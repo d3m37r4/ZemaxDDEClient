@@ -1,10 +1,13 @@
 #pragma once
 
-struct LocalSurfaceErrorState {
+struct LocalSurfaceErrorsPageState {
     int tolerancedSurfaceIndex = 0;
     int nominalSurfaceIndex = 0;
-    int sampling = 128;
-    int numCrossSections = 1;
+
+    int tolerancedSampling = 128;
+    double tolerancedAngle = 0.0;
+    int nominalSampling = 128;
+    double nominalAngle = 0.0;
 };
 
 // Maximum number of sampling points along the diameter in Zemax (as per tool "Surface Sag Cross Section" from Zemax)

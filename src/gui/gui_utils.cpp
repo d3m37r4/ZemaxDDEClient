@@ -1,13 +1,13 @@
 #include "gui.h"
 
 namespace gui {
-    const char* getUnitString(int unitCode) {
+    const char* getUnitString(int unitCode, bool full) {
         switch (unitCode) {
-            case 0: return "mm";
-            case 1: return "cm";
-            case 2: return "in";
-            case 3: return "m";
-            default: return "unknown";
+            case 0: return full ? "Millimeters" : "mm";
+            case 1: return full ? "Centimeters" : "cm";
+            case 2: return full ? "Inches" : "in";
+            case 3: return full ? "Meters" : "m";
+            default: return full ? "Unknown unit" : "unknown";
         }
     }
 
@@ -20,11 +20,10 @@ namespace gui {
         }
     }
 
-    void HelpMarker(const char* desc)
-    {
+    void HelpMarker(const char* desc) {
         ImGui::TextDisabled("(?)");
-        if (ImGui::BeginItemTooltip())
-        {
+
+        if (ImGui::BeginItemTooltip()) {
             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45.0f);
             ImGui::TextUnformatted(desc);
             ImGui::PopTextWrapPos();
