@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "gui.h"
 
 namespace gui {
@@ -35,12 +37,22 @@ namespace gui {
 
         if (showTolerancedProfileWindow) {
             auto& surface = zemaxDDEClient->getTolerancedSurface();
-            if (surface.isValid()) renderProfileWindow("Toleranced Surface Profile", "Toleranced", surface, &showTolerancedProfileWindow);
+            std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
+
+            if (surface.isValid()) {
+                renderProfileWindow(title.c_str(), "Toleranced", surface, &showTolerancedProfileWindow);
+            }
         }
+
         if (showNominalProfileWindow) {
             auto& surface = zemaxDDEClient->getNominalSurface();
-            if (surface.isValid()) renderProfileWindow("Nominal Surface Profile", "Nominal", surface, &showNominalProfileWindow);
+            std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
+
+            if (surface.isValid()) {
+                renderProfileWindow(title.c_str(), "Nominal", surface, &showNominalProfileWindow);
+            }
         }
+
         if (showComparisonWindow) {
             auto& nom = zemaxDDEClient->getNominalSurface();
             auto& tol = zemaxDDEClient->getTolerancedSurface();
@@ -48,6 +60,7 @@ namespace gui {
                 renderComparisonWindow(nom, tol, &showComparisonWindow);
             }
         }
+
         if (showErrorWindow) {
             auto& nom = zemaxDDEClient->getNominalSurface();
             auto& tol = zemaxDDEClient->getTolerancedSurface();

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+
 #include "dde_zemax_const.h"
 
 namespace ZemaxDDE {
@@ -17,9 +18,16 @@ namespace ZemaxDDE {
         double alternateSag = 0.0;
     };
 
+    struct SurfaceProfileMetadata {
+        double angle = 0.0;
+        int sampling = 0;
+    };
+
     struct SurfaceData {
         int id = -1;
         int units = 0;
+        int sampling = 0;
+        double angle = 0.0;
         double semiDiameter = 0.0;
         std::string type = "Unknown";
         std::vector<SagData> sagDataPoints;
@@ -29,6 +37,8 @@ namespace ZemaxDDE {
         void clear() {
             id = -1;
             units = 0;
+            sampling = 0;
+            angle = 0.0;
             semiDiameter = 0.0;
             type = "Unknown";
             sagDataPoints.clear();

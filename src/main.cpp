@@ -1,4 +1,7 @@
+#include <fstream>
+
 #include <imgui.h>
+
 #include "logger/logger.h"
 #include "app/app_init.h"
 #include "application.h"
@@ -12,7 +15,7 @@ extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM 
             return client->handleDDEMessages(iMsg, wParam, lParam);
         } else {
         #ifdef DEBUG_LOG
-            logger.addLog("[APP] WndProc: No ZemaxDDEClient instance associated with hwnd = " + std::to_string((uintptr_t)hwnd));
+            logger.addLog(std::format("[APP] WndProc: No ZemaxDDEClient instance associated with hwnd = {}", (uintptr_t)hwnd));
         #endif
         }
     }

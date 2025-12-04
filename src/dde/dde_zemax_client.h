@@ -1,10 +1,10 @@
 #pragma once
 
 #include <windows.h>
-#include <string>
-#include <vector>
 #include <functional>
+
 #include "logger/logger.h"
+
 #include "dde_zemax_types.h"
 
 namespace ZemaxDDE {
@@ -44,6 +44,11 @@ namespace ZemaxDDE {
             void setStorageTarget(StorageTarget target) { currentStorageTarget = target; }
             void clearTolerancedSurface() { tolerancedSurface.clear(); }
             void clearNominalSurface() { nominalSurface.clear(); }
+            void setSurfaceProfileMetadata(ZemaxDDE::StorageTarget target, const SurfaceProfileMetadata& metadata) {
+                SurfaceData& surface = (target == StorageTarget::NOMINAL) ? nominalSurface : tolerancedSurface;
+                surface.angle = metadata.angle;
+                surface.sampling = metadata.sampling;
+            }
 
         private:
             HWND zemaxDDEServer = NULL;

@@ -1,33 +1,20 @@
 #pragma once
 
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
-#include <string>
-#include <math.h>
-#include <algorithm>
+#include <vector>
 
 #include <windows.h>
-#include <nfd.h>
 #include <GLFW/glfw3.h>
 
+#include <nfd.h>
 #include "lib/imgui/imgui.h"
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
-
 #include "lib/implot/implot.h"
 
 #include "application.h"
 #include "version.h"
-
 #include "dde/dde_zemax_client.h"
 
-#include "gui/components/gui_navbar.h"
-#include "gui/components/gui_sidebar.h"
-#include "gui/components/gui_dde_status.h"
-#include "gui/components/gui_content.h"
-#include "gui/components/gui_debug_log.h"
-#include "gui/components/gui_popups.h"
 #include "gui/content_pages/gui_page_local_surface_errors.h"
 #include "gui/content_pages/gui_page_optical_system_info.h"
 
@@ -35,6 +22,8 @@ namespace gui {
     const char* getUnitString(int unitCode, bool full = false);
     const char* getRayAimingTypeString(int rayAimingType);
     void HelpMarker(const char* desc);
+
+    std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface);
 
     class GuiManager {
         public: 

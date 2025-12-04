@@ -1,3 +1,6 @@
+#include <stdexcept>
+#include <fstream>
+
 #include "gui.h"
 
 namespace gui {
@@ -13,7 +16,7 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        logger.addLog("[GUI] Received DDE client window handle = " + std::to_string((uintptr_t)hwndClient));
+        logger.addLog(std::format("[GUI] Received DDE client window handle = {}", (uintptr_t)hwndClient));
     }
 
     GuiManager::~GuiManager() {

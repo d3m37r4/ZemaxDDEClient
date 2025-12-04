@@ -1,3 +1,5 @@
+#include "gui/components/gui_content.h"
+
 #include "gui/gui.h"
 
 namespace gui {

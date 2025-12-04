@@ -1,3 +1,5 @@
+#include "gui/components/gui_debug_log.h"
+
 #include "gui.h"
 
 namespace gui {

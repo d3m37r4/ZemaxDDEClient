@@ -1,7 +1,8 @@
+#include "logger.h"
+
 #ifdef DEBUG_LOG
     #include <iostream>
 #endif
-#include "logger.h"
 
 Logger::Logger() {}                                                 // Initialization of the Logger class.
 

@@ -1,3 +1,7 @@
+#include <stdexcept>
+
+#include "gui/components/gui_dde_status.h"
+
 #include "gui.h"
 
 namespace gui {

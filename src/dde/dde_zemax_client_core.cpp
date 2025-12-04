@@ -1,5 +1,7 @@
 #include <stdexcept>
+#include <fstream>
 #include <dde.h>
+
 #include "dde_zemax_client.h"
 #include "dde_zemax_utils.h"
 
@@ -30,7 +32,7 @@ namespace ZemaxDDE {
         char appName[256], topicName[256];
         WideCharToMultiByte(CP_ACP, 0, DDE_APP_NAME, -1, appName, sizeof(appName), NULL, NULL);
         WideCharToMultiByte(CP_ACP, 0, DDE_TOPIC, -1, topicName, sizeof(topicName), NULL, NULL);
-        logger.addLog("[DDE] Sent 'WM_DDE_INITIATE' to app='" + std::string(appName) + "', topic='" + std::string(topicName) + "'");
+        logger.addLog(std::format("[DDE] Sent 'WM_DDE_INITIATE' to app='{}', topic='{}'.", appName, topicName));
     #endif
     
         GlobalDeleteAtom(aApp);
@@ -47,7 +49,7 @@ namespace ZemaxDDE {
             try {
                 onDDEConnected(this);
             } catch (const std::exception& e) {
-                logger.addLog("[DDE] Error in DDE connected callback: " + std::string(e.what()));
+                logger.addLog(std::format("[DDE] Error in DDE connected callback: {}", e.what()));
                 throw;
             }
         }
@@ -74,7 +76,7 @@ namespace ZemaxDDE {
 
     void ZemaxDDEClient::sendPostRequest(const char* request) {
     #ifdef DEBUG_LOG
-        logger.addLog("[DDE] Sending request: " + std::string(request));
+        logger.addLog(std::format("[DDE] Sending request: {}", request));
     #endif
         wchar_t wItem[256];
         MultiByteToWideChar(CP_ACP, 0, request, -1, wItem, 256);
@@ -93,8 +95,9 @@ namespace ZemaxDDE {
         ATOM aItem;
         UINT_PTR uiLow, uiHi;
         std::string buffer;
+
     #ifdef DEBUG_LOG
-        logger.addLog("[DDE] Received message: " + std::to_string(iMsg));
+        logger.addLog(std::format("[DDE] Received message: {}", iMsg));
     #endif
         switch (iMsg) {
             case WM_DDE_ACK: {
@@ -107,7 +110,7 @@ namespace ZemaxDDE {
                     GlobalDeleteAtom((ATOM)uiLow);
                     GlobalDeleteAtom((ATOM)uiHi);
                 #ifdef DEBUG_LOG
-                    logger.addLog("[DDE] Received 'WM_DDE_ACK', zemaxDDEServer = " + std::to_string((uintptr_t)zemaxDDEServer));
+                    logger.addLog(std::format("[DDE] Received 'WM_DDE_ACK', zemaxDDEServer = {}", (uintptr_t)zemaxDDEServer));
                 #endif
                 }
 
@@ -138,7 +141,7 @@ namespace ZemaxDDE {
                     isDataReceived = true;
                     buffer = (char*)pDdeData->Value;
                 #ifdef DEBUG_LOG
-                    logger.addLog("[DDE] Received 'WM_DDE_DATA', content = " + buffer);
+                    logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
                 #endif
                     if (command_token == "GetName") {
                         opticalSystem.lensName = buffer;
@@ -154,9 +157,8 @@ namespace ZemaxDDE {
                         int params = static_cast<int>(systemParams.size());
 
                         if (params != GET_SYSTEM_PARAMS_COUNT) {
-                            logger.addLog("[DDE] GetSystem: Invalid parameter count. Expected exactly " +
-                                        std::to_string(GET_SYSTEM_PARAMS_COUNT) + ", got " +
-                                        std::to_string(params));
+                            logger.addLog(std::format("[DDE] GetSystem: Invalid parameter count. Expected exactly {}, got {}",
+                                                    GET_SYSTEM_PARAMS_COUNT, params));
                             return 0;
                         }
 
@@ -186,13 +188,13 @@ namespace ZemaxDDE {
 
                             DdeAck.fAck = TRUE;
                         } catch (const std::invalid_argument& e) {
-                            logger.addLog("[DDE] GetSystem: Invalid number format in parameter: " + std::string(e.what()));
+                            logger.addLog(std::format("[DDE] GetSystem: Invalid number format in parameter: {}", e.what()));
                             return 0;
                         } catch (const std::out_of_range& e) {
-                            logger.addLog("[DDE] GetSystem: Number out of range: " + std::string(e.what()));
+                            logger.addLog(std::format("[DDE] GetSystem: Number out of range: {}", e.what()));
                             return 0;
                         } catch (const std::exception& e) {
-                            logger.addLog("[DDE] GetSystem: Unexpected error: " + std::string(e.what()));
+                            logger.addLog(std::format("[DDE] GetSystem: Unexpected error: {}", e.what()));
                             return 0;
                         }
                     }
@@ -201,9 +203,8 @@ namespace ZemaxDDE {
                         int params = static_cast<int>(item_tokens.size());
 
                         if (params != EXPECTED_COMMAND_TOKENS) {
-                            logger.addLog("[DDE] GetField: Invalid command format. Expected exactly " +
-                                        std::to_string(EXPECTED_COMMAND_TOKENS) + " tokens, got " +
-                                        std::to_string(params));
+                            logger.addLog(std::format("[DDE] GetField: Invalid command format. Expected exactly {} tokens, got {}",
+                                                    EXPECTED_COMMAND_TOKENS, params));
                             return 0;
                         }
 
@@ -211,10 +212,10 @@ namespace ZemaxDDE {
                         try {
                             arg = std::stoi(item_tokens[1]);
                         } catch (const std::invalid_argument&) {
-                            logger.addLog("[DDE] GetField: Invalid field index '" + item_tokens[1] + "'. Not a number.");
+                            logger.addLog(std::format("[DDE] GetField: Invalid field index '{}'. Not a number.", item_tokens[1]));
                             return 0;
                         } catch (const std::out_of_range&) {
-                            logger.addLog("[DDE] GetField: Field index '" + item_tokens[1] + "' is out of range (too large).");
+                            logger.addLog(std::format("[DDE] GetField: Field index '{}' is out of range (too large).", item_tokens[1]));
                             return 0;
                         }
 
@@ -225,9 +226,8 @@ namespace ZemaxDDE {
                             if(arg == 0) {
                                 const int GET_FIELD_META_COUNT = 5;     // fieldType, numFields, maxX, maxY, normalizationMethod
                                 if (dataCount != GET_FIELD_META_COUNT) {
-                                    logger.addLog("[DDE] GetField: Invalid parameter count for field metadata. Expected exactly " +
-                                                std::to_string(GET_FIELD_META_COUNT) + ", got " +
-                                                std::to_string(dataCount));
+                                    logger.addLog(std::format("[DDE] GetField: Invalid parameter count for field metadata. Expected exactly {}, got {}",
+                                                            GET_FIELD_META_COUNT, dataCount));
                                     return 0;
                                 }
 
@@ -244,9 +244,8 @@ namespace ZemaxDDE {
 
                                     int numFields = std::stoi(tokens[NUM_FIELDS]);
                                     if (numFields < ZemaxDDE::MIN_FIELDS || numFields > ZemaxDDE::MAX_FIELDS) {
-                                        logger.addLog("[DDE] GetField: Invalid numFields value: " + std::to_string(numFields) +
-                                                    ". Must be in range [" + std::to_string(ZemaxDDE::MIN_FIELDS) + ", " +
-                                                    std::to_string(ZemaxDDE::MAX_FIELDS) + "]");
+                                        logger.addLog(std::format("[DDE] GetField: Invalid numFields value: {}. Must be in range [{}, {}]",
+                                                                numFields, ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS));
                                         return 0;
                                     }
 
@@ -255,15 +254,14 @@ namespace ZemaxDDE {
                                     opticalSystem.maxYField = std::stod(tokens[MAX_Y_FIELD]);
                                     opticalSystem.normalizationMethod = std::stoi(tokens[NORMALIZATION_METHOD]);
                                 } catch (const std::exception& e) {
-                                    logger.addLog("[DDE] GetField: Failed to parse field metadata: " + std::string(e.what()));
+                                    logger.addLog(std::format("[DDE] GetField: Failed to parse field metadata: {}", e.what()));
                                     return 0;
                                 }
                             } else {
                                 const int GET_FIELD_DATA_COUNT = 8;     // xField, yField, weight, vDx, vDy, vCx, vCy, vAn
                                 if (dataCount != GET_FIELD_DATA_COUNT) {
-                                    logger.addLog("[DDE] GetField: Invalid parameter count for field data. Expected exactly " +
-                                                std::to_string(GET_FIELD_DATA_COUNT) + ", got " +
-                                                std::to_string(dataCount));
+                                    logger.addLog(std::format("[DDE] GetField: Invalid parameter count for field data. Expected exactly {}, got {}",
+                                                            GET_FIELD_DATA_COUNT, dataCount));
                                     return 0;
                                 }
 
@@ -282,16 +280,13 @@ namespace ZemaxDDE {
                                     opticalSystem.xField[arg] = std::stod(tokens[XFIELD]);
                                     opticalSystem.yField[arg] = std::stod(tokens[YFIELD]);
                                 } catch (const std::exception& e) {
-                                    logger.addLog("[DDE] GetField: Failed to parse data for field " + std::to_string(arg) +
-                                                ": " + std::string(e.what()));
+                                    logger.addLog(std::format("[DDE] GetField: Failed to parse data for field {}: {}", arg, e.what()));
                                     return 0;
                                 }
                             }
                         } else {
-                            logger.addLog("[DDE] GetField: Field index must be 0 (metadata) or in range [" + 
-                                        std::to_string(ZemaxDDE::MIN_FIELDS) + ", " +
-                                        std::to_string(ZemaxDDE::MAX_FIELDS) + "]. Got: " +
-                                        std::to_string(arg));
+                            logger.addLog(std::format("[DDE] GetField: Field index must be 0 (metadata) or in range [{}, {}]. Got: {}",
+                                                    ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS, arg));
                             return 0;
                         }
                         DdeAck.fAck = TRUE;
@@ -301,9 +296,8 @@ namespace ZemaxDDE {
                         int params = static_cast<int>(item_tokens.size());
 
                         if (params != EXPECTED_COMMAND_TOKENS) {
-                            logger.addLog("[DDE] GetWave: Invalid command format. Expected exactly " +
-                                        std::to_string(EXPECTED_COMMAND_TOKENS) + " tokens, got " +
-                                        std::to_string(params));
+                            logger.addLog(std::format("[DDE] GetWave: Invalid command format. Expected exactly {} tokens, got {}",
+                                                    EXPECTED_COMMAND_TOKENS, params));
                             return 0;
                         }
 
@@ -311,10 +305,10 @@ namespace ZemaxDDE {
                         try {
                             arg = std::stoi(item_tokens[1]);
                         } catch (const std::invalid_argument&) {
-                            logger.addLog("[DDE] GetWave: Invalid wave index '" + item_tokens[1] + "'. Not a number.");
+                            logger.addLog(std::format("[DDE] GetWave: Invalid wave index '{}'. Not a number.", item_tokens[1]));
                             return 0;
                         } catch (const std::out_of_range&) {
-                            logger.addLog("[DDE] GetWave: Wave index '" + item_tokens[1] + "' is out of range (too large).");
+                            logger.addLog(std::format("[DDE] GetWave: Wave index '{}' is out of range (too large).", item_tokens[1]));
                             return 0;
                         }
 
@@ -325,9 +319,8 @@ namespace ZemaxDDE {
                             if(arg == 0) {
                                 const int GET_WAVE_META_COUNT = 2;     // primary, number
                                 if (dataCount != GET_WAVE_META_COUNT) {
-                                    logger.addLog("[DDE] GetWave: Invalid parameter count for wave metadata. Expected exactly " +
-                                                std::to_string(GET_WAVE_META_COUNT) + ", got " +
-                                                std::to_string(dataCount));
+                                    logger.addLog(std::format("[DDE] GetWave: Invalid parameter count for wave metadata. Expected exactly {}, got {}",
+                                                            GET_WAVE_META_COUNT, dataCount));
                                     return 0;
                                 }
 
@@ -341,23 +334,21 @@ namespace ZemaxDDE {
 
                                     int numWaves = std::stoi(tokens[NUM_WAVES]);
                                     if (numWaves < ZemaxDDE::MIN_WAVES || numWaves > ZemaxDDE::MAX_WAVES) {
-                                        logger.addLog("[DDE] GetWave: Invalid numWaves value: " + std::to_string(numWaves) +
-                                                    ". Must be in range [" + std::to_string(ZemaxDDE::MIN_WAVES) + ", " +
-                                                    std::to_string(ZemaxDDE::MAX_WAVES) + "]");
+                                        logger.addLog(std::format("[DDE] GetWave: Invalid numWaves value: {}. Must be in range [{}, {}]",
+                                                                numWaves, ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES));
                                         return 0;
                                     }
 
                                     opticalSystem.numWaves = numWaves;
                                 } catch (const std::exception& e) {
-                                    logger.addLog("[DDE] GetWave: Failed to parse wave metadata: " + std::string(e.what()));
+                                    logger.addLog(std::format("[DDE] GetWave: Failed to parse wave metadata: {}", e.what()));
                                     return 0;
                                 }
                             } else {
                                 const int GET_WAVE_DATA_COUNT = 2;     // waveLen, weight
                                 if (dataCount != GET_WAVE_DATA_COUNT) {
-                                    logger.addLog("[DDE] GetWave: Invalid parameter count for wave data. Expected exactly " +
-                                                std::to_string(GET_WAVE_DATA_COUNT) + ", got " +
-                                                std::to_string(dataCount));
+                                    logger.addLog(std::format("[DDE] GetWave: Invalid parameter count for wave data. Expected exactly {}, got {}",
+                                                            GET_WAVE_DATA_COUNT, dataCount));
                                     return 0;
                                 }
 
@@ -370,16 +361,13 @@ namespace ZemaxDDE {
                                     opticalSystem.waveData[arg].value  = std::stod(tokens[WAVE_LENGTH]);
                                     opticalSystem.waveData[arg].weight = std::stod(tokens[WEIGHT]);
                                 } catch (const std::exception& e) {
-                                    logger.addLog("[DDE] GetWave: Failed to parse data for wave " + std::to_string(arg) +
-                                                ": " + std::string(e.what()));
+                                    logger.addLog(std::format("[DDE] GetWave: Failed to parse data for wave {}: {}", arg, e.what()));
                                     return 0;
                                 }
                             }
                         } else {
-                            logger.addLog("[DDE] GetWave: Wave index must be 0 (metadata) or in range [" + 
-                                        std::to_string(ZemaxDDE::MIN_WAVES) + ", " +
-                                        std::to_string(ZemaxDDE::MAX_WAVES) + "]. Got: " +
-                                        std::to_string(arg));
+                            logger.addLog(std::format("[DDE] GetWave: Wave index must be 0 (metadata) or in range [{}, {}]. Got: {}",
+                                                    ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES, arg));
                             return 0;
                         }
                         DdeAck.fAck = TRUE;
@@ -390,15 +378,14 @@ namespace ZemaxDDE {
 
                         int currentSurface = std::stoi(item_tokens[1]);
                         if (currentSurface < 0 || currentSurface > opticalSystem.numSurfs) {
-                            logger.addLog("[DDE] GetSurfaceData: Invalid current surface value: " + std::to_string(currentSurface) +
-                                        ". Must be in range [" + std::to_string(0) + ", " +
-                                        std::to_string(opticalSystem.numSurfs) + "]");
+                            logger.addLog(std::format("[DDE] GetSurfaceData: Invalid current surface value: {}. Must be in range [{}, {}]",
+                                                    currentSurface, 0, opticalSystem.numSurfs));
                             return 0;
                         }
 
                         int code = std::stoi(item_tokens[2]);
                         if (!ZemaxDDE::SurfaceDataCode::isValid(code)) {
-                            logger.addLog("[DDE] GetSurfaceData: Invalid surface data code received: " + std::to_string(code));
+                            logger.addLog(std::format("[DDE] GetSurfaceData: Invalid surface data code received: {}", code));
                             return 0;
                         }
 
@@ -421,7 +408,7 @@ namespace ZemaxDDE {
                                 break;
                             }
                             default: {
-                                logger.addLog("[DDE] GetSurfaceData: Unsupported code for storage: " + std::to_string(code));
+                                logger.addLog(std::format("[DDE] GetSurfaceData: Unsupported code for storage: {}", code));
                                 return 0;
                             }
                         }
@@ -435,9 +422,8 @@ namespace ZemaxDDE {
 
                         int currentSurface = std::stoi(item_tokens[1]);
                         if (currentSurface < 0 || currentSurface > opticalSystem.numSurfs) {
-                            logger.addLog("[DDE] GetSag: Invalid current surface value: " + std::to_string(currentSurface) +
-                                        ". Must be in range [" + std::to_string(0) + ", " +
-                                        std::to_string(opticalSystem.numSurfs) + "]");
+                            logger.addLog(std::format("[DDE] GetSag: Invalid current surface value: {}. Must be in range [{}, {}]",
+                                                    currentSurface, 0, opticalSystem.numSurfs));
                             return 0;
                         }
 
@@ -448,7 +434,7 @@ namespace ZemaxDDE {
                             x = std::stod(item_tokens[2]);
                             y = std::stod(item_tokens[3]);
                         } catch (const std::exception& e) {
-                            logger.addLog("[DDE] GetSag: Failed to parse x/y: " + std::string(e.what()));
+                            logger.addLog(std::format("[DDE] GetSag: Failed to parse x/y: {}", e.what()));
                             return 0;
                         }
                         
@@ -502,7 +488,7 @@ namespace ZemaxDDE {
         const char* const DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED = "No ZemaxDDEServer received, DDE connection to Zemax not established";
         if (!zemaxDDEServer) {
         #ifdef DEBUG_LOG
-            logger.addLog("[DDE] " + std::string(DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED));
+            logger.addLog(std::format("[DDE] {}", DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED));
         #endif
             throw std::runtime_error(DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED);
         }
@@ -511,7 +497,7 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::checkResponseStatus(const std::string& errorMsg) {
         if (!isDataReceived) {
         #ifdef DEBUG_LOG
-            logger.addLog("[DDE] " + errorMsg);
+            logger.addLog(std::format("[DDE] {}", errorMsg));
         #endif
             throw std::runtime_error(errorMsg);
         }

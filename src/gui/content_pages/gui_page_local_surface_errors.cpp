@@ -1,10 +1,29 @@
+#include <fstream>
+
 #include "gui/gui.h"
 
 namespace {
+    struct ProfileData {
+        std::vector<double> x_nom, y_nom;
+        std::vector<double> x_tol, y_tol;
+    };
+
+    ProfileData prepareProfileData(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced) {
+        auto [x_nom, y_nom] = gui::extractSagCoordinates(nominal);
+        auto [x_tol, y_tol] = gui::extractSagCoordinates(toleranced);
+        
+        return ProfileData{
+            std::move(x_nom), std::move(y_nom),
+            std::move(x_tol), std::move(y_tol)
+        };
+    }
+
     std::string getSamplingTooltip() {
-        return "Number of points to sample along the surface diameter (min=" +
-               std::to_string(MIN_SAMPLING) + ", max=" + std::to_string(MAX_SAMPLING) +
-               ").\nHigher values = smoother profile, slower calculation.";
+        return std::format(
+            "Number of points to sample along the surface diameter (min={}, max={}).\n"
+            "Higher values = smoother profile, slower calculation.",
+            MIN_SAMPLING, MAX_SAMPLING
+        );
     }
 
     std::string getAngleTooltip() {
@@ -22,7 +41,12 @@ namespace gui {
         ImGui::Spacing();
 
         ImGui::SeparatorText("Toleranced surface parameters");
-        ImGui::BeginChild("TolerancedSurfaceContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
+        ImGui::BeginChild(
+            "TolerancedSurfaceContent",
+            ImVec2(0.0f, 0.0f),
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
+        );
 
         if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
             ImGui::Text("Optical system: %s", "null");
@@ -42,6 +66,8 @@ namespace gui {
             if (ImGui::Button("Show profile graphic")) {
                 showTolerancedProfileWindow = true;
             }
+
+            ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
                 showTolerancedProfileWindow = false;
@@ -87,84 +113,85 @@ namespace gui {
                 }
             }
 
-            ImGui::Spacing();
-            ImGui::TextDisabled("No data for this surface");
-
             ImGui::EndDisabled();
         }
         ImGui::EndChild();
 
         ImGui::SeparatorText("Nominal surface parameters");
-        ImGui::BeginChild("NominalSurfaceContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
-            if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
-                ImGui::Text("Optical system: %s", "null");
-                ImGui::Text("Surface index: %d", nominal.id);
-                ImGui::Text("Surface type: %s", nominal.type.c_str());
-                ImGui::Text("Semi-diameter: %.3f %s", nominal.semiDiameter, getUnitString(nominal.units));
-                ImGui::Text("Diameter: %.3f %s", nominal.diameter(), getUnitString(nominal.units));
-                ImGui::Text("Surface sag data:");
-                ImGui::SameLine();
+        ImGui::BeginChild(
+            "NominalSurfaceContent",
+            ImVec2(0.0f, 0.0f),
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
+        );
+        if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
+            ImGui::Text("Optical system: %s", "null");
+            ImGui::Text("Surface index: %d", nominal.id);
+            ImGui::Text("Surface type: %s", nominal.type.c_str());
+            ImGui::Text("Semi-diameter: %.3f %s", nominal.semiDiameter, getUnitString(nominal.units));
+            ImGui::Text("Diameter: %.3f %s", nominal.diameter(), getUnitString(nominal.units));
+            ImGui::Text("Surface sag data:");
+            ImGui::SameLine();
 
-                if (ImGui::Button("Text")) {
-                    saveSagProfileToFile(nominal);
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button("Show profile graphic")) {
-                    showNominalProfileWindow = true;
-                }
-
-                if (ImGui::Button("Clear data")) {
-                    showNominalProfileWindow = false;
-                    zemaxDDEClient->clearNominalSurface();
-                }
-            } else {
-                ImGui::BeginDisabled(!isDdeInitialized());
-
-                ImGui::Text("Sampling:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-                state.nominalSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.nominalSampling));
-                ImGui::SameLine(); 
-                HelpMarker(getSamplingTooltip().c_str());
-
-                ImGui::Text("Angle:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
-                state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
-                ImGui::SameLine(); 
-                HelpMarker(getAngleTooltip().c_str());
-
-                ImGui::Text("Surface number:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                state.nominalSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
-
-                if (ImGui::Button("Copy toleranced surface settings")) {
-                    state.nominalSampling = state.tolerancedSampling;
-                    state.nominalAngle = state.tolerancedAngle;
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button("Get nominal surface data")) {
-                    if (isDdeInitialized()) {
-                        zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
-                        zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                        zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                        calculateSurfaceProfile(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
-                    }
-                }
-
-                ImGui::Spacing();
-                ImGui::TextDisabled("No data for this surface");
-
-                ImGui::EndDisabled();
+            if (ImGui::Button("Text")) {
+                saveSagProfileToFile(nominal);
             }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Show profile graphic")) {
+                showNominalProfileWindow = true;
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Clear data")) {
+                showNominalProfileWindow = false;
+                zemaxDDEClient->clearNominalSurface();
+            }
+        } else {
+            ImGui::BeginDisabled(!isDdeInitialized());
+
+            ImGui::Text("Sampling:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
+            state.nominalSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.nominalSampling));
+            ImGui::SameLine(); 
+            HelpMarker(getSamplingTooltip().c_str());
+
+            ImGui::Text("Angle:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
+            state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
+            ImGui::SameLine(); 
+            HelpMarker(getAngleTooltip().c_str());
+
+            ImGui::Text("Surface number:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
+            state.nominalSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
+
+            if (ImGui::Button("Copy toleranced surface settings")) {
+                state.nominalSampling = state.tolerancedSampling;
+                state.nominalAngle = state.tolerancedAngle;
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Get nominal surface data")) {
+                if (isDdeInitialized()) {
+                    zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
+                    zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+                    zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                    calculateSurfaceProfile(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                }
+            }
+
+            ImGui::EndDisabled();
+        }
         ImGui::EndChild();
         
         if (nominal.isValid() && toleranced.isValid()) {
@@ -185,29 +212,28 @@ namespace gui {
             if (ImGui::Button("Export comparison to CSV")) {
                 nfdchar_t* savePath = nullptr;
                 nfdresult_t result = NFD_SaveDialog("csv", nullptr, &savePath);
+
                 if (result == NFD_OKAY) {
                     std::ofstream file(savePath);
+
                     if (file.is_open()) {
-                        std::vector<double> x_nom, y_nom, x_tol, y_tol;
-                        for (const auto& p : nominal.sagDataPoints) {
-                            x_nom.push_back(p.x);
-                            y_nom.push_back(p.sag);
-                        }
-                        for (const auto& p : toleranced.sagDataPoints) {
-                            x_tol.push_back(p.x);
-                            y_tol.push_back(p.sag);
-                        }
+                        auto data = prepareProfileData(nominal, toleranced);
+
                         file << "x_nom,y_nom,x_tol,y_tol,error\n";
-                        size_t n = std::min(x_nom.size(), x_tol.size());
+
+                        size_t n = std::min(data.x_nom.size(), data.x_tol.size());
+                        
                         for (size_t i = 0; i < n; ++i) {
-                            double error = y_tol[i] - y_nom[i];
-                            file << x_nom[i] << "," << y_nom[i] << ","
-                                << x_tol[i] << "," << y_tol[i] << ","
+                            double error = data.y_tol[i] - data.y_nom[i];
+                            file << data.x_nom[i] << "," << data.y_nom[i] << ","
+                                << data.x_tol[i] << "," << data.y_tol[i] << ","
                                 << error << "\n";
                         }
+
                         file.close();
                         logger.addLog("[GUI] Comparison data saved to " + std::string(savePath));
                     }
+
                     free(savePath);
                 }
             }
@@ -216,38 +242,34 @@ namespace gui {
             bool showErrorPlot = !showErrorWindow;
 
             if (showProfiles || showErrorPlot) {
-                ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiWindowFlags_NoTitleBar | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_FrameStyle);
+                ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoTitleBar);
 
-                std::vector<double> x_nom, y_nom, x_tol, y_tol;
-                for (const auto& p : nominal.sagDataPoints) {
-                    x_nom.push_back(p.x);
-                    y_nom.push_back(p.sag);
-                }
-                for (const auto& p : toleranced.sagDataPoints) {
-                    x_tol.push_back(p.x);
-                    y_tol.push_back(p.sag);
-                }
+                auto data = prepareProfileData(nominal, toleranced);
 
                 if (showProfiles) {
                     if (ImPlot::BeginPlot("##Profiles", ImVec2(-1, 200))) {
                         ImPlot::SetupAxes("X (mm)", "Sag (mm)");
                         ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-                        ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size());
-                        ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size());
+                        ImPlot::PlotLine("Nominal", data.x_nom.data(), data.y_nom.data(), data.x_nom.size());
+                        ImPlot::PlotLine("Toleranced", data.x_tol.data(), data.y_tol.data(), data.x_tol.size());
                         ImPlot::EndPlot();
                     }
-                    ImGui::Spacing();
                 }
 
-                if (showErrorPlot && x_nom.size() == x_tol.size()) {
+                ImGui::Spacing();
+
+                if (showErrorPlot && data.x_nom.size() == data.x_tol.size()) {
                     if (ImPlot::BeginPlot("##Error", ImVec2(-1, 200))) {
                         ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
                         ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+
                         std::vector<double> error;
-                        for (size_t i = 0; i < x_nom.size(); ++i) {
-                            error.push_back(y_nom[i] - y_tol[i]);
+
+                        for (size_t i = 0; i < data.x_nom.size(); ++i) {
+                            error.push_back(data.y_nom[i] - data.y_tol[i]);
                         }
-                        ImPlot::PlotLine("Error", x_nom.data(), error.data(), x_nom.size());
+
+                        ImPlot::PlotLine("Error", data.x_nom.data(), error.data(), data.x_nom.size());
                         ImPlot::EndPlot();
                     }
                 }
