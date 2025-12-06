@@ -109,7 +109,7 @@ namespace gui {
                     zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
                     zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                    calculateSurfaceProfile(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                    calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
                 }
             }
 
@@ -186,7 +186,7 @@ namespace gui {
                     zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
                     zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                    calculateSurfaceProfile(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                 }
             }
 

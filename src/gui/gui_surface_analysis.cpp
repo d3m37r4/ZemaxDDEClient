@@ -20,7 +20,7 @@ namespace gui {
         return {std::move(x_vals), std::move(y_vals)};
     }
 
-    void GuiManager::calculateSurfaceProfile(int surfaceNumber, int sampling, double angle) {
+    void GuiManager::calculateSagCrossSection(int surface, int sampling, double angle) {
         const auto targetStorage = zemaxDDEClient->getStorageTarget();
         assert(targetStorage == ZemaxDDE::StorageTarget::NOMINAL || targetStorage == ZemaxDDE::StorageTarget::TOLERANCED);
     
@@ -29,8 +29,8 @@ namespace gui {
                 ? zemaxDDEClient->getNominalSurface() 
                 : zemaxDDEClient->getTolerancedSurface();
 
-        if (targetSurface.id != surfaceNumber || !targetSurface.isValid()) [[unlikely]] {
-            logger.addLog(std::format("[GUI] No valid surface data for surface {}", surfaceNumber));
+        if (targetSurface.id != surface || !targetSurface.isValid()) [[unlikely]] {
+            logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
             return;
         }
 
@@ -42,14 +42,14 @@ namespace gui {
         double step = targetSurface.diameter() / (sampling - 1);
 
     #ifdef DEBUG_LOG
-        logger.addLog(std::format("[GUI] Calculating profile for surface {} at angle {}° with {} points", surfaceNumber, angle, sampling));
+        logger.addLog(std::format("[GUI] Requesting Sag Cross Section for surface {} at angle {}° with {} points", surface, angle, sampling));
     #endif
 
         for (int i : std::views::iota(0, sampling)) {
             const double r = -semiDiameter + i * step;
             const double x = r * cosAngle;
             const double y = r * sinAngle;
-            zemaxDDEClient->getSag(surfaceNumber, x, y);
+            zemaxDDEClient->getSag(surface, x, y);
         }     
         
         zemaxDDEClient->setSurfaceProfileMetadata(
