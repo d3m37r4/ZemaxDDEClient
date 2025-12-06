@@ -53,7 +53,7 @@ namespace gui {
         }     
         
         zemaxDDEClient->setSurfaceProfileMetadata(
-            zemaxDDEClient->getStorageTarget(),
+            targetStorage,
             {.angle = angle, .sampling = sampling}
         );
     }
