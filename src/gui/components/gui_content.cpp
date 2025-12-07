@@ -14,15 +14,15 @@ namespace gui {
             return;
         }
 
-        switch (selectedMenuItem) {
-            case 0: {
+        gui::renderPageHeader(currentPage);
+
+        switch (currentPage) {
+            case GuiPage::OpticalSystemInfo:
                 renderPageOpticalSystemInfo();
                 break;
-            }
-            case 1: {
-                renderPageLocalSurfaceErrors();
+            case GuiPage::SurfaceSagAnalysis:
+                renderPageSurfaceSagAnalysis();
                 break;
-            }
         }
 
         ImGui::End();

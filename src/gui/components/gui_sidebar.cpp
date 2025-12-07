@@ -19,9 +19,16 @@ namespace gui {
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 10.0f));
         renderDDEStatusFrame();
+
         ImGui::Spacing();
-        if (ImGui::Button("Optical system information", ImVec2(-1.0f, 0.0f))) selectedMenuItem = 0;
-        if (ImGui::Button("Local surface errors", ImVec2(-1.0f, 0.0f))) selectedMenuItem = 1;
+
+        for (size_t i = 0; i < GUI_PAGES_COUNT; ++i) {
+            const auto& page = GUI_PAGES[i];
+            if (ImGui::Button(page.title, ImVec2(-1.0f, 0.0f))) {
+                currentPage = page.id;
+            }
+        }
+
         ImGui::PopStyleVar(2);
         ImGui::End();
     }

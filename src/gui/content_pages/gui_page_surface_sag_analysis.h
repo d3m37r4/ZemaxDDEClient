@@ -1,6 +1,6 @@
 #pragma once
 
-struct LocalSurfaceErrorsPageState {
+struct SurfaceSagAnalysisPageState {
     int tolerancedSurfaceIndex = 0;
     int nominalSurfaceIndex = 0;
 

@@ -2,8 +2,6 @@
 
 namespace gui {
     void GuiManager::renderPageOpticalSystemInfo() {
-        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
-        ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
         if (isDdeInitialized()) {

@@ -1,6 +1,11 @@
 #include "gui.h"
 
 namespace gui {
+    void renderPageHeader(GuiPage currentPage) {
+        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), GUI_PAGES[static_cast<size_t>(currentPage)].title);
+        ImGui::Spacing();
+    }
+
     const char* getUnitString(int unitCode, bool full) {
         switch (unitCode) {
             case 0: return full ? "Millimeters" : "mm";

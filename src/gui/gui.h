@@ -15,13 +15,32 @@
 #include "version.h"
 #include "dde/dde_zemax_client.h"
 
-#include "gui/content_pages/gui_page_local_surface_errors.h"
 #include "gui/content_pages/gui_page_optical_system_info.h"
+#include "gui/content_pages/gui_page_surface_sag_analysis.h"
 
 namespace gui {
+    enum class GuiPage {
+        OpticalSystemInfo,      // = 0
+        SurfaceSagAnalysis      // = 1
+    };
+
+    struct GuiPageInfo {
+        GuiPage id;
+        const char* title;
+    };
+
+    constexpr GuiPageInfo GUI_PAGES[] = {
+        {GuiPage::OpticalSystemInfo, "Optical system information"},
+        {GuiPage::SurfaceSagAnalysis, "Surface Sag Cross Section Analysis"}
+    };
+
+    constexpr size_t GUI_PAGES_COUNT = sizeof(GUI_PAGES) / sizeof(GUI_PAGES[0]);
+
     const char* getUnitString(int unitCode, bool full = false);
     const char* getRayAimingTypeString(int rayAimingType);
+    
     void HelpMarker(const char* desc);
+    void renderPageHeader(GuiPage currentPage);
 
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface);
 
@@ -43,13 +62,13 @@ namespace gui {
             void renderUpdatesPopup();
 
             void renderPageOpticalSystemInfo();
-            void renderPageLocalSurfaceErrors();
+            void renderPageSurfaceSagAnalysis();
 
             void renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
             void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
             void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
 
-            void calculateSurfaceProfile(int surfaceNumber, int sampling, double angle = 0.0);
+            void calculateSagCrossSection(int surface, int sampling, double angle = 0.0);
             void saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface);
 
             bool shouldClose() const { return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true; }
@@ -60,8 +79,8 @@ namespace gui {
             HWND hwndClient;                                    // DDE client window handle
             ZemaxDDE::ZemaxDDEClient* zemaxDDEClient;           // Pointer to a DDE client instance
 
-            LocalSurfaceErrorsPageState surfaceErrorsPageState{};
-            int selectedMenuItem{0};
+            GuiPage currentPage = GuiPage::OpticalSystemInfo;
+            SurfaceSagAnalysisPageState surfaceSagAnalysisPageState{};
 
             bool showTolerancedProfileWindow{false};
             bool showNominalProfileWindow{false};
