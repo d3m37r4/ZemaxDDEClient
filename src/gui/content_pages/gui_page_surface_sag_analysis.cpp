@@ -3,16 +3,16 @@
 #include "gui/gui.h"
 
 namespace {
-    struct ProfileData {
+    struct SagCrossSectionPair {
         std::vector<double> x_nom, y_nom;
         std::vector<double> x_tol, y_tol;
     };
 
-    ProfileData prepareProfileData(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced) {
+    SagCrossSectionPair prepareSagCrossSectionData(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced) {
         auto [x_nom, y_nom] = gui::extractSagCoordinates(nominal);
         auto [x_tol, y_tol] = gui::extractSagCoordinates(toleranced);
         
-        return ProfileData{
+        return SagCrossSectionPair{
             std::move(x_nom), std::move(y_nom),
             std::move(x_tol), std::move(y_tol)
         };
@@ -214,7 +214,7 @@ namespace gui {
                     std::ofstream file(savePath);
 
                     if (file.is_open()) {
-                        auto data = prepareProfileData(nominal, toleranced);
+                        auto data = prepareSagCrossSectionData(nominal, toleranced);
 
                         file << "x_nom,y_nom,x_tol,y_tol,error\n";
 
@@ -241,7 +241,7 @@ namespace gui {
             if (showProfiles || showErrorPlot) {
                 ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoTitleBar);
 
-                auto data = prepareProfileData(nominal, toleranced);
+                auto data = prepareSagCrossSectionData(nominal, toleranced);
 
                 if (showProfiles) {
                     if (ImPlot::BeginPlot("##Profiles", ImVec2(-1, 200))) {
