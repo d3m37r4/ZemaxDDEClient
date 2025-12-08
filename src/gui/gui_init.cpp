@@ -8,7 +8,6 @@ namespace gui {
         : glfwWindow(glfwWindow)
         , hwndClient(hwndClient)
         , zemaxDDEClient(ddeClient)
-        , selectedMenuItem(0)
         , show_updates_popup(false)
         , show_about_popup(false)
     {

@@ -35,21 +35,21 @@ namespace gui {
         renderDebugLogFrame();
         ImGui::End();
 
-        if (showTolerancedProfileWindow) {
+        if (showTolerancedSagWindow) {
             auto& surface = zemaxDDEClient->getTolerancedSurface();
             std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
 
             if (surface.isValid()) {
-                renderProfileWindow(title.c_str(), "Toleranced", surface, &showTolerancedProfileWindow);
+                renderSagCrossSectionWindow(title.c_str(), "Toleranced", surface, &showTolerancedSagWindow);
             }
         }
 
-        if (showNominalProfileWindow) {
+        if (showNominalSagWindow) {
             auto& surface = zemaxDDEClient->getNominalSurface();
             std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
 
             if (surface.isValid()) {
-                renderProfileWindow(title.c_str(), "Nominal", surface, &showNominalProfileWindow);
+                renderSagCrossSectionWindow(title.c_str(), "Nominal", surface, &showNominalSagWindow);
             }
         }
 

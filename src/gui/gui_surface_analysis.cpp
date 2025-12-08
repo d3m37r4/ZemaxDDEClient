@@ -95,7 +95,7 @@ namespace gui {
         logger.addLog(std::format("[GUI] Sag profile saved to {}", tempPath.string()));
     }
 
-    void GuiManager::renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
+    void GuiManager::renderSagCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
         if (!openFlag || !*openFlag) return;
         if (surface.sagDataPoints.empty()) return;
 

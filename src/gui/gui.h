@@ -30,7 +30,7 @@ namespace gui {
     };
 
     constexpr GuiPageInfo GUI_PAGES[] = {
-        {GuiPage::OpticalSystemInfo, "Optical system information"},
+        {GuiPage::OpticalSystemInfo, "Optical System Information"},
         {GuiPage::SurfaceSagAnalysis, "Surface Sag Cross Section Analysis"}
     };
 
@@ -64,7 +64,7 @@ namespace gui {
             void renderPageOpticalSystemInfo();
             void renderPageSurfaceSagAnalysis();
 
-            void renderProfileWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
+            void renderSagCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
             void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
             void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
 
@@ -82,8 +82,8 @@ namespace gui {
             GuiPage currentPage = GuiPage::OpticalSystemInfo;
             SurfaceSagAnalysisPageState surfaceSagAnalysisPageState{};
 
-            bool showTolerancedProfileWindow{false};
-            bool showNominalProfileWindow{false};
+            bool showTolerancedSagWindow{false};
+            bool showNominalSagWindow{false};
             bool showComparisonWindow{false};
             bool showErrorWindow{false};
             

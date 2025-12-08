@@ -61,13 +61,13 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                showTolerancedProfileWindow = true;
+                showTolerancedSagWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                showTolerancedProfileWindow = false;
+                showTolerancedSagWindow = false;
                 zemaxDDEClient->clearTolerancedSurface();
             }
         } else {
@@ -137,13 +137,13 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                showNominalProfileWindow = true;
+                showNominalSagWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                showNominalProfileWindow = false;
+                showNominalSagWindow = false;
                 zemaxDDEClient->clearNominalSurface();
             }
         } else {
