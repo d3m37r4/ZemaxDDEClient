@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "gui.h"
 
 namespace gui {
@@ -33,6 +35,24 @@ namespace gui {
             ImGui::TextUnformatted(desc);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
+        }
+    }
+
+    std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content) {
+        try {
+            const auto tempPath = std::filesystem::temp_directory_path() / filename;
+            std::ofstream file(tempPath);
+
+            if (!file.is_open()) {
+                return std::nullopt;
+            }
+
+            file << content;
+            file.close();
+
+            return tempPath;
+        } catch (...) {
+            return std::nullopt;
         }
     }
 }

@@ -55,7 +55,7 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                saveSagProfileToFile(toleranced);
+                saveSagCrossSectionToFile(toleranced);
             }
 
             ImGui::SameLine();
@@ -131,7 +131,7 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                saveSagProfileToFile(nominal);
+                saveSagCrossSectionToFile(nominal);
             }
 
             ImGui::SameLine();

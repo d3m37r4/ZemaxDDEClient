@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 
 #include <windows.h>
@@ -43,6 +44,7 @@ namespace gui {
     void renderPageHeader(GuiPage currentPage);
 
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface);
+    std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content);
 
     class GuiManager {
         public: 
@@ -69,7 +71,7 @@ namespace gui {
             void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
 
             void calculateSagCrossSection(int surface, int sampling, double angle = 0.0);
-            void saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface);
+            void saveSagCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
             bool shouldClose() const { return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true; }
             bool isDdeInitialized() const { return zemaxDDEClient != nullptr && zemaxDDEClient->isConnected(); }

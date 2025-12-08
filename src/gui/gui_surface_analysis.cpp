@@ -1,9 +1,8 @@
-#include "gui.h"
-
-#include <filesystem>
 #include <fstream>
 #include <ranges>
 #include <math.h>
+
+#include "gui.h"
 
 namespace gui {
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface) {
@@ -58,41 +57,34 @@ namespace gui {
         );
     }
 
-    void GuiManager::saveSagProfileToFile(const ZemaxDDE::SurfaceData& surface) {
+    void GuiManager::saveSagCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
         if (surface.sagDataPoints.empty()) {
-            logger.addLog("[GUI] No sag profile data to save");
+            logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
             return;
         }
 
-        auto tempDir = std::filesystem::temp_directory_path();
-        auto tempPath = tempDir / "ZemaxDDE_SagProfile.txt";
-
-        std::ofstream file(tempPath);
-        
-        if (!file.is_open()) {
-            logger.addLog(std::format("[GUI] Failed to open file for writing: {}", tempPath.string()));
-            return;
-        }
-
-        file << std::format("Listing of Surface Sag Cross Section Data\n\n");
-        file << std::format("Surface {}.\n", surface.id);
-        file << std::format("Coordinate units are {}.\n", getUnitString(surface.units, true));
-        file << std::format("Units are {}.\n", getUnitString(surface.units, true));
-        file << std::format("Width = {}, Decenter x = 0, y = 0 {}.\n", surface.diameter(), getUnitString(surface.units, true));
-        file << std::format("Cross section is oriented at an angle of {:.2f} degrees.\n", surface.angle);
-        file << std::format("Cross section calculated with {} sampling points.\n\n", surface.sampling);
-
-        file << std::format("{:<15}{:<15}{:<15}\n", "X-Coordinate", "Y-Coordinate", "Sag");
+        std::string content;
+        content += "Listing of Surface Sag Cross Section Data\n\n";
+        content += std::format("Surface {}.\n", surface.id);
+        content += std::format("Coordinate units are {}.\n", getUnitString(surface.units, true));
+        content += std::format("Units are {}.\n", getUnitString(surface.units, true));
+        content += std::format("Width = {} {}.\n", surface.diameter(), getUnitString(surface.units, true));
+        content += std::format("Cross section is oriented at an angle of {:.2f} degrees.\n", surface.angle);
+        content += std::format("Cross section calculated with {} sampling points.\n\n", surface.sampling);
+        content += std::format("{:<15}{:<15}{:<15}\n", "X-Coordinate", "Y-Coordinate", "Sag");
 
         for (const auto& point : surface.sagDataPoints) {
-            file << std::format("{:<15.6e}{:<15.6e}{:<15.6e}\n", point.x, point.y, point.sag);
+            content += std::format("{:<15.6e}{:<15.6e}{:<15.6e}\n", point.x, point.y, point.sag);
         }
 
-        file.close();
+        auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_SagCrossSection_Temp.txt", content);
+        if (!tempPathOpt) {
+            logger.addLog("[GUI] Failed to create temporary file for Surface Sag Cross Section export");
+            return;
+        }
 
-        ShellExecuteW(nullptr, L"open", tempPath.c_str(), nullptr, nullptr, SW_SHOW);
-
-        logger.addLog(std::format("[GUI] Sag profile saved to {}", tempPath.string()));
+        ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
+        logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
     }
 
     void GuiManager::renderSagCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
