@@ -58,7 +58,7 @@ namespace gui {
             void renderSidebar();
             void renderDDEStatusFrame();
             void renderContent();
-            void renderDebugLogFrame();
+            void renderDebugLog();
             void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();

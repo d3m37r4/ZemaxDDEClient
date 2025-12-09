@@ -30,10 +30,7 @@ namespace gui {
 
         renderSidebar();
         renderContent();
-
-        ImGui::Begin("##Debug");
-        renderDebugLogFrame();
-        ImGui::End();
+        renderDebugLog();
 
         if (showTolerancedSagWindow) {
             auto& surface = zemaxDDEClient->getTolerancedSurface();
