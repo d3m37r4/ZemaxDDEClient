@@ -1,17 +1,10 @@
-#include <stdexcept>
-#include <string>
-#include "lib/imgui/imgui.h"
-#include "dde/dde_zemax_client.h"
-#include "gui/content_pages/gui_page_optical_system_info.h"
 #include "gui/gui.h"
 
 namespace gui {
     void GuiManager::renderPageOpticalSystemInfo() {
-        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "OPTICAL SYSTEM INFORMATION");
-        ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
-        if (dde_initialized) {
+        if (isDdeInitialized()) {
             const ZemaxDDE::OpticalSystemData& opticalSystem = zemaxDDEClient->getOpticalSystemData(); 
             ImGui::Text("Lens Name: %s", opticalSystem.lensName.c_str());
             ImGui::Text("File Name: %s", opticalSystem.fileName.c_str());

@@ -1,31 +1,32 @@
 #ifdef DEBUG_LOG
     #include <iostream>
 #endif
+
 #include "logger.h"
 
-Logger::Logger() {}                                                 // Initialization of the Logger class.
-
 void Logger::addLog(const std::string& message) {
-    time_t now = time(0);
-    tm ltm;
-    setlocale(LC_TIME, "");     // Set locale (just in case)
     std::string logEntry;
-    if (localtime_s(&ltm, &now) == 0) {
-        char timestamp[25];
-        if (strftime(timestamp, sizeof(timestamp), LOG_TIME_FORMAT, &ltm) > 0) {
-            logEntry = std::string(timestamp) + " " + message;
+    
+    try {
+        time_t now = std::time(nullptr);
+        tm ltm{};
+        if (localtime_s(&ltm, &now) == 0) {
+            char timestamp[32];
+            if (std::strftime(timestamp, sizeof(timestamp), timeFormat.data(), &ltm) > 0) {
+                logEntry = std::format("{} {}", timestamp, message);
+            } else {
+                logEntry = std::format("[strftime failed] {}", message);
+            }
         } else {
-            logEntry = "[strftime failed] " + message;
+            logEntry = std::format("[localtime failed] {}", message);
         }
-    } else {
-        logEntry = "[localtime failed] " + message;
+    } catch (...) {
+        logEntry = std::format("[log timestamp exception] {}", message);
     }
-    logs.push_back(logEntry);
-#ifdef DEBUG_LOG
-    std::cout << logEntry << std::endl;                             // Immediate output to console only in debug mode
-#endif
-}
 
-const std::vector<std::string>& Logger::getLogs() const {
-    return logs;
+    logs.push_back(std::move(logEntry));
+
+#ifdef DEBUG_LOG
+    std::cout << logs.back() << '\n';
+#endif
 }

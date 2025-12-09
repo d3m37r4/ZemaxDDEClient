@@ -1,6 +1,9 @@
 [submodule "src/lib/imgui"]
 	path = src/lib/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "src/lib/implot"]
+	path = src/lib/implot
+	url = https://github.com/epezent/implot.git
 [submodule "src/lib/nfd"]
 	path = src/lib/nfd
 	url = https://github.com/mlabbe/nativefiledialog

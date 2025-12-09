@@ -1,9 +1,6 @@
 #include <stdexcept>
-#include <windows.h>
-#include "lib/imgui/imgui.h"
-#include "lib/imgui/backends/imgui_impl_glfw.h"
-#include "lib/imgui/backends/imgui_impl_opengl3.h"
-#include "dde/dde_zemax_client.h"
+#include <fstream>
+
 #include "gui.h"
 
 namespace gui {
@@ -11,8 +8,6 @@ namespace gui {
         : glfwWindow(glfwWindow)
         , hwndClient(hwndClient)
         , zemaxDDEClient(ddeClient)
-        , dde_initialized(false)
-        , selectedMenuItem(0)
         , show_updates_popup(false)
         , show_about_popup(false)
     {
@@ -20,7 +15,7 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        logger.addLog("[GUI] Received DDE client window handle = " + std::to_string((uintptr_t)hwndClient));
+        logger.addLog(std::format("[GUI] Received DDE client window handle = {}", (uintptr_t)hwndClient));
     }
 
     GuiManager::~GuiManager() {
@@ -28,6 +23,7 @@ namespace gui {
             ImGui_ImplOpenGL3_DestroyDeviceObjects();
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplGlfw_Shutdown();
+            ImPlot::DestroyContext();
             ImGui::DestroyContext();
         }
     }
@@ -35,13 +31,16 @@ namespace gui {
     void GuiManager::initialize() {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
+        ImPlot::CreateContext();
 
         ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
         char fontPath[MAX_PATH];
         GetWindowsDirectoryA(fontPath, MAX_PATH);
         strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 18.0f);
-        
+
         if (!font) {
             logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
         }

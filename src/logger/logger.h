@@ -2,17 +2,17 @@
 
 #include <string>
 #include <vector>
-#include <ctime>
+#include <string_view>
 
 class Logger {
     public:
-        Logger();
         void addLog(const std::string& message);
-        const std::vector<std::string>& getLogs() const;
+        void clearLogs() noexcept { logs.clear(); }
+        const std::vector<std::string>& getLogs() const noexcept { return logs; }
 
     private:
         std::vector<std::string> logs;
-        static inline const char* LOG_TIME_FORMAT = "[%d.%m.%Y - %H:%M:%S]";     // Time format const
+        static constexpr std::string_view timeFormat = "[%d.%m.%Y - %H:%M:%S]";
 };
 
 extern Logger logger;

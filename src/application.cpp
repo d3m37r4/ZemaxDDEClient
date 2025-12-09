@@ -1,8 +1,10 @@
 #include <windows.h>
-#include <string>
+#include <fstream>
+
 #include "nfd.h"
-#include "logger/logger.h"
+
 #include "application.h"
+#include "logger/logger.h"
 
 namespace Application {
     void openZmxFileInZemax() {
@@ -11,7 +13,7 @@ namespace Application {
 
         if (result == NFD_OKAY) {
         #ifdef DEBUG_LOG
-            logger.addLog("[APP] Selected file: " + std::string(outPath));
+            logger.addLog(std::format("[APP] Selected file: {}", outPath));
         #endif
             // UTF-8 → UTF-16
             int size = MultiByteToWideChar(CP_UTF8, 0, outPath, -1, nullptr, 0);
@@ -21,11 +23,10 @@ namespace Application {
             HINSTANCE ret = ShellExecuteW(nullptr, L"open", widePath.c_str(), nullptr, nullptr, SW_SHOW);
             if ((intptr_t)ret <= 32) {
                 MessageBoxW(nullptr, L"Failed to open file. Is Zemax installed?", L"Error", MB_ICONERROR);
-                logger.addLog("[APP] ShellExecute failed to open file: " + std::string(outPath) + 
-                            " (Error code: " + std::to_string((intptr_t)ret) + ")");
+                logger.addLog(std::format("[APP] ShellExecute failed to open file: {}. (Error code: {})", outPath, (int)(intptr_t)ret));
             } else {
             #ifdef DEBUG_LOG
-                logger.addLog("[APP] Successfully sent file to ShellExecute: " + std::string(outPath));
+                logger.addLog(std::format("[APP] Successfully sent file to ShellExecute: {}", outPath));
             #endif
             }
 
@@ -36,7 +37,7 @@ namespace Application {
         #endif
         } else {
             const char* error = NFD_GetError();
-            logger.addLog("[APP] NFD Error: " + std::string(error ? error : "Unknown error"));
+            logger.addLog(std::format("[APP] NFD Error: {}", error ? error : "Unknown error"));
         }
     }
 } // namespace Application

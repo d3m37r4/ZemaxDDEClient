@@ -1,20 +1,48 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+#include "dde_zemax_const.h"
 
 namespace ZemaxDDE {
-    constexpr int MIN_FIELDS = 1;
-    constexpr int MAX_FIELDS = 12;
-
-    constexpr int MIN_WAVES  = 1;
-    constexpr int MAX_WAVES  = 24;
-
-    constexpr int FIELD_ARRAY_SIZE = MAX_FIELDS + 1;
-    constexpr int WAVE_ARRAY_SIZE  = MAX_WAVES + 1;
-
     struct Wavelength {
         double value = 0.0;
         double weight = 1.0;
+    };
+
+    struct SagData {
+        double x = 0.0;
+        double y = 0.0;
+        double sag = 0.0;
+        double alternateSag = 0.0;
+    };
+
+    struct SurfaceProfileMetadata {
+        double angle = 0.0;
+        int sampling = 0;
+    };
+
+    struct SurfaceData {
+        int id = -1;
+        int units = 0;
+        int sampling = 0;
+        double angle = 0.0;
+        double semiDiameter = 0.0;
+        std::string type = "Unknown";
+        std::vector<SagData> sagDataPoints;
+        bool isValid() const { return id >= 0; }
+        double diameter() const { return 2.0 * semiDiameter; }
+
+        void clear() {
+            id = -1;
+            units = 0;
+            sampling = 0;
+            angle = 0.0;
+            semiDiameter = 0.0;
+            type = "Unknown";
+            sagDataPoints.clear();
+        }
     };
 
     struct OpticalSystemData {

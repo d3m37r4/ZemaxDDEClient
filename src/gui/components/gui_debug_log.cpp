@@ -1,38 +1,80 @@
-#include <string>
-#include "lib/imgui/imgui.h"
-#include "components/gui_debug_log.h"
+#include "gui/components/gui_debug_log.h"
+
 #include "gui.h"
 
-namespace gui {
-    void GuiManager::renderDebugLogFrame() {
-        ImGui::BeginChild("DebugLogHeader", ImVec2(0, ImGui::GetFrameHeightWithSpacing()), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-        ImGui::BeginChild("DebugLabel", ImVec2(ImGui::GetWindowWidth() * 0.5f, 0), false);
-        ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.2f, 1.0f), "DEBUG");
-        ImGui::EndChild();
-        ImGui::SameLine();
-        ImGui::BeginChild("DebugCopyButton", ImVec2(0, 0), false);
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(COPY_CLIPBOARD_BUTTON_TITLE).x - ImGui::GetStyle().FramePadding.x * 2);
-        if (ImGui::Button(COPY_CLIPBOARD_BUTTON_TITLE)) {
-            std::string log_text;
-            for (const auto& log : logger.getLogs()) {
-                log_text += log + "\n";
-            }
-            logger.addLog("[GUI] Debug log copied to clipboard");
-            ImGui::SetClipboardText(log_text.c_str());
+namespace {
+    std::string collectLogContent() {
+        std::string content;
+        for (const auto& entry : logger.getLogs()) {
+            content += entry;
+            content += '\n';
         }
-        ImGui::EndChild();
+        return content;
+    }
+
+    void saveDebugLogToFile() {
+        std::string logContent = collectLogContent();
+        auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_DebugLog_Temp.txt", logContent);
+        if (tempPathOpt) {
+            ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
+            logger.addLog(std::format("[GUI] Debug log saved to {}", tempPathOpt->string()));
+        } else {
+            logger.addLog("[GUI] Failed to create temporary file for debug log export");
+        }
+    }
+
+    void copyDebugLogToClipboard() {
+        std::string logContent = collectLogContent();
+        logger.addLog("[GUI] Debug log copied to clipboard");
+        ImGui::SetClipboardText(logContent.c_str());
+    }
+}
+
+namespace gui {
+    void GuiManager::renderDebugLog() {
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(DEBUG_LOG_WIDTH_MIN, DEBUG_LOG_HEIGHT_MIN),  // min_size
+            ImVec2(FLT_MAX, FLT_MAX)                            // max_size
+        );
+
+        if (!ImGui::Begin("Debug", nullptr)) {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::BeginChild("DebugLogHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
+        if (ImGui::Button("Text")) {
+            saveDebugLogToFile();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Copy to clipboard")) {
+            copyDebugLogToClipboard();
+        }
+
+        ImGui::SameLine();
+
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("Clear logs").x - ImGui::GetStyle().FramePadding.x * 2);
+        if (ImGui::Button("Clear logs")) {
+            logger.clearLogs();
+        }
         ImGui::EndChild();
 
-        ImGui::BeginChild("DebugLogContent", ImVec2(0, DEBUG_LOG_HEIGHT - ImGui::GetFrameHeightWithSpacing()), true);
-        static size_t last_log_size = 0;
+        ImGui::BeginChild("DebugLogContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+        static size_t lastLogSize = 0;
         const auto& logEntries = logger.getLogs();
-        for (const auto& log : logEntries) {
-            ImGui::Text(log.c_str());
+
+        for (const auto& entry : logEntries) {
+            ImGui::Text(entry.c_str());
         }
-        if (logEntries.size() > last_log_size) {
+
+        if (logEntries.size() > lastLogSize) {
             ImGui::SetScrollHereY(1.0f);
-            last_log_size = logEntries.size();
+            lastLogSize = logEntries.size();
         }
         ImGui::EndChild();
+
+        ImGui::End();
     }
 }

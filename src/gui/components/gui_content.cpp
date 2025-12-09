@@ -1,21 +1,30 @@
-#include "lib/imgui/imgui.h"
 #include "gui/components/gui_content.h"
+
 #include "gui/gui.h"
 
 namespace gui {
     void GuiManager::renderContent() {
-        float content_height = 450.0f;      // TODO: Move to 'gui.h' as static constexpr for reuse
-        ImGui::BeginChild("Content", ImVec2(0, content_height), ImGuiChildFlags_Borders);
-        switch (selectedMenuItem) {
-            case 0: {
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(CONTENT_WIDTH_MIN, CONTENT_HEIGHT_MIN),      // min_size
+            ImVec2(FLT_MAX, FLT_MAX)                            // max_size
+        );
+
+        if (!ImGui::Begin("Workspace", nullptr)) {
+            ImGui::End();
+            return;
+        }
+
+        gui::renderPageHeader(currentPage);
+
+        switch (currentPage) {
+            case GuiPage::OpticalSystemInfo:
                 renderPageOpticalSystemInfo();
                 break;
-            }
-            case 1: {
-                renderPageLocalSurfaceErrors();
+            case GuiPage::SurfaceSagAnalysis:
+                renderPageSurfaceSagAnalysis();
                 break;
-            }
         }
-        ImGui::EndChild();
+
+        ImGui::End();
     }
 }

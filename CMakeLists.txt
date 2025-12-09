@@ -6,13 +6,14 @@ project(ZemaxDDEClient
     LANGUAGES      C CXX
 )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(SRC_DIR "src")
 set(IMGUI_DIR "${SRC_DIR}/lib/imgui")
+set(IMPLOT_DIR "${SRC_DIR}/lib/implot")
 set(NFD_DIR "${SRC_DIR}/lib/nfd")
 
 # MSYS2 paths (MinGW)
@@ -59,22 +60,23 @@ configure_file(
 set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
+    ${SRC_DIR}/logger/logger.cpp
     ${SRC_DIR}/application.cpp
     ${SRC_DIR}/dde/dde_zemax_client_core.cpp
     ${SRC_DIR}/dde/dde_zemax_client_data.cpp
     ${SRC_DIR}/dde/dde_zemax_utils.cpp
-    ${SRC_DIR}/gui/gui_utils.cpp
-    ${SRC_DIR}/gui/components/gui_debug_log.cpp
-    ${SRC_DIR}/gui/components/gui_popups.cpp
-    ${SRC_DIR}/gui/components/gui_dde_status.cpp
-    ${SRC_DIR}/gui/components/gui_sidebar.cpp
-    ${SRC_DIR}/gui/components/gui_menu_bar.cpp
-    ${SRC_DIR}/gui/components/gui_content.cpp
-    ${SRC_DIR}/gui/content_pages/gui_page_optical_system_info.cpp
-    ${SRC_DIR}/gui/content_pages/gui_page_local_surface_errors.cpp
     ${SRC_DIR}/gui/gui_init.cpp
     ${SRC_DIR}/gui/gui_container.cpp
-    ${SRC_DIR}/logger/logger.cpp
+    ${SRC_DIR}/gui/gui_surface_analysis.cpp
+    ${SRC_DIR}/gui/gui_utils.cpp
+    ${SRC_DIR}/gui/components/gui_navbar.cpp
+    ${SRC_DIR}/gui/components/gui_sidebar.cpp
+    ${SRC_DIR}/gui/components/gui_dde_status.cpp
+    ${SRC_DIR}/gui/components/gui_content.cpp
+    ${SRC_DIR}/gui/components/gui_debug_log.cpp
+    ${SRC_DIR}/gui/components/gui_popups.cpp
+    ${SRC_DIR}/gui/content_pages/gui_page_optical_system_info.cpp
+    ${SRC_DIR}/gui/content_pages/gui_page_surface_sag_analysis.cpp
 )
 
 # Add ImGui source files directly
@@ -85,6 +87,12 @@ list(APPEND SOURCES
     ${IMGUI_DIR}/imgui_widgets.cpp
     ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+# Add ImPlot source files directly
+list(APPEND SOURCES
+    ${IMPLOT_DIR}/implot.cpp
+    ${IMPLOT_DIR}/implot_items.cpp
 )
 
 # Add NFD source files directly
@@ -107,6 +115,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${SRC_DIR}/gui
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
+    ${IMPLOT_DIR}
     ${NFD_DIR}/src/include
     ${MINGW_INCLUDE}
 )

@@ -1,6 +1,5 @@
-#include "lib/imgui/imgui.h"
-#include "lib/imgui/backends/imgui_impl_glfw.h"
-#include "lib/imgui/backends/imgui_impl_opengl3.h"
+#include <fstream>
+
 #include "gui.h"
 
 namespace gui {
@@ -9,26 +8,70 @@ namespace gui {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        renderMenuBar();
+        renderNavbar();
 
-        ImVec2 window_pos = ImVec2(0, ImGui::GetFrameHeight());
-        float total_available_height = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeight();
-        ImGui::SetNextWindowPos(window_pos);
-        ImGui::SetNextWindowSize(ImVec2(ImGui::GetIO().DisplaySize.x, total_available_height));
-
-        ImGui::Begin("Layout", nullptr, 
-            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
-            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
-        renderSidebar();
-        ImGui::SameLine();
-        renderContent();
-        ImGui::Spacing();
-        renderDebugLogFrame();
+        const float navbarHeight = ImGui::GetFrameHeight();
+        ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
+        ImGui::SetNextWindowSize(ImVec2(
+            ImGui::GetIO().DisplaySize.x,
+            ImGui::GetIO().DisplaySize.y - navbarHeight
+        ));
+        ImGui::Begin("MainDockSpace", nullptr,
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoNavFocus
+        );
+        ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
         ImGui::End();
 
+        renderSidebar();
+        renderContent();
+        renderDebugLog();
+
+        if (showTolerancedSagWindow) {
+            auto& surface = zemaxDDEClient->getTolerancedSurface();
+            std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
+
+            if (surface.isValid()) {
+                renderSagCrossSectionWindow(title.c_str(), "Toleranced", surface, &showTolerancedSagWindow);
+            }
+        }
+
+        if (showNominalSagWindow) {
+            auto& surface = zemaxDDEClient->getNominalSurface();
+            std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
+
+            if (surface.isValid()) {
+                renderSagCrossSectionWindow(title.c_str(), "Nominal", surface, &showNominalSagWindow);
+            }
+        }
+
+        if (showComparisonWindow) {
+            auto& nom = zemaxDDEClient->getNominalSurface();
+            auto& tol = zemaxDDEClient->getTolerancedSurface();
+            if (nom.isValid() && tol.isValid()) {
+                renderComparisonWindow(nom, tol, &showComparisonWindow);
+            }
+        }
+
+        if (showErrorWindow) {
+            auto& nom = zemaxDDEClient->getNominalSurface();
+            auto& tol = zemaxDDEClient->getTolerancedSurface();
+            if (nom.isValid() && tol.isValid() && nom.sagDataPoints.size() == tol.sagDataPoints.size()) {
+                renderErrorWindow(nom, tol, &showErrorWindow);
+            }
+        }
+        
         setPopupPosition();
         renderUpdatesPopup();
         renderAboutPopup();
+
+        glClearColor(0.12f, 0.12f, 0.12f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

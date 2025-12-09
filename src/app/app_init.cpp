@@ -1,7 +1,11 @@
+#include <fstream>
+
 #include <GLFW/glfw3.h>
 #include <GL/gl.h>
 #include <windows.h>
+
 #include "logger/logger.h"
+
 #include "app_init.h"
 
 AppContext* initializeApplication() {
@@ -62,7 +66,7 @@ AppContext* initializeApplication() {
         return nullptr;
     }
 
-    logger.addLog("[APP] DDE window created: hwndClient = " + std::to_string((uintptr_t)ctx->hwndClient));
+    logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", (uintptr_t)ctx->hwndClient));
 
     // Create and associate ZemaxDDEClient with the window
     ctx->ddeClient = new ZemaxDDE::ZemaxDDEClient(ctx->hwndClient);
@@ -78,7 +82,7 @@ AppContext* initializeApplication() {
 
             int numFields = client->getOpticalSystemData().numFields;
             if (numFields < 0) {
-                logger.addLog("[DDE] Invalid numFields value: " + std::to_string(numFields) + ". Skipping field requests.");
+                logger.addLog(std::format("[DDE] Invalid numFields value: {}. Skipping field requests.", numFields));
                 return;
             }
 
@@ -90,7 +94,7 @@ AppContext* initializeApplication() {
 
             int numWaves = client->getOpticalSystemData().numWaves;
             if (numWaves < 0) {
-                logger.addLog("[DDE] Invalid numWaves value: " + std::to_string(numWaves) + ". Skipping wave requests.");
+                logger.addLog(std::format("[DDE] Invalid numWaves value: {}. Skipping field requests.", numWaves));
                 return;
             }
 
@@ -98,7 +102,7 @@ AppContext* initializeApplication() {
                 client->getWaveByIndex(i);
             }
         } catch (const std::exception& e) {
-            logger.addLog("[DDE] Error requesting initial system data: " + std::string(e.what()));
+            logger.addLog(std::format("[DDE] Error requesting initial system data: {}", e.what()));
         }
     });
 

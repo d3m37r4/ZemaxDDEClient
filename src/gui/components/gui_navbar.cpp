@@ -1,13 +1,9 @@
-#include <string>
-#include <windows.h>
-#include <nfd.h>
-#include "lib/imgui/imgui.h"
-#include "gui/components/gui_menu_bar.h"
+#include "gui/components/gui_navbar.h"
+
 #include "gui/gui.h"
-#include "application.h"
 
 namespace gui {
-    void GuiManager::renderMenuBar() {
+    void GuiManager::renderNavbar() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
                 if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) Application::openZmxFileInZemax();
@@ -16,7 +12,7 @@ namespace gui {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Info")) {
-                if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
+                // if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
                 if (ImGui::MenuItem("About")) show_about_popup = true;
                 ImGui::EndMenu();
             }

@@ -88,7 +88,7 @@ if [ -z "$OUTPUT_EXE" ]; then
     exit 1
 fi
 
-# Этап 4: Вывод результата
+# Step 4: Output of result
 BUILD_END=$(date +%s)
 BUILD_TIME=$((BUILD_END - BUILD_START))
 
@@ -98,5 +98,5 @@ echo "Elapsed time: ${BUILD_TIME}s"
 echo "Output: $(pwd)/$OUTPUT_EXE"
 echo "Size: $(du -h "$OUTPUT_EXE" | cut -f1)"
 
-# Опционально: запустить
+# Optional: run
 echo -e "${YELLOW}Run with: ./$OUTPUT_EXE${NC}"
