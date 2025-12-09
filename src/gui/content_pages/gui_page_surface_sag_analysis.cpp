@@ -206,34 +206,34 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Export comparison to CSV")) {
-                nfdchar_t* savePath = nullptr;
-                nfdresult_t result = NFD_SaveDialog("csv", nullptr, &savePath);
+            // if (ImGui::Button("Export comparison to CSV")) {
+            //     nfdchar_t* savePath = nullptr;
+            //     nfdresult_t result = NFD_SaveDialog("csv", nullptr, &savePath);
 
-                if (result == NFD_OKAY) {
-                    std::ofstream file(savePath);
+            //     if (result == NFD_OKAY) {
+            //         std::ofstream file(savePath);
 
-                    if (file.is_open()) {
-                        auto data = prepareSagCrossSectionData(nominal, toleranced);
+            //         if (file.is_open()) {
+            //             auto data = prepareSagCrossSectionData(nominal, toleranced);
 
-                        file << "x_nom,y_nom,x_tol,y_tol,error\n";
+            //             file << "x_nom,y_nom,x_tol,y_tol,error\n";
 
-                        size_t n = std::min(data.x_nom.size(), data.x_tol.size());
+            //             size_t n = std::min(data.x_nom.size(), data.x_tol.size());
                         
-                        for (size_t i = 0; i < n; ++i) {
-                            double error = data.y_tol[i] - data.y_nom[i];
-                            file << data.x_nom[i] << "," << data.y_nom[i] << ","
-                                << data.x_tol[i] << "," << data.y_tol[i] << ","
-                                << error << "\n";
-                        }
+            //             for (size_t i = 0; i < n; ++i) {
+            //                 double error = data.y_tol[i] - data.y_nom[i];
+            //                 file << data.x_nom[i] << "," << data.y_nom[i] << ","
+            //                     << data.x_tol[i] << "," << data.y_tol[i] << ","
+            //                     << error << "\n";
+            //             }
 
-                        file.close();
-                        logger.addLog("[GUI] Comparison data saved to " + std::string(savePath));
-                    }
+            //             file.close();
+            //             logger.addLog("[GUI] Comparison data saved to " + std::string(savePath));
+            //         }
 
-                    free(savePath);
-                }
-            }
+            //         free(savePath);
+            //     }
+            // }
 
             bool showProfiles = !showComparisonWindow;
             bool showErrorPlot = !showErrorWindow;

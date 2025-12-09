@@ -12,7 +12,7 @@ namespace gui {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Info")) {
-                if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
+                // if (ImGui::MenuItem("Check for updates")) show_updates_popup = true;
                 if (ImGui::MenuItem("About")) show_about_popup = true;
                 ImGui::EndMenu();
             }
