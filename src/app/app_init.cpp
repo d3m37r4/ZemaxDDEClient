@@ -18,7 +18,7 @@ namespace App {
         logger.addLog("[APP] GLFW initialized");
 
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
-        ctx->glfwWindow = glfwCreateWindow(800, 600, APP_NAME, NULL, NULL);
+        ctx->glfwWindow = glfwCreateWindow(800, 600, APP_TITLE, NULL, NULL);
 
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");

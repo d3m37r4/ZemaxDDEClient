@@ -3,6 +3,7 @@
 #include "gui/components/gui_popups.h"
 
 #include "gui/gui.h"
+#include "app/app.h"
 
 namespace gui {
     void GuiManager::setPopupPosition() {
@@ -40,7 +41,7 @@ namespace gui {
                 APP_GIT_COMMIT
             );
 
-            ImGui::TextUnformatted("ZemaxDDEClient");
+            ImGui::TextUnformatted(APP_NAME);
             ImGui::Separator();
 
             ImGui::TextUnformatted("GitHub Repository:");

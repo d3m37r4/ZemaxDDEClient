@@ -5,6 +5,10 @@
 
 #include "dde/dde_zemax_client.h"
 #include "gui/gui.h"
+#include "version.h"
+
+#define APP_NAME "ZemaxDDEClient"
+#define APP_TITLE APP_NAME " " APP_FULL_VERSION
 
 struct AppContext {
     GLFWwindow* glfwWindow = nullptr;
