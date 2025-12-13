@@ -113,6 +113,12 @@ set_source_files_properties(${NFD_DIR}/src/nfd_common.c PROPERTIES LANGUAGE C)
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+# Define application name macro for use in source code (e.g., window titles)
+set(APP_NAME "ZemaxDDEClient")
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    APP_NAME="${APP_NAME}"
+)
+
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_BINARY_DIR}
