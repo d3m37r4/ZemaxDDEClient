@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(ZemaxDDEClient
     VERSION        "${APP_VERSION_STRING}"
-    DESCRIPTION    "A C++ GUI application for interacting with Zemax OpticStudio via DDE"
+    DESCRIPTION    "A C++ GUI application for interacting with Zemax via DDE"
     HOMEPAGE_URL   "https://github.com/d3m37r4/ZemaxDDEClient"
     LANGUAGES      C CXX
 )
@@ -35,7 +35,13 @@ else()
 endif()
 
 # Generate build number
-string(TIMESTAMP APP_BUILD_NUMBER "%Y%m%d%H%M%S")
+# Build number = seconds since first commit in repository
+# First commit timestamp (UTC): 1749018884 (4 June 2025)
+# Obtained via: git rev-list --all --max-parents=0 | xargs git log -1 --format=%ct | sort -n | head -1
+set(FIRST_COMMIT_TIMESTAMP 1749018884)
+
+string(TIMESTAMP CURRENT_TIME "%s" UTC)
+math(EXPR APP_BUILD_NUMBER "${CURRENT_TIME} - ${FIRST_COMMIT_TIMESTAMP}")
 
 # Application version
 set(APP_VERSION_MAJOR 0)
