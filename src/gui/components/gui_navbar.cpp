@@ -1,12 +1,13 @@
 #include "gui/components/gui_navbar.h"
 
+#include "app/app.h"
 #include "gui/gui.h"
 
 namespace gui {
     void GuiManager::renderNavbar() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
-                if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) Application::openZmxFileInZemax();
+                if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax();
                 ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) glfwSetWindowShouldClose(glfwWindow, true);
                 ImGui::EndMenu();

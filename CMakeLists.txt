@@ -66,8 +66,8 @@ configure_file(
 set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
+    ${SRC_DIR}/app/app_actions.cpp
     ${SRC_DIR}/logger/logger.cpp
-    ${SRC_DIR}/application.cpp
     ${SRC_DIR}/dde/dde_zemax_client_core.cpp
     ${SRC_DIR}/dde/dde_zemax_client_data.cpp
     ${SRC_DIR}/dde/dde_zemax_utils.cpp

@@ -12,7 +12,6 @@
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 #include "lib/implot/implot.h"
 
-#include "application.h"
 #include "version.h"
 #include "dde/dde_zemax_client.h"
 

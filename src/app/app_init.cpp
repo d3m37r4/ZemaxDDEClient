@@ -1,144 +1,143 @@
 #include <fstream>
 
-#include <GLFW/glfw3.h>
-#include <GL/gl.h>
-#include <windows.h>
-
 #include "logger/logger.h"
 
-#include "app_init.h"
+#include "app/app.h"
 
-AppContext* initializeApplication() {
-    auto ctx = new AppContext();
+namespace App {
+    AppContext* initialize() {
+        auto ctx = new AppContext();
 
-    // Initialize GLFW
-    if (!glfwInit()) {
-        logger.addLog("[APP] Failed to initialize GLFW");
-        delete ctx;
-        return nullptr;
-    }
-
-    logger.addLog("[APP] GLFW initialized");
-
-    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
-    ctx->glfwWindow = glfwCreateWindow(800, 600, APP_NAME, NULL, NULL);
-
-    if (!ctx->glfwWindow) {
-        logger.addLog("[APP] Failed to create GLFW window");
-        glfwTerminate();
-        delete ctx;
-        return nullptr;
-    }
-
-    glfwMakeContextCurrent(ctx->glfwWindow);
-    glfwSwapInterval(1);
-
-    logger.addLog("[APP] Application starting");
-
-    // Register DDE message-only window class
-    WNDCLASSEXW wndClass = {};
-    wndClass.cbSize = sizeof(WNDCLASSEXW);
-    wndClass.style = CS_HREDRAW | CS_VREDRAW;
-    wndClass.lpfnWndProc = WndProc;
-    wndClass.hInstance = GetModuleHandle(NULL);
-    wndClass.lpszClassName = L"ZEMAX_DDE_Client";
-
-    if (!RegisterClassExW(&wndClass)) {
-        logger.addLog("[APP] Failed to register DDE window class");
-        glfwDestroyWindow(ctx->glfwWindow);
-        glfwTerminate();
-        delete ctx;
-        return nullptr;
-    }
-
-    logger.addLog("[APP] DDE window class registered");
-
-    // Create and associate ZemaxDDEClient with the window
-    ctx->hwndClient = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
-
-    if (!ctx->hwndClient) {
-        MessageBoxA(NULL, "Failed to create DDE communication window.\n"
-                        "The application will now exit.\n\n"
-                        "Ensure no other instance is running and try again.", "Error", MB_OK | MB_ICONERROR);
-        logger.addLog("[APP] Failed to create DDE window (CreateWindowExW returned NULL)");
-        glfwTerminate();
-        delete ctx;
-        return nullptr;
-    }
-
-    logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", (uintptr_t)ctx->hwndClient));
-
-    // Create and associate ZemaxDDEClient with the window
-    ctx->ddeClient = new ZemaxDDE::ZemaxDDEClient(ctx->hwndClient);
-    SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, (LONG_PTR)ctx->ddeClient);
-
-    // Register callback to send requests after DDE connection
-    ctx->ddeClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
-        try {
-            client->getLensName();
-            client->getFileName();
-            client->getSystemData();
-            client->getFieldData();
-
-            int numFields = client->getOpticalSystemData().numFields;
-            if (numFields < 0) {
-                logger.addLog(std::format("[DDE] Invalid numFields value: {}. Skipping field requests.", numFields));
-                return;
-            }
-
-            for (int i = ZemaxDDE::MIN_FIELDS; i <= numFields; ++i) {
-                client->getFieldByIndex(i);
-            }
-
-            client->getWaveData();
-
-            int numWaves = client->getOpticalSystemData().numWaves;
-            if (numWaves < 0) {
-                logger.addLog(std::format("[DDE] Invalid numWaves value: {}. Skipping field requests.", numWaves));
-                return;
-            }
-
-            for (int i = ZemaxDDE::MIN_WAVES; i <= numWaves; ++i) {
-                client->getWaveByIndex(i);
-            }
-        } catch (const std::exception& e) {
-            logger.addLog(std::format("[DDE] Error requesting initial system data: {}", e.what()));
+        // Initialize GLFW
+        if (!glfwInit()) {
+            logger.addLog("[APP] Failed to initialize GLFW");
+            delete ctx;
+            return nullptr;
         }
-    });
 
-    // Initialize GUI manager with existing DDE client
-    ctx->gui = new gui::GuiManager(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient);
-    ctx->gui->initialize();
+        logger.addLog("[APP] GLFW initialized");
 
-    return ctx;
-}
+        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
+        ctx->glfwWindow = glfwCreateWindow(800, 600, APP_NAME, NULL, NULL);
 
-void shutdownApplication(AppContext* ctx) {
-    if (!ctx) return;
-
-    // Shutdown GUI
-    if (ctx->gui) {
-        delete ctx->gui;
-        ctx->gui = nullptr;
-    }
-
-    // Shutdown DDE
-    if (ctx->hwndClient) {
-        if (ctx->ddeClient) {
-            ctx->ddeClient->terminateDDE();
-            delete ctx->ddeClient;
-            SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, 0);
+        if (!ctx->glfwWindow) {
+            logger.addLog("[APP] Failed to create GLFW window");
+            glfwTerminate();
+            delete ctx;
+            return nullptr;
         }
-        DestroyWindow(ctx->hwndClient);
-        ctx->hwndClient = nullptr;
+
+        glfwMakeContextCurrent(ctx->glfwWindow);
+        glfwSwapInterval(1);
+
+        logger.addLog("[APP] Application starting");
+
+        // Register DDE message-only window class
+        WNDCLASSEXW wndClass = {};
+        wndClass.cbSize = sizeof(WNDCLASSEXW);
+        wndClass.style = CS_HREDRAW | CS_VREDRAW;
+        wndClass.lpfnWndProc = WndProc;
+        wndClass.hInstance = GetModuleHandle(NULL);
+        wndClass.lpszClassName = L"ZEMAX_DDE_Client";
+
+        if (!RegisterClassExW(&wndClass)) {
+            logger.addLog("[APP] Failed to register DDE window class");
+            glfwDestroyWindow(ctx->glfwWindow);
+            glfwTerminate();
+            delete ctx;
+            return nullptr;
+        }
+
+        logger.addLog("[APP] DDE window class registered");
+
+        // Create and associate ZemaxDDEClient with the window
+        ctx->hwndClient = CreateWindowExW(0, L"ZEMAX_DDE_Client", L"DDE Client", 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL);
+
+        if (!ctx->hwndClient) {
+            MessageBoxA(NULL, "Failed to create DDE communication window.\n"
+                            "The application will now exit.\n\n"
+                            "Ensure no other instance is running and try again.", "Error", MB_OK | MB_ICONERROR);
+            logger.addLog("[APP] Failed to create DDE window (CreateWindowExW returned NULL)");
+            glfwTerminate();
+            delete ctx;
+            return nullptr;
+        }
+
+        logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", (uintptr_t)ctx->hwndClient));
+
+        // Create and associate ZemaxDDEClient with the window
+        ctx->ddeClient = new ZemaxDDE::ZemaxDDEClient(ctx->hwndClient);
+        SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, (LONG_PTR)ctx->ddeClient);
+
+        // Register callback to send requests after DDE connection
+        ctx->ddeClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
+            try {
+                client->getLensName();
+                client->getFileName();
+                client->getSystemData();
+                client->getFieldData();
+
+                int numFields = client->getOpticalSystemData().numFields;
+                if (numFields < 0) {
+                    logger.addLog(std::format("[DDE] Invalid numFields value: {}. Skipping field requests.", numFields));
+                    return;
+                }
+
+                for (int i = ZemaxDDE::MIN_FIELDS; i <= numFields; ++i) {
+                    client->getFieldByIndex(i);
+                }
+
+                client->getWaveData();
+
+                int numWaves = client->getOpticalSystemData().numWaves;
+                if (numWaves < 0) {
+                    logger.addLog(std::format("[DDE] Invalid numWaves value: {}. Skipping field requests.", numWaves));
+                    return;
+                }
+
+                for (int i = ZemaxDDE::MIN_WAVES; i <= numWaves; ++i) {
+                    client->getWaveByIndex(i);
+                }
+            } catch (const std::exception& e) {
+                logger.addLog(std::format("[DDE] Error requesting initial system data: {}", e.what()));
+            }
+        });
+
+        // Initialize GUI manager with existing DDE client
+        ctx->gui = new gui::GuiManager(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient);
+        ctx->gui->initialize();
+
+        return ctx;
     }
 
-    // Shutdown GLFW
-    if (ctx->glfwWindow) {
-        glfwDestroyWindow(ctx->glfwWindow);
-        ctx->glfwWindow = nullptr;
-    }
-    glfwTerminate();
+    void shutdown(AppContext* ctx) {
+        if (!ctx) return;
 
-    delete ctx;
+        // Shutdown GUI
+        if (ctx->gui) {
+            delete ctx->gui;
+            ctx->gui = nullptr;
+        }
+
+        // Shutdown DDE
+        if (ctx->hwndClient) {
+            if (ctx->ddeClient) {
+                ctx->ddeClient->terminateDDE();
+                delete ctx->ddeClient;
+                SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, 0);
+            }
+            DestroyWindow(ctx->hwndClient);
+            ctx->hwndClient = nullptr;
+        }
+
+        // Shutdown GLFW
+        if (ctx->glfwWindow) {
+            glfwDestroyWindow(ctx->glfwWindow);
+            ctx->glfwWindow = nullptr;
+        }
+
+        glfwTerminate();
+
+        delete ctx;
+    }
 }

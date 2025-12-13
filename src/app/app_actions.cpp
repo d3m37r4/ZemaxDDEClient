@@ -1,12 +1,10 @@
-#include <windows.h>
-#include <fstream>
-
 #include "nfd.h"
 
-#include "application.h"
 #include "logger/logger.h"
 
-namespace Application {
+#include "app/app.h"
+
+namespace App {
     void openZmxFileInZemax() {
         nfdchar_t* outPath = nullptr;
         nfdresult_t result = NFD_OpenDialog("zmx", nullptr, &outPath);
@@ -40,4 +38,4 @@ namespace Application {
             logger.addLog(std::format("[APP] NFD Error: {}", error ? error : "Unknown error"));
         }
     }
-} // namespace Application
+}

@@ -3,8 +3,7 @@
 #include <imgui.h>
 
 #include "logger/logger.h"
-#include "app/app_init.h"
-#include "application.h"
+#include "app/app.h"
 
 Logger logger;
 
@@ -25,7 +24,7 @@ extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM 
 int main() {
     logger.addLog("[APP] Application started");
 
-    AppContext* ctx = initializeApplication();
+    AppContext* ctx = App::initialize();
     if (!ctx) {
         logger.addLog("[APP] Application failed to initialize");
         return -1;
@@ -39,7 +38,7 @@ int main() {
         // Hotkey Ctrl+O
         if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
             if (ImGui::IsKeyPressed(ImGuiKey_O)) {
-                Application::openZmxFileInZemax();
+                App::openZmxFileInZemax();
             }
         }
 
@@ -48,7 +47,7 @@ int main() {
     }
 
     logger.addLog("[APP] Main loop ended");
-    shutdownApplication(ctx);
+    App::shutdown(ctx);
 
     logger.addLog("[APP] Application terminated");
     return 0;
