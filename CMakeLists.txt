@@ -136,6 +136,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Ole32
     Comdlg32
     Uuid
+    Shell32
 )
 
 # Compiler flags
@@ -147,6 +148,11 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 # Convert the input to a lowercase and make it case-insensitive
 string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_LOWER)
+
+# Determine whether the build is production (release)
+if(BUILD_TYPE_LOWER STREQUAL "release")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE APP_PRODUCTION_BUILD=1)
+endif()
 
 # Add '-v' and '-DDEBUG_LOG' in debug mode
 if(BUILD_TYPE_LOWER STREQUAL "debug")
