@@ -1,0 +1,82 @@
+name: Build & Attach Release Binaries
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            git
+            cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-pkg-config
+            zip
+
+      - name: Make build.sh executable
+        run: |
+          git update-index --chmod=+x build.sh
+        shell: msys2 {0}
+
+      - name: Extract version and build from version.h.in
+        run: |
+          prerelease=$(grep -oP 'set\(APP_VERSION_PRERELEASE "\K[^"]+' CMakeLists.txt)
+
+          major=$(grep -oP 'set\(APP_VERSION_MAJOR \K[0-9]+' CMakeLists.txt)
+          minor=$(grep -oP 'set\(APP_VERSION_MINOR \K[0-9]+' CMakeLists.txt)
+          patch=$(grep -oP 'set\(APP_VERSION_PATCH \K[0-9]+' CMakeLists.txt)
+
+          version="${major}.${minor}.${patch}"
+          if [ -n "$prerelease" ]; then
+            version="${version}${prerelease}"
+          fi
+          echo "APP_VERSION=$version" >> $GITHUB_ENV
+          echo "#include \"${GITHUB_WORKSPACE}/CMakeLists.txt\"" > /dev/null
+        shell: bash
+
+      - name: Build Release to get build number
+        run: ./build.sh release
+        shell: msys2 {0}
+
+      - name: Extract build number from generated version.h
+        run: |
+          build_num=$(grep -oP '#define APP_BUILD_NUMBER \K[0-9]+' build/version.h)
+          echo "APP_BUILD_NUMBER=$build_num" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Package Release binary
+        run: |
+          cd build
+          zip -j "ZemaxDDEClient-v${{ env.APP_VERSION }}-Release-build${{ env.APP_BUILD_NUMBER }}.zip" ZemaxDDEClient.exe
+        shell: msys2 {0}
+
+      - name: Build Debug
+        run: ./build.sh debug
+        shell: msys2 {0}
+
+      - name: Package Debug binary
+        run: |
+          cd build
+          zip -j "ZemaxDDEClient-v${{ env.APP_VERSION }}-Debug-build${{ env.APP_BUILD_NUMBER }}.zip" ZemaxDDEClient.exe
+        shell: msys2 {0}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/ZemaxDDEClient-v${{ env.APP_VERSION }}-Release-build${{ env.APP_BUILD_NUMBER }}.zip
+            build/ZemaxDDEClient-v${{ env.APP_VERSION }}-Debug-build${{ env.APP_BUILD_NUMBER }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
