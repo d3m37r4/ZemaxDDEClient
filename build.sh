@@ -54,14 +54,22 @@ for arg in "$@"; do
     esac
 done
 
-BUILD_START=$(date +%s)
+# Use external BUILD_TIMESTAMP if provided (e.g., from CI), otherwise use current time
+if [ -z "${BUILD_TIMESTAMP+1}" ]; then
+    BUILD_TIMESTAMP=$(date +%s)
+fi
+
+BUILD_START=$BUILD_TIMESTAMP
 echo -e "${GREEN}=== Building $PROJECT_NAME ($CMAKE_BUILD_TYPE) ===${NC}"
-echo "Build started at: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "Build started at: $(date -d "@$BUILD_START" '+%Y-%m-%d %H:%M:%S')"
+
+echo "Using BUILD_TIMESTAMP = $BUILD_TIMESTAMP"
 
 # Configuration
 echo -e "${YELLOW}--- Configuring with CMake ---${NC}"
 cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
+    -DBUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     "${EXTRA_CMAKE_ARGS[@]}" \
     --fresh
