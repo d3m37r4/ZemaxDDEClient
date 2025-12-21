@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+env:
+  PROJECT_NAME: ZemaxDDEClient
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -15,15 +18,11 @@ jobs:
 
       - name: Set build timestamp and extract version
         run: |
-          # Compute consistent timestamp
           echo "BUILD_TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
-
-          # Extract version components using sed (POSIX-compatible)
           major=$(sed -n 's/.*set(APP_VERSION_MAJOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
           minor=$(sed -n 's/.*set(APP_VERSION_MINOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
           patch=$(sed -n 's/.*set(APP_VERSION_PATCH \([0-9]\+\).*/\1/p' CMakeLists.txt)
           prerelease=$(sed -n 's/.*set(APP_VERSION_PRERELEASE "\(.*\)".*/\1/p' CMakeLists.txt)
-
           version="${major}.${minor}.${patch}${prerelease}"
           echo "APP_VERSION=$version" >> $GITHUB_ENV
         shell: bash
@@ -34,43 +33,46 @@ jobs:
           msystem: MINGW64
           install: |
             git
-            cmake
+            mingw-w64-x86_64-cmake
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-glfw
             mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-make
             zip
 
       - name: Make build.sh executable
         run: git update-index --chmod=+x build.sh
         shell: msys2 {0}
 
-      # --- Build Release ---
       - name: Build Release
-        run: BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh release
+        run: |
+          export MSYS_NO_PATHCONV=1
+          BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh release
         shell: msys2 {0}
 
       - name: Package Release binary
         run: |
-          cd build
-          zip -j "ZemaxDDEClient-v${{ env.APP_VERSION }}-Release-build${{ env.BUILD_TIMESTAMP }}.zip" ZemaxDDEClient.exe
+          cd build/bin
+          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.BUILD_TIMESTAMP }}.zip" *.exe
         shell: msys2 {0}
 
-      # --- Build Debug ---
       - name: Build Debug
-        run: BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh debug
+        run: |
+          export MSYS_NO_PATHCONV=1
+          BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh debug
         shell: msys2 {0}
 
       - name: Package Debug binary
         run: |
-          cd build
-          zip -j "ZemaxDDEClient-v${{ env.APP_VERSION }}-Debug-build${{ env.BUILD_TIMESTAMP }}.zip" ZemaxDDEClient.exe
+          cd build/bin
+          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.BUILD_TIMESTAMP }}.zip" *.exe
         shell: msys2 {0}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/ZemaxDDEClient-v${{ env.APP_VERSION }}-Release-build${{ env.BUILD_TIMESTAMP }}.zip
-            build/ZemaxDDEClient-v${{ env.APP_VERSION }}-Debug-build${{ env.BUILD_TIMESTAMP }}.zip
+            build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.BUILD_TIMESTAMP }}.zip
+            build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.BUILD_TIMESTAMP }}.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_RELEASE_TOKEN }}

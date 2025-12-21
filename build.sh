@@ -67,7 +67,19 @@ echo "Using BUILD_TIMESTAMP = $BUILD_TIMESTAMP"
 
 # Configuration
 echo -e "${YELLOW}--- Configuring with CMake ---${NC}"
+# Choose generator: Ninja if available, otherwise MinGW Makefiles
+if command -v ninja &> /dev/null; then
+    GENERATOR="Ninja"
+    MAKE_PROGRAM=""
+else
+    GENERATOR="MinGW Makefiles"
+    MAKE_PROGRAM="-DCMAKE_MAKE_PROGRAM=mingw32-make"
+fi
+
+# Configure
 cmake -S "$SOURCE_DIR" -B "$BUILD_DIR" \
+    -G "$GENERATOR" \
+    $MAKE_PROGRAM \
     -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
     -DBUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
