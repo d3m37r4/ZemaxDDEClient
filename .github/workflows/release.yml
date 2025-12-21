@@ -18,11 +18,12 @@ jobs:
           # Compute consistent timestamp
           echo "BUILD_TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
-          # Extract version from CMakeLists.txt
-          prerelease=$(grep -oP 'set\(APP_VERSION_PRERELEASE "\K[^"]*' CMakeLists.txt)
-          major=$(grep -oP 'set\(APP_VERSION_MAJOR \K[0-9]+' CMakeLists.txt)
-          minor=$(grep -oP 'set\(APP_VERSION_MINOR \K[0-9]+' CMakeLists.txt)
-          patch=$(grep -oP 'set\(APP_VERSION_PATCH \K[0-9]+' CMakeLists.txt)
+          # Extract version components using sed (POSIX-compatible)
+          major=$(sed -n 's/.*set(APP_VERSION_MAJOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
+          minor=$(sed -n 's/.*set(APP_VERSION_MINOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
+          patch=$(sed -n 's/.*set(APP_VERSION_PATCH \([0-9]\+\).*/\1/p' CMakeLists.txt)
+          prerelease=$(sed -n 's/.*set(APP_VERSION_PRERELEASE "\(.*\)".*/\1/p' CMakeLists.txt)
+
           version="${major}.${minor}.${patch}${prerelease}"
           echo "APP_VERSION=$version" >> $GITHUB_ENV
         shell: bash
