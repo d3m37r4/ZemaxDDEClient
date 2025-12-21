@@ -21,33 +21,25 @@ set(MINGW_ROOT "C:/msys64" CACHE STRING "MSYS2 MinGW root directory")
 set(MINGW_INCLUDE "${MINGW_ROOT}/mingw64/include")
 set(MINGW_LIB "${MINGW_ROOT}/mingw64/lib")
 
-# Find Git to get the short commit hash
-find_package(Git QUIET)
-if(GIT_FOUND)
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE APP_GIT_COMMIT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-else()
-    set(APP_GIT_COMMIT "unknown")
-endif()
-
 # Generate build number
 # Build number = seconds since first commit in repository
-# First commit timestamp (UTC): 1749018884 (4 June 2025)
+# First commit: 4 June 2025 (timestamp 1749018884)
 # Obtained via: git rev-list --all --max-parents=0 | xargs git log -1 --format=%ct | sort -n | head -1
-set(FIRST_COMMIT_TIMESTAMP 1749018884)
+if(NOT DEFINED BUILD_TIMESTAMP)
+    string(TIMESTAMP BUILD_TIMESTAMP "%s" UTC)
+endif()
 
-string(TIMESTAMP CURRENT_TIME "%s" UTC)
-math(EXPR APP_BUILD_NUMBER "${CURRENT_TIME} - ${FIRST_COMMIT_TIMESTAMP}")
+set(FIRST_COMMIT_TIMESTAMP 1749018884)
+math(EXPR APP_BUILD_NUMBER "${BUILD_TIMESTAMP} - ${FIRST_COMMIT_TIMESTAMP}")
+
+# Log the final value
+message(STATUS "Using APP_BUILD_NUMBER = ${APP_BUILD_NUMBER} (based on BUILD_TIMESTAMP = ${BUILD_TIMESTAMP})")
 
 # Application version
 set(APP_VERSION_MAJOR 0)
-set(APP_VERSION_MINOR 1)
+set(APP_VERSION_MINOR 2)
 set(APP_VERSION_PATCH 0)
-set(APP_VERSION_PRERELEASE "a")
+set(APP_VERSION_PRERELEASE "b")
 
 # Form version string
 set(APP_VERSION_STRING "${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}.${APP_VERSION_PATCH}")

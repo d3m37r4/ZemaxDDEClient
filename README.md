@@ -79,6 +79,9 @@ The project uses CMake for reliable, cross-platform builds. Use the build.sh wra
    # Clean and rebuild
    ./build.sh clean
    ./build.sh release
+
+   # Build with a fixed timestamp (useful for reproducible builds or CI)
+   BUILD_TIMESTAMP=1766073737 ./build.sh release
    ```
 
 Manual CMake usage (advanced)
