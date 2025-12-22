@@ -34,7 +34,6 @@ namespace gui {
         if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             std::string version = std::format("Version: {}", APP_FULL_VERSION);
             std::string built   = std::format("Built: {} {}", __DATE__, __TIME__);
-            std::string commit  = std::format("Git commit: {}", APP_GIT_COMMIT);
 
             std::string commitUrl = std::format(
                 "https://github.com/d3m37r4/ZemaxDDEClient/commit/{}",

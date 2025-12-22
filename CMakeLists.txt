@@ -35,6 +35,22 @@ math(EXPR APP_BUILD_NUMBER "${BUILD_TIMESTAMP} - ${FIRST_COMMIT_TIMESTAMP}")
 # Log the final value
 message(STATUS "Using APP_BUILD_NUMBER = ${APP_BUILD_NUMBER} (based on BUILD_TIMESTAMP = ${BUILD_TIMESTAMP})")
 
+# Find Git to get the short commit hash
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE APP_GIT_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+endif()
+
+if(NOT DEFINED APP_GIT_COMMIT OR "${APP_GIT_COMMIT}" STREQUAL "")
+    set(APP_GIT_COMMIT "unknown")
+endif()
+
 # Application version
 set(APP_VERSION_MAJOR 0)
 set(APP_VERSION_MINOR 2)
