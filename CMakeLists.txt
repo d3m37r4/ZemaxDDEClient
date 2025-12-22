@@ -54,7 +54,7 @@ endif()
 # Application version
 set(APP_VERSION_MAJOR 0)
 set(APP_VERSION_MINOR 2)
-set(APP_VERSION_PATCH 0)
+set(APP_VERSION_PATCH 1)
 set(APP_VERSION_PRERELEASE "b")
 
 # Form version string
