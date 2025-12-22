@@ -1,4 +1,7 @@
 # ZemaxDDEClient
+[![Latest Release](https://img.shields.io/github/v/release/d3m37r4/ZemaxDDEClient?include_prereleases&style=flat-square&color=blue)](https://github.com/d3m37r4/ZemaxDDEClient/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE)
+
 A C++ GUI test application for interacting with Zemax via DDE (Dynamic Data Exchange).
 
 <details>
@@ -20,6 +23,35 @@ This project is a DDE client that:
 ## Documentation Reference
 For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in official Zemax documentation.
 </details>
+
+## 🔽 Downloads
+You can download pre-built binaries for Windows from the [Releases](https://github.com/d3m37r4/ZemaxDDEClient/releases) page.
+
+- [**Release builds**](https://github.com/d3m37r4/ZemaxDDEClient/releases) — stable, tested versions.
+- [**Dev builds**](https://github.com/d3m37r4/ZemaxDDEClient/actions) — latest development builds (may be unstable).
+
+> 📌 **Note**: Binaries are automatically attached to each [GitHub Release](https://github.com/d3m37r4/ZemaxDDEClient/releases).
+
+> 💡 All builds include both Release and Debug versions with matching build numbers.
+
+## 🏁 Run
+You can launch the ZemaxDDEClient in two ways: via Zemax's **Extensions menu**, or by **running the executable directly**.
+
+### Option 1: Launch via Zemax Extensions
+This method integrates your application into Zemax’s Extensions menu for easy access.
+1. Launch **Zemax**
+2. Open Extensions menu (`F11` hotkey by default)
+3. From the list, select an executable file of the form: `ZemaxDDEClient_*.exe`
+> 💡 **Tip**: To make the client permanently available, copy the `.exe` file to Zemax’s extensions directory:  
+> `C:\Program Files\Zemax\Extend\`
+
+### Option 2: Run Directly
+You can run the executable directly without adding it to Zemax.
+1. Launch **Zemax**
+2. Run the application executable file `ZemaxDDEClient_*.exe`
+3. Initiate a connection to **Zemax**
+
+> ✅ Both methods establish a DDE connection with Zemax.
 
 ## 📦 Prerequisites
 - **MSYS2** with MinGW-w64 toolchain
@@ -90,24 +122,14 @@ Manual CMake usage (advanced)
    cmake --build build
    ```
 
-## 🏁 Run
-You can launch the ZemaxDDEClient in two ways: via Zemax's **Extensions menu**, or by **running the executable directly**.
-
-### Option 1: Launch via Zemax Extensions
-This method integrates your application into Zemax’s Extensions menu for easy access.
-1. Launch **Zemax**
-2. Open Extensions menu (`F11` hotkey by default)
-3. From the list, select an executable file of the form: `ZemaxDDEClient_*.exe`
-> 💡 **Tip**: To make the client permanently available, copy the `.exe` file to Zemax’s extensions directory:  
-> `C:\Program Files\Zemax\Extend\`
-
-### Option 2: Run Directly
-You can run the executable directly without adding it to Zemax.
-1. Launch **Zemax**
-2. Run the application executable file `ZemaxDDEClient_*.exe`
-3. Initiate a connection to **Zemax**
-
-> ✅ Both methods establish a DDE connection with Zemax.
-
 ## 📄 License
 This project is licensed under the MIT License.
+
+## 🤝 Contribution and support
+If you have any thoughts, bug reports, or suggestions to improve the product, please contact me at one of the following places:
+
+[![GitHub Issues](https://img.shields.io/badge/GitHub-Issues-blue?logo=github&style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/issues)  
+[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-blue?logo=github&style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/discussions)  
+[![Telegram](https://img.shields.io/badge/Telegram-dmitry_isakow-blue?logo=telegram&style=flat-square)](https://t.me/dmitry_isakow)
+
+You can also submit a [pull request](https://github.com/d3m37r4/ZemaxDDEClient/pulls).
