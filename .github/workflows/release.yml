@@ -50,10 +50,16 @@ jobs:
           BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh release
         shell: msys2 {0}
 
+      - name: Extract Release APP_BUILD_NUMBER
+        run: |
+          BUILD_NUM=$(grep -o '#define APP_BUILD_NUMBER [0-9]\+' build/version.h | cut -d' ' -f3)
+          echo "RELEASE_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+        shell: bash
+
       - name: Package Release binary
         run: |
           cd build/bin
-          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.BUILD_TIMESTAMP }}.zip" *.exe
+          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip" *.exe
         shell: msys2 {0}
 
       - name: Build Debug
@@ -62,17 +68,23 @@ jobs:
           BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh debug
         shell: msys2 {0}
 
+      - name: Extract Debug APP_BUILD_NUMBER
+        run: |
+          BUILD_NUM=$(grep -o '#define APP_BUILD_NUMBER [0-9]\+' build/version.h | cut -d' ' -f3)
+          echo "DEBUG_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+        shell: bash
+
       - name: Package Debug binary
         run: |
           cd build/bin
-          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.BUILD_TIMESTAMP }}.zip" *.exe
+          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip" *.exe
         shell: msys2 {0}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.BUILD_TIMESTAMP }}.zip
-            build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.BUILD_TIMESTAMP }}.zip
+            build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip
+            build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.CI_RELEASE_TOKEN }}
