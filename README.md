@@ -1,11 +1,19 @@
 # ZemaxDDEClient
+
+<a id="en"></a>
+
+>**🌐 Documentation available in multiple languages:**
+[![EN](https://img.shields.io/badge/%F0%9F%87%AC%F0%9F%87%A7%20EN-blue?style=flat-square)](#en)
+[![RU](https://img.shields.io/badge/%F0%9F%87%B7%F0%9F%87%BA%20RU-inactive?style=flat-square)](README.ru.md#ru)
+
 [![Latest Release](https://img.shields.io/github/v/release/d3m37r4/ZemaxDDEClient?include_prereleases&style=flat-square&color=blue)](https://github.com/d3m37r4/ZemaxDDEClient/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE)
 
-A C++ GUI test application for interacting with Zemax via DDE (Dynamic Data Exchange).
+## 📌 About
+An application for [Zemax](https://en.wikipedia.org/wiki/Zemax) that enables advanced analysis of optical systems through direct access to their parameters via DDE (Dynamic Data Exchange).
 
 <details>
-<summary><b>About DDE and Zemax Interaction</b></summary>
+<summary><b>Working with Zemax via DDE</b></summary>
 
 ### What is DDE?
 Dynamic Data Exchange (DDE) is a Windows interprocess communication protocol that enables data exchange between applications. Two applications can establish a DDE link:
@@ -25,39 +33,37 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
 </details>
 
 ## 🔽 Downloads
-You can download pre-built binaries for Windows from the [Releases](https://github.com/d3m37r4/ZemaxDDEClient/releases) page.
+Pre-built binaries for Windows are available on the [Releases](https://github.com/d3m37r4/ZemaxDDEClient/releases) page.
 
-- [**Release builds**](https://github.com/d3m37r4/ZemaxDDEClient/releases) — stable, tested versions.
-- [**Dev builds**](https://github.com/d3m37r4/ZemaxDDEClient/actions) — latest development builds (may be unstable).
+- [**Release builds**](https://github.com/d3m37r4/ZemaxDDEClient/releases) — stable, tested versions.  
+- [**Dev builds**](https://github.com/d3m37r4/ZemaxDDEClient/actions) — test builds with new or experimental features not yet included in a release (may be unstable).
 
-> 📌 **Note**: Binaries are automatically attached to each [GitHub Release](https://github.com/d3m37r4/ZemaxDDEClient/releases).
-
-> 💡 All builds include both Release and Debug versions with matching build numbers.
+> 💡 Each build includes two versions:<br>
+> – **Release** — for regular use,<br>
+> – **Debug** — with console output and extended logging for debugging.<br>
+> Both share the same build number for easy comparison.
 
 ## 🏁 Run
-You can launch the ZemaxDDEClient in two ways: via Zemax's **Extensions menu**, or by **running the executable directly**.
+You can launch the application in two ways: via Zemax’s **Extensions** menu or by running the executable directly.
 
 ### Option 1: Launch via Zemax Extensions
-This method integrates your application into Zemax’s Extensions menu for easy access.
+This method integrates the application into Zemax’s Extensions menu for convenient access.
 1. Launch **Zemax**
-2. Open Extensions menu (`F11` hotkey by default)
-3. From the list, select an executable file of the form: `ZemaxDDEClient_*.exe`
-> 💡 **Tip**: To make the client permanently available, copy the `.exe` file to Zemax’s extensions directory:  
-> `C:\Program Files\Zemax\Extend\`
+2. Open the Extensions menu (default hotkey `F11`) 
+3. From the list, select an executable file named like: `ZemaxDDEClient_*.exe`
+> 💡 Zemax scans the `Extend` folder inside its installation directory (typically `C:\Program Files\Zemax\Extend\`) and displays all `.exe` files from it in the **Extensions** menu. To make the application permanently available, place your executable in this folder.
 
-### Option 2: Run Directly
+### Option 2: Direct Launch
 You can run the executable directly without adding it to Zemax.
 1. Launch **Zemax**
-2. Run the application executable file `ZemaxDDEClient_*.exe`
-3. Initiate a connection to **Zemax**
-
-> ✅ Both methods establish a DDE connection with Zemax.
+2. Run the `ZemaxDDEClient_*.exe` file
+3. Click the **Connect to Zemax** button in the **Sidebar** window
 
 ## 📦 Prerequisites
 - **MSYS2** with MinGW-w64 toolchain
 - **CMake** (≥ 3.16)
 - **GLFW**: `pacman -S mingw-w64-x86_64-glfw`
-- **Zemax** (running as DDE server)
+- **Zemax** (acts as a DDE server once running)
 
 ## 📚 Third-Party Libraries
 This project uses the following third-party libraries:
@@ -65,7 +71,7 @@ This project uses the following third-party libraries:
 - **[ImPlot](https://github.com/epezent/implot)** by Evan Pezent — 2D plotting library for Dear ImGui
 - **[Native File Dialog (NFD)](https://github.com/mlabbe/nativefiledialog)** by Michael Labbe — Cross-platform file dialogs
 
-## 🚀 Setup
+## 🚀 Build Setup
 1. Clone the repository:
    ```bash
    git clone --recurse-submodules https://github.com/d3m37r4/ZemaxDDEClient.git
@@ -76,27 +82,27 @@ This project uses the following third-party libraries:
    pacman -Syu
    pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw cmake
    ```
-3. Initialize submodules (if not cloned with --recurse-submodules):
+3. Fetch the submodules (if not cloned with --recurse-submodules):
    ```bash
    git submodule update --init --recursive
    ```
 4. Set up environment in Git Bash:
    ```bash
-    export PATH=/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH
-    export LIBRARY_PATH=/c/msys64/mingw64/lib:$LIBRARY_PATH
-    export CPLUS_INCLUDE_PATH=/c/msys64/mingw64/include:$CPLUS_INCLUDE_PATH
-    ```
+   export PATH=/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH
+   export LIBRARY_PATH=/c/msys64/mingw64/lib:$LIBRARY_PATH
+   export CPLUS_INCLUDE_PATH=/c/msys64/mingw64/include:$CPLUS_INCLUDE_PATH
+   ```
 
 ## 🔨 Build
-The project uses CMake for reliable, cross-platform builds. Use the build.sh wrapper for more convenience.
+The project uses CMake for reliable builds. For convenience, it is recommended to use the `build.sh` wrapper script.
    ```bash
-   # Make build.sh executable
+   # Make the build.sh file executable
    chmod +x build.sh
 
-   # Build in Release mode (default)
+   # Build the Release version (used by default)
    ./build.sh
 
-   # Build in Debug mode (console visible, DEBUG_LOG enabled)
+   # Build the Debug version (with visible console and DEBUG_LOG enabled)
    ./build.sh debug
 
    # Build with optimization: -O2
@@ -105,31 +111,30 @@ The project uses CMake for reliable, cross-platform builds. Use the build.sh wra
    # Build with maximum optimization: -O3
    ./build.sh optimize=2
 
-   # Debug build with -O2
+   # Debug build with -O2 optimization (example of combining arguments)
    ./build.sh debug optimize=1
 
-   # Clean and rebuild
+   # Clean the build directory
    ./build.sh clean
-   ./build.sh release
 
-   # Build with a fixed timestamp (useful for reproducible builds or CI)
+   # Build with a fixed timestamp — for stable artifacts in CI and automation
    BUILD_TIMESTAMP=1766073737 ./build.sh release
    ```
 
-Manual CMake usage (advanced)
+Manual build via CMake (if fine-grained control or debugging of the build process is needed):
    ```bash
    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
    cmake --build build
    ```
 
 ## 📄 License
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE).
 
 ## 🤝 Contribution and support
 If you have any thoughts, bug reports, or suggestions to improve the product, please contact me at one of the following places:
 
 [![GitHub Issues](https://img.shields.io/badge/GitHub-Issues-blue?logo=github&style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/issues)  
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-blue?logo=github&style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/discussions)  
-[![Telegram](https://img.shields.io/badge/Telegram-dmitry_isakow-blue?logo=telegram&style=flat-square)](https://t.me/dmitry_isakow)
+[![Telegram](https://img.shields.io/badge/Telegram-dmitry__isakow-blue?logo=telegram&style=flat-square)](https://t.me/dmitry_isakow)
 
 You can also submit a [pull request](https://github.com/d3m37r4/ZemaxDDEClient/pulls).
