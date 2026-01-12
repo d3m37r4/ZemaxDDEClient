@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(ZemaxDDEClient
     VERSION        "${APP_VERSION_STRING}"
-    DESCRIPTION    "A C++ GUI application for interacting with Zemax via DDE"
+    DESCRIPTION    "Advanced analysis of optical systems using parameters retrieved from Zemax via DDE (Dynamic Data Exchange)"
     HOMEPAGE_URL   "https://github.com/d3m37r4/ZemaxDDEClient"
     LANGUAGES      C CXX
 )
