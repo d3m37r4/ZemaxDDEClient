@@ -1,0 +1,84 @@
+name: Build Test (main, feature/*, release/*, hotfix/*)
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - main
+
+env:
+  PROJECT_NAME: ZemaxDDEClient
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set build timestamp
+        run: |
+          echo "BUILD_TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            git
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-make
+            zip
+
+      - name: Make build.sh executable
+        run: git update-index --chmod=+x build.sh
+        shell: msys2 {0}
+
+      - name: Build Test
+        run: |
+          export MSYS_NO_PATHCONV=1
+          BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh
+        shell: msys2 {0}
+
+      - name: Save test binary
+        run: |
+          mkdir -p artifacts
+          cp build/bin/*.exe artifacts/${{ env.PROJECT_NAME }}-dev.exe
+        shell: msys2 {0}
+
+      - name: Build Debug
+        run: |
+          export MSYS_NO_PATHCONV=1
+          BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh debug
+        shell: msys2 {0}
+
+      - name: Save debug binary
+        run: |
+          mkdir -p artifacts
+          cp build/bin/*.exe artifacts/${{ env.PROJECT_NAME }}-dev-debug.exe
+        shell: msys2 {0}
+
+      - name: Upload dev build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-dev
+          path: artifacts/${{ env.PROJECT_NAME }}-dev.exe
+          retention-days: 14
+
+      - name: Upload dev-debug build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-dev-debug
+          path: artifacts/${{ env.PROJECT_NAME }}-dev-debug.exe
+          retention-days: 14
