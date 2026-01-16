@@ -7,7 +7,8 @@
 [![RU](https://img.shields.io/badge/%F0%9F%87%B7%F0%9F%87%BA%20RU-inactive?style=flat-square)](README.ru.md#ru)
 
 [![Latest Release](https://img.shields.io/github/v/release/d3m37r4/ZemaxDDEClient?include_prereleases&style=flat-square&color=blue)](https://github.com/d3m37r4/ZemaxDDEClient/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE)
+[![Build Test](https://img.shields.io/github/actions/workflow/status/d3m37r4/ZemaxDDEClient/.github%2Fworkflows%2Fbuild-test.yml?branch=main&style=flat-square&label=build%20test)](https://github.com/d3m37r4/ZemaxDDEClient/actions/workflows/build-test.yml)
+[![License](https://img.shields.io/github/license/d3m37r4/ZemaxDDEClient?style=flat-square)](https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE)
 
 ## 📌 About
 An application for [Zemax](https://en.wikipedia.org/wiki/Zemax) that enables advanced analysis of optical systems through direct access to their parameters via DDE (Dynamic Data Exchange).
