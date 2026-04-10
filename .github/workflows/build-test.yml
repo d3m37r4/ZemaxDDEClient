@@ -1,4 +1,4 @@
-name: Build Test (main, feature/*, release/*, hotfix/*)
+name: Build Test (main, feature/*, release/*, hotfix/*, fix/*)
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - 'feature/**'
       - 'release/**'
       - 'hotfix/**'
+      - 'fix/**'
   pull_request:
     branches:
       - main

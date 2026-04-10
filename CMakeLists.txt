@@ -21,6 +21,17 @@ set(MINGW_ROOT "C:/msys64" CACHE STRING "MSYS2 MinGW root directory")
 set(MINGW_INCLUDE "${MINGW_ROOT}/mingw64/include")
 set(MINGW_LIB "${MINGW_ROOT}/mingw64/lib")
 
+# === GLFW Library Path ===
+# Use static library for portable single-file executable
+set(GLFW_LIBRARY "${MINGW_LIB}/libglfw3.a" CACHE FILEPATH "GLFW static library")
+
+# Verify library exists
+if(NOT EXISTS "${GLFW_LIBRARY}")
+    message(FATAL_ERROR "GLFW library not found at: ${GLFW_LIBRARY}\nInstall it via: pacman -S mingw-w64-x86_64-glfw")
+endif()
+
+message(STATUS "Using GLFW: ${GLFW_LIBRARY}")
+
 # Generate build number
 # Build number = seconds since first commit in repository
 # First commit: 4 June 2025 (timestamp 1749018884)
@@ -136,7 +147,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    glfw3
+    # glfw3
+    # ${MINGW_LIB}/libglfw3.a
+    ${GLFW_LIBRARY}
     OpenGL32
     Gdi32
     User32
@@ -151,7 +164,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall -Wextra
     -DUNICODE -D_UNICODE
-    -static-libgcc -static-libstdc++
+)
+
+target_link_options(${PROJECT_NAME} PRIVATE
+    -static-libgcc
+    -static-libstdc++
+    -static
 )
 
 # Convert the input to a lowercase and make it case-insensitive
