@@ -86,5 +86,3 @@ jobs:
           files: |
             build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip
             build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_RELEASE_TOKEN }}
