@@ -82,17 +82,11 @@ Zemax реализует интерфейс DDE-сервера, что даёт 
 2. Установите MSYS2 и необходимые зависимости:
    ```bash
    pacman -Syu
-   pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw cmake
+   pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-glfw mingw-w64-x86_64-pkg-config git zip
    ```
 3. Загрузите подмодули (если клонирование выполнялось без флага --recurse-submodules):
    ```bash
    git submodule update --init --recursive
-   ```
-4. Настройте окружение в Git Bash:
-   ```bash
-   export PATH=/c/msys64/mingw64/bin:/c/msys64/usr/bin:$PATH
-   export LIBRARY_PATH=/c/msys64/mingw64/lib:$LIBRARY_PATH
-   export CPLUS_INCLUDE_PATH=/c/msys64/mingw64/include:$CPLUS_INCLUDE_PATH
    ```
 
 ## 🔨 Сборка
@@ -116,7 +110,7 @@ Zemax реализует интерфейс DDE-сервера, что даёт 
    # Debug-сборка с оптимизацией -O2 (пример комбинирования параметров)
    ./build.sh debug optimize=1
 
-   # Очистка сборочной директории
+   # Очистка сборочной директории перед сборкой
    ./build.sh clean
 
    # Сборка с фиксированным временем — для стабильных артефактов в CI и автоматизации
