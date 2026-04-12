@@ -19,9 +19,9 @@ namespace App {
             MultiByteToWideChar(CP_UTF8, 0, outPath, -1, widePath.data(), size);
 
             HINSTANCE ret = ShellExecuteW(nullptr, L"open", widePath.c_str(), nullptr, nullptr, SW_SHOW);
-            if ((intptr_t)ret <= 32) {
+            if (reinterpret_cast<intptr_t>(ret) <= 32) {
                 MessageBoxW(nullptr, L"Failed to open file. Is Zemax installed?", L"Error", MB_ICONERROR);
-                logger.addLog(std::format("[APP] ShellExecute failed to open file: {}. (Error code: {})", outPath, (int)(intptr_t)ret));
+                logger.addLog(std::format("[APP] ShellExecute failed to open file: {}. (Error code: {})", outPath, static_cast<int>(reinterpret_cast<intptr_t>(ret))));
             } else {
             #ifdef DEBUG_LOG
                 logger.addLog(std::format("[APP] Successfully sent file to ShellExecute: {}", outPath));

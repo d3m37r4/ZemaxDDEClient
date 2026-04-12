@@ -9,12 +9,12 @@ Logger logger;
 
 extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
     if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
-        ZemaxDDE::ZemaxDDEClient* client = (ZemaxDDE::ZemaxDDEClient*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+        auto* client = reinterpret_cast<ZemaxDDE::ZemaxDDEClient*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
         if (client) {
             return client->handleDDEMessages(iMsg, wParam, lParam);
         } else {
         #ifdef DEBUG_LOG
-            logger.addLog(std::format("[APP] WndProc: No ZemaxDDEClient instance associated with hwnd = {}", (uintptr_t)hwnd));
+            logger.addLog(std::format("[APP] WndProc: No ZemaxDDEClient instance associated with hwnd = {}", reinterpret_cast<uintptr_t>(hwnd)));
         #endif
         }
     }
