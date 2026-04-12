@@ -52,6 +52,7 @@ namespace gui {
 
             void initialize();
             void render();
+            void updateDpiStyle(float dpiScale);
 
             void renderNavbar();
             void renderSidebar();
