@@ -12,6 +12,11 @@ on:
     branches:
       - main
 
+# Prevent duplicate workflow runs for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   PROJECT_NAME: ZemaxDDEClient
 
