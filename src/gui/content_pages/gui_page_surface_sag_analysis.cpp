@@ -33,9 +33,9 @@ namespace {
 
 namespace gui {
     void GuiManager::renderPageSurfaceSagAnalysis() {
-        auto& state = surfaceSagAnalysisPageState;
-        auto& nominal = zemaxDDEClient->getNominalSurface();
-        auto& toleranced = zemaxDDEClient->getTolerancedSurface();
+        auto& state = m_surfaceSagAnalysisPageState;
+        auto& nominal = m_zemaxDDEClient->getNominalSurface();
+        auto& toleranced = m_zemaxDDEClient->getTolerancedSurface();
 
         ImGui::SeparatorText("Toleranced surface parameters");
         ImGui::BeginChild(
@@ -46,11 +46,11 @@ namespace gui {
         );
 
         if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
-            ImGui::Text("Optical system: %s", "null");
-            ImGui::Text("Surface index: %d", toleranced.id);
-            ImGui::Text("Surface type: %s", toleranced.type.c_str());
-            ImGui::Text("Semi-diameter: %.3f %s", toleranced.semiDiameter, getUnitString(toleranced.units));
-            ImGui::Text("Diameter: %.3f %s", toleranced.diameter(), getUnitString(toleranced.units));
+            ImGui::TextUnformatted("Optical system: null");
+            ImGui::TextUnformatted(std::format("Surface index: {}", toleranced.id).c_str());
+            ImGui::TextUnformatted(std::format("Surface type: {}", toleranced.type).c_str());
+            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
+            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
             ImGui::Text("Surface sag data:");
             ImGui::SameLine();
 
@@ -61,38 +61,38 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                showTolerancedSagWindow = true;
+                m_showTolerancedSagWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                showTolerancedSagWindow = false;
-                zemaxDDEClient->clearTolerancedSurface();
+                m_showTolerancedSagWindow = false;
+                m_zemaxDDEClient->clearTolerancedSurface();
             }
         } else {
             ImGui::BeginDisabled(!isDdeInitialized());
             ImGui::Text("Sampling:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
             state.tolerancedSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.tolerancedSampling));
-            ImGui::SameLine(); 
+            ImGui::SameLine();
             HelpMarker(getSamplingTooltip().c_str());
 
             ImGui::Text("Angle:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputDouble("##toleranced_angle", &state.tolerancedAngle, 1.0, 10.0, "%.2f");
             state.tolerancedAngle = std::clamp(state.tolerancedAngle, -360.0, 360.0);
-            ImGui::SameLine(); 
+            ImGui::SameLine();
             HelpMarker(getAngleTooltip().c_str());
 
             ImGui::Text("Surface number:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-            state.tolerancedSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
+            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
 
             if (ImGui::Button("Copy nominal surface settings")) {
                 state.tolerancedSampling = state.nominalSampling;
@@ -103,9 +103,9 @@ namespace gui {
 
             if (ImGui::Button("Get toleranced surface data")) {
                 if (isDdeInitialized()) {
-                    zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
-                    zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                    zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                    m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
+                    m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+                    m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
                     calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
                 }
             }
@@ -122,11 +122,11 @@ namespace gui {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
         if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
-            ImGui::Text("Optical system: %s", "null");
-            ImGui::Text("Surface index: %d", nominal.id);
-            ImGui::Text("Surface type: %s", nominal.type.c_str());
-            ImGui::Text("Semi-diameter: %.3f %s", nominal.semiDiameter, getUnitString(nominal.units));
-            ImGui::Text("Diameter: %.3f %s", nominal.diameter(), getUnitString(nominal.units));
+            ImGui::TextUnformatted("Optical system: null");
+            ImGui::TextUnformatted(std::format("Surface index: {}", nominal.id).c_str());
+            ImGui::TextUnformatted(std::format("Surface type: {}", nominal.type).c_str());
+            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
+            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
             ImGui::Text("Surface sag data:");
             ImGui::SameLine();
 
@@ -137,39 +137,39 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                showNominalSagWindow = true;
+                m_showNominalSagWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                showNominalSagWindow = false;
-                zemaxDDEClient->clearNominalSurface();
+                m_showNominalSagWindow = false;
+                m_zemaxDDEClient->clearNominalSurface();
             }
         } else {
             ImGui::BeginDisabled(!isDdeInitialized());
 
             ImGui::Text("Sampling:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
             state.nominalSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.nominalSampling));
-            ImGui::SameLine(); 
+            ImGui::SameLine();
             HelpMarker(getSamplingTooltip().c_str());
 
             ImGui::Text("Angle:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
             state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
-            ImGui::SameLine(); 
+            ImGui::SameLine();
             HelpMarker(getAngleTooltip().c_str());
 
             ImGui::Text("Surface number:");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-            state.nominalSurfaceIndex = std::max(0, std::min(zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
+            state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
 
             if (ImGui::Button("Copy toleranced surface settings")) {
                 state.nominalSampling = state.tolerancedSampling;
@@ -180,9 +180,9 @@ namespace gui {
 
             if (ImGui::Button("Get nominal surface data")) {
                 if (isDdeInitialized()) {
-                    zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
-                    zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                    zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                    m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
+                    m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+                    m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
                     calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                 }
             }
@@ -195,13 +195,13 @@ namespace gui {
             ImGui::SeparatorText("Profile Comparison");
 
             if (ImGui::Button("Detach Comparison")) {
-                showComparisonWindow = true;
+                m_showComparisonWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Detach Error")) {
-                showErrorWindow = true;
+                m_showErrorWindow = true;
             }
 
             ImGui::SameLine();
@@ -235,8 +235,8 @@ namespace gui {
             //     }
             // }
 
-            bool showProfiles = !showComparisonWindow;
-            bool showErrorPlot = !showErrorWindow;
+            bool showProfiles = !m_showComparisonWindow;
+            bool showErrorPlot = !m_showErrorWindow;
 
             if (showProfiles || showErrorPlot) {
                 ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoTitleBar);
