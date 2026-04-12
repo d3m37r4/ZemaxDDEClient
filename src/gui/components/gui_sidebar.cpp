@@ -25,7 +25,7 @@ namespace gui {
         for (size_t i = 0; i < GUI_PAGES_COUNT; ++i) {
             const auto& page = GUI_PAGES[i];
             if (ImGui::Button(page.title, ImVec2(-1.0f, 0.0f))) {
-                currentPage = page.id;
+                m_currentPage = page.id;
             }
         }
 

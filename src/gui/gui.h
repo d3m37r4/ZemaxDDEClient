@@ -73,23 +73,23 @@ namespace gui {
             void calculateSagCrossSection(int surface, int sampling, double angle = 0.0);
             void saveSagCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
-            bool shouldClose() const { return glfwWindow ? glfwWindowShouldClose(glfwWindow) : true; }
-            bool isDdeInitialized() const { return zemaxDDEClient != nullptr && zemaxDDEClient->isConnected(); }
+            [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
+            [[nodiscard]] bool isDdeInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
-        private: 
-            GLFWwindow* glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
-            HWND hwndClient;                                    // DDE client window handle
-            ZemaxDDE::ZemaxDDEClient* zemaxDDEClient;           // Pointer to a DDE client instance
+        private:
+            GLFWwindow* m_glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
+            HWND m_hwndClient;                                    // DDE client window handle
+            ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;           // Pointer to a DDE client instance
 
-            GuiPage currentPage = GuiPage::OpticalSystemInfo;
-            SurfaceSagAnalysisPageState surfaceSagAnalysisPageState{};
+            GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
+            SurfaceSagAnalysisPageState m_surfaceSagAnalysisPageState{};
 
-            bool showTolerancedSagWindow{false};
-            bool showNominalSagWindow{false};
-            bool showComparisonWindow{false};
-            bool showErrorWindow{false};
-            
-            bool show_updates_popup{false};                     // Display flag for popup 'Check for Updates'
-            bool show_about_popup{false};                       // Display flag for popup 'Check for About'
+            bool m_showTolerancedSagWindow{false};
+            bool m_showNominalSagWindow{false};
+            bool m_showComparisonWindow{false};
+            bool m_showErrorWindow{false};
+
+            bool m_showUpdatesPopup{false};                       // Display flag for popup 'Check for Updates'
+            bool m_showAboutPopup{false};                         // Display flag for popup 'Check for About'
     };
 }

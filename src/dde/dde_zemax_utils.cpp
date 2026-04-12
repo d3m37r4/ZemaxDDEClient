@@ -6,7 +6,7 @@ namespace ZemaxDDE {
     * Tokens are delimited by commas, spaces, newlines, or carriage returns, unless they are enclosed within double quotes.
     * Returns a vector of strings, where each string is a token.
     */
-    std::vector<std::string> tokenize(const std::string& bufferStr) {
+    std::vector<std::string> tokenize(std::string_view bufferStr) {
         std::vector<std::string> tokens;
         std::string currentToken;
         bool inQuotes = false;

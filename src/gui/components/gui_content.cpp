@@ -14,9 +14,9 @@ namespace gui {
             return;
         }
 
-        gui::renderPageHeader(currentPage);
+        gui::renderPageHeader(m_currentPage);
 
-        switch (currentPage) {
+        switch (m_currentPage) {
             case GuiPage::OpticalSystemInfo:
                 renderPageOpticalSystemInfo();
                 break;

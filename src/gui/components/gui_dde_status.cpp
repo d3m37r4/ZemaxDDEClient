@@ -36,9 +36,9 @@ namespace gui {
         if (ImGui::Button(isDdeInitialized() ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             try {
                 if (!isDdeInitialized()) {
-                    zemaxDDEClient->initiateDDE();
+                    m_zemaxDDEClient->initiateDDE();
                 } else {
-                    zemaxDDEClient->terminateDDE();
+                    m_zemaxDDEClient->terminateDDE();
                 }
             #ifdef DEBUG_LOG
                 logger.addLog("[GUI] " + std::string(isDdeInitialized() ? "Connected to Zemax" : "Disconnected from Zemax"));

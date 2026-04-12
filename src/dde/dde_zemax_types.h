@@ -31,10 +31,10 @@ namespace ZemaxDDE {
         double semiDiameter = 0.0;
         std::string type = "Unknown";
         std::vector<SagData> sagDataPoints;
-        bool isValid() const { return id >= 0; }
-        double diameter() const { return 2.0 * semiDiameter; }
+        bool isValid() const noexcept { return id >= 0; }
+        double diameter() const noexcept { return 2.0 * semiDiameter; }
 
-        void clear() {
+        void clear() noexcept {
             id = -1;
             units = 0;
             sampling = 0;

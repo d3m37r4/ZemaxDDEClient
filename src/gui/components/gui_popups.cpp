@@ -12,9 +12,9 @@ namespace gui {
     }
 
     void GuiManager::renderUpdatesPopup() {
-        if (show_updates_popup) { 
-            ImGui::OpenPopup("Check for Updates"); 
-            show_updates_popup = false; 
+        if (m_showUpdatesPopup) {
+            ImGui::OpenPopup("Check for Updates");
+            m_showUpdatesPopup = false;
         }
 
         if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -26,9 +26,9 @@ namespace gui {
     }
 
     void GuiManager::renderAboutPopup() {
-        if (show_about_popup) {
+        if (m_showAboutPopup) {
             ImGui::OpenPopup("About");
-            show_about_popup = false;
+            m_showAboutPopup = false;
         }
 
         if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
