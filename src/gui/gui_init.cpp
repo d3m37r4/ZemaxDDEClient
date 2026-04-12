@@ -88,10 +88,20 @@ namespace gui {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.IniFilename = getImGuiIniPath();
 
+        // Get DPI scale factor for font and UI scaling
+        HDC hdc = GetDC(NULL);
+        int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
+        ReleaseDC(NULL, hdc);
+        float dpiScale = static_cast<float>(dpiX) / 96.0f;
+
         char fontPath[MAX_PATH];
         GetWindowsDirectoryA(fontPath, MAX_PATH);
         strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
-        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, 18.0f);
+
+        // Scale font size based on DPI
+        float baseFontSize = 18.0f;
+        float scaledFontSize = baseFontSize * dpiScale;
+        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, scaledFontSize);
 
         if (!font) {
             logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
@@ -100,6 +110,16 @@ namespace gui {
         // ImGui::StyleColorsClassic();
         // ImGui::StyleColorsLight();
         // ImGui::StyleColorsDark();
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.WindowPadding = ImVec2(8.0f * dpiScale, 8.0f * dpiScale);
+        style.FramePadding = ImVec2(4.0f * dpiScale, 4.0f * dpiScale);
+        style.ItemSpacing = ImVec2(8.0f * dpiScale, 4.0f * dpiScale);
+        style.ItemInnerSpacing = ImVec2(4.0f * dpiScale, 4.0f * dpiScale);
+        style.IndentSpacing = 25.0f * dpiScale;
+        style.ScrollbarSize = 15.0f * dpiScale;
+        style.GrabMinSize = 10.0f * dpiScale;
+
         ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();

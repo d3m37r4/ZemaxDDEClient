@@ -8,6 +8,9 @@ namespace App {
     AppContext* initialize() {
         auto ctx = new AppContext();
 
+        // Enable DPI awareness for proper scaling on high-DPI displays
+        SetProcessDPIAware();
+
         // Initialize GLFW
         if (!glfwInit()) {
             logger.addLog("[APP] Failed to initialize GLFW");
@@ -17,8 +20,23 @@ namespace App {
 
         logger.addLog("[APP] GLFW initialized");
 
+        // Get DPI scale factor and log it
+        HDC hdc = GetDC(NULL);
+        int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
+        int dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
+        ReleaseDC(NULL, hdc);
+        float dpiScale = static_cast<float>(dpiX) / 96.0f;
+        logger.addLog(std::format("[APP] DPI scale factor: {:.2f} ({}x{})", dpiScale, dpiX, dpiY));
+
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
-        ctx->glfwWindow = glfwCreateWindow(800, 600, APP_TITLE, NULL, NULL);
+
+        // Scale window size based on DPI
+        int baseWidth = 800;
+        int baseHeight = 600;
+        int scaledWidth = static_cast<int>(baseWidth * dpiScale);
+        int scaledHeight = static_cast<int>(baseHeight * dpiScale);
+
+        ctx->glfwWindow = glfwCreateWindow(scaledWidth, scaledHeight, APP_TITLE, NULL, NULL);
 
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");
