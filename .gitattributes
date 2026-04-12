@@ -1,0 +1,46 @@
+# Auto-detect text files and normalize to CRLF on checkout
+* text=auto eol=crlf
+
+# Source code files (explicit UTF-8 with CRLF)
+*.cpp text eol=crlf encoding=utf-8
+*.h text eol=crlf encoding=utf-8
+*.hpp text eol=crlf encoding=utf-8
+*.in text eol=crlf encoding=utf-8
+
+# Build & config files
+CMakeLists.txt text eol=crlf encoding=utf-8
+*.cmake text eol=crlf encoding=utf-8
+*.json text eol=crlf encoding=utf-8
+*.yml text eol=crlf encoding=utf-8
+*.yaml text eol=crlf encoding=utf-8
+
+# Documentation
+*.md text eol=crlf encoding=utf-8
+*.txt text eol=crlf encoding=utf-8
+
+# Shell scripts (preserve LF for Unix compatibility)
+*.sh text eol=lf encoding=utf-8
+
+# Binary files (no conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.ico binary
+*.svg binary
+*.exe binary
+*.dll binary
+*.lib binary
+*.obj binary
+*.o binary
+*.a binary
+*.so binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.tar binary
+
+# IDE files
+.vscode/ text eol=crlf
+*.vssettings text eol=crlf
