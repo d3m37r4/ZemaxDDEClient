@@ -126,4 +126,21 @@ namespace gui {
 
         logger.addLog("[GUI] GUI initialized");
     }
+
+    void GuiManager::updateDpiStyle(float dpiScale) {
+        ImGuiIO& io = ImGui::GetIO();
+
+        // Scale font globally (fonts already loaded)
+        io.FontGlobalScale = dpiScale;
+
+        // Scale ImGui style metrics
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.WindowPadding = ImVec2(8.0f * dpiScale, 8.0f * dpiScale);
+        style.FramePadding = ImVec2(4.0f * dpiScale, 4.0f * dpiScale);
+        style.ItemSpacing = ImVec2(8.0f * dpiScale, 4.0f * dpiScale);
+        style.ItemInnerSpacing = ImVec2(4.0f * dpiScale, 4.0f * dpiScale);
+        style.IndentSpacing = 25.0f * dpiScale;
+        style.ScrollbarSize = 15.0f * dpiScale;
+        style.GrabMinSize = 10.0f * dpiScale;
+    }
 }

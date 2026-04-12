@@ -15,6 +15,7 @@ struct AppContext {
     HWND hwndClient = nullptr;
     ZemaxDDE::ZemaxDDEClient* ddeClient = nullptr;
     gui::GuiManager* gui = nullptr;
+    float dpiScale = 1.0f;
 };
 
 namespace App {
