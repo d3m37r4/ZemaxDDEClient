@@ -1,6 +1,5 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
-
 #include "app/app.h"
 
 namespace gui {

@@ -1,6 +1,6 @@
 #include <fstream>
 #include <ranges>
-#include <math.h>
+#include <cmath>
 
 #include "gui.h"
 #include "logger/logger.h"

@@ -1,5 +1,4 @@
 #include "gui/gui.h"
-
 #include "app/app.h"
 
 namespace gui {

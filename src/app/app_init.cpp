@@ -3,7 +3,6 @@
 #include <nfd.h>
 
 #include "logger/logger.h"
-
 #include "app/app.h"
 
 namespace App {
