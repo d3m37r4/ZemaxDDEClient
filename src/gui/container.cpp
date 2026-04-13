@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include "gui.h"
+#include "gui/gui_impl.h"
 
 namespace gui {
     void GuiManager::render() {

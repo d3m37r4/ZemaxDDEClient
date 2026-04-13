@@ -2,7 +2,19 @@
 
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "lib/imgui/imgui.h"
 #include "logger/logger.h"
+
+namespace {
+    inline constexpr ImVec4 DDE_STATUS_COLOR_CONNECTED    = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);  // Green
+    inline constexpr ImVec4 DDE_STATUS_COLOR_DISCONNECTED = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);  // Red
+    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_NORMAL  = ImVec4(0.0f, 0.5f, 0.0f, 1.0f);
+    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_HOVER   = ImVec4(0.0f, 0.7f, 0.0f, 1.0f);
+    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_ACTIVE  = ImVec4(0.0f, 0.3f, 0.0f, 1.0f);
+    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_NORMAL = ImVec4(0.5f, 0.0f, 0.0f, 1.0f);
+    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_HOVER  = ImVec4(0.7f, 0.0f, 0.0f, 1.0f);
+    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_ACTIVE = ImVec4(0.3f, 0.0f, 0.0f, 1.0f);
+}
 
 namespace gui {
     void GuiManager::renderDDEStatusFrame() {

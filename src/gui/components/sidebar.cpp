@@ -1,5 +1,6 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "lib/imgui/imgui.h"
 
 namespace gui {
     void GuiManager::renderSidebar() {

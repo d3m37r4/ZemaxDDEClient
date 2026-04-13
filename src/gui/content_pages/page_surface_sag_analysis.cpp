@@ -1,6 +1,8 @@
 #include <fstream>
 
 #include "gui/gui.h"
+#include "lib/imgui/imgui.h"
+#include "lib/implot/implot.h"
 
 namespace {
     struct SagCrossSectionPair {

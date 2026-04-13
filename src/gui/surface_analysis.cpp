@@ -2,7 +2,7 @@
 #include <ranges>
 #include <cmath>
 
-#include "gui.h"
+#include "gui/gui_impl.h"
 #include "logger/logger.h"
 
 namespace gui {

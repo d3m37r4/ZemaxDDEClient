@@ -7,8 +7,8 @@
 #include <shellapi.h>
 #include <shlobj.h>
 
+#include "gui/gui_impl.h"
 #include "app/app.h"
-#include "gui.h"
 #include "logger/logger.h"
 
 namespace {

@@ -1,6 +1,9 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "lib/imgui/imgui.h"
 #include "logger/logger.h"
+#include <windows.h>
+#include <shellapi.h>
 
 namespace gui {
     void GuiManager::renderDebugLog() {

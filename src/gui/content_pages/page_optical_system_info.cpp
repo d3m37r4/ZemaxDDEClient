@@ -1,4 +1,5 @@
 #include "gui/gui.h"
+#include "lib/imgui/imgui.h"
 
 namespace gui {
     void GuiManager::renderPageOpticalSystemInfo() {

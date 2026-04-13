@@ -1,46 +1,24 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
+#include <utility>
 #include <vector>
 
 #include <windows.h>
 #include <GLFW/glfw3.h>
 
-#include <nfd.h>
-#include "lib/imgui/imgui.h"
-#include "lib/imgui/backends/imgui_impl_glfw.h"
-#include "lib/imgui/backends/imgui_impl_opengl3.h"
-#include "lib/implot/implot.h"
-
-#include "version.h"
-#include "dde/client.h"
-
+#include "gui/forwards.h"
 #include "gui/constants.h"
 #include "gui/content_pages/page_surface_sag_analysis.h"
+#include "dde/client.h"
 
 class Logger;
 
 namespace gui {
-    enum class GuiPage {
-        OpticalSystemInfo,      // = 0
-        SurfaceSagAnalysis      // = 1
-    };
-
-    struct GuiPageInfo {
-        GuiPage id;
-        const char* title;
-    };
-
-    constexpr GuiPageInfo GUI_PAGES[] = {
-        {GuiPage::OpticalSystemInfo, "Optical System Information"},
-        {GuiPage::SurfaceSagAnalysis, "Surface Sag Cross Section Analysis"}
-    };
-
-    constexpr size_t GUI_PAGES_COUNT = sizeof(GUI_PAGES) / sizeof(GUI_PAGES[0]);
-
+    // Free utility functions
     const char* getUnitString(int unitCode, bool full = false);
     const char* getRayAimingTypeString(int rayAimingType);
-    
     void HelpMarker(const char* desc);
     void renderPageHeader(GuiPage currentPage);
 

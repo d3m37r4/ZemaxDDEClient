@@ -1,7 +1,5 @@
 #pragma once
 
-#include "lib/imgui/imgui.h"
-
 namespace gui {
     // Content area constraints
     inline constexpr float CONTENT_WIDTH_MIN    = 600.0f;
@@ -18,20 +16,6 @@ namespace gui {
     // DDE status frame constraints
     inline constexpr float DDE_STATUS_FRAME_WIDTH  = 0.0f;   // Automatic width
     inline constexpr float DDE_STATUS_FRAME_HEIGHT = 0.0f;   // Automatic height
-
-    // DDE status text colors
-    inline constexpr ImVec4 DDE_STATUS_COLOR_CONNECTED    = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);  // Green
-    inline constexpr ImVec4 DDE_STATUS_COLOR_DISCONNECTED = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);  // Red
-
-    // DDE button colors — Connect state
-    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_NORMAL  = ImVec4(0.0f, 0.5f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_HOVER   = ImVec4(0.0f, 0.7f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_ACTIVE  = ImVec4(0.0f, 0.3f, 0.0f, 1.0f);
-
-    // DDE button colors — Disconnect state
-    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_NORMAL = ImVec4(0.5f, 0.0f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_HOVER  = ImVec4(0.7f, 0.0f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_ACTIVE = ImVec4(0.3f, 0.0f, 0.0f, 1.0f);
 
     // Sag analysis sampling constraints
     // Maximum: Zemax tool "Surface Sag Cross Section" limit

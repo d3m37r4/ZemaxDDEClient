@@ -1,6 +1,7 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "app/app.h"
+#include "lib/imgui/imgui.h"
 
 namespace gui {
     void GuiManager::renderNavbar() {
