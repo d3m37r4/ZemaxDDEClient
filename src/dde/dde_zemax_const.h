@@ -10,16 +10,16 @@ namespace ZemaxDDE {
         NOMINAL
     };
 
-    constexpr int MIN_FIELDS = 1;
-    constexpr int MAX_FIELDS = 12;
+    inline constexpr int MIN_FIELDS = 1;
+    inline constexpr int MAX_FIELDS = 12;
 
-    constexpr int MIN_WAVES  = 1;
-    constexpr int MAX_WAVES  = 24;
+    inline constexpr int MIN_WAVES  = 1;
+    inline constexpr int MAX_WAVES  = 24;
 
-    constexpr int FIELD_ARRAY_SIZE = MAX_FIELDS + 1;
-    constexpr int WAVE_ARRAY_SIZE  = MAX_WAVES + 1;
+    inline constexpr int FIELD_ARRAY_SIZE = MAX_FIELDS + 1;
+    inline constexpr int WAVE_ARRAY_SIZE  = MAX_WAVES + 1;
 
-    constexpr int MAX_SURFACE_NUMBER = 2048;
+    inline constexpr int MAX_SURFACE_NUMBER = 2048;
 
     /**
      * @brief Codes for command GetSurfaceData/SetSurfaceData

@@ -81,11 +81,11 @@ namespace App {
             return nullptr;
         }
 
-        logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", (uintptr_t)ctx->hwndClient));
+        logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", reinterpret_cast<uintptr_t>(ctx->hwndClient)));
 
         // Create and associate ZemaxDDEClient with the window
-        ctx->ddeClient = new ZemaxDDE::ZemaxDDEClient(ctx->hwndClient);
-        SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, (LONG_PTR)ctx->ddeClient);
+        ctx->ddeClient = std::make_unique<ZemaxDDE::ZemaxDDEClient>(ctx->hwndClient);
+        SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(ctx->ddeClient.get()));
 
         // Register callback to send requests after DDE connection
         ctx->ddeClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
@@ -122,7 +122,7 @@ namespace App {
         });
 
         // Initialize GUI manager with existing DDE client
-        ctx->gui = new gui::GuiManager(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient);
+        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get());
         ctx->gui->initialize();
 
         // Set up DPI change callback for dynamic scaling
@@ -154,24 +154,23 @@ namespace App {
     void shutdown(AppContext* ctx) {
         if (!ctx) return;
 
-        // Shutdown GUI
-        if (ctx->gui) {
-            delete ctx->gui;
-            ctx->gui = nullptr;
+        // 1. Shutdown GUI first (depends on DDE client and GLFW)
+        ctx->gui.reset();
+
+        // 2. Shutdown DDE (depends on GLFW window messages)
+        if (ctx->hwndClient && ctx->ddeClient) {
+            ctx->ddeClient->terminateDDE();
+            SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, 0);
+            ctx->ddeClient.reset();
         }
 
-        // Shutdown DDE
+        // 3. Destroy DDE message window
         if (ctx->hwndClient) {
-            if (ctx->ddeClient) {
-                ctx->ddeClient->terminateDDE();
-                delete ctx->ddeClient;
-                SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, 0);
-            }
             DestroyWindow(ctx->hwndClient);
             ctx->hwndClient = nullptr;
         }
 
-        // Shutdown GLFW
+        // 4. Shutdown GLFW
         if (ctx->glfwWindow) {
             glfwDestroyWindow(ctx->glfwWindow);
             ctx->glfwWindow = nullptr;
@@ -179,6 +178,7 @@ namespace App {
 
         glfwTerminate();
 
+        // 5. Free context itself
         delete ctx;
     }
 }

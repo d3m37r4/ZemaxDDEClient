@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <string>
+#include <filesystem>
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -9,7 +10,7 @@
 #include "gui.h"
 
 namespace {
-    const char* imguiIniFilename = "imgui.ini";
+    constexpr std::string_view IMGUI_INI_FILENAME = "imgui.ini";
 
     const char* getImGuiIniPath() {
         static std::string imguiIniPath;
@@ -27,7 +28,7 @@ namespace {
                 CoTaskMemFree(localAppDataPath);
                 std::filesystem::create_directories(configFolderPath);
 
-                std::wstring imguiIniWidePath = configFolderPath + L"\\" + std::wstring(imguiIniFilename, imguiIniFilename + strlen(imguiIniFilename));
+                std::wstring imguiIniWidePath = configFolderPath + L"\\" + std::wstring(IMGUI_INI_FILENAME.begin(), IMGUI_INI_FILENAME.end());
 
                 int utf8PathLength = WideCharToMultiByte(CP_UTF8, 0, imguiIniWidePath.c_str(), -1, nullptr, 0, nullptr, nullptr);
                 if (utf8PathLength > 0) {
@@ -37,15 +38,15 @@ namespace {
                     logger.addLog(std::format("[GUI] ImGui INI path set to: {}", imguiIniPath));
                 #endif
                 } else {
-                    imguiIniPath = imguiIniFilename;
+                    imguiIniPath = std::string(IMGUI_INI_FILENAME);
                     logger.addLog(std::format("[GUI] Warning: Failed to convert ImGui INI path to UTF-8. Using fallback: {}", imguiIniPath));
                 }
             } else {
-                imguiIniPath = imguiIniFilename;
+                imguiIniPath = std::string(IMGUI_INI_FILENAME);
                 logger.addLog(std::format("[GUI] Warning: Failed to get %LOCALAPPDATA%. Using fallback path: {}", imguiIniPath));
             }
         #else
-            imguiIniPath = imguiIniFilename;
+            imguiIniPath = std::string(IMGUI_INI_FILENAME);
             logger.addLog(std::format("[GUI] Development mode: ImGui INI path = {}", imguiIniPath));
         #endif
         }
@@ -56,21 +57,21 @@ namespace {
 
 namespace gui {
     GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient)
-        : glfwWindow(glfwWindow)
-        , hwndClient(hwndClient)
-        , zemaxDDEClient(ddeClient)
-        , show_updates_popup(false)
-        , show_about_popup(false)
+        : m_glfwWindow(glfwWindow)
+        , m_hwndClient(hwndClient)
+        , m_zemaxDDEClient(ddeClient)
+        , m_showUpdatesPopup(false)
+        , m_showAboutPopup(false)
     {
-        if (!glfwWindow) {
+        if (!m_glfwWindow) {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        logger.addLog(std::format("[GUI] Received DDE client window handle = {}", (uintptr_t)hwndClient));
+        logger.addLog(std::format("[GUI] Received DDE client window handle = {}", reinterpret_cast<uintptr_t>(hwndClient)));
     }
 
     GuiManager::~GuiManager() {
-        if (glfwWindow) {
+        if (m_glfwWindow) {
             ImGui_ImplOpenGL3_DestroyDeviceObjects();
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplGlfw_Shutdown();
@@ -94,22 +95,17 @@ namespace gui {
         ReleaseDC(NULL, hdc);
         float dpiScale = static_cast<float>(dpiX) / 96.0f;
 
-        char fontPath[MAX_PATH];
-        GetWindowsDirectoryA(fontPath, MAX_PATH);
-        strcat_s(fontPath, "\\Fonts\\segoeui.ttf");
+        std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
+        const std::string fontPathStr = fontPath.string();
 
-        // Scale font size based on DPI
+        // Load font already scaled to DPI — do NOT use FontGlobalScale (it breaks input field text rendering)
         float baseFontSize = 18.0f;
         float scaledFontSize = baseFontSize * dpiScale;
-        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath, scaledFontSize);
+        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), scaledFontSize);
 
         if (!font) {
             logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
         }
-
-        // ImGui::StyleColorsClassic();
-        // ImGui::StyleColorsLight();
-        // ImGui::StyleColorsDark();
 
         ImGuiStyle& style = ImGui::GetStyle();
         style.WindowPadding = ImVec2(8.0f * dpiScale, 8.0f * dpiScale);
@@ -120,7 +116,7 @@ namespace gui {
         style.ScrollbarSize = 15.0f * dpiScale;
         style.GrabMinSize = 10.0f * dpiScale;
 
-        ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
+        ImGui_ImplGlfw_InitForOpenGL(m_glfwWindow, true);
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 

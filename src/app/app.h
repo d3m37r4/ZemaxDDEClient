@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <GLFW/glfw3.h>
 #include <windows.h>
 
@@ -13,8 +14,8 @@
 struct AppContext {
     GLFWwindow* glfwWindow = nullptr;
     HWND hwndClient = nullptr;
-    ZemaxDDE::ZemaxDDEClient* ddeClient = nullptr;
-    gui::GuiManager* gui = nullptr;
+    std::unique_ptr<ZemaxDDE::ZemaxDDEClient> ddeClient;
+    std::unique_ptr<gui::GuiManager> gui;
     float dpiScale = 1.0f;
 };
 

@@ -20,13 +20,13 @@ namespace gui {
     }
 
     void GuiManager::calculateSagCrossSection(int surface, int sampling, double angle) {
-        const auto targetStorage = zemaxDDEClient->getStorageTarget();
+        const auto targetStorage = m_zemaxDDEClient->getStorageTarget();
         assert(targetStorage == ZemaxDDE::StorageTarget::NOMINAL || targetStorage == ZemaxDDE::StorageTarget::TOLERANCED);
     
         const ZemaxDDE::SurfaceData& targetSurface = 
             (targetStorage == ZemaxDDE::StorageTarget::NOMINAL) 
-                ? zemaxDDEClient->getNominalSurface() 
-                : zemaxDDEClient->getTolerancedSurface();
+                ? m_zemaxDDEClient->getNominalSurface() 
+                : m_zemaxDDEClient->getTolerancedSurface();
 
         if (targetSurface.id != surface || !targetSurface.isValid()) [[unlikely]] {
             logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
@@ -48,10 +48,10 @@ namespace gui {
             const double r = -semiDiameter + i * step;
             const double x = r * cosAngle;
             const double y = r * sinAngle;
-            zemaxDDEClient->getSag(surface, x, y);
+            m_zemaxDDEClient->getSag(surface, x, y);
         }     
         
-        zemaxDDEClient->setSurfaceProfileMetadata(
+        m_zemaxDDEClient->setSurfaceProfileMetadata(
             targetStorage,
             {.angle = angle, .sampling = sampling}
         );
