@@ -2,8 +2,8 @@
 #include <fstream>
 #include <dde.h>
 
-#include "dde_zemax_client.h"
-#include "dde_zemax_utils.h"
+#include "client.h"
+#include "utils.h"
 
 namespace ZemaxDDE {
     ZemaxDDEClient::ZemaxDDEClient(HWND hwndZemaxClient) : m_hwndZemaxClient(hwndZemaxClient) {}

@@ -22,7 +22,7 @@ namespace {
         return std::format(
             "Number of points to sample along the surface diameter (min={}, max={}).\n"
             "Higher values = smoother profile, slower calculation.",
-            MIN_SAMPLING, MAX_SAMPLING
+            gui::MIN_SAMPLING, gui::MAX_SAMPLING
         );
     }
 
@@ -76,7 +76,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-            state.tolerancedSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.tolerancedSampling));
+            state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling));
             ImGui::SameLine();
             HelpMarker(getSamplingTooltip().c_str());
 
@@ -153,7 +153,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-            state.nominalSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.nominalSampling));
+            state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
             ImGui::SameLine();
             HelpMarker(getSamplingTooltip().c_str());
 

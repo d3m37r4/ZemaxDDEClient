@@ -1,7 +1,7 @@
-#include "gui/components/gui_navbar.h"
+#include "gui/gui.h"
+#include "gui/constants.h"
 
 #include "app/app.h"
-#include "gui/gui.h"
 
 namespace gui {
     void GuiManager::renderNavbar() {

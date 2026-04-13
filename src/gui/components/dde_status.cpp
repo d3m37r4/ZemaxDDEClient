@@ -1,8 +1,7 @@
 #include <stdexcept>
 
-#include "gui/components/gui_dde_status.h"
-
-#include "gui.h"
+#include "gui/gui.h"
+#include "gui/constants.h"
 
 namespace gui {
     void GuiManager::renderDDEStatusFrame() {

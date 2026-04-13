@@ -1,6 +1,5 @@
-#include "gui/components/gui_content.h"
-
 #include "gui/gui.h"
+#include "gui/constants.h"
 
 namespace gui {
     void GuiManager::renderContent() {

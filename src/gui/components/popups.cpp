@@ -1,8 +1,5 @@
-
-
-#include "gui/components/gui_popups.h"
-
 #include "gui/gui.h"
+
 #include "app/app.h"
 
 namespace gui {

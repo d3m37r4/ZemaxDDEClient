@@ -6,7 +6,7 @@
 
 #include "logger/logger.h"
 
-#include "dde_zemax_types.h"
+#include "types.h"
 
 namespace ZemaxDDE {
     class ZemaxDDEClient {

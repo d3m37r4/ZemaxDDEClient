@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "dde_zemax_const.h"
+#include "constants.h"
 
 namespace ZemaxDDE {
     struct Wavelength {

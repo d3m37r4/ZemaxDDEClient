@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <windows.h>
 
-#include "dde/dde_zemax_client.h"
+#include "dde/client.h"
 #include "gui/gui.h"
 #include "version.h"
 

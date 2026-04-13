@@ -1,6 +1,5 @@
-#include "gui/components/gui_debug_log.h"
-
-#include "gui.h"
+#include "gui/gui.h"
+#include "gui/constants.h"
 
 namespace {
     std::string collectLogContent() {

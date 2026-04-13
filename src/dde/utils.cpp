@@ -1,4 +1,4 @@
-#include "dde_zemax_utils.h"
+#include "utils.h"
 
 namespace ZemaxDDE {
     /*

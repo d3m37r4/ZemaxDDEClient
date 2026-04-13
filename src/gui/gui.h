@@ -13,10 +13,10 @@
 #include "lib/implot/implot.h"
 
 #include "version.h"
-#include "dde/dde_zemax_client.h"
+#include "dde/client.h"
 
-#include "gui/content_pages/gui_page_optical_system_info.h"
-#include "gui/content_pages/gui_page_surface_sag_analysis.h"
+#include "gui/constants.h"
+#include "gui/content_pages/page_surface_sag_analysis.h"
 
 namespace gui {
     enum class GuiPage {
