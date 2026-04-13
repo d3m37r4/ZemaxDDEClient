@@ -8,23 +8,29 @@
 #include "gui/gui.h"
 #include "version.h"
 
+class Logger;
+
 #define APP_NAME "ZemaxDDEClient"
 #define APP_TITLE APP_NAME " " APP_FULL_VERSION
+
+class Logger;
 
 struct AppContext {
     GLFWwindow* glfwWindow = nullptr;
     HWND hwndClient = nullptr;
     std::unique_ptr<ZemaxDDE::ZemaxDDEClient> ddeClient;
     std::unique_ptr<gui::GuiManager> gui;
+    Logger* pLogger = nullptr;
     float dpiScale = 1.0f;
 };
 
 namespace App {
     /**
      * @brief Initialize entire application: GLFW, DDE window, DDE client, GUI.
+     * @param logger Logger instance for logging (dependency injection).
      * @return Pointer to AppContext on success, nullptr on error.
      */
-    AppContext* initialize();
+    AppContext* initialize(Logger& logger);
 
     /**
      * @brief Shut down and clean up all resources.
@@ -35,7 +41,7 @@ namespace App {
     /**
      * @brief Open a .zmx file in Zemax using native file dialog and ShellExecute.
      */
-    void openZmxFileInZemax();
+    void openZmxFileInZemax(Logger& logger);
 }
 
 // Windows message handler (C linkage, global scope)

@@ -7,7 +7,7 @@ namespace gui {
     void GuiManager::renderNavbar() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
-                if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax();
+                if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax(m_logger);
                 ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) glfwSetWindowShouldClose(m_glfwWindow, true);
                 ImGui::EndMenu();

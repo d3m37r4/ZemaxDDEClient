@@ -2,6 +2,7 @@
 
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "logger/logger.h"
 
 namespace gui {
     void GuiManager::renderDDEStatusFrame() {
@@ -40,10 +41,10 @@ namespace gui {
                     m_zemaxDDEClient->terminateDDE();
                 }
             #ifdef DEBUG_LOG
-                logger.addLog("[GUI] " + std::string(isDdeInitialized() ? "Connected to Zemax" : "Disconnected from Zemax"));
+                m_logger.addLog("[GUI] " + std::string(isDdeInitialized() ? "Connected to Zemax" : "Disconnected from Zemax"));
             #endif
             } catch (const std::runtime_error& e) {
-                logger.addLog("[GUI] DDE connection failed: " + std::string(e.what()));
+                m_logger.addLog("[GUI] DDE connection failed: " + std::string(e.what()));
             }
         }
         ImGui::PopStyleVar();

@@ -18,6 +18,8 @@
 #include "gui/constants.h"
 #include "gui/content_pages/page_surface_sag_analysis.h"
 
+class Logger;
+
 namespace gui {
     enum class GuiPage {
         OpticalSystemInfo,      // = 0
@@ -46,8 +48,8 @@ namespace gui {
     std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content);
 
     class GuiManager {
-        public: 
-            GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient);
+        public:
+            GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
             ~GuiManager();
 
             void initialize();
@@ -80,6 +82,7 @@ namespace gui {
             GLFWwindow* m_glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
             HWND m_hwndClient;                                    // DDE client window handle
             ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;           // Pointer to a DDE client instance
+            Logger& m_logger;                                     // Logger instance (dependency injection)
 
             GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
             SurfaceSagAnalysisPageState m_surfaceSagAnalysisPageState{};

@@ -8,11 +8,12 @@
 
 #include "app/app.h"
 #include "gui.h"
+#include "logger/logger.h"
 
 namespace {
     constexpr std::string_view IMGUI_INI_FILENAME = "imgui.ini";
 
-    const char* getImGuiIniPath() {
+    const char* getImGuiIniPath(Logger& logger) {
         static std::string imguiIniPath;
 
         if (imguiIniPath.empty()) {
@@ -56,10 +57,11 @@ namespace {
 }
 
 namespace gui {
-    GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient)
+    GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
         : m_glfwWindow(glfwWindow)
         , m_hwndClient(hwndClient)
         , m_zemaxDDEClient(ddeClient)
+        , m_logger(logger)
         , m_showUpdatesPopup(false)
         , m_showAboutPopup(false)
     {
@@ -67,7 +69,7 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        logger.addLog(std::format("[GUI] Received DDE client window handle = {}", reinterpret_cast<uintptr_t>(hwndClient)));
+        m_logger.addLog(std::format("[GUI] Received DDE client window handle = {}", reinterpret_cast<uintptr_t>(hwndClient)));
     }
 
     GuiManager::~GuiManager() {
@@ -87,7 +89,7 @@ namespace gui {
 
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        io.IniFilename = getImGuiIniPath();
+        io.IniFilename = getImGuiIniPath(m_logger);
 
         // Get DPI scale factor for font and UI scaling
         HDC hdc = GetDC(NULL);
@@ -104,7 +106,7 @@ namespace gui {
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), scaledFontSize);
 
         if (!font) {
-            logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
+            m_logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
         }
 
         ImGuiStyle& style = ImGui::GetStyle();
@@ -120,7 +122,7 @@ namespace gui {
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 
-        logger.addLog("[GUI] GUI initialized");
+        m_logger.addLog("[GUI] GUI initialized");
     }
 
     void GuiManager::updateDpiStyle(float dpiScale) {

@@ -7,7 +7,7 @@
 #include "app/app.h"
 
 namespace App {
-    AppContext* initialize() {
+    AppContext* initialize(Logger& logger) {
         auto ctx = new AppContext();
 
         // Enable DPI awareness for proper scaling on high-DPI displays
@@ -86,11 +86,11 @@ namespace App {
         logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", reinterpret_cast<uintptr_t>(ctx->hwndClient)));
 
         // Create and associate ZemaxDDEClient with the window
-        ctx->ddeClient = std::make_unique<ZemaxDDE::ZemaxDDEClient>(ctx->hwndClient);
+        ctx->ddeClient = std::make_unique<ZemaxDDE::ZemaxDDEClient>(ctx->hwndClient, logger);
         SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(ctx->ddeClient.get()));
 
         // Register callback to send requests after DDE connection
-        ctx->ddeClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
+        ctx->ddeClient->setOnDDEConnectedCallback([&logger](ZemaxDDE::ZemaxDDEClient* client) {
             try {
                 client->getLensName();
                 client->getFileName();
@@ -123,15 +123,18 @@ namespace App {
             }
         });
 
+        ctx->pLogger = &logger;
+
         // Initialize GUI manager with existing DDE client
-        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get());
+        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get(), logger);
         ctx->gui->initialize();
 
         // Set up DPI change callback for dynamic scaling
         glfwSetWindowContentScaleCallback(ctx->glfwWindow, [](GLFWwindow* window, float xScale, float yScale) {
             AppContext* ctx = static_cast<AppContext*>(glfwGetWindowUserPointer(window));
-            if (!ctx) return;
+            if (!ctx || !ctx->pLogger) return;
 
+            Logger& logger = *ctx->pLogger;
             float newDpiScale = (xScale + yScale) / 2.0f;
             logger.addLog(std::format("[APP] DPI scale changed to: {:.2f}", newDpiScale));
 
@@ -184,7 +187,7 @@ namespace App {
         delete ctx;
     }
 
-    void openZmxFileInZemax() {
+    void openZmxFileInZemax(Logger& logger) {
         nfdchar_t* outPath = nullptr;
         nfdresult_t result = NFD_OpenDialog("zmx", nullptr, &outPath);
 

@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "gui.h"
+#include "logger/logger.h"
 
 namespace gui {
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface) {
@@ -29,7 +30,7 @@ namespace gui {
                 : m_zemaxDDEClient->getTolerancedSurface();
 
         if (targetSurface.id != surface || !targetSurface.isValid()) [[unlikely]] {
-            logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
+            m_logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
             return;
         }
 
@@ -41,7 +42,7 @@ namespace gui {
         double step = targetSurface.diameter() / (sampling - 1);
 
     #ifdef DEBUG_LOG
-        logger.addLog(std::format("[GUI] Requesting Sag Cross Section for surface {} at angle {}° with {} points", surface, angle, sampling));
+        m_logger.addLog(std::format("[GUI] Requesting Sag Cross Section for surface {} at angle {}° with {} points", surface, angle, sampling));
     #endif
 
         for (int i : std::views::iota(0, sampling)) {
@@ -59,7 +60,7 @@ namespace gui {
 
     void GuiManager::saveSagCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
         if (surface.sagDataPoints.empty()) {
-            logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
+            m_logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
             return;
         }
 
@@ -79,12 +80,12 @@ namespace gui {
 
         auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_SagCrossSection_Temp.txt", content);
         if (!tempPathOpt) {
-            logger.addLog("[GUI] Failed to create temporary file for Surface Sag Cross Section export");
+            m_logger.addLog("[GUI] Failed to create temporary file for Surface Sag Cross Section export");
             return;
         }
 
         ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
-        logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
+        m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
     }
 
     void GuiManager::renderSagCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {

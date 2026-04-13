@@ -5,26 +5,22 @@
 #include "logger/logger.h"
 #include "app/app.h"
 
-Logger logger;
-
 extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
     if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
         auto* client = reinterpret_cast<ZemaxDDE::ZemaxDDEClient*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
         if (client) {
             return client->handleDDEMessages(iMsg, wParam, lParam);
-        } else {
-        #ifdef DEBUG_LOG
-            logger.addLog(std::format("[APP] WndProc: No ZemaxDDEClient instance associated with hwnd = {}", reinterpret_cast<uintptr_t>(hwnd)));
-        #endif
         }
     }
     return DefWindowProcW(hwnd, iMsg, wParam, lParam);
 }
 
 int main() {
+    Logger logger;
+
     logger.addLog("[APP] Application started");
 
-    AppContext* ctx = App::initialize();
+    AppContext* ctx = App::initialize(logger);
     if (!ctx) {
         logger.addLog("[APP] Application failed to initialize");
         return -1;
@@ -38,7 +34,7 @@ int main() {
         // Hotkey Ctrl+O
         if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
             if (ImGui::IsKeyPressed(ImGuiKey_O)) {
-                App::openZmxFileInZemax();
+                App::openZmxFileInZemax(logger);
             }
         }
 
