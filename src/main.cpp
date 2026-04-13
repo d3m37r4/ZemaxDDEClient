@@ -10,7 +10,7 @@ int main() {
 
     logger.addLog("[APP] Application started");
 
-    AppContext* ctx = App::initialize(logger);
+    auto ctx = App::initialize(logger);
     if (!ctx) {
         logger.addLog("[APP] Application failed to initialize");
         return -1;
@@ -33,7 +33,7 @@ int main() {
     }
 
     logger.addLog("[APP] Main loop ended");
-    App::shutdown(ctx);
+    App::shutdown(*ctx);
 
     logger.addLog("[APP] Application terminated");
     return 0;

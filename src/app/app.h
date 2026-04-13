@@ -26,15 +26,15 @@ namespace App {
     /**
      * @brief Initialize entire application: GLFW, DDE window, DDE client, GUI.
      * @param logger Logger instance for logging (dependency injection).
-     * @return Pointer to AppContext on success, nullptr on error.
+     * @return Unique pointer to AppContext on success, nullptr on error.
      */
-    AppContext* initialize(Logger& logger);
+    std::unique_ptr<AppContext> initialize(Logger& logger);
 
     /**
      * @brief Shut down and clean up all resources.
      * @param ctx Application context (must not be used after this call).
      */
-    void shutdown(AppContext* ctx);
+    void shutdown(AppContext& ctx);
 
     /**
      * @brief Open a .zmx file in Zemax using native file dialog and ShellExecute.

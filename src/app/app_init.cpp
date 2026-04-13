@@ -18,8 +18,10 @@ namespace {
 }
 
 namespace App {
-    AppContext* initialize(Logger& logger) {
-        auto ctx = new AppContext();
+    std::unique_ptr<AppContext> initialize(Logger& logger) {
+        auto ctx = std::make_unique<AppContext>();
+
+        ctx->pLogger = &logger;
 
         // Enable DPI awareness for proper scaling on high-DPI displays
         SetProcessDPIAware();
@@ -27,7 +29,6 @@ namespace App {
         // Initialize GLFW
         if (!glfwInit()) {
             logger.addLog("[APP] Failed to initialize GLFW");
-            delete ctx;
             return nullptr;
         }
 
@@ -54,7 +55,6 @@ namespace App {
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");
             glfwTerminate();
-            delete ctx;
             return nullptr;
         }
 
@@ -75,7 +75,6 @@ namespace App {
             logger.addLog("[APP] Failed to register DDE window class");
             glfwDestroyWindow(ctx->glfwWindow);
             glfwTerminate();
-            delete ctx;
             return nullptr;
         }
 
@@ -90,7 +89,6 @@ namespace App {
                             "Ensure no other instance is running and try again.", "Error", MB_OK | MB_ICONERROR);
             logger.addLog("[APP] Failed to create DDE window (CreateWindowExW returned NULL)");
             glfwTerminate();
-            delete ctx;
             return nullptr;
         }
 
@@ -162,40 +160,36 @@ namespace App {
         });
 
         // Store context pointer for callback access
-        glfwSetWindowUserPointer(ctx->glfwWindow, ctx);
+        glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
 
         return ctx;
     }
 
-    void shutdown(AppContext* ctx) {
-        if (!ctx) return;
-
+    void shutdown(AppContext& ctx) {
         // 1. Shutdown GUI first (depends on DDE client and GLFW)
-        ctx->gui.reset();
+        ctx.gui.reset();
 
         // 2. Shutdown DDE (depends on GLFW window messages)
-        if (ctx->hwndClient && ctx->ddeClient) {
-            ctx->ddeClient->terminateDDE();
-            SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, 0);
-            ctx->ddeClient.reset();
+        if (ctx.hwndClient && ctx.ddeClient) {
+            ctx.ddeClient->terminateDDE();
+            SetWindowLongPtr(ctx.hwndClient, GWLP_USERDATA, 0);
+            ctx.ddeClient.reset();
         }
 
         // 3. Destroy DDE message window
-        if (ctx->hwndClient) {
-            DestroyWindow(ctx->hwndClient);
-            ctx->hwndClient = nullptr;
+        if (ctx.hwndClient) {
+            DestroyWindow(ctx.hwndClient);
+            ctx.hwndClient = nullptr;
         }
 
         // 4. Shutdown GLFW
-        if (ctx->glfwWindow) {
-            glfwDestroyWindow(ctx->glfwWindow);
-            ctx->glfwWindow = nullptr;
+        if (ctx.glfwWindow) {
+            glfwDestroyWindow(ctx.glfwWindow);
+            ctx.glfwWindow = nullptr;
         }
 
         glfwTerminate();
-
-        // 5. Free context itself
-        delete ctx;
+        // 5. Context destroyed by unique_ptr
     }
 
     void openZmxFileInZemax(Logger& logger) {
