@@ -13,8 +13,6 @@ class Logger;
 #define APP_NAME "ZemaxDDEClient"
 #define APP_TITLE APP_NAME " " APP_FULL_VERSION
 
-class Logger;
-
 struct AppContext {
     GLFWwindow* glfwWindow = nullptr;
     HWND hwndClient = nullptr;
@@ -43,6 +41,3 @@ namespace App {
      */
     void openZmxFileInZemax(Logger& logger);
 }
-
-// Windows message handler (C linkage, global scope)
-extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);

@@ -5,16 +5,6 @@
 #include "logger/logger.h"
 #include "app/app.h"
 
-extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
-    if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
-        auto* client = reinterpret_cast<ZemaxDDE::ZemaxDDEClient*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-        if (client) {
-            return client->handleDDEMessages(iMsg, wParam, lParam);
-        }
-    }
-    return DefWindowProcW(hwnd, iMsg, wParam, lParam);
-}
-
 int main() {
     Logger logger;
 
