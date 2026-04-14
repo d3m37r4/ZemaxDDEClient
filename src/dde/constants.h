@@ -1,8 +1,8 @@
 #pragma once
 
 namespace ZemaxDDE {
-    static constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";     // Appname DDE
-    static constexpr const wchar_t* DDE_TOPIC       = L"RayData";   // Topic DDE
+    inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";     // Appname DDE
+    inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";   // Topic DDE
     static constexpr int DDE_TIMEOUT_MS             = 5000;         // Timeout in ms (5 sec.)
 
     enum class StorageTarget {
@@ -64,7 +64,7 @@ namespace ZemaxDDE {
         static constexpr int COORD_RETURN_SOLVE_STATUS = 80; // int: Coordinate return solve status. 0=none, 1=Orientation only, 2=Orient+XY, 3=Orient+XYZ. The surface must be a coordinate break for this solve to have any affect.
         static constexpr int COORD_RETURN_SURFACE_NUMBER = 81; // int: 81 Coordinate return surface number. Used only by the coordinate return solve.
 
-        static bool isValid(int code) {
+        static constexpr bool isValid(int code) noexcept {
             switch (code) {
                 case TYPE_NAME:
                 case COMMENT:
