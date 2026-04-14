@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -10,7 +11,7 @@
 
 #include "gui/forwards.h"
 #include "gui/constants.h"
-#include "gui/content_pages/page_surface_sag_analysis.h"
+#include "gui/sag_analysis_service.h"
 #include "dde/client.h"
 
 class Logger;
@@ -21,9 +22,6 @@ namespace gui {
     const char* getRayAimingTypeString(int rayAimingType);
     void HelpMarker(const char* desc);
     void renderPageHeader(GuiPage currentPage);
-
-    std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface);
-    std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content);
 
     class GuiManager {
         public:
@@ -46,13 +44,6 @@ namespace gui {
             void renderPageOpticalSystemInfo();
             void renderPageSurfaceSagAnalysis();
 
-            void renderSagCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
-            void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
-            void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
-
-            void calculateSagCrossSection(int surface, int sampling, double angle = 0.0);
-            void saveSagCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
-
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDdeInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
@@ -61,14 +52,9 @@ namespace gui {
             HWND m_hwndClient;                                    // DDE client window handle
             ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;           // Pointer to a DDE client instance
             Logger& m_logger;                                     // Logger instance (dependency injection)
+            std::unique_ptr<SagAnalysisService> m_sagService;     // Sag analysis service (owned by GuiManager)
 
             GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
-            SurfaceSagAnalysisPageState m_surfaceSagAnalysisPageState{};
-
-            bool m_showTolerancedSagWindow{false};
-            bool m_showNominalSagWindow{false};
-            bool m_showComparisonWindow{false};
-            bool m_showErrorWindow{false};
 
             bool m_showUpdatesPopup{false};                       // Display flag for popup 'Check for Updates'
             bool m_showAboutPopup{false};                         // Display flag for popup 'Check for About'

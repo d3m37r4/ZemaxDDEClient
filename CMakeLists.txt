@@ -80,7 +80,7 @@ set(SOURCES
     ${SRC_DIR}/dde/utils.cpp
     ${SRC_DIR}/gui/init.cpp
     ${SRC_DIR}/gui/container.cpp
-    ${SRC_DIR}/gui/surface_analysis.cpp
+    ${SRC_DIR}/gui/sag_analysis_service.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/components/navbar.cpp
     ${SRC_DIR}/gui/components/sidebar.cpp

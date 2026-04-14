@@ -16,4 +16,5 @@
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 #include "lib/implot/implot.h"
 
+#include "gui/sag_analysis_service.h"
 #include "gui/gui.h"

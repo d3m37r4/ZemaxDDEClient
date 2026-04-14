@@ -2,16 +2,26 @@
 #include <ranges>
 #include <cmath>
 
-#include "gui/gui_impl.h"
+#include "lib/imgui/imgui.h"
+#include "lib/implot/implot.h"
+
+#include "gui/sag_analysis_service.h"
+#include "gui/gui.h"
 #include "logger/logger.h"
 
 namespace gui {
+    SagAnalysisService::SagAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
+        : m_ddeClient(ddeClient)
+        , m_logger(logger)
+    {
+    }
+
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface) {
         std::vector<double> x_vals, y_vals;
 
         x_vals.reserve(surface.sagDataPoints.size());
         y_vals.reserve(surface.sagDataPoints.size());
-        
+
         for (const auto& point : surface.sagDataPoints) {
             x_vals.push_back(point.x);
             y_vals.push_back(point.sag);
@@ -20,14 +30,14 @@ namespace gui {
         return {std::move(x_vals), std::move(y_vals)};
     }
 
-    void GuiManager::calculateSagCrossSection(int surface, int sampling, double angle) {
-        const auto targetStorage = m_zemaxDDEClient->getStorageTarget();
+    void SagAnalysisService::calculateSagCrossSection(int surface, int sampling, double angle) {
+        const auto targetStorage = m_ddeClient->getStorageTarget();
         assert(targetStorage == ZemaxDDE::StorageTarget::NOMINAL || targetStorage == ZemaxDDE::StorageTarget::TOLERANCED);
-    
-        const ZemaxDDE::SurfaceData& targetSurface = 
-            (targetStorage == ZemaxDDE::StorageTarget::NOMINAL) 
-                ? m_zemaxDDEClient->getNominalSurface() 
-                : m_zemaxDDEClient->getTolerancedSurface();
+
+        const ZemaxDDE::SurfaceData& targetSurface =
+            (targetStorage == ZemaxDDE::StorageTarget::NOMINAL)
+                ? m_ddeClient->getNominalSurface()
+                : m_ddeClient->getTolerancedSurface();
 
         if (targetSurface.id != surface || !targetSurface.isValid()) [[unlikely]] {
             m_logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
@@ -49,16 +59,21 @@ namespace gui {
             const double r = -semiDiameter + i * step;
             const double x = r * cosAngle;
             const double y = r * sinAngle;
-            m_zemaxDDEClient->getSag(surface, x, y);
-        }     
-        
-        m_zemaxDDEClient->setSurfaceProfileMetadata(
+            m_ddeClient->getSag(surface, x, y);
+        }
+
+        m_ddeClient->setSurfaceProfileMetadata(
             targetStorage,
             {.angle = angle, .sampling = sampling}
         );
+
+        // Auto-update state after successful calculation
+        m_state.tolerancedSurfaceIndex = surface;
+        m_state.tolerancedSampling = sampling;
+        m_state.tolerancedAngle = angle;
     }
 
-    void GuiManager::saveSagCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
+    void SagAnalysisService::saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
         if (surface.sagDataPoints.empty()) {
             m_logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
             return;
@@ -88,7 +103,7 @@ namespace gui {
         m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
     }
 
-    void GuiManager::renderSagCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
+    void SagAnalysisService::renderCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
         if (!openFlag || !*openFlag) return;
         if (surface.sagDataPoints.empty()) return;
 
@@ -115,7 +130,7 @@ namespace gui {
         ImGui::End();
     }
 
-    void GuiManager::renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
+    void SagAnalysisService::renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
         if (!openFlag || !*openFlag) return;
 
         if (ImGui::Begin("Profile Comparison", openFlag)) {
@@ -133,7 +148,7 @@ namespace gui {
         ImGui::End();
     }
 
-    void GuiManager::renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
+    void SagAnalysisService::renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
         if (!openFlag || !*openFlag) return;
 
         auto [x_nom, y_nom] = extractSagCoordinates(nominal);

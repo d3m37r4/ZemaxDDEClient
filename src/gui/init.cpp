@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <memory>
 #include <fstream>
 #include <string>
 #include <filesystem>
@@ -63,6 +64,7 @@ namespace gui {
         , m_hwndClient(hwndClient)
         , m_zemaxDDEClient(ddeClient)
         , m_logger(logger)
+        , m_sagService(std::make_unique<SagAnalysisService>(ddeClient, logger))
         , m_showUpdatesPopup(false)
         , m_showAboutPopup(false)
     {
