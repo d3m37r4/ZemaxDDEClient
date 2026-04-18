@@ -197,10 +197,12 @@ namespace App {
         nfdresult_t result = NFD_OpenDialog("zmx", nullptr, &outPath);
 
         if (result == NFD_OKAY) {
+            struct NFDDeleter { void operator()(nfdchar_t* p) const { std::free(p); } };
+            std::unique_ptr<nfdchar_t, NFDDeleter> pathGuard{outPath};
+
         #ifdef DEBUG_LOG
             logger.addLog(std::format("[APP] Selected file: {}", outPath));
         #endif
-            // UTF-8 → UTF-16
             int size = MultiByteToWideChar(CP_UTF8, 0, outPath, -1, nullptr, 0);
             std::wstring widePath(size, L'\0');
             MultiByteToWideChar(CP_UTF8, 0, outPath, -1, widePath.data(), size);
@@ -214,8 +216,6 @@ namespace App {
                 logger.addLog(std::format("[APP] Successfully sent file to ShellExecute: {}", outPath));
             #endif
             }
-
-            free(outPath);
         } else if (result == NFD_CANCEL) {
         #ifdef DEBUG_LOG
             logger.addLog("[APP] File open dialog canceled by user");
