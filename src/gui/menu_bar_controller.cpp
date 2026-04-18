@@ -31,7 +31,6 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            // Stage 4.1: DDE controls integrated into Menu
             if (ImGui::BeginMenu("DDE")) {
                 if (m_pDdeMgr) {
                     if (ImGui::MenuItem("Connect to Zemax")) {

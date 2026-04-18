@@ -4,5 +4,4 @@ SagAnalysisController::SagAnalysisController() {
 }
 
 void SagAnalysisController::render() {
-    // Stage 4: placeholder - real rendering to be wired with SagAnalysisService later
 }
