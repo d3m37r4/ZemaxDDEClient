@@ -9,7 +9,7 @@
 namespace gui {
     // UI utility functions
     void renderPageHeader(GuiPage currentPage);
-    const char* getUnitString(int unitCode, bool full = false);
+    const char* getUnitString(int unitCode, bool full);
     const char* getRayAimingTypeString(int rayAimingType);
     void HelpMarker(const char* desc);
 

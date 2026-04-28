@@ -17,6 +17,8 @@
 #include "gui/menu_bar_controller.h"
 #include "gui/sidebar_renderer.h"
 #include "gui/content_router.h"
+#include "gui/app_info_dialog.h"
+#include "gui/debug_log_viewer.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
 
@@ -38,14 +40,15 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
+            void renderDockspace();
+            void renderDDEStatusBar();
             void renderNavbar();
             void renderSidebar();
             void renderDDEStatusFrame();
             void renderContent();
             void renderDebugLog();
             void setPopupPosition();
-            void renderAboutPopup();
-            void renderUpdatesPopup();
+            void renderPopups();
 
             void renderPageOpticalSystemInfo();
             void renderPageSurfaceSagAnalysis();
@@ -65,6 +68,8 @@ namespace gui {
             std::unique_ptr<SidebarRenderer> m_sidebarRenderer;
             std::unique_ptr<ContentRouter> m_contentRouter;
             GraphicsBackend m_graphics;
+            std::unique_ptr<AppInfoDialog> m_appInfoDialog;
+            std::unique_ptr<DebugLogViewer> m_debugLogViewer;
 
             GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
 
