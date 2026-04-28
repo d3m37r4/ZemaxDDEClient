@@ -26,9 +26,9 @@ namespace ZemaxDDE {
 
         m_hwndZemaxServer = NULL;
 
-        ATOM aApp = GlobalAddAtomW(DDE_APP_NAME);
-        ATOM aTop = GlobalAddAtomW(DDE_TOPIC);
-        SendMessageW(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(aApp, aTop));
+        ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
+        ATOM topicAtom = GlobalAddAtomW(DDE_TOPIC);
+        SendMessageW(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom));
 
     #ifdef DEBUG_LOG
         char appName[256], topicName[256];
@@ -37,8 +37,8 @@ namespace ZemaxDDE {
         m_logger.addLog(std::format("[DDE] Sent 'WM_DDE_INITIATE' to app='{}', topic='{}'.", appName, topicName));
     #endif
     
-        GlobalDeleteAtom(aApp);
-        GlobalDeleteAtom(aTop);
+        GlobalDeleteAtom(appAtom);
+        GlobalDeleteAtom(topicAtom);
         checkDDEConnection();
 
         if (m_hwndZemaxServer) {
@@ -93,10 +93,10 @@ namespace ZemaxDDE {
 
     LRESULT ZemaxDDEClient::handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam) {
         static DDEACK DdeAck;
-        GLOBALHANDLE hDdeData;
-        DDEDATA* pDdeData;
+        GLOBALHANDLE ddeDataHandle;
+        DDEDATA* ddeDataPtr;
         ATOM aItem;
-        UINT_PTR uiLow, uiHi;
+        UINT_PTR lowWord, highWord;
         std::string buffer;
 
     #ifdef DEBUG_LOG
@@ -105,13 +105,13 @@ namespace ZemaxDDE {
         switch (iMsg) {
             case WM_DDE_ACK: {
                 if (!m_hwndZemaxServer) {
-                    UnpackDDElParam(WM_DDE_ACK, lParam, &uiLow, &uiHi);
+                    UnpackDDElParam(WM_DDE_ACK, lParam, &lowWord, &highWord);
                     FreeDDElParam(WM_DDE_ACK, lParam);
 
                     m_hwndZemaxServer = reinterpret_cast<HWND>(wParam);
 
-                    GlobalDeleteAtom(static_cast<ATOM>(uiLow));
-                    GlobalDeleteAtom(static_cast<ATOM>(uiHi));
+                    GlobalDeleteAtom(static_cast<ATOM>(lowWord));
+                    GlobalDeleteAtom(static_cast<ATOM>(highWord));
                 #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_ACK', m_hwndZemaxServer = {}", reinterpret_cast<uintptr_t>(m_hwndZemaxServer)));
                 #endif
@@ -120,18 +120,18 @@ namespace ZemaxDDE {
                 return 0;
             }
             case WM_DDE_DATA: {
-                UnpackDDElParam(WM_DDE_DATA, lParam, &uiLow, &uiHi);
+                UnpackDDElParam(WM_DDE_DATA, lParam, &lowWord, &highWord);
                 FreeDDElParam(WM_DDE_DATA, lParam);
 
-                hDdeData = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(uiLow));
-                pDdeData = static_cast<DDEDATA*>(GlobalLock(hDdeData));
-                aItem = static_cast<ATOM>(uiHi);
+                ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
+                ddeDataPtr = static_cast<DDEDATA*>(GlobalLock(ddeDataHandle));
+                aItem = static_cast<ATOM>(highWord);
                 DdeAck.bAppReturnCode = 0;
                 DdeAck.reserved = 0;
                 DdeAck.fBusy = FALSE;
                 DdeAck.fAck = FALSE;
 
-                if (pDdeData->cfFormat == CF_TEXT) {
+                if (ddeDataPtr->cfFormat == CF_TEXT) {
                     char item[512]; 
                     wchar_t wItem[512];
                     GlobalGetAtomNameW(aItem, wItem, sizeof(wItem));
@@ -142,7 +142,7 @@ namespace ZemaxDDE {
                     std::string command_token = item_tokens.empty() ? "" : item_tokens[0];
 
                     m_isDataReceived = true;
-                    buffer = reinterpret_cast<char*>(pDdeData->Value);
+                    buffer = reinterpret_cast<char*>(ddeDataPtr->Value);
                 #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
                 #endif
@@ -463,23 +463,23 @@ namespace ZemaxDDE {
                         return 0;    
                     }
                 }
-                if (pDdeData->fAckReq == TRUE) {
+                if (ddeDataPtr->fAckReq == TRUE) {
                     WORD wStatus;
                     memcpy(&wStatus, &DdeAck, sizeof(wStatus));
                     if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
                         GlobalDeleteAtom(aItem);
-                        GlobalUnlock(hDdeData);
-                        GlobalFree(hDdeData);
+                        GlobalUnlock(ddeDataHandle);
+                        GlobalFree(ddeDataHandle);
                         return 0;
                     }
                 } else {
                     GlobalDeleteAtom(aItem);
                 }
-                if (pDdeData->fRelease == TRUE || DdeAck.fAck == FALSE) {
-                    GlobalUnlock(hDdeData);
-                    GlobalFree(hDdeData);
+                if (ddeDataPtr->fRelease == TRUE || DdeAck.fAck == FALSE) {
+                    GlobalUnlock(ddeDataHandle);
+                    GlobalFree(ddeDataHandle);
                 } else {
-                    GlobalUnlock(hDdeData);
+                    GlobalUnlock(ddeDataHandle);
                 }
                 return 0;
             }
