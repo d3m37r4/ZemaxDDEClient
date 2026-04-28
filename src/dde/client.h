@@ -52,7 +52,7 @@ namespace ZemaxDDE {
             }
 
         private:
-            HWND m_hwndZemaxServer = NULL;
+            HWND m_hwndZemaxServer = nullptr;
             HWND m_hwndZemaxClient = NULL;
             Logger& m_logger;
             OnDDEConnectedCallback m_onDDEConnected;

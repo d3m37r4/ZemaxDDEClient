@@ -19,7 +19,7 @@ namespace ZemaxDDE {
     }
 
     void ZemaxDDEClient::initiateDDE() {
-        if (m_hwndZemaxServer != NULL) {
+        if (m_hwndZemaxServer != nullptr) {
             m_logger.addLog("[DDE] DDE already connected. Skipping initiate.");
             return;
         }
@@ -60,7 +60,7 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);
-            m_hwndZemaxServer = NULL;
+m_hwndZemaxServer = nullptr;
             m_logger.addLog("[DDE] Connection terminated");
         }
     }
