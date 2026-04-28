@@ -1,5 +1,4 @@
 #pragma once
-#include <cstddef>
 
 namespace gui {
     enum class GuiPage {
