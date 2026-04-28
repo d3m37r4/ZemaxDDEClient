@@ -117,7 +117,7 @@ m_hwndZemaxServer = nullptr;
     };
 
     LRESULT ZemaxDDEClient::handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam) {
-        static DDEACK DdeAck;
+        DDEACK DdeAck{};
         ATOM aItem;
         UINT_PTR lowWord, highWord;
         std::string buffer;
@@ -149,10 +149,6 @@ m_hwndZemaxServer = nullptr;
                 GLOBALHANDLE ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
                 GlobalLockGuard ddeDataLock(ddeDataHandle);
                 aItem = static_cast<ATOM>(highWord);
-                DdeAck.bAppReturnCode = 0;
-                DdeAck.reserved = 0;
-                DdeAck.fBusy = FALSE;
-                DdeAck.fAck = FALSE;
 
                 if (ddeDataLock.isValid() && ddeDataLock.as<::DDEDATA>()->cfFormat == CF_TEXT) {
                     char item[512]; 
