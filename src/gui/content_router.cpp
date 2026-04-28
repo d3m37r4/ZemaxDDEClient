@@ -1,4 +1,5 @@
 #include "content_router.h"
+#include "gui.h"
 #include "gui/gui.h"
 #include "lib/imgui/imgui.h"
 #include "gui/utils.h"

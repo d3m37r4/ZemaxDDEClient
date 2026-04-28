@@ -18,6 +18,4 @@ namespace gui {
     };
 
     constexpr size_t GUI_PAGES_COUNT = sizeof(GUI_PAGES) / sizeof(GUI_PAGES[0]);
-
-    class GuiManager;
 }
