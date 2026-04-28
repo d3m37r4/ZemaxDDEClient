@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <fstream>
+#include <vector>
 
 #include <dde.h>
 
@@ -80,10 +81,20 @@ m_hwndZemaxServer = nullptr;
     #ifdef DEBUG_LOG
         m_logger.addLog(std::format("[DDE] Sending request: {}", request));
     #endif
-        wchar_t wItem[256];
-        MultiByteToWideChar(CP_ACP, 0, request.data(), static_cast<int>(request.size()), wItem, 256);
-        wItem[request.size()] = L'\0';
-        ATOM aItem = GlobalAddAtomW(wItem);
+        int wideCharCount = MultiByteToWideChar(CP_ACP,0, request.data(), static_cast<int>(request.size()), nullptr,0);
+        if (wideCharCount == 0) {
+            throw std::runtime_error("Failed to convert DDE request to wide string");
+        }
+
+        std::vector<wchar_t> wItem(wideCharCount + 1);
+
+        int converted = MultiByteToWideChar(CP_ACP, 0, request.data(), static_cast<int>(request.size()), wItem.data(), wideCharCount);
+        if (converted == 0 || converted != wideCharCount) {
+            throw std::runtime_error("Failed to convert DDE request to wide string");
+        }
+
+        wItem[wideCharCount] = L'\0';
+        ATOM aItem = GlobalAddAtomW(wItem.data());
         if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
             GlobalDeleteAtom(aItem);
             throw std::runtime_error("Cannot communicate with Zemax");
