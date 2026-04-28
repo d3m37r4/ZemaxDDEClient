@@ -102,10 +102,22 @@ m_hwndZemaxServer = nullptr;
         waitForData();
     }
 
+    class GlobalLockGuard {
+        HGLOBAL m_handle;
+        void* m_ptr;
+    public:
+        explicit GlobalLockGuard(HGLOBAL handle) : m_handle(handle), m_ptr(GlobalLock(handle)) {}
+        ~GlobalLockGuard() { if (m_ptr) GlobalUnlock(m_handle); }
+        GlobalLockGuard(const GlobalLockGuard&) = delete;
+        GlobalLockGuard& operator=(const GlobalLockGuard&) = delete;
+
+        bool isValid() const { return m_ptr != nullptr; }
+        void* get() const { return m_ptr; }
+        template<typename T> T* as() const { return static_cast<T*>(m_ptr); }
+    };
+
     LRESULT ZemaxDDEClient::handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam) {
         static DDEACK DdeAck;
-        GLOBALHANDLE ddeDataHandle;
-        DDEDATA* ddeDataPtr;
         ATOM aItem;
         UINT_PTR lowWord, highWord;
         std::string buffer;
@@ -134,15 +146,15 @@ m_hwndZemaxServer = nullptr;
                 UnpackDDElParam(WM_DDE_DATA, lParam, &lowWord, &highWord);
                 FreeDDElParam(WM_DDE_DATA, lParam);
 
-                ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
-                ddeDataPtr = static_cast<DDEDATA*>(GlobalLock(ddeDataHandle));
+                GLOBALHANDLE ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
+                GlobalLockGuard ddeDataLock(ddeDataHandle);
                 aItem = static_cast<ATOM>(highWord);
                 DdeAck.bAppReturnCode = 0;
                 DdeAck.reserved = 0;
                 DdeAck.fBusy = FALSE;
                 DdeAck.fAck = FALSE;
 
-                if (ddeDataPtr->cfFormat == CF_TEXT) {
+                if (ddeDataLock.isValid() && ddeDataLock.as<::DDEDATA>()->cfFormat == CF_TEXT) {
                     char item[512]; 
                     wchar_t wItem[512];
                     GlobalGetAtomNameW(aItem, wItem, sizeof(wItem));
@@ -153,7 +165,7 @@ m_hwndZemaxServer = nullptr;
                     std::string command_token = item_tokens.empty() ? "" : item_tokens[0];
 
                     m_isDataReceived = true;
-                    buffer = reinterpret_cast<char*>(ddeDataPtr->Value);
+                    buffer = reinterpret_cast<char*>(ddeDataLock.as<::DDEDATA>()->Value);
                 #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
                 #endif
@@ -474,23 +486,19 @@ m_hwndZemaxServer = nullptr;
                         return 0;    
                     }
                 }
-                if (ddeDataPtr->fAckReq == TRUE) {
+                if (ddeDataLock.as<::DDEDATA>()->fAckReq == TRUE) {
                     WORD wStatus;
                     memcpy(&wStatus, &DdeAck, sizeof(wStatus));
                     if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
                         GlobalDeleteAtom(aItem);
-                        GlobalUnlock(ddeDataHandle);
                         GlobalFree(ddeDataHandle);
                         return 0;
                     }
                 } else {
                     GlobalDeleteAtom(aItem);
                 }
-                if (ddeDataPtr->fRelease == TRUE || DdeAck.fAck == FALSE) {
-                    GlobalUnlock(ddeDataHandle);
+                if (ddeDataLock.as<::DDEDATA>()->fRelease == TRUE || DdeAck.fAck == FALSE) {
                     GlobalFree(ddeDataHandle);
-                } else {
-                    GlobalUnlock(ddeDataHandle);
                 }
                 return 0;
             }
