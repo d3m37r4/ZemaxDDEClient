@@ -16,12 +16,11 @@
 #include "gui/graphics_backend.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/sidebar_renderer.h"
+#include "gui/content_router.h"
 #include "gui/app_info_dialog.h"
 #include "gui/debug_log_viewer.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
-#include "dde_status_bar.h"
-#include "gui/content_router.h"
 
 class Logger;
 
@@ -42,7 +41,10 @@ namespace gui {
             void updateDpiStyle(float dpiScale);
 
             void renderDockspace();
+            void renderDDEStatusBar();
+            void renderNavbar();
             void renderSidebar();
+            void renderDDEStatusFrame();
             void renderContent();
             void renderDebugLog();
             void setPopupPosition();
@@ -62,7 +64,6 @@ namespace gui {
             std::unique_ptr<SagAnalysisService> m_sagService;
             std::unique_ptr<SagAnalysisController> m_sagController;
             std::unique_ptr<DdeConnectionManager> m_ddeConnectionManager;
-            std::unique_ptr<DdeStatusBar> m_ddeStatusBar;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<SidebarRenderer> m_sidebarRenderer;
             std::unique_ptr<ContentRouter> m_contentRouter;

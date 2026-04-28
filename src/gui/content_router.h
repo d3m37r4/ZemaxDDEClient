@@ -2,9 +2,12 @@
 
 #include "gui/forwards.h"
 
-namespace gui {
-    class GuiManager;
+class GuiManager;
 
+namespace gui {
+    /**
+     * @brief Routes content rendering for different GUI pages.
+     */
     class ContentRouter {
     public:
         void renderContent(GuiPage currentPage, GuiManager* gui);

@@ -89,7 +89,6 @@ set(SOURCES
     ${SRC_DIR}/gui/app_info_dialog.cpp
     ${SRC_DIR}/gui/debug_log_viewer.cpp
     ${SRC_DIR}/gui/utils.cpp
-    ${SRC_DIR}/gui/dde_status_bar.cpp
     ${SRC_DIR}/gui/content_pages/page_optical_system_info.cpp
     ${SRC_DIR}/gui/content_pages/page_surface_sag_analysis.cpp
 )
