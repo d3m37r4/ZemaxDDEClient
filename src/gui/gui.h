@@ -12,13 +12,7 @@
 #include "gui/forwards.h"
 #include "gui/constants.h"
 #include "gui/sag_analysis_service.h"
-#include "gui/sag_analysis_controller.h"
-#include "gui/graphics_backend.h"
-#include "gui/menu_bar_controller.h"
-#include "gui/sidebar_renderer.h"
-#include "gui/content_router.h"
 #include "dde/client.h"
-#include "dde/dde_connection_manager.h"
 
 class Logger;
 
@@ -54,17 +48,11 @@ namespace gui {
             [[nodiscard]] bool isDdeInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
-            GLFWwindow* m_glfwWindow;
-            HWND m_hwndClient;
-            ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;
-            Logger& m_logger;
-            std::unique_ptr<SagAnalysisService> m_sagService;
-            std::unique_ptr<SagAnalysisController> m_sagController;
-            std::unique_ptr<DdeConnectionManager> m_ddeConnectionManager;
-            std::unique_ptr<MenuBarController> m_menuBarController;
-            std::unique_ptr<SidebarRenderer> m_sidebarRenderer;
-            std::unique_ptr<ContentRouter> m_contentRouter;
-            GraphicsBackend m_graphics;
+            GLFWwindow* m_glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
+            HWND m_hwndClient;                                    // DDE client window handle
+            ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;           // Pointer to a DDE client instance
+            Logger& m_logger;                                     // Logger instance (dependency injection)
+            std::unique_ptr<SagAnalysisService> m_sagService;     // Sag analysis service (owned by GuiManager)
 
             GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
 
