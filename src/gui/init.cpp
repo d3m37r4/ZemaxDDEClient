@@ -126,6 +126,7 @@ namespace gui {
     }
 
     void GuiManager::updateDpiStyle(float dpiScale) {
+        // TODO: Add logging for DPI scale change (hot-reload). Currently logged only during initialization.
         ImGuiIO& io = ImGui::GetIO();
 
         // Scale font globally (fonts already loaded)
