@@ -136,7 +136,7 @@ namespace App {
 
         // Initialize GUI manager with existing DDE client
         ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get(), logger);
-        ctx->gui->initialize();
+        ctx->gui->initialize(ctx->dpiScale);
 
         // Set up DPI change callback for dynamic scaling
         glfwSetWindowContentScaleCallback(ctx->glfwWindow, [](GLFWwindow* window, float xScale, float yScale) {

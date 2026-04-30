@@ -18,7 +18,7 @@ namespace gui {
             GraphicsBackend(const GraphicsBackend&) = delete;
             GraphicsBackend& operator=(const GraphicsBackend&) = delete;
 
-            void initialize(GLFWwindow* window, Logger& logger, const char* iniPath);
+            void initialize(GLFWwindow* window, Logger& logger, const char* iniPath, float initialDpiScale = 1.0f);
             void updateDpiStyle(float dpiScale);
             void beginFrame();
             void endFrame();

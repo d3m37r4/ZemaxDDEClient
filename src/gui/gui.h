@@ -28,7 +28,7 @@ namespace gui {
             GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
             ~GuiManager();
 
-            void initialize();
+            void initialize(float dpiScale = 1.0f);
             void render();
             void updateDpiStyle(float dpiScale);
 

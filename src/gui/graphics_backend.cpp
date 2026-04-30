@@ -23,7 +23,7 @@ namespace gui {
         }
     }
 
-    void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, const char* iniPath) {
+    void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, const char* iniPath, float initialDpiScale) {
         m_window = window;
 
         if (!m_window) {
@@ -38,17 +38,8 @@ namespace gui {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.IniFilename = iniPath;
 
-        // Propagate initial DPI scale to ImGui DisplayFramebufferScale to avoid
-        // internal assertion on CurrentDpiScale during startup.
-        // Compute initial dpiScale from DPI, then clamp to safe range and apply.
-        // It will be overridden by updateDpiStyle() when needed.
-        // (dpiScale is defined a few lines later, we clamp and apply once computed.)
-
-        // Get DPI scale factor for font and UI scaling
-        HDC hdc = GetDC(NULL);
-        int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-        ReleaseDC(NULL, hdc);
-        float dpiScale = static_cast<float>(dpiX) / 96.0f;
+        // Use pre-computed DPI scale passed from app initialization
+        float dpiScale = initialDpiScale;
         if (!std::isfinite(dpiScale)) dpiScale = 1.0f;
         if (dpiScale <= 0.0f) dpiScale = 0.01f;
         if (dpiScale > 98.0f) dpiScale = 98.0f;

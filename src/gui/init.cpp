@@ -85,7 +85,7 @@ namespace gui {
         }
     }
 
-    void GuiManager::initialize() {
+    void GuiManager::initialize(float dpiScale) {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImPlot::CreateContext();
@@ -94,11 +94,8 @@ namespace gui {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.IniFilename = getImGuiIniPath(m_logger);
 
-        // Get DPI scale factor for font and UI scaling
-        HDC hdc = GetDC(NULL);
-        int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-        ReleaseDC(NULL, hdc);
-        float dpiScale = static_cast<float>(dpiX) / 96.0f;
+        // Use pre-computed DPI scale passed from app initialization
+        (void)dpiScale; // parameter is used by caller
 
         std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
         const std::string fontPathStr = fontPath.string();
