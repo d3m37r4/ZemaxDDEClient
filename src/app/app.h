@@ -9,7 +9,6 @@
 #include "version.h"
 
 class Logger;
-namespace gui { class SagAnalysisService; }
 
 #define APP_NAME "ZemaxDDEClient"
 #define APP_TITLE APP_NAME " " APP_FULL_VERSION
