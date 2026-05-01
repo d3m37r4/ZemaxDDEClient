@@ -17,6 +17,7 @@ jobs:
           submodules: recursive
 
       - name: Set build timestamp and extract version
+        id: version
         run: |
           echo "BUILD_TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
           major=$(sed -n 's/.*set(APP_VERSION_MAJOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
@@ -25,6 +26,7 @@ jobs:
           prerelease=$(sed -n 's/.*set(APP_VERSION_PRERELEASE "\(.*\)".*/\1/p' CMakeLists.txt)
           version="${major}.${minor}.${patch}${prerelease}"
           echo "APP_VERSION=$version" >> $GITHUB_ENV
+          echo "version=$version" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Set up MSYS2
@@ -39,11 +41,15 @@ jobs:
             mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-make
             zip
+            coreutils
 
       - name: Make build.sh executable
         run: git update-index --chmod=+x build.sh
         shell: msys2 {0}
 
+      # ==========================================
+      # RELEASE BUILD
+      # ==========================================
       - name: Build Release
         run: |
           export MSYS_NO_PATHCONV=1
@@ -51,17 +57,137 @@ jobs:
         shell: msys2 {0}
 
       - name: Extract Release APP_BUILD_NUMBER
+        id: rel_build_num
         run: |
           BUILD_NUM=$(grep -o '#define APP_BUILD_NUMBER [0-9]\+' build/version.h | cut -d' ' -f3)
           echo "RELEASE_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+          echo "build_num=$BUILD_NUM" >> $GITHUB_OUTPUT
         shell: bash
+
+      - name: Stage Release binary
+        run: |
+          mkdir -p release_exe
+          exe=$(ls build/bin/*.exe | head -n1)
+          if [ -f "$exe" ]; then
+            newName="${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.exe"
+            cp "$exe" "release_exe/$newName"
+            echo "Staged: release_exe/$newName"
+            echo "RELEASE_EXE_NAME=$newName" >> $GITHUB_ENV
+          else
+            echo "ERROR: No .exe found in build/bin/"
+            exit 1
+          fi
+        shell: msys2 {0}
+
+      - name: VirusTotal Scan Release
+        id: vt_release
+        run: |
+          $apiKey = "${{ secrets.VIRUSTOTAL_API_KEY }}"
+          $file = Get-ChildItem -Path "release_exe" -Filter "*.exe" | Select-Object -First 1
+          
+          if (-not $file) {
+            Write-Error "No release exe found"
+            exit 1
+          }
+          
+          Write-Host "Scanning Release: $($file.Name)"
+          Write-Host "  File size: $($file.Length) bytes"
+          
+          $localSha256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
+          Write-Host "  Local EXE SHA256 (before upload): $localSha256"
+          
+          $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
+            -Headers @{ "x-apikey" = $apiKey }
+          $uploadUrl = $uploadUrlResponse.data
+          Write-Host "  Upload URL obtained"
+          
+          $jsonResponse = curl -s -X POST "$uploadUrl" `
+            -H "x-apikey: $apiKey" `
+            -F "file=@$($file.FullName)"
+          
+          $uploadResponse = $jsonResponse | ConvertFrom-Json
+          
+          $analysisId = $uploadResponse.data.id
+          Write-Host "  Analysis ID: $analysisId"
+          
+          $maxAttempts = 60
+          $attempt = 0
+          $stats = $null
+          $meta = $null
+          
+          do {
+            Start-Sleep -Seconds 10
+            $attempt++
+            
+            try {
+              $analysisResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/analyses/$analysisId" `
+                -Headers @{ "x-apikey" = $apiKey }
+              
+              $status = $analysisResponse.data.attributes.status
+              if ($attempt % 5 -eq 0 -or $status -eq "completed") {
+                Write-Host "  Status: $status (attempt $attempt/$maxAttempts)"
+              }
+              
+              if ($status -eq "completed") {
+                $stats = $analysisResponse.data.attributes.stats
+                $meta = $analysisResponse.meta.file_info
+                break
+              }
+            } catch {
+              Write-Host "  Retry: $($_.Exception.Message)"
+            }
+          } while ($attempt -lt $maxAttempts)
+          
+          if ($stats) {
+            $total = $stats.malicious + $stats.suspicious + $stats.undetected + $stats.harmless
+            $vtSha256 = $meta.sha256.ToLower()
+            $vtLink = "https://www.virustotal.com/gui/file/$vtSha256"
+            
+            Write-Host "  EXE SHA256: $vtSha256"
+            
+            $result = @{
+              vt_link = $vtLink
+              malicious = $stats.malicious
+              total = $total
+              exe_sha256 = $vtSha256
+              local_sha256 = $localSha256
+              sha_match = ($localSha256 -eq $vtSha256)
+            }
+          } else {
+            Write-Warning "VirusTotal scan timed out"
+            $result = @{
+              vt_link = "timeout"
+              malicious = -1
+              total = 0
+              exe_sha256 = $localSha256
+              local_sha256 = $localSha256
+              sha_match = $false
+            }
+          }
+          
+          $result | ConvertTo-Json | Out-File -FilePath "release_vt.json" -Encoding UTF8
+          $result | ConvertTo-Json | Write-Host
+        shell: pwsh
 
       - name: Package Release binary
         run: |
-          cd build/bin
-          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip" *.exe
+          cd release_exe
+          zipName="${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip"
+          zip -j "$zipName" *.exe
+          mv "$zipName" "${{ github.workspace }}/build/bin/"
+          
+          sha=$(sha256sum "${{ github.workspace }}/build/bin/$zipName" | awk '{print $1}' | sed 's/[^a-f0-9]//g')
+          printf "%s" "$sha" > "${{ github.workspace }}/release_sha.txt"
+          echo "Release ZIP SHA256: $sha"
+          
+          exeSha=$(sha256sum *.exe | awk '{print $1}')
+          printf "%s" "$exeSha" > "${{ github.workspace }}/release_exe_sha.txt"
+          echo "Release EXE SHA256: $exeSha"
         shell: msys2 {0}
 
+      # ==========================================
+      # DEBUG BUILD
+      # ==========================================
       - name: Build Debug
         run: |
           export MSYS_NO_PATHCONV=1
@@ -69,16 +195,162 @@ jobs:
         shell: msys2 {0}
 
       - name: Extract Debug APP_BUILD_NUMBER
+        id: dbg_build_num
         run: |
           BUILD_NUM=$(grep -o '#define APP_BUILD_NUMBER [0-9]\+' build/version.h | cut -d' ' -f3)
           echo "DEBUG_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+          echo "build_num=$BUILD_NUM" >> $GITHUB_OUTPUT
         shell: bash
+
+      - name: Stage Debug binary
+        run: |
+          mkdir -p debug_exe
+          exe=$(ls build/bin/*.exe | head -n1)
+          if [ -f "$exe" ]; then
+            newName="${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.exe"
+            cp "$exe" "debug_exe/$newName"
+            echo "Staged: debug_exe/$newName"
+            echo "DEBUG_EXE_NAME=$newName" >> $GITHUB_ENV
+          else
+            echo "ERROR: No .exe found in build/bin/"
+            exit 1
+          fi
+        shell: msys2 {0}
+
+      - name: VirusTotal Scan Debug
+        id: vt_debug
+        run: |
+          $apiKey = "${{ secrets.VIRUSTOTAL_API_KEY }}"
+          $file = Get-ChildItem -Path "debug_exe" -Filter "*.exe" | Select-Object -First 1
+          
+          if (-not $file) {
+            Write-Error "No debug exe found"
+            exit 1
+          }
+          
+          Write-Host "Scanning Debug: $($file.Name)"
+          Write-Host "  File size: $($file.Length) bytes"
+          
+          $localSha256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
+          Write-Host "  Local EXE SHA256 (before upload): $localSha256"
+          
+          $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
+            -Headers @{ "x-apikey" = $apiKey }
+          $uploadUrl = $uploadUrlResponse.data
+          
+          $jsonResponse = curl -s -X POST "$uploadUrl" `
+            -H "x-apikey: $apiKey" `
+            -F "file=@$($file.FullName)"
+          
+          $uploadResponse = $jsonResponse | ConvertFrom-Json
+          
+          $analysisId = $uploadResponse.data.id
+          Write-Host "  Analysis ID: $analysisId"
+          
+          $maxAttempts = 60
+          $attempt = 0
+          $stats = $null
+          $meta = $null
+          
+          do {
+            Start-Sleep -Seconds 10
+            $attempt++
+            
+            try {
+              $analysisResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/analyses/$analysisId" `
+                -Headers @{ "x-apikey" = $apiKey }
+              
+              $status = $analysisResponse.data.attributes.status
+              if ($attempt % 5 -eq 0 -or $status -eq "completed") {
+                Write-Host "  Status: $status (attempt $attempt/$maxAttempts)"
+              }
+              
+              if ($status -eq "completed") {
+                $stats = $analysisResponse.data.attributes.stats
+                $meta = $analysisResponse.meta.file_info
+                break
+              }
+            } catch {
+              Write-Host "  Retry: $($_.Exception.Message)"
+            }
+          } while ($attempt -lt $maxAttempts)
+          
+          if ($stats) {
+            $total = $stats.malicious + $stats.suspicious + $stats.undetected + $stats.harmless
+            $vtSha256 = $meta.sha256.ToLower()
+            $vtLink = "https://www.virustotal.com/gui/file/$vtSha256"
+            
+            Write-Host "  EXE SHA256: $vtSha256"
+            
+            $result = @{
+              vt_link = $vtLink
+              malicious = $stats.malicious
+              total = $total
+              exe_sha256 = $vtSha256
+              local_sha256 = $localSha256
+              sha_match = ($localSha256 -eq $vtSha256)
+            }
+          } else {
+            Write-Warning "VirusTotal scan timed out"
+            $result = @{
+              vt_link = "timeout"
+              malicious = -1
+              total = 0
+              exe_sha256 = $localSha256
+              local_sha256 = $localSha256
+              sha_match = $false
+            }
+          }
+          
+          $result | ConvertTo-Json | Out-File -FilePath "debug_vt.json" -Encoding UTF8
+          $result | ConvertTo-Json | Write-Host
+        shell: pwsh
 
       - name: Package Debug binary
         run: |
-          cd build/bin
-          zip -j "${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip" *.exe
+          cd debug_exe
+          zipName="${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip"
+          zip -j "$zipName" *.exe
+          mv "$zipName" "${{ github.workspace }}/build/bin/"
+          sha=$(sha256sum "${{ github.workspace }}/build/bin/$zipName" | awk '{print $1}' | sed 's/[^a-f0-9]//g')
+          printf "%s" "$sha" > "${{ github.workspace }}/debug_sha.txt"
+          echo "Debug ZIP SHA256: $sha"
+          
+          exeSha=$(sha256sum *.exe | awk '{print $1}')
+          printf "%s" "$exeSha" > "${{ github.workspace }}/debug_exe_sha.txt"
+          echo "Debug EXE SHA256: $exeSha"
         shell: msys2 {0}
+
+      # ==========================================
+      # RELEASE NOTES & UPLOAD
+      # ==========================================
+      - name: Generate release notes
+        run: |
+          $releaseJson = Get-Content -Path "release_vt.json" -Raw | ConvertFrom-Json
+          $releaseZipSha = (Get-Content -Path "release_sha.txt" -Raw).Trim()
+          $releaseExeSha = (Get-Content -Path "release_exe_sha.txt" -Raw).Trim()
+          
+          $debugJson = Get-Content -Path "debug_vt.json" -Raw | ConvertFrom-Json
+          $debugZipSha = (Get-Content -Path "debug_sha.txt" -Raw).Trim()
+          $debugExeSha = (Get-Content -Path "debug_exe_sha.txt" -Raw).Trim()
+          
+          $releaseLink = $releaseJson.vt_link
+          $releaseMal = $releaseJson.malicious
+          $releaseTotal = $releaseJson.total
+          
+          $debugLink = $debugJson.vt_link
+          $debugMal = $debugJson.malicious
+          $debugTotal = $debugJson.total
+          
+          $originalBody = "${{ github.event.release.body }}"
+          if (-not $originalBody) { $originalBody = "" }
+          
+          $vtSection = "`n`n## VirusTotal Scan Results`n`n> **Release build scan result**: [$releaseMal/$releaseTotal detections]($releaseLink)`n> **EXE SHA256**: $releaseExeSha`n> **ZIP SHA256**: $releaseZipSha`n`n> **Debug build scan result**: [$debugMal/$debugTotal detections]($debugLink)`n> **EXE SHA256**: $debugExeSha`n> **ZIP SHA256**: $debugZipSha"
+          
+          $body = $originalBody + $vtSection
+          $body | Out-File -FilePath "release_body.txt" -Encoding UTF8
+          Write-Host "Generated release notes"
+        shell: pwsh
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
@@ -86,3 +358,4 @@ jobs:
           files: |
             build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip
             build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip
+          body_path: release_body.txt
