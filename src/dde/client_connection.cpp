@@ -27,7 +27,11 @@ namespace ZemaxDDE {
 
         ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
         ATOM topicAtom = GlobalAddAtomW(DDE_TOPIC);
-        SendMessageW(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom));
+        DWORD_PTR dwResult = 0;
+        if (!SendMessageTimeoutW(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom),
+                SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, DDE_TIMEOUT_MS, &dwResult)) {
+            m_logger.addLog("[DDE] WM_DDE_INITIATE broadcast timed out or failed (hung window detected)");
+        }
 
     #ifdef DEBUG_LOG
         char appName[256], topicName[256];
