@@ -183,30 +183,26 @@ namespace App {
     }
 
     void shutdown(AppContext& ctx) {
-        // 1. Shutdown GUI first (depends on DDE client and GLFW)
+        // GUI depends on DDE client and GLFW
         ctx.gui.reset();
 
-        // 2. Shutdown DDE (depends on GLFW window messages)
         if (ctx.hwndClient && ctx.ddeClient) {
             ctx.ddeClient->terminateDDE();
             SetWindowLongPtr(ctx.hwndClient, GWLP_USERDATA, 0);
             ctx.ddeClient.reset();
         }
 
-        // 3. Destroy DDE message window
         if (ctx.hwndClient) {
             DestroyWindow(ctx.hwndClient);
             ctx.hwndClient = nullptr;
         }
 
-        // 4. Shutdown GLFW
         if (ctx.glfwWindow) {
             glfwDestroyWindow(ctx.glfwWindow);
             ctx.glfwWindow = nullptr;
         }
 
         glfwTerminate();
-        // 5. Context destroyed by unique_ptr
     }
 
     void openZmxFileInZemax(Logger& logger) {
