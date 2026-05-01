@@ -32,7 +32,10 @@ namespace gui {
 
     void SagAnalysisService::calculateSagCrossSection(int surface, int sampling, double angle) {
         const auto targetStorage = m_ddeClient->getStorageTarget();
-        assert(targetStorage == ZemaxDDE::StorageTarget::NOMINAL || targetStorage == ZemaxDDE::StorageTarget::TOLERANCED);
+        if (targetStorage != ZemaxDDE::StorageTarget::NOMINAL && targetStorage != ZemaxDDE::StorageTarget::TOLERANCED) {
+            m_logger.addLog("[GUI] Invalid storage target for Sag calculation");
+            return;
+        }
 
         const ZemaxDDE::SurfaceData& targetSurface =
             (targetStorage == ZemaxDDE::StorageTarget::NOMINAL)
