@@ -75,8 +75,8 @@ set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
     ${SRC_DIR}/logger/logger.cpp
-    ${SRC_DIR}/dde/client_core.cpp
-    ${SRC_DIR}/dde/client_data.cpp
+    ${SRC_DIR}/dde/client_connection.cpp
+    ${SRC_DIR}/dde/client_commands.cpp
     ${SRC_DIR}/dde/utils.cpp
     ${SRC_DIR}/dde/dde_connection_manager.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
