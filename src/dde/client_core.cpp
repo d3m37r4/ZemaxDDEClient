@@ -2,8 +2,6 @@
 #include <fstream>
 #include <vector>
 
-#include <dde.h>
-
 #include "client.h"
 #include "utils.h"
 #include "logger/logger.h"

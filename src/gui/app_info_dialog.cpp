@@ -57,4 +57,18 @@ namespace gui {
             ImGui::EndPopup();
         }
     }
+
+    void AppInfoDialog::renderUpdatesPopup(bool& showUpdatesPopup) {
+        if (showUpdatesPopup) {
+            ImGui::OpenPopup("Check for Updates");
+            showUpdatesPopup = false;
+        }
+
+        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Your software is up to date!");
+            ImGui::Separator();
+            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+    }
 }

@@ -8,8 +8,9 @@ namespace gui {
     class AppInfoDialog {
         public:
             void render(bool& showAboutPopup);
+            void renderUpdatesPopup(bool& showUpdatesPopup);
+            void setPopupPosition();
 
         private:
-            void setPopupPosition();
     };
 }

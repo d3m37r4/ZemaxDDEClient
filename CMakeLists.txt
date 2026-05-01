@@ -78,16 +78,17 @@ set(SOURCES
     ${SRC_DIR}/dde/client_core.cpp
     ${SRC_DIR}/dde/client_data.cpp
     ${SRC_DIR}/dde/utils.cpp
-    ${SRC_DIR}/gui/init.cpp
-    ${SRC_DIR}/gui/container.cpp
+    ${SRC_DIR}/dde/dde_connection_manager.cpp
+    ${SRC_DIR}/gui/gui_manager.cpp
     ${SRC_DIR}/gui/sag_analysis_service.cpp
     ${SRC_DIR}/gui/utils.cpp
-    ${SRC_DIR}/gui/components/navbar.cpp
-    ${SRC_DIR}/gui/components/sidebar.cpp
-    ${SRC_DIR}/gui/components/dde_status.cpp
-    ${SRC_DIR}/gui/components/content.cpp
-    ${SRC_DIR}/gui/components/debug_log.cpp
-    ${SRC_DIR}/gui/components/popups.cpp
+    ${SRC_DIR}/gui/menu_bar_controller.cpp
+    ${SRC_DIR}/gui/sidebar_renderer.cpp
+    ${SRC_DIR}/gui/content_router.cpp
+    ${SRC_DIR}/gui/sag_analysis_controller.cpp
+    ${SRC_DIR}/gui/graphics_backend.cpp
+    ${SRC_DIR}/gui/app_info_dialog.cpp
+    ${SRC_DIR}/gui/debug_log_viewer.cpp
     ${SRC_DIR}/gui/content_pages/page_optical_system_info.cpp
     ${SRC_DIR}/gui/content_pages/page_surface_sag_analysis.cpp
 )
