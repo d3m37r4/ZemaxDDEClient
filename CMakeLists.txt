@@ -85,7 +85,6 @@ set(SOURCES
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/sidebar_renderer.cpp
     ${SRC_DIR}/gui/content_router.cpp
-    ${SRC_DIR}/gui/sag_analysis_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/app_info_dialog.cpp
     ${SRC_DIR}/gui/debug_log_viewer.cpp

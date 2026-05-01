@@ -5,7 +5,6 @@
 #include "dde/dde_connection_manager.h"
 #include "gui/sidebar_renderer.h"
 #include "gui/content_router.h"
-#include "gui/sag_analysis_controller.h"
 
 namespace gui {
 
@@ -16,7 +15,6 @@ namespace gui {
 , m_logger(logger)
 {
     m_sagService = std::make_unique<SagAnalysisService>(ddeClient, logger);
-    m_sagController = std::make_unique<SagAnalysisController>();
     m_ddeConnectionManager = std::make_unique<DdeConnectionManager>(m_zemaxDDEClient, m_logger);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager.get());
     m_menuBarController->setExitCallback([this]() {

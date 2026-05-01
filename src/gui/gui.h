@@ -16,7 +16,6 @@
 #include "gui/sidebar_renderer.h"
 #include "gui/content_router.h"
 #include "gui/menu_bar_controller.h"
-#include "gui/sag_analysis_controller.h"
 #include "gui/graphics_backend.h"
 #include "gui/debug_log_viewer.h"
 #include "gui/app_info_dialog.h"
@@ -60,7 +59,6 @@ namespace gui {
             // Components (New approach)
             GraphicsBackend m_graphics;
             std::unique_ptr<SagAnalysisService> m_sagService;     // Sag analysis service (owned by GuiManager)
-            std::unique_ptr<SagAnalysisController> m_sagController;
             std::unique_ptr<DdeConnectionManager> m_ddeConnectionManager;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<SidebarRenderer> m_sidebarRenderer;
