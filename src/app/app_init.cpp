@@ -152,8 +152,6 @@ namespace App {
             }
         });
 
-        ctx->pLogger = &logger;
-
         // Initialize GUI manager with existing DDE client
         ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get(), logger);
         ctx->gui->initialize(ctx->dpiScale);
