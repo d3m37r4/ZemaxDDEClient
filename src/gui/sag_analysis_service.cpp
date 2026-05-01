@@ -23,7 +23,10 @@ namespace gui {
         y_vals.reserve(surface.sagDataPoints.size());
 
         for (const auto& point : surface.sagDataPoints) {
-            x_vals.push_back(point.x);
+            // Recover radial coordinate r from (x, y) with sign preservation
+            // r = sign(x) * sqrt(x^2 + y^2) gives correct range from -semiDiameter to +semiDiameter
+            double r = (point.x >= 0 ? 1.0 : -1.0) * std::sqrt(point.x * point.x + point.y * point.y);
+            x_vals.push_back(r);
             y_vals.push_back(point.sag);
         }
 
