@@ -25,5 +25,6 @@ namespace gui {
 
         private:
             GLFWwindow* m_window = nullptr;
+            Logger* m_logger = nullptr;
     };
 }

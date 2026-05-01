@@ -18,13 +18,35 @@ namespace {
 }
 
 namespace App {
+    // Base window dimensions and system DPI constant
+    constexpr int BASE_WIDTH = 800;
+    constexpr int BASE_HEIGHT = 600;
+    constexpr float SYSTEM_DPI = 96.0f;
+
     std::unique_ptr<AppContext> initialize(Logger& logger) {
         auto ctx = std::make_unique<AppContext>();
 
         ctx->pLogger = &logger;
 
         // Enable DPI awareness for proper scaling on high-DPI displays
-        SetProcessDPIAware();
+        // Dynamically load SetProcessDpiAwarenessContext to avoid MinGW header issues
+        HMODULE user32 = LoadLibraryW(L"user32.dll");
+        if (user32) {
+            using SetProcessDpiAwarenessContextFunc = BOOL (WINAPI*)(void*);
+            auto* func = (SetProcessDpiAwarenessContextFunc)GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+            if (func) {
+                // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (DPI_AWARENESS_CONTEXT)-4
+                func((void*)-4);
+                logger.addLog("[APP] DPI Awareness set to Per-Monitor V2 (runtime)");
+            } else {
+                SetProcessDPIAware();
+                logger.addLog("[APP] DPI Awareness set to legacy mode (fallback)");
+            }
+            FreeLibrary(user32);
+        } else {
+            SetProcessDPIAware();
+            logger.addLog("[APP] DPI Awareness set to legacy mode (user32 load failed)");
+        }
 
         // Initialize GLFW
         if (!glfwInit()) {
@@ -39,16 +61,14 @@ namespace App {
         int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
         int dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
         ReleaseDC(NULL, hdc);
-        ctx->dpiScale = static_cast<float>(dpiX) / 96.0f;
-        logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f} ({}x{})", ctx->dpiScale, dpiX, dpiY));
+        ctx->dpiScale = static_cast<float>(dpiX) / SYSTEM_DPI;
+        logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f}", ctx->dpiScale));
 
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
         // Scale window size based on DPI
-        int baseWidth = 800;
-        int baseHeight = 600;
-        int scaledWidth = static_cast<int>(baseWidth * ctx->dpiScale);
-        int scaledHeight = static_cast<int>(baseHeight * ctx->dpiScale);
+        int scaledWidth = static_cast<int>(BASE_WIDTH * ctx->dpiScale);
+        int scaledHeight = static_cast<int>(BASE_HEIGHT * ctx->dpiScale);
 
         ctx->glfwWindow = glfwCreateWindow(scaledWidth, scaledHeight, APP_TITLE, NULL, NULL);
 
@@ -138,6 +158,9 @@ namespace App {
         ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get(), logger);
         ctx->gui->initialize(ctx->dpiScale);
 
+        // Store context pointer for callback access (must be before callback registration)
+        glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
+
         // Set up DPI change callback for dynamic scaling
         glfwSetWindowContentScaleCallback(ctx->glfwWindow, [](GLFWwindow* window, float xScale, float yScale) {
             AppContext* ctx = static_cast<AppContext*>(glfwGetWindowUserPointer(window));
@@ -145,22 +168,18 @@ namespace App {
 
             Logger& logger = *ctx->pLogger;
             float newDpiScale = (xScale + yScale) / 2.0f;
-            logger.addLog(std::format("[APP] DPI scale changed to: {:.2f}", newDpiScale));
 
             // Update window size
-            int baseWidth = 800;
-            int baseHeight = 600;
-            int scaledWidth = static_cast<int>(baseWidth * newDpiScale);
-            int scaledHeight = static_cast<int>(baseHeight * newDpiScale);
+            int scaledWidth = static_cast<int>(BASE_WIDTH * newDpiScale);
+            int scaledHeight = static_cast<int>(BASE_HEIGHT * newDpiScale);
             glfwSetWindowSize(window, scaledWidth, scaledHeight);
 
             // Update ImGui style
             ctx->gui->updateDpiStyle(newDpiScale);
             ctx->dpiScale = newDpiScale;
-        });
 
-        // Store context pointer for callback access
-        glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
+            logger.addLog(std::format("[APP] DPI scale changed to: {:.2f}", newDpiScale));
+        });
 
         return ctx;
     }

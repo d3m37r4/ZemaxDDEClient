@@ -5,6 +5,7 @@
 #include "dde/dde_connection_manager.h"
 #include "gui/sidebar_renderer.h"
 #include "gui/content_router.h"
+#include "logger/logger.h"
 
 namespace gui {
 

@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <filesystem>
+#include <format>
 
 #include <windows.h>
 
@@ -25,6 +26,7 @@ namespace gui {
 
     void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, const char* iniPath, float initialDpiScale) {
         m_window = window;
+        m_logger = &logger;
 
         if (!m_window) {
             throw std::runtime_error("Invalid GLFW window");
@@ -74,10 +76,16 @@ namespace gui {
         logger.addLog("[GUI] GUI initialized");
     }
 
-void GraphicsBackend::updateDpiStyle(float dpiScale) {
+    void GraphicsBackend::updateDpiStyle(float dpiScale) {
         // Clamp to valid range to avoid ImGui assertion failures
-        if (dpiScale <= 0.0f) dpiScale = 0.01f;
-        if (dpiScale > 98.0f) dpiScale = 98.0f;
+        // Minimum: ImGui FontGlobalScale must be > 0
+        // Maximum: 5.0 (500%) matches Windows 10/11 max display scaling
+        constexpr float MIN_DPI_SCALE = 1.0f;
+        constexpr float MAX_DPI_SCALE = 5.0f;
+
+        if (dpiScale < 1.0f) dpiScale = MIN_DPI_SCALE;
+        if (dpiScale > MAX_DPI_SCALE) dpiScale = MAX_DPI_SCALE;
+
         ImGuiIO& io = ImGui::GetIO();
 
         // Only scale font globally, not styles (they're already scaled at init)
