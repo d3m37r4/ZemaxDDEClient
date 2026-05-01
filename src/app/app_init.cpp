@@ -33,7 +33,8 @@ namespace App {
         HMODULE user32 = LoadLibraryW(L"user32.dll");
         if (user32) {
             using SetProcessDpiAwarenessContextFunc = BOOL (WINAPI*)(void*);
-            auto* func = (SetProcessDpiAwarenessContextFunc)GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+            auto fp = GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+            auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(reinterpret_cast<void*>(fp));
             if (func) {
                 // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (DPI_AWARENESS_CONTEXT)-4
                 func((void*)-4);
@@ -59,7 +60,6 @@ namespace App {
         // Get initial DPI scale factor
         HDC hdc = GetDC(NULL);
         int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-        int dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
         ReleaseDC(NULL, hdc);
         ctx->dpiScale = static_cast<float>(dpiX) / SYSTEM_DPI;
         logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f}", ctx->dpiScale));
