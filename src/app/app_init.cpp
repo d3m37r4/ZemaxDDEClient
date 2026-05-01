@@ -5,6 +5,10 @@
 #include "logger/logger.h"
 #include "app/app.h"
 
+// Expose native Win32 functions (glfwGetWin32Window)
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+
 namespace {
     extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
         if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
@@ -71,7 +75,7 @@ namespace App {
         int scaledHeight = static_cast<int>(BASE_HEIGHT * ctx->dpiScale);
 
         ctx->glfwWindow = glfwCreateWindow(scaledWidth, scaledHeight, APP_TITLE, NULL, NULL);
-
+        
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");
             glfwTerminate();
@@ -80,6 +84,47 @@ namespace App {
 
         glfwMakeContextCurrent(ctx->glfwWindow);
         glfwSwapInterval(1);
+
+        // Apply system theme to title bar (Windows 10/11)
+        // Define the attribute constant (MinGW headers may lack it)
+        #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+        #define DWMWA_USE_IMMERSIVE_DARK_MODE 19
+        #endif
+
+        HMODULE dwmApi = LoadLibraryW(L"dwmapi.dll");
+        if (dwmApi) {
+            using DwmSetWindowAttributeFunc = HRESULT (WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+            auto* dwmFunc = reinterpret_cast<DwmSetWindowAttributeFunc>(
+                reinterpret_cast<void*>(GetProcAddress(dwmApi, "DwmSetWindowAttribute")));
+            
+            if (dwmFunc) {
+                // Detect system dark mode via registry (reliable for Windows 10/11)
+                bool isDarkMode = false;
+                HKEY hKey = NULL;
+                LONG regResult = RegOpenKeyExW(HKEY_CURRENT_USER,
+                    L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                    0, KEY_READ, &hKey);
+                if (regResult == ERROR_SUCCESS) {
+                    DWORD lightTheme = 1;
+                    DWORD dataSize = sizeof(DWORD);
+                    if (RegQueryValueExW(hKey, L"AppsUseLightTheme", nullptr, nullptr,
+                            (LPBYTE)&lightTheme, &dataSize) == ERROR_SUCCESS) {
+                        // lightTheme == 0 means dark mode is active
+                        isDarkMode = (lightTheme == 0);
+                    }
+                    RegCloseKey(hKey);
+                }
+
+                BOOL useDarkMode = isDarkMode;
+                HWND hwnd = glfwGetWin32Window(ctx->glfwWindow);
+                if (hwnd) {
+                    dwmFunc(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
+                }
+                
+                logger.addLog(std::format("[APP] Title bar theme applied (dark mode: {})", isDarkMode));
+            }
+            FreeLibrary(dwmApi);
+        }
 
         logger.addLog("[APP] Application starting");
 
