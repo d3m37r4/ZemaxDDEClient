@@ -1,4 +1,4 @@
-#include "dde_zemax_utils.h"
+#include "utils.h"
 
 namespace ZemaxDDE {
     /*
@@ -11,7 +11,14 @@ namespace ZemaxDDE {
         std::string currentToken;
         bool inQuotes = false;
 
-        for (char c : bufferStr) {
+        for (size_t i = 0; i < bufferStr.size(); ++i) {
+            char c = bufferStr[i];
+            // Handle escaped quotes: if we see a backslash followed by a quote, skip the backslash and add the quote literally
+            if (c == '\\' && i + 1 < bufferStr.size() && bufferStr[i + 1] == '"') {
+                currentToken += '"';
+                ++i; // skip the quote character
+                continue;
+            }
             if (c == '"') {
                 inQuotes = !inQuotes;
             } else if ((c == ',' || c == '\n' || c == '\r' || c == ' ') && !inQuotes) {

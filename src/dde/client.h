@@ -4,14 +4,14 @@
 #include <windows.h>
 #include <functional>
 
-#include "logger/logger.h"
+#include "types.h"
 
-#include "dde_zemax_types.h"
+class Logger;
 
 namespace ZemaxDDE {
     class ZemaxDDEClient {
         public:
-            ZemaxDDEClient(HWND zemaxDDEClient);
+            ZemaxDDEClient(HWND hwndClient, Logger& logger);
             ~ZemaxDDEClient();
 
             void initiateDDE();
@@ -52,8 +52,9 @@ namespace ZemaxDDE {
             }
 
         private:
-            HWND m_hwndZemaxServer = NULL;
+            HWND m_hwndZemaxServer = nullptr;
             HWND m_hwndZemaxClient = NULL;
+            Logger& m_logger;
             OnDDEConnectedCallback m_onDDEConnected;
             OpticalSystemData m_opticalSystem;
             SurfaceData m_tolerancedSurface;

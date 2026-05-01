@@ -1,20 +1,57 @@
 #include <fstream>
 
-#include "logger/logger.h"
+#include <nfd.h>
 
+#include "logger/logger.h"
 #include "app/app.h"
 
+namespace {
+    extern "C" LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
+        if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
+            auto* client = reinterpret_cast<ZemaxDDE::ZemaxDDEClient*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+            if (client) {
+                return client->handleDDEMessages(iMsg, wParam, lParam);
+            }
+        }
+        return DefWindowProcW(hwnd, iMsg, wParam, lParam);
+    }
+}
+
 namespace App {
-    AppContext* initialize() {
-        auto ctx = new AppContext();
+    // Base window dimensions and system DPI constant
+    constexpr int BASE_WIDTH = 800;
+    constexpr int BASE_HEIGHT = 600;
+    constexpr float SYSTEM_DPI = 96.0f;
+
+    std::unique_ptr<AppContext> initialize(Logger& logger) {
+        auto ctx = std::make_unique<AppContext>();
+
+        ctx->pLogger = &logger;
 
         // Enable DPI awareness for proper scaling on high-DPI displays
-        SetProcessDPIAware();
+        // Dynamically load SetProcessDpiAwarenessContext to avoid MinGW header issues
+        HMODULE user32 = LoadLibraryW(L"user32.dll");
+        if (user32) {
+            using SetProcessDpiAwarenessContextFunc = BOOL (WINAPI*)(void*);
+            auto fp = GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+            auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(reinterpret_cast<void*>(fp));
+            if (func) {
+                // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (DPI_AWARENESS_CONTEXT)-4
+                func((void*)-4);
+                logger.addLog("[APP] DPI Awareness set to Per-Monitor V2 (runtime)");
+            } else {
+                SetProcessDPIAware();
+                logger.addLog("[APP] DPI Awareness set to legacy mode (fallback)");
+            }
+            FreeLibrary(user32);
+        } else {
+            SetProcessDPIAware();
+            logger.addLog("[APP] DPI Awareness set to legacy mode (user32 load failed)");
+        }
 
         // Initialize GLFW
         if (!glfwInit()) {
             logger.addLog("[APP] Failed to initialize GLFW");
-            delete ctx;
             return nullptr;
         }
 
@@ -23,25 +60,21 @@ namespace App {
         // Get initial DPI scale factor
         HDC hdc = GetDC(NULL);
         int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-        int dpiY = GetDeviceCaps(hdc, LOGPIXELSY);
         ReleaseDC(NULL, hdc);
-        ctx->dpiScale = static_cast<float>(dpiX) / 96.0f;
-        logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f} ({}x{})", ctx->dpiScale, dpiX, dpiY));
+        ctx->dpiScale = static_cast<float>(dpiX) / SYSTEM_DPI;
+        logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f}", ctx->dpiScale));
 
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
         // Scale window size based on DPI
-        int baseWidth = 800;
-        int baseHeight = 600;
-        int scaledWidth = static_cast<int>(baseWidth * ctx->dpiScale);
-        int scaledHeight = static_cast<int>(baseHeight * ctx->dpiScale);
+        int scaledWidth = static_cast<int>(BASE_WIDTH * ctx->dpiScale);
+        int scaledHeight = static_cast<int>(BASE_HEIGHT * ctx->dpiScale);
 
         ctx->glfwWindow = glfwCreateWindow(scaledWidth, scaledHeight, APP_TITLE, NULL, NULL);
 
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");
             glfwTerminate();
-            delete ctx;
             return nullptr;
         }
 
@@ -62,7 +95,6 @@ namespace App {
             logger.addLog("[APP] Failed to register DDE window class");
             glfwDestroyWindow(ctx->glfwWindow);
             glfwTerminate();
-            delete ctx;
             return nullptr;
         }
 
@@ -77,18 +109,17 @@ namespace App {
                             "Ensure no other instance is running and try again.", "Error", MB_OK | MB_ICONERROR);
             logger.addLog("[APP] Failed to create DDE window (CreateWindowExW returned NULL)");
             glfwTerminate();
-            delete ctx;
             return nullptr;
         }
 
         logger.addLog(std::format("[APP] DDE window created: hwndClient = {}", reinterpret_cast<uintptr_t>(ctx->hwndClient)));
 
         // Create and associate ZemaxDDEClient with the window
-        ctx->ddeClient = std::make_unique<ZemaxDDE::ZemaxDDEClient>(ctx->hwndClient);
+        ctx->ddeClient = std::make_unique<ZemaxDDE::ZemaxDDEClient>(ctx->hwndClient, logger);
         SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(ctx->ddeClient.get()));
 
         // Register callback to send requests after DDE connection
-        ctx->ddeClient->setOnDDEConnectedCallback([](ZemaxDDE::ZemaxDDEClient* client) {
+        ctx->ddeClient->setOnDDEConnectedCallback([&logger](ZemaxDDE::ZemaxDDEClient* client) {
             try {
                 client->getLensName();
                 client->getFileName();
@@ -122,63 +153,89 @@ namespace App {
         });
 
         // Initialize GUI manager with existing DDE client
-        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get());
-        ctx->gui->initialize();
+        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->hwndClient, ctx->ddeClient.get(), logger);
+        ctx->gui->initialize(ctx->dpiScale);
+
+        // Store context pointer for callback access (must be before callback registration)
+        glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
 
         // Set up DPI change callback for dynamic scaling
         glfwSetWindowContentScaleCallback(ctx->glfwWindow, [](GLFWwindow* window, float xScale, float yScale) {
             AppContext* ctx = static_cast<AppContext*>(glfwGetWindowUserPointer(window));
-            if (!ctx) return;
+            if (!ctx || !ctx->pLogger) return;
 
+            Logger& logger = *ctx->pLogger;
             float newDpiScale = (xScale + yScale) / 2.0f;
-            logger.addLog(std::format("[APP] DPI scale changed to: {:.2f}", newDpiScale));
 
             // Update window size
-            int baseWidth = 800;
-            int baseHeight = 600;
-            int scaledWidth = static_cast<int>(baseWidth * newDpiScale);
-            int scaledHeight = static_cast<int>(baseHeight * newDpiScale);
+            int scaledWidth = static_cast<int>(BASE_WIDTH * newDpiScale);
+            int scaledHeight = static_cast<int>(BASE_HEIGHT * newDpiScale);
             glfwSetWindowSize(window, scaledWidth, scaledHeight);
 
             // Update ImGui style
             ctx->gui->updateDpiStyle(newDpiScale);
             ctx->dpiScale = newDpiScale;
-        });
 
-        // Store context pointer for callback access
-        glfwSetWindowUserPointer(ctx->glfwWindow, ctx);
+            logger.addLog(std::format("[APP] DPI scale changed to: {:.2f}", newDpiScale));
+        });
 
         return ctx;
     }
 
-    void shutdown(AppContext* ctx) {
-        if (!ctx) return;
+    void shutdown(AppContext& ctx) {
+        // GUI depends on DDE client and GLFW
+        ctx.gui.reset();
 
-        // 1. Shutdown GUI first (depends on DDE client and GLFW)
-        ctx->gui.reset();
-
-        // 2. Shutdown DDE (depends on GLFW window messages)
-        if (ctx->hwndClient && ctx->ddeClient) {
-            ctx->ddeClient->terminateDDE();
-            SetWindowLongPtr(ctx->hwndClient, GWLP_USERDATA, 0);
-            ctx->ddeClient.reset();
+        if (ctx.hwndClient && ctx.ddeClient) {
+            ctx.ddeClient->terminateDDE();
+            SetWindowLongPtr(ctx.hwndClient, GWLP_USERDATA, 0);
+            ctx.ddeClient.reset();
         }
 
-        // 3. Destroy DDE message window
-        if (ctx->hwndClient) {
-            DestroyWindow(ctx->hwndClient);
-            ctx->hwndClient = nullptr;
+        if (ctx.hwndClient) {
+            DestroyWindow(ctx.hwndClient);
+            ctx.hwndClient = nullptr;
         }
 
-        // 4. Shutdown GLFW
-        if (ctx->glfwWindow) {
-            glfwDestroyWindow(ctx->glfwWindow);
-            ctx->glfwWindow = nullptr;
+        if (ctx.glfwWindow) {
+            glfwDestroyWindow(ctx.glfwWindow);
+            ctx.glfwWindow = nullptr;
         }
 
         glfwTerminate();
+    }
 
-        // 5. Free context itself
-        delete ctx;
+    void openZmxFileInZemax(Logger& logger) {
+        nfdchar_t* outPath = nullptr;
+        nfdresult_t result = NFD_OpenDialog("zmx", nullptr, &outPath);
+
+        if (result == NFD_OKAY) {
+            struct NFDDeleter { void operator()(nfdchar_t* p) const { std::free(p); } };
+            std::unique_ptr<nfdchar_t, NFDDeleter> pathGuard{outPath};
+
+        #ifdef DEBUG_LOG
+            logger.addLog(std::format("[APP] Selected file: {}", outPath));
+        #endif
+            int size = MultiByteToWideChar(CP_UTF8, 0, outPath, -1, nullptr, 0);
+            std::wstring widePath(size, L'\0');
+            MultiByteToWideChar(CP_UTF8, 0, outPath, -1, widePath.data(), size);
+
+            HINSTANCE ret = ShellExecuteW(nullptr, L"open", widePath.c_str(), nullptr, nullptr, SW_SHOW);
+            if (reinterpret_cast<intptr_t>(ret) <= 32) {
+                MessageBoxW(nullptr, L"Failed to open file. Is Zemax installed?", L"Error", MB_ICONERROR);
+                logger.addLog(std::format("[APP] ShellExecute failed to open file: {}. (Error code: {})", outPath, static_cast<int>(reinterpret_cast<intptr_t>(ret))));
+            } else {
+            #ifdef DEBUG_LOG
+                logger.addLog(std::format("[APP] Successfully sent file to ShellExecute: {}", outPath));
+            #endif
+            }
+        } else if (result == NFD_CANCEL) {
+        #ifdef DEBUG_LOG
+            logger.addLog("[APP] File open dialog canceled by user");
+        #endif
+        } else {
+            const char* error = NFD_GetError();
+            logger.addLog(std::format("[APP] NFD Error: {}", error ? error : "Unknown error"));
+        }
     }
 }

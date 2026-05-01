@@ -1,8 +1,7 @@
 #include <format>
 #include <dde.h>
 
-#include "dde_zemax_client.h"
-#include "dde_zemax_utils.h"
+#include "client.h"
 
 namespace ZemaxDDE {
     void ZemaxDDEClient::getLensName() {

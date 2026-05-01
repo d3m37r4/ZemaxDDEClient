@@ -16,5 +16,3 @@ class Logger {
         std::mutex m_mutex;
         static constexpr std::string_view TIME_FORMAT = "[%d.%m.%Y - %H:%M:%S]";
 };
-
-extern Logger logger;

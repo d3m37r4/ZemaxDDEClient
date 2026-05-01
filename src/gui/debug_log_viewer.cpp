@@ -1,37 +1,15 @@
-#include "gui/components/gui_debug_log.h"
-
-#include "gui.h"
-
-namespace {
-    std::string collectLogContent() {
-        std::string content;
-        for (const auto& entry : logger.getLogs()) {
-            content += entry;
-            content += '\n';
-        }
-        return content;
-    }
-
-    void saveDebugLogToFile() {
-        std::string logContent = collectLogContent();
-        auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_DebugLog_Temp.txt", logContent);
-        if (tempPathOpt) {
-            ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
-            logger.addLog(std::format("[GUI] Debug log saved to {}", tempPathOpt->string()));
-        } else {
-            logger.addLog("[GUI] Failed to create temporary file for debug log export");
-        }
-    }
-
-    void copyDebugLogToClipboard() {
-        std::string logContent = collectLogContent();
-        logger.addLog("[GUI] Debug log copied to clipboard");
-        ImGui::SetClipboardText(logContent.c_str());
-    }
-}
+#include "gui/debug_log_viewer.h"
+#include "gui/constants.h"
+#include "gui/utils.h"
+#include "lib/imgui/imgui.h"
+#include "logger/logger.h"
+#include <windows.h>
+#include <shellapi.h>
+#include <format>
+#include <string>
 
 namespace gui {
-    void GuiManager::renderDebugLog() {
+    void DebugLogViewer::render(Logger& logger) {
         ImGui::SetNextWindowSizeConstraints(
             ImVec2(DEBUG_LOG_WIDTH_MIN, DEBUG_LOG_HEIGHT_MIN),  // min_size
             ImVec2(FLT_MAX, FLT_MAX)                            // max_size
@@ -44,13 +22,30 @@ namespace gui {
 
         ImGui::BeginChild("DebugLogHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
         if (ImGui::Button("Text")) {
-            saveDebugLogToFile();
+            std::string content;
+            for (const auto& entry : logger.getLogs()) {
+                content += entry;
+                content += '\n';
+            }
+            auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_DebugLog_Temp.txt", content);
+            if (tempPathOpt) {
+                ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
+                logger.addLog(std::format("[GUI] Debug log saved to {}", tempPathOpt->string()));
+            } else {
+                logger.addLog("[GUI] Failed to create temporary file for debug log export");
+            }
         }
 
         ImGui::SameLine();
 
         if (ImGui::Button("Copy to clipboard")) {
-            copyDebugLogToClipboard();
+            std::string content;
+            for (const auto& entry : logger.getLogs()) {
+                content += entry;
+                content += '\n';
+            }
+            logger.addLog("[GUI] Debug log copied to clipboard");
+            ImGui::SetClipboardText(content.c_str());
         }
 
         ImGui::SameLine();

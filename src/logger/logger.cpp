@@ -1,7 +1,9 @@
+#include <ctime>
+#include <format>
+
 #ifdef DEBUG_LOG
     #include <iostream>
 #endif
-#include <format>
 
 #include "logger.h"
 

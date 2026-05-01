@@ -1,9 +1,10 @@
 #pragma once
 
+#include <array>
 #include <string>
 #include <vector>
 
-#include "dde_zemax_const.h"
+#include "constants.h"
 
 namespace ZemaxDDE {
     struct Wavelength {
@@ -59,13 +60,13 @@ namespace ZemaxDDE {
         int globalRefSurf = 0;
         int numFields = 0;
         int fieldType = 0;
-        double xField[FIELD_ARRAY_SIZE] = {0};
-        double yField[FIELD_ARRAY_SIZE] = {0};
+        std::array<double, FIELD_ARRAY_SIZE> xField{};
+        std::array<double, FIELD_ARRAY_SIZE> yField{};
         double maxXField = 0.0;
         double maxYField = 0.0;
         int normalizationMethod = 0;
         int primWave = 0;
         int numWaves = 0;
-        Wavelength waveData[WAVE_ARRAY_SIZE] = {};
+        std::array<Wavelength, WAVE_ARRAY_SIZE> waveData{};
     };
 }

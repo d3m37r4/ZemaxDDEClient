@@ -1,6 +1,7 @@
 #include <fstream>
 
-#include "gui.h"
+#include "gui/gui.h"
+#include "lib/imgui/imgui.h"
 
 namespace gui {
     void renderPageHeader(GuiPage currentPage) {

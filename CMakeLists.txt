@@ -74,23 +74,22 @@ configure_file(
 set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
-    ${SRC_DIR}/app/app_actions.cpp
     ${SRC_DIR}/logger/logger.cpp
-    ${SRC_DIR}/dde/dde_zemax_client_core.cpp
-    ${SRC_DIR}/dde/dde_zemax_client_data.cpp
-    ${SRC_DIR}/dde/dde_zemax_utils.cpp
-    ${SRC_DIR}/gui/gui_init.cpp
-    ${SRC_DIR}/gui/gui_container.cpp
-    ${SRC_DIR}/gui/gui_surface_analysis.cpp
-    ${SRC_DIR}/gui/gui_utils.cpp
-    ${SRC_DIR}/gui/components/gui_navbar.cpp
-    ${SRC_DIR}/gui/components/gui_sidebar.cpp
-    ${SRC_DIR}/gui/components/gui_dde_status.cpp
-    ${SRC_DIR}/gui/components/gui_content.cpp
-    ${SRC_DIR}/gui/components/gui_debug_log.cpp
-    ${SRC_DIR}/gui/components/gui_popups.cpp
-    ${SRC_DIR}/gui/content_pages/gui_page_optical_system_info.cpp
-    ${SRC_DIR}/gui/content_pages/gui_page_surface_sag_analysis.cpp
+    ${SRC_DIR}/dde/client_connection.cpp
+    ${SRC_DIR}/dde/client_commands.cpp
+    ${SRC_DIR}/dde/utils.cpp
+    ${SRC_DIR}/dde/dde_connection_manager.cpp
+    ${SRC_DIR}/gui/gui_manager.cpp
+    ${SRC_DIR}/gui/sag_analysis_service.cpp
+    ${SRC_DIR}/gui/utils.cpp
+    ${SRC_DIR}/gui/menu_bar_controller.cpp
+    ${SRC_DIR}/gui/sidebar_renderer.cpp
+    ${SRC_DIR}/gui/content_router.cpp
+    ${SRC_DIR}/gui/graphics_backend.cpp
+    ${SRC_DIR}/gui/app_info_dialog.cpp
+    ${SRC_DIR}/gui/debug_log_viewer.cpp
+    ${SRC_DIR}/gui/content_pages/page_optical_system_info.cpp
+    ${SRC_DIR}/gui/content_pages/page_surface_sag_analysis.cpp
 )
 
 # Add ImGui source files directly

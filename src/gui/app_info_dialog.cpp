@@ -1,34 +1,20 @@
-
-
-#include "gui/components/gui_popups.h"
-
-#include "gui/gui.h"
+#include "gui/app_info_dialog.h"
+#include "lib/imgui/imgui.h"
 #include "app/app.h"
+#include "version.h"
+#include <string>
+#include <format>
 
 namespace gui {
-    void GuiManager::setPopupPosition() {
+    void AppInfoDialog::setPopupPosition() {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }
 
-    void GuiManager::renderUpdatesPopup() {
-        if (m_showUpdatesPopup) {
-            ImGui::OpenPopup("Check for Updates");
-            m_showUpdatesPopup = false;
-        }
-
-        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Your software is up to date!");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
-    }
-
-    void GuiManager::renderAboutPopup() {
-        if (m_showAboutPopup) {
+    void AppInfoDialog::render(bool& showAboutPopup) {
+        if (showAboutPopup) {
             ImGui::OpenPopup("About");
-            m_showAboutPopup = false;
+            showAboutPopup = false;
         }
 
         if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -68,6 +54,20 @@ namespace gui {
             if (ImGui::Button("OK", ImVec2(button_width, 0))) {
                 ImGui::CloseCurrentPopup();
             }
+            ImGui::EndPopup();
+        }
+    }
+
+    void AppInfoDialog::renderUpdatesPopup(bool& showUpdatesPopup) {
+        if (showUpdatesPopup) {
+            ImGui::OpenPopup("Check for Updates");
+            showUpdatesPopup = false;
+        }
+
+        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Your software is up to date!");
+            ImGui::Separator();
+            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
         }
     }

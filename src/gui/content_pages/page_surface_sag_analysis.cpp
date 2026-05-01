@@ -1,6 +1,8 @@
 #include <fstream>
 
-#include "gui/gui.h"
+#include "gui/gui_impl.h"
+#include "lib/imgui/imgui.h"
+#include "lib/implot/implot.h"
 
 namespace {
     struct SagCrossSectionPair {
@@ -11,7 +13,7 @@ namespace {
     SagCrossSectionPair prepareSagCrossSectionData(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced) {
         auto [x_nom, y_nom] = gui::extractSagCoordinates(nominal);
         auto [x_tol, y_tol] = gui::extractSagCoordinates(toleranced);
-        
+
         return SagCrossSectionPair{
             std::move(x_nom), std::move(y_nom),
             std::move(x_tol), std::move(y_tol)
@@ -22,7 +24,7 @@ namespace {
         return std::format(
             "Number of points to sample along the surface diameter (min={}, max={}).\n"
             "Higher values = smoother profile, slower calculation.",
-            MIN_SAMPLING, MAX_SAMPLING
+            gui::MIN_SAMPLING, gui::MAX_SAMPLING
         );
     }
 
@@ -33,7 +35,7 @@ namespace {
 
 namespace gui {
     void GuiManager::renderPageSurfaceSagAnalysis() {
-        auto& state = m_surfaceSagAnalysisPageState;
+        auto& state = m_sagService->m_surfaceSagAnalysisPageState;
         auto& nominal = m_zemaxDDEClient->getNominalSurface();
         auto& toleranced = m_zemaxDDEClient->getTolerancedSurface();
 
@@ -55,19 +57,19 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                saveSagCrossSectionToFile(toleranced);
+                m_sagService->saveCrossSectionToFile(toleranced);
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                m_showTolerancedSagWindow = true;
+                m_sagService->m_showTolerancedSagWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                m_showTolerancedSagWindow = false;
+                m_sagService->m_showTolerancedSagWindow = false;
                 m_zemaxDDEClient->clearTolerancedSurface();
             }
         } else {
@@ -76,7 +78,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-            state.tolerancedSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.tolerancedSampling));
+            state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling));
             ImGui::SameLine();
             HelpMarker(getSamplingTooltip().c_str());
 
@@ -106,7 +108,7 @@ namespace gui {
                     m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                    calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                    m_sagService->calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
                 }
             }
 
@@ -131,19 +133,19 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                saveSagCrossSectionToFile(nominal);
+                m_sagService->saveCrossSectionToFile(nominal);
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                m_showNominalSagWindow = true;
+                m_sagService->m_showNominalSagWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                m_showNominalSagWindow = false;
+                m_sagService->m_showNominalSagWindow = false;
                 m_zemaxDDEClient->clearNominalSurface();
             }
         } else {
@@ -153,7 +155,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-            state.nominalSampling = std::max(MIN_SAMPLING, std::min(MAX_SAMPLING, state.nominalSampling));
+            state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
             ImGui::SameLine();
             HelpMarker(getSamplingTooltip().c_str());
 
@@ -183,60 +185,31 @@ namespace gui {
                     m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                    calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    m_sagService->calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                 }
             }
 
             ImGui::EndDisabled();
         }
         ImGui::EndChild();
-        
+
         if (nominal.isValid() && toleranced.isValid()) {
             ImGui::SeparatorText("Profile Comparison");
 
             if (ImGui::Button("Detach Comparison")) {
-                m_showComparisonWindow = true;
+                m_sagService->m_showComparisonWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Detach Error")) {
-                m_showErrorWindow = true;
+                m_sagService->m_showErrorWindow = true;
             }
 
             ImGui::SameLine();
 
-            // if (ImGui::Button("Export comparison to CSV")) {
-            //     nfdchar_t* savePath = nullptr;
-            //     nfdresult_t result = NFD_SaveDialog("csv", nullptr, &savePath);
-
-            //     if (result == NFD_OKAY) {
-            //         std::ofstream file(savePath);
-
-            //         if (file.is_open()) {
-            //             auto data = prepareSagCrossSectionData(nominal, toleranced);
-
-            //             file << "x_nom,y_nom,x_tol,y_tol,error\n";
-
-            //             size_t n = std::min(data.x_nom.size(), data.x_tol.size());
-                        
-            //             for (size_t i = 0; i < n; ++i) {
-            //                 double error = data.y_tol[i] - data.y_nom[i];
-            //                 file << data.x_nom[i] << "," << data.y_nom[i] << ","
-            //                     << data.x_tol[i] << "," << data.y_tol[i] << ","
-            //                     << error << "\n";
-            //             }
-
-            //             file.close();
-            //             logger.addLog("[GUI] Comparison data saved to " + std::string(savePath));
-            //         }
-
-            //         free(savePath);
-            //     }
-            // }
-
-            bool showProfiles = !m_showComparisonWindow;
-            bool showErrorPlot = !m_showErrorWindow;
+            bool showProfiles = !m_sagService->m_showComparisonWindow;
+            bool showErrorPlot = !m_sagService->m_showErrorWindow;
 
             if (showProfiles || showErrorPlot) {
                 ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoTitleBar);
