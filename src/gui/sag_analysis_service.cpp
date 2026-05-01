@@ -71,9 +71,9 @@ namespace gui {
         );
 
         // Auto-update state after successful calculation
-        m_state.tolerancedSurfaceIndex = surface;
-        m_state.tolerancedSampling = sampling;
-        m_state.tolerancedAngle = angle;
+        m_surfaceSagAnalysisPageState.tolerancedSurfaceIndex = surface;
+        m_surfaceSagAnalysisPageState.tolerancedSampling = sampling;
+        m_surfaceSagAnalysisPageState.tolerancedAngle = angle;
     }
 
     void SagAnalysisService::saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {

@@ -6,11 +6,20 @@
 #include <vector>
 
 #include "dde/client.h"
-#include "gui/content_pages/page_surface_sag_analysis.h"
 
 class Logger;
 
 namespace gui {
+    struct SagAnalysisState {
+        int tolerancedSurfaceIndex = 0;
+        int nominalSurfaceIndex = 0;
+
+        int tolerancedSampling = 128;
+        double tolerancedAngle = 0.0;
+        int nominalSampling = 128;
+        double nominalAngle = 0.0;
+    };
+
     // Free utility function — extracts X and Sag coordinates from surface data
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface);
 
@@ -41,7 +50,7 @@ namespace gui {
             bool m_showErrorWindow{false};
 
             // Page state
-            SurfaceSagAnalysisPageState m_state;
+            SagAnalysisState m_surfaceSagAnalysisPageState;
 
         private:
             ZemaxDDE::ZemaxDDEClient* m_ddeClient;
