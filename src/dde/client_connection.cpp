@@ -168,11 +168,24 @@ namespace ZemaxDDE {
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
                 #endif
                     if (command_token == "GetName") {
-                        m_opticalSystem.lensName = buffer;
+                        std::string name = extractStringFromDDE(ddeDataHandle);
+                        if (name.empty()) {
+                            name = "unknown";
+                            m_logger.addLog("[DDE] GetName: empty lens name, using default 'unknown'");
+                        }
+
+                        m_opticalSystem.lensName = name;
+                        #ifdef DEBUG_LOG
+                        m_logger.addLog(std::format("[DDE] GetName (converted): {}", name));
+                        #endif
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetFile") {
-                        m_opticalSystem.fileName = buffer;
+                        std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
+                        m_opticalSystem.fileName = fileNameStr;
+                        #ifdef DEBUG_LOG
+                        m_logger.addLog(std::format("[DDE] GetFile (converted): {}", fileNameStr));
+                        #endif
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetSystem") {
