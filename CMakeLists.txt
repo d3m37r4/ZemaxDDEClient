@@ -15,6 +15,7 @@ set(SRC_DIR "src")
 set(IMGUI_DIR "${SRC_DIR}/lib/imgui")
 set(IMPLOT_DIR "${SRC_DIR}/lib/implot")
 set(NFD_DIR "${SRC_DIR}/lib/nfd")
+set(JSON_DIR "${SRC_DIR}/lib/json")
 
 # MSYS2 paths (MinGW)
 set(MINGW_ROOT "C:/msys64" CACHE STRING "MSYS2 MinGW root directory")
@@ -130,6 +131,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${IMGUI_DIR}/backends
     ${IMPLOT_DIR}
     ${NFD_DIR}/src/include
+    ${JSON_DIR}/single_include
     ${MINGW_INCLUDE}
 )
 
