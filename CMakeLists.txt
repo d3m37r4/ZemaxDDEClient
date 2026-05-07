@@ -89,6 +89,8 @@ set(SOURCES
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/app_info_dialog.cpp
     ${SRC_DIR}/gui/debug_log_viewer.cpp
+    ${SRC_DIR}/gui/WindowManager.cpp
+    ${SRC_DIR}/gui/WindowRegistration.cpp
     ${SRC_DIR}/gui/content_pages/page_optical_system_info.cpp
     ${SRC_DIR}/gui/content_pages/page_surface_sag_analysis.cpp
 )
