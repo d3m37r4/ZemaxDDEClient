@@ -5,8 +5,8 @@
 
 #include "logger/logger.h"
 #include "app/app.h"
-#include "gui/WindowManager.hpp"
-#include "gui/WindowRegistration.hpp"
+#include "gui/WindowManager.h"
+#include "gui/WindowRegistration.h"
 
 int main() {
     Logger logger;

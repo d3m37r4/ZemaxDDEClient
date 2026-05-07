@@ -1,4 +1,4 @@
-#include "WindowRegistration.hpp"
+#include "WindowRegistration.h"
 #include "gui.h"
 
 void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {

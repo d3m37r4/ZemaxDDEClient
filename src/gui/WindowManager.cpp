@@ -1,4 +1,4 @@
-#include "WindowManager.hpp"
+#include "WindowManager.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
 
