@@ -1,12 +1,15 @@
 #include "app/config_path.h"
 
+#include <filesystem>
 #include <windows.h>
 #include <shlobj.h>
-#include <filesystem>
 
 #include "app/app.h"
 
 namespace {
+    inline constexpr const char* IMGUI_INI_FILENAME = "imgui.ini";
+    inline constexpr const char* WINDOW_STATE_FILENAME = "windows.json";
+
     std::string imguiIniPath;
     std::string windowStatePath;
 
@@ -38,12 +41,12 @@ namespace app {
 #ifdef APP_PRODUCTION_BUILD
             std::string basePath = getLocalAppDataPath();
             if (!basePath.empty()) {
-                imguiIniPath = basePath + "\\imgui.ini";
+                imguiIniPath = basePath + "\\" + std::string(IMGUI_INI_FILENAME);
             } else {
-                imguiIniPath = "imgui.ini";
+                imguiIniPath = IMGUI_INI_FILENAME;
             }
 #else
-            imguiIniPath = "imgui.ini";
+            imguiIniPath = IMGUI_INI_FILENAME;
 #endif
         }
         return imguiIniPath.c_str();
@@ -54,12 +57,12 @@ namespace app {
 #ifdef APP_PRODUCTION_BUILD
             std::string basePath = getLocalAppDataPath();
             if (!basePath.empty()) {
-                windowStatePath = basePath + "\\windows.json";
+                windowStatePath = basePath + "\\" + std::string(WINDOW_STATE_FILENAME);
             } else {
-                windowStatePath = "windows.json";
+                windowStatePath = WINDOW_STATE_FILENAME;
             }
 #else
-            windowStatePath = "windows.json";
+            windowStatePath = WINDOW_STATE_FILENAME;
 #endif
         }
         return windowStatePath.c_str();
