@@ -10,6 +10,7 @@
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 
 #include "gui/graphics_backend.h"
+#include "app/config_path.h"
 #include <cmath>
 #include "logger/logger.h"
 
@@ -24,7 +25,7 @@ namespace gui {
         }
     }
 
-    void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, const char* iniPath, float initialDpiScale) {
+    void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, float initialDpiScale) {
         m_window = window;
         m_logger = &logger;
 
@@ -38,7 +39,7 @@ namespace gui {
 
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        io.IniFilename = iniPath;
+        io.IniFilename = app::getImguiIniPath();
 
         // Use pre-computed DPI scale passed from app initialization
         float dpiScale = initialDpiScale;
