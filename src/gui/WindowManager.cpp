@@ -1,4 +1,5 @@
 #include "WindowManager.h"
+#include "app/config_path.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
 
@@ -23,19 +24,28 @@ void WindowManager::RenderAll() {
 }
 
 void WindowManager::LoadState() {
-    std::ifstream in("window_state.json");
+    std::ifstream in(app::getWindowStatePath());
     if (!in) return;
     nlohmann::json j; in >> j;
     for (auto &el : j.items()) {
-        WindowID id = static_cast<WindowID>(std::stoi(el.key()));
-        visibility_[id] = el.value().get<bool>();
+        const std::string& name = el.key();
+        bool visible = el.value().get<bool>();
+        // Find WindowID by name
+        for (auto &pair : names_) {
+            if (pair.second == name) {
+                visibility_[pair.first] = visible;
+                break;
+            }
+        }
     }
 }
 
 void WindowManager::SaveState() {
     nlohmann::json j;
-    for (auto &pair : visibility_)
-        j[std::to_string(static_cast<int>(pair.first))] = pair.second;
-    std::ofstream out("window_state.json");
+    for (auto &pair : visibility_) {
+        const std::string& name = names_.at(pair.first);
+        j[name] = pair.second;
+    }
+    std::ofstream out(app::getWindowStatePath());
     out << j.dump(4);
 }
