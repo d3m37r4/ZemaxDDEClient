@@ -9,7 +9,6 @@
 #include <windows.h>
 #include <GLFW/glfw3.h>
 
-#include "gui/forwards.h"
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
