@@ -1,5 +1,6 @@
 #include "gui/gui.h"
 #include <imgui.h>
+#include <imgui_internal.h>
 #include "gui/sag_analysis_service.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/window_manager.h"
@@ -55,7 +56,7 @@ void GuiManager::render() {
         ImGuiWindowFlags_NoNavFocus
     );
     ImGuiID dockSpaceId = ImGui::GetID("MainDockSpace");
-    ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+    ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_NoCloseButton);
     ImGui::End();
 
     if (m_pWndMgr) {
