@@ -1,9 +1,9 @@
 #pragma once
 
 #include <functional>
-// Forward declaration for Logger type to avoid coupling here
 class Logger;
 class DdeConnectionManager;
+class WindowManager;
 
 namespace gui {
     /**
@@ -17,10 +17,14 @@ public:
     void setExitCallback(std::function<void()> cb);
     void setAboutCallback(std::function<void()> cb);
     void setDdeConnectionManager(DdeConnectionManager* ddeMgr);
+    void setWindowManager(WindowManager* wndMgr);
+    void setSidebarToggleCallback(std::function<void(bool)> cb);
 private:
     Logger& m_logger;
     std::function<void()> m_onExit;
     std::function<void()> m_onAbout;
     ::DdeConnectionManager* m_pDdeMgr{nullptr};
+    WindowManager* m_pWndMgr{nullptr};
+    std::function<void(bool)> m_onSidebarToggle;
 };
 }

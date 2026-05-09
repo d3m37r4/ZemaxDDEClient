@@ -3,6 +3,7 @@
 #include "logger/logger.h"
 #include "dde/dde_connection_manager.h"
 #include "gui/constants.h"
+#include "gui/WindowManager.h"
 #include "lib/imgui/imgui.h"
 #include <format>
 
@@ -19,6 +20,14 @@ namespace gui {
 
     void MenuBarController::setDdeConnectionManager(DdeConnectionManager* ddeMgr) {
         m_pDdeMgr = ddeMgr;
+    }
+
+    void MenuBarController::setWindowManager(WindowManager* wndMgr) {
+        m_pWndMgr = wndMgr;
+    }
+
+    void MenuBarController::setSidebarToggleCallback(std::function<void(bool)> cb) {
+        m_onSidebarToggle = std::move(cb);
     }
 
     void MenuBarController::render() {
@@ -39,6 +48,24 @@ namespace gui {
                     if (ImGui::MenuItem("Disconnect from Zemax")) {
                         m_pDdeMgr->disconnect();
                     }
+                }
+                ImGui::Separator();
+                static bool showDdeStatus = true;
+                if (ImGui::MenuItem("Show DDE Status", nullptr, &showDdeStatus)) {
+                    if (m_onSidebarToggle) m_onSidebarToggle(showDdeStatus);
+                }
+                ImGui::EndMenu();
+            }
+            if (m_pWndMgr && ImGui::BeginMenu("Tools")) {
+                const auto& visMap = m_pWndMgr->GetVisibilities();
+                const auto& nameMap = m_pWndMgr->GetNames();
+                for (auto &pair : visMap) {
+                    auto it = nameMap.find(pair.first);
+                    if (it == nameMap.end()) continue;
+                    bool visible = pair.second;
+                    const char* name = it->second.c_str();
+                    if (ImGui::MenuItem(name, nullptr, &visible))
+                        m_pWndMgr->SetVisible(pair.first, visible);
                 }
                 ImGui::EndMenu();
             }

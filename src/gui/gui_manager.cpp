@@ -2,8 +2,9 @@
 #include <imgui.h>
 #include "gui/sag_analysis_service.h"
 #include "gui/menu_bar_controller.h"
+#include "gui/WindowManager.h"
 #include "dde/dde_connection_manager.h"
-#include "gui/sidebar_renderer.h"
+#include "windows/dde_status_renderer.h"
 #include "gui/content_router.h"
 #include "logger/logger.h"
 
@@ -24,20 +25,16 @@ namespace gui {
     m_menuBarController->setAboutCallback([this]() {
         m_showAboutPopup = true;
     });
-    m_sidebarRenderer   = std::make_unique<SidebarRenderer>();
+    m_ddeStatusRenderer   = std::make_unique<DdeStatusRenderer>();
     m_contentRouter     = std::make_unique<ContentRouter>();
     m_debugLogViewer    = std::make_unique<DebugLogViewer>();
     m_appInfoDialog     = std::make_unique<AppInfoDialog>();
-    if (m_sidebarRenderer) {
-        m_sidebarRenderer->setPageSwitcher([this](GuiPage page){ m_currentPage = page; });
-    }
 }
 
 GuiManager::~GuiManager() = default;
 
 void GuiManager::initialize(float dpiScale) {
-    const char* iniPath = "imgui.ini";
-    m_graphics.initialize(m_glfwWindow, m_logger, iniPath, dpiScale);
+    m_graphics.initialize(m_glfwWindow, m_logger, dpiScale);
 }
 
 void GuiManager::render() {
@@ -65,11 +62,16 @@ void GuiManager::render() {
     ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
     ImGui::End();
 
-    renderSidebar();
-    renderContent();
+    if (m_showDdeStatus) {
+        if (m_ddeStatusRenderer)
+            m_ddeStatusRenderer->renderDdeStatus(m_zemaxDDEClient, m_logger);
+    }
+    // renderContent(); // disabled - using standalone windows instead
 
-    // Render debug log window
-    renderDebugLog();
+    // Render toggleable windows from WindowManager
+    if (m_pWndMgr) {
+        m_pWndMgr->RenderAll();
+    }
 
     // Sag analysis windows (delegated to service)
     if (m_sagService->m_showTolerancedSagWindow) {
@@ -110,12 +112,6 @@ void GuiManager::render() {
     renderAboutPopup();
 
     m_graphics.endFrame();
-}
-
-void GuiManager::renderSidebar() {
-    if (m_sidebarRenderer) {
-        m_sidebarRenderer->renderSidebar(m_zemaxDDEClient, m_logger);
-    }
 }
 
 void GuiManager::renderContent() {

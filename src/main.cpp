@@ -14,14 +14,23 @@ int main() {
     logger.addLog("[APP] Application started");
 
     auto ctx = App::initialize(logger);
+    if (!ctx) {
+        logger.addLog("[APP] Application failed to initialize");
+        return -1;
+    }
+
     // Window manager for toggleable windows
     WindowManager wndMgr;
     RegisterAllWindows(wndMgr, ctx->gui.get());
     wndMgr.LoadState();
+    ctx->gui->setWindowManager(&wndMgr);
 
-    if (!ctx) {
-        logger.addLog("[APP] Application failed to initialize");
-        return -1;
+    auto* menuBar = ctx->gui->getMenuBarController();
+    if (menuBar) {
+        menuBar->setWindowManager(&wndMgr);
+        menuBar->setSidebarToggleCallback([&ctx](bool show) {
+            ctx->gui->setShowDdeStatus(show);
+        });
     }
 
     logger.addLog("[APP] Main loop started");
@@ -35,23 +44,6 @@ int main() {
                 App::openZmxFileInZemax(logger);
             }
         }
-
-        // Tools menu with window toggles
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Tools")) {
-                for (auto &pair : wndMgr.GetVisibilities()) {
-                    bool visible = pair.second;
-                    const char* name = wndMgr.GetNames().at(pair.first).c_str();
-                    if (ImGui::MenuItem(name, nullptr, &visible))
-                        wndMgr.SetVisible(pair.first, visible);
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
-
-        // Render toggleable windows
-        wndMgr.RenderAll();
 
         ctx->gui->render();
         glfwSwapBuffers(ctx->glfwWindow);

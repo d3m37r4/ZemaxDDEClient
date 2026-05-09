@@ -13,14 +13,16 @@
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
-#include "gui/sidebar_renderer.h"
+#include "windows/dde_status_renderer.h"
 #include "gui/content_router.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
-#include "gui/debug_log_viewer.h"
+#include "windows/debug_log_viewer.h"
 #include "gui/app_info_dialog.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
+
+class WindowManager;
 
 class Logger;
 
@@ -37,12 +39,15 @@ namespace gui {
             void updateDpiStyle(float dpiScale);
 
             // Delegated to components
-            void renderSidebar();
             void renderContent();
             void renderDebugLog();
             void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
+
+            MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
+            void setWindowManager(WindowManager* wndMgr) { m_pWndMgr = wndMgr; }
+            void setShowDdeStatus(bool show) { m_showDdeStatus = show; }
 
             void renderPageOpticalSystemInfo();
             void renderPageSurfaceSagAnalysis();
@@ -61,15 +66,17 @@ namespace gui {
             std::unique_ptr<SagAnalysisService> m_sagService;     // Sag analysis service (owned by GuiManager)
             std::unique_ptr<DdeConnectionManager> m_ddeConnectionManager;
             std::unique_ptr<MenuBarController> m_menuBarController;
-            std::unique_ptr<SidebarRenderer> m_sidebarRenderer;
+            std::unique_ptr<DdeStatusRenderer> m_ddeStatusRenderer;
             std::unique_ptr<ContentRouter> m_contentRouter;
             std::unique_ptr<DebugLogViewer> m_debugLogViewer;
             std::unique_ptr<AppInfoDialog> m_appInfoDialog;
+            WindowManager* m_pWndMgr{nullptr};
 
             GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
 
             // State
-            bool m_showUpdatesPopup{false};                       // Display flag for popup 'Check for Updates'
-            bool m_showAboutPopup{false};                         // Display flag for popup 'Check for About'
+            bool m_showUpdatesPopup{false};
+            bool m_showAboutPopup{false};
+            bool m_showDdeStatus{true};
     };
 }
