@@ -1,6 +1,12 @@
 #include <fstream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <format>
 
-#include "gui/gui_impl.h"
+#include "gui/gui.h"
+#include "gui/constants.h"
+#include "gui/sag_analysis_service.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
