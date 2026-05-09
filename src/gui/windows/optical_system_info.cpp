@@ -2,7 +2,7 @@
 #include "lib/imgui/imgui.h"
 
 namespace gui {
-    void GuiManager::renderPageOpticalSystemInfo() {
+    void GuiManager::renderOpticalSystemInfo() {
         ImGui::Separator();
         ImGui::Spacing();
         if (isDdeInitialized()) {

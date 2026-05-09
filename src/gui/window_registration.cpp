@@ -10,7 +10,7 @@ namespace {
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SystemInfo);
         ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Optical System Information", &isVisible)) {
-            guiMgr->renderPageOpticalSystemInfo();
+            guiMgr->renderOpticalSystemInfo();
         }
         ImGui::End();
         if (!isVisible) {
@@ -23,7 +23,7 @@ namespace {
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SagAnalysis);
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
         if (ImGui::Begin("Surface Sag Cross Section Analysis", &isVisible)) {
-            guiMgr->renderPageSurfaceSagAnalysis();
+            guiMgr->renderSurfaceSagAnalysis();
         }
         ImGui::End();
         if (!isVisible) {

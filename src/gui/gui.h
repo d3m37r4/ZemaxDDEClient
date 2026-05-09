@@ -48,8 +48,8 @@ namespace gui {
             Logger& getLogger() const { return m_logger; }
             DdeStatusRenderer* getDdeStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
-            void renderPageOpticalSystemInfo();
-            void renderPageSurfaceSagAnalysis();
+            void renderOpticalSystemInfo();
+            void renderSurfaceSagAnalysis();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDdeInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }

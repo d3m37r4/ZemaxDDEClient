@@ -34,7 +34,7 @@ namespace {
 }
 
 namespace gui {
-    void GuiManager::renderPageSurfaceSagAnalysis() {
+    void GuiManager::renderSurfaceSagAnalysis() {
         auto& state = m_sagService->m_surfaceSagAnalysisPageState;
         auto& nominal = m_zemaxDDEClient->getNominalSurface();
         auto& toleranced = m_zemaxDDEClient->getTolerancedSurface();
