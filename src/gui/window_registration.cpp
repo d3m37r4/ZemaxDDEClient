@@ -34,7 +34,11 @@ namespace {
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DebugLog);
-        guiMgr->renderDebugLog(&isVisible);
+        ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Debug Log", &isVisible)) {
+            guiMgr->renderDebugLog();
+        }
+        ImGui::End();
         if (!isVisible) {
             guiMgr->getWindowManager()->SetVisible(WindowID::DebugLog, false);
         }
@@ -50,7 +54,7 @@ namespace {
         if (ImGui::Begin("DDE Status", &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
             if (guiMgr->getDDEStatusRenderer()) {
-                guiMgr->getDDEStatusRenderer()->renderDDEStatus(guiMgr->getDDEClient(), guiMgr->getLogger());
+                guiMgr->getDDEStatusRenderer()->render(guiMgr->getLogger());
             }
         }
         ImGui::End();

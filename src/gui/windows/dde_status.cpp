@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include "windows/dde_status_renderer.h"
+#include "windows/dde_status.h"
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "lib/imgui/imgui.h"
@@ -17,38 +17,15 @@ namespace {
 }
 
 namespace gui {
-    void DDEStatusRenderer::renderDDEStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(DDE_STATUS_WINDOW_WIDTH_MIN, DDE_STATUS_WINDOW_HEIGHT_MIN),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
-
-        if (!ImGui::Begin("DDE Status", nullptr,
-            ImGuiWindowFlags_NoScrollbar |
-            ImGuiWindowFlags_NoScrollWithMouse)) {
-            ImGui::End();
-            return;
-        }
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 10.0f));
-        
-        // DDE status at the top
-        renderDDEStatusFrame(ddeClient, logger);
-
-        ImGui::PopStyleVar(2);
-        ImGui::End();
-    }
-
-    void DDEStatusRenderer::renderDDEStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
-        ImGui::BeginChild("DDE Status Frame", 
-            ImVec2(DDE_STATUS_FRAME_WIDTH, DDE_STATUS_FRAME_HEIGHT), 
-            ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, 
+    void DDEStatus::render(Logger& logger) {
+        ImGui::BeginChild("DDE Status Content",
+            ImVec2(DDE_STATUS_FRAME_WIDTH, DDE_STATUS_FRAME_HEIGHT),
+            ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
         );
 
         const char* label = "Zemax DDE Status:";
-        const char* value = ddeClient && ddeClient->isConnected() ? "Connected" : "Disconnected";
+        const char* value = m_ddeClient && m_ddeClient->isConnected() ? "Connected" : "Disconnected";
 
         float availableWidth = ImGui::GetContentRegionAvail().x;
         float labelWidth = ImGui::CalcTextSize(label).x;
@@ -59,8 +36,8 @@ namespace gui {
 
         ImGui::TextUnformatted(label);
         ImGui::SameLine(0.0f, 4.0f);
-        
-        bool connected = ddeClient && ddeClient->isConnected();
+
+        bool connected = m_ddeClient && m_ddeClient->isConnected();
         ImGui::PushStyleColor(ImGuiCol_Text, connected ? DDE_STATUS_COLOR_CONNECTED : DDE_STATUS_COLOR_DISCONNECTED);
         ImGui::TextUnformatted(value);
         ImGui::PopStyleColor();
@@ -70,13 +47,13 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? DDE_BUTTON_DISCONNECT_COLOR_HOVER : DDE_BUTTON_CONNECT_COLOR_HOVER);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, connected ? DDE_BUTTON_DISCONNECT_COLOR_ACTIVE : DDE_BUTTON_CONNECT_COLOR_ACTIVE);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
-        
+
         if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             try {
                 if (!connected) {
-                    ddeClient->initiateDDE();
+                    m_ddeClient->initiateDDE();
                 } else {
-                    ddeClient->terminateDDE();
+                    m_ddeClient->terminateDDE();
                 }
             #ifdef DEBUG_LOG
                 logger.addLog("[GUI] " + std::string(connected ? "Connected to Zemax" : "Disconnected from Zemax"));
@@ -85,11 +62,11 @@ namespace gui {
                 logger.addLog("[GUI] DDE connection failed: " + std::string(e.what()));
             }
         }
-        
+
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(3);
         ImGui::PopStyleVar();
-        
+
         ImGui::EndChild();
     }
 }
