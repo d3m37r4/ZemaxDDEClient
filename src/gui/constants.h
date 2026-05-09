@@ -1,21 +1,21 @@
 #pragma once
 
 namespace gui {
-    // Content area constraints
-    inline constexpr float CONTENT_WIDTH_MIN    = 600.0f;
-    inline constexpr float CONTENT_HEIGHT_MIN   = 480.0f;
-
     // Debug log constraints
     inline constexpr float DEBUG_LOG_WIDTH_MIN  = 600.0f;
     inline constexpr float DEBUG_LOG_HEIGHT_MIN = 200.0f;
 
-    // DDE status window constraints
+    // Debug log window constraints
+    inline constexpr float DEBUG_LOG_WINDOW_WIDTH_MIN  = 920.0f;
+    inline constexpr float DEBUG_LOG_WINDOW_HEIGHT_MIN = 460.0f;
+
+    // DDE status constraints
     inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 440.0f;
     inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 160.0f;
 
-    // DDE status frame constraints
-    inline constexpr float DDE_STATUS_FRAME_WIDTH  = 0.0f;   // Automatic width
-    inline constexpr float DDE_STATUS_FRAME_HEIGHT = 0.0f;   // Automatic height
+    // DDE status content constraints
+    inline constexpr float DDE_STATUS_CONTENT_WIDTH  = 0.0f;   // Automatic width
+    inline constexpr float DDE_STATUS_CONTENT_HEIGHT = 0.0f;   // Automatic height
 
     // Sag analysis sampling constraints
     // Maximum: Zemax tool "Surface Sag Cross Section" limit

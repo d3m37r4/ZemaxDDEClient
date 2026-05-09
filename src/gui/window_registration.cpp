@@ -53,7 +53,11 @@ namespace {
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DebugLog);
-        ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        // ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
         if (ImGui::Begin("Debug Log", &isVisible)) {
             guiMgr->renderDebugLog();
         }
