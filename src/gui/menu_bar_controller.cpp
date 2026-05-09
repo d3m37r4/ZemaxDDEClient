@@ -3,7 +3,7 @@
 #include "logger/logger.h"
 #include "dde/dde_connection_manager.h"
 #include "gui/constants.h"
-#include "gui/WindowManager.h"
+#include "gui/window_manager.h"
 #include "lib/imgui/imgui.h"
 #include <format>
 

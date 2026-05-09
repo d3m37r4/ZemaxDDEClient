@@ -2,7 +2,7 @@
 #include <imgui.h>
 #include "gui/sag_analysis_service.h"
 #include "gui/menu_bar_controller.h"
-#include "gui/WindowManager.h"
+#include "gui/window_manager.h"
 #include "dde/dde_connection_manager.h"
 #include "windows/dde_status_renderer.h"
 #include "gui/content_router.h"

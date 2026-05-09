@@ -1,4 +1,4 @@
-#include "WindowRegistration.h"
+#include "window_registration.h"
 #include "gui.h"
 #include "lib/imgui/imgui.h"
 

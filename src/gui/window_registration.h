@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WindowManager.h"
+#include "window_manager.h"
 
 namespace gui {
 class GuiManager;
