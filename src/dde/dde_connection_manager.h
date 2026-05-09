@@ -6,9 +6,9 @@ namespace ZemaxDDE { class ZemaxDDEClient; }
 
 class Logger;
 
-class DdeConnectionManager {
+class DDEConnectionManager {
 public:
-    DdeConnectionManager(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+    DDEConnectionManager(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
 
     bool connect();
     void disconnect();

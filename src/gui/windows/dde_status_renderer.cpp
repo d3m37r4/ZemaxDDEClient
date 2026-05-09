@@ -17,7 +17,7 @@ namespace {
 }
 
 namespace gui {
-    void DdeStatusRenderer::renderDdeStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
+    void DDEStatusRenderer::renderDDEStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
         ImGui::SetNextWindowSizeConstraints(
             ImVec2(DDE_STATUS_WINDOW_WIDTH_MIN, DDE_STATUS_WINDOW_HEIGHT_MIN),
             ImVec2(FLT_MAX, FLT_MAX)
@@ -34,13 +34,13 @@ namespace gui {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 10.0f));
         
         // DDE status at the top
-        renderDdeStatusFrame(ddeClient, logger);
+        renderDDEStatusFrame(ddeClient, logger);
 
         ImGui::PopStyleVar(2);
         ImGui::End();
     }
 
-    void DdeStatusRenderer::renderDdeStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
+    void DDEStatusRenderer::renderDDEStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
         ImGui::BeginChild("DDE Status Frame", 
             ImVec2(DDE_STATUS_FRAME_WIDTH, DDE_STATUS_FRAME_HEIGHT), 
             ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, 

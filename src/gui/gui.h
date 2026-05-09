@@ -42,17 +42,17 @@ namespace gui {
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(WindowManager* wndMgr) { m_pWndMgr = wndMgr; }
             WindowManager* getWindowManager() const { return m_pWndMgr; }
-            void setShowDdeStatus(bool show) { m_showDdeStatus = show; }
+            void setShowDDEStatus(bool show) { m_showDDEStatus = show; }
 
-            ZemaxDDE::ZemaxDDEClient* getDdeClient() const { return m_zemaxDDEClient; }
+            ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
             Logger& getLogger() const { return m_logger; }
-            DdeStatusRenderer* getDdeStatusRenderer() const { return m_ddeStatusRenderer.get(); }
+            DDEStatusRenderer* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
             void renderOpticalSystemInfo();
             void renderSurfaceSagAnalysis();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
-            [[nodiscard]] bool isDdeInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
+            [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
             GLFWwindow* m_glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
@@ -62,9 +62,9 @@ namespace gui {
 
             GraphicsBackend m_graphics;
             std::unique_ptr<SagAnalysisService> m_sagService;
-            std::unique_ptr<DdeConnectionManager> m_ddeConnectionManager;
+            std::unique_ptr<DDEConnectionManager> m_ddeConnectionManager;
             std::unique_ptr<MenuBarController> m_menuBarController;
-            std::unique_ptr<DdeStatusRenderer> m_ddeStatusRenderer;
+            std::unique_ptr<DDEStatusRenderer> m_ddeStatusRenderer;
             std::unique_ptr<DebugLogViewer> m_debugLogViewer;
             std::unique_ptr<AppInfoDialog> m_appInfoDialog;
             WindowManager* m_pWndMgr{nullptr};
@@ -72,6 +72,6 @@ namespace gui {
             // State
             bool m_showUpdatesPopup{false};
             bool m_showAboutPopup{false};
-            bool m_showDdeStatus{true};
+            bool m_showDDEStatus{true};
     };
 }

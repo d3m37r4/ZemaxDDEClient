@@ -9,9 +9,9 @@
 class ZemaxDDEClient;
 
 namespace gui {
-    class DdeStatusRenderer {
+    class DDEStatusRenderer {
     public:
-        void renderDdeStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
-        void renderDdeStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+        void renderDDEStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+        void renderDDEStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
     };
 }

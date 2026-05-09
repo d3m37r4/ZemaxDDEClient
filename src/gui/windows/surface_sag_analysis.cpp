@@ -73,7 +73,7 @@ namespace gui {
                 m_zemaxDDEClient->clearTolerancedSurface();
             }
         } else {
-            ImGui::BeginDisabled(!isDdeInitialized());
+            ImGui::BeginDisabled(!isDDEInitialized());
             ImGui::Text("Sampling:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
@@ -104,7 +104,7 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Get toleranced surface data")) {
-                if (isDdeInitialized()) {
+                if (isDDEInitialized()) {
                     m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
@@ -149,7 +149,7 @@ namespace gui {
                 m_zemaxDDEClient->clearNominalSurface();
             }
         } else {
-            ImGui::BeginDisabled(!isDdeInitialized());
+            ImGui::BeginDisabled(!isDDEInitialized());
 
             ImGui::Text("Sampling:");
             ImGui::SameLine();
@@ -181,7 +181,7 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Get nominal surface data")) {
-                if (isDdeInitialized()) {
+                if (isDDEInitialized()) {
                     m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);

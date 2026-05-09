@@ -40,22 +40,22 @@ namespace {
         }
     }
 
-    void RenderDdeStatusWindow(gui::GuiManager* guiMgr) {
+    void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
-        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DdeStatus);
+        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DDEStatus);
         ImGui::SetNextWindowSizeConstraints(
             ImVec2(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN),
             ImVec2(FLT_MAX, FLT_MAX)
         );
         if (ImGui::Begin("DDE Status", &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-            if (guiMgr->getDdeStatusRenderer()) {
-                guiMgr->getDdeStatusRenderer()->renderDdeStatus(guiMgr->getDdeClient(), guiMgr->getLogger());
+            if (guiMgr->getDDEStatusRenderer()) {
+                guiMgr->getDDEStatusRenderer()->renderDDEStatus(guiMgr->getDDEClient(), guiMgr->getLogger());
             }
         }
         ImGui::End();
         if (!isVisible) {
-            guiMgr->getWindowManager()->SetVisible(WindowID::DdeStatus, false);
+            guiMgr->getWindowManager()->SetVisible(WindowID::DDEStatus, false);
         }
     }
 }
@@ -66,7 +66,7 @@ void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
     });
     mgr.SetVisible(WindowID::SagAnalysis, false);
 
-    mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Tools, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Info, [guiMgr]() {
         RenderDebugLogWindow(guiMgr);
     });
 
@@ -74,7 +74,7 @@ void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
         RenderSystemInfoWindow(guiMgr);
     });
 
-    mgr.RegisterWindow(WindowID::DdeStatus, "DDE Status", WindowCategory::DDE, [guiMgr]() {
-        RenderDdeStatusWindow(guiMgr);
+    mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status", WindowCategory::DDE, [guiMgr]() {
+        RenderDDEStatusWindow(guiMgr);
     });
 }

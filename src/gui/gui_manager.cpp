@@ -16,7 +16,7 @@ namespace gui {
 , m_logger(logger)
 {
     m_sagService = std::make_unique<SagAnalysisService>(ddeClient, logger);
-    m_ddeConnectionManager = std::make_unique<DdeConnectionManager>(m_zemaxDDEClient, m_logger);
+    m_ddeConnectionManager = std::make_unique<DDEConnectionManager>(m_zemaxDDEClient, m_logger);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager.get());
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
@@ -24,7 +24,7 @@ namespace gui {
     m_menuBarController->setAboutCallback([this]() {
         m_showAboutPopup = true;
     });
-    m_ddeStatusRenderer = std::make_unique<DdeStatusRenderer>();
+    m_ddeStatusRenderer = std::make_unique<DDEStatusRenderer>();
     m_debugLogViewer    = std::make_unique<DebugLogViewer>();
     m_appInfoDialog     = std::make_unique<AppInfoDialog>();
 }

@@ -9,11 +9,12 @@ enum class WindowID {
     SagAnalysis,
     DebugLog,
     SystemInfo,
-    DdeStatus,
+    DDEStatus,
 };
 
 enum class WindowCategory {
     Tools,
+    Info,
     DDE,
 };
 
