@@ -6,7 +6,6 @@ namespace ZemaxDDE { class ZemaxDDEClient; }
 
 class Logger;
 
-// 4.1: Centralizes DDE connection management
 class DdeConnectionManager {
 public:
     DdeConnectionManager(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);

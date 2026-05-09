@@ -5,7 +5,6 @@
 #include "logger/logger.h"
 #include "app/app.h"
 
-// Expose native Win32 functions (glfwGetWin32Window)
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 

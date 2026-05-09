@@ -1,21 +1,24 @@
 #include "windows/debug_log_viewer.h"
+
+#include <format>
+#include <string>
+
+#include <windows.h>
+#include <shellapi.h>
+
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
-#include <windows.h>
-#include <shellapi.h>
-#include <format>
-#include <string>
 
 namespace gui {
-    void DebugLogViewer::render(Logger& logger) {
+    void DebugLogViewer::render(Logger& logger, bool* pOpen) {
         ImGui::SetNextWindowSizeConstraints(
             ImVec2(DEBUG_LOG_WIDTH_MIN, DEBUG_LOG_HEIGHT_MIN),  // min_size
             ImVec2(FLT_MAX, FLT_MAX)                            // max_size
         );
 
-        if (!ImGui::Begin("Debug", nullptr)) {
+        if (!ImGui::Begin("Debug", pOpen)) {
             ImGui::End();
             return;
         }
