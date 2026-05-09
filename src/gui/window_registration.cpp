@@ -9,7 +9,7 @@ namespace {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SystemInfo);
         ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("System Info", &isVisible)) {
+        if (ImGui::Begin("Optical System Information", &isVisible)) {
             guiMgr->renderPageOpticalSystemInfo();
         }
         ImGui::End();
@@ -22,7 +22,7 @@ namespace {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SagAnalysis);
         ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Sag Analysis", &isVisible)) {
+        if (ImGui::Begin("Surface Sag Cross Section Analysis", &isVisible)) {
             guiMgr->renderPageSurfaceSagAnalysis();
         }
         ImGui::End();
@@ -61,7 +61,7 @@ namespace {
 }
 
 void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
-    mgr.RegisterWindow(WindowID::SagAnalysis, "Sag Analysis", WindowCategory::Tools, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::SagAnalysis, "Surface Sag Cross Section Analysis", WindowCategory::Tools, [guiMgr]() {
         RenderSagAnalysisWindow(guiMgr);
     });
     mgr.SetVisible(WindowID::SagAnalysis, false);
@@ -70,7 +70,7 @@ void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
         RenderDebugLogWindow(guiMgr);
     });
 
-    mgr.RegisterWindow(WindowID::SystemInfo, "System Info", WindowCategory::Tools, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information", WindowCategory::Tools, [guiMgr]() {
         RenderSystemInfoWindow(guiMgr);
     });
 
