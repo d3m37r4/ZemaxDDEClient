@@ -19,7 +19,6 @@ int main() {
         return -1;
     }
 
-    // Window manager for toggleable windows
     WindowManager wndMgr;
     RegisterAllWindows(wndMgr, ctx->gui.get());
     wndMgr.LoadState();
@@ -28,9 +27,6 @@ int main() {
     auto* menuBar = ctx->gui->getMenuBarController();
     if (menuBar) {
         menuBar->setWindowManager(&wndMgr);
-        menuBar->setSidebarToggleCallback([&ctx](bool show) {
-            ctx->gui->setShowDdeStatus(show);
-        });
     }
 
     logger.addLog("[APP] Main loop started");

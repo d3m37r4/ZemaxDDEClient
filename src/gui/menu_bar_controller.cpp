@@ -50,22 +50,25 @@ namespace gui {
                     }
                 }
                 ImGui::Separator();
-                static bool showDdeStatus = true;
-                if (ImGui::MenuItem("Show DDE Status", nullptr, &showDdeStatus)) {
-                    if (m_onSidebarToggle) m_onSidebarToggle(showDdeStatus);
+                if (m_pWndMgr) {
+                    bool showDdeStatus = m_pWndMgr->IsVisible(WindowID::DdeStatus);
+                    if (ImGui::MenuItem("Show DDE Status", nullptr, &showDdeStatus)) {
+                        m_pWndMgr->SetVisible(WindowID::DdeStatus, showDdeStatus);
+                    }
                 }
                 ImGui::EndMenu();
             }
             if (m_pWndMgr && ImGui::BeginMenu("Tools")) {
-                const auto& visMap = m_pWndMgr->GetVisibilities();
+                auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Tools);
                 const auto& nameMap = m_pWndMgr->GetNames();
-                for (auto &pair : visMap) {
-                    auto it = nameMap.find(pair.first);
+                for (WindowID id : ids) {
+                    bool visible = m_pWndMgr->IsVisible(id);
+                    auto it = nameMap.find(id);
                     if (it == nameMap.end()) continue;
-                    bool visible = pair.second;
                     const char* name = it->second.c_str();
-                    if (ImGui::MenuItem(name, nullptr, &visible))
-                        m_pWndMgr->SetVisible(pair.first, visible);
+                    if (ImGui::MenuItem(name, nullptr, &visible)) {
+                        m_pWndMgr->SetVisible(id, visible);
+                    }
                 }
                 ImGui::EndMenu();
             }

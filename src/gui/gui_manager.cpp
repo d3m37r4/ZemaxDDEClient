@@ -5,11 +5,9 @@
 #include "gui/window_manager.h"
 #include "dde/dde_connection_manager.h"
 #include "windows/dde_status_renderer.h"
-#include "gui/content_router.h"
 #include "logger/logger.h"
 
 namespace gui {
-
     GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
 : m_glfwWindow(glfwWindow)
 , m_hwndClient(hwndClient)
@@ -25,8 +23,7 @@ namespace gui {
     m_menuBarController->setAboutCallback([this]() {
         m_showAboutPopup = true;
     });
-    m_ddeStatusRenderer   = std::make_unique<DdeStatusRenderer>();
-    m_contentRouter     = std::make_unique<ContentRouter>();
+    m_ddeStatusRenderer = std::make_unique<DdeStatusRenderer>();
     m_debugLogViewer    = std::make_unique<DebugLogViewer>();
     m_appInfoDialog     = std::make_unique<AppInfoDialog>();
 }
@@ -43,7 +40,6 @@ void GuiManager::render() {
         m_menuBarController->render();
     }
 
-    // Create main docking space (restored from container.cpp)
     float navbarHeight = ImGui::GetFrameHeight();
     ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
@@ -62,18 +58,10 @@ void GuiManager::render() {
     ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
     ImGui::End();
 
-    if (m_showDdeStatus) {
-        if (m_ddeStatusRenderer)
-            m_ddeStatusRenderer->renderDdeStatus(m_zemaxDDEClient, m_logger);
-    }
-    // renderContent(); // disabled - using standalone windows instead
-
-    // Render toggleable windows from WindowManager
     if (m_pWndMgr) {
         m_pWndMgr->RenderAll();
     }
 
-    // Sag analysis windows (delegated to service)
     if (m_sagService->m_showTolerancedSagWindow) {
         auto& surface = m_zemaxDDEClient->getTolerancedSurface();
         if (surface.isValid()) {
@@ -106,7 +94,6 @@ void GuiManager::render() {
         }
     }
 
-    // Render popups
     setPopupPosition();
     renderUpdatesPopup();
     renderAboutPopup();
@@ -114,19 +101,13 @@ void GuiManager::render() {
     m_graphics.endFrame();
 }
 
-void GuiManager::renderContent() {
-    if (m_contentRouter) {
-        m_contentRouter->renderContent(m_currentPage, this);
-    }
-}
-
 void GuiManager::updateDpiStyle(float dpiScale) {
     m_graphics.updateDpiStyle(dpiScale);
 }
 
-void GuiManager::renderDebugLog() {
+void GuiManager::renderDebugLog(bool* pOpen) {
     if (m_debugLogViewer) {
-        m_debugLogViewer->render(m_logger);
+        m_debugLogViewer->render(m_logger, pOpen);
     }
 }
 
@@ -148,4 +129,4 @@ void GuiManager::renderUpdatesPopup() {
     }
 }
 
-} // namespace gui
+}

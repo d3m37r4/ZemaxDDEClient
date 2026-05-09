@@ -19,7 +19,7 @@ namespace {
 namespace gui {
     void DdeStatusRenderer::renderDdeStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
         ImGui::SetNextWindowSizeConstraints(
-            ImVec2(SIDEBAR_WIDTH_MIN, SIDEBAR_HEIGHT_MIN),
+            ImVec2(DDE_STATUS_WINDOW_WIDTH_MIN, DDE_STATUS_WINDOW_HEIGHT_MIN),
             ImVec2(FLT_MAX, FLT_MAX)
         );
 

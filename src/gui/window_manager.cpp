@@ -6,8 +6,8 @@
 WindowManager::WindowManager() = default;
 WindowManager::~WindowManager() = default;
 
-void WindowManager::RegisterWindow(WindowID id, const char* name, std::function<void()> renderFn) {
-    windows_[id].render = std::move(renderFn);
+void WindowManager::RegisterWindow(WindowID id, const char* name, WindowCategory category, std::function<void()> renderFn) {
+    windows_[id] = {category, std::move(renderFn)};
     names_[id] = name;
     if (visibility_.find(id) == visibility_.end())
         visibility_[id] = true;
@@ -48,4 +48,14 @@ void WindowManager::SaveState() {
     }
     std::ofstream out(app::getWindowStatePath());
     out << j.dump(4);
+}
+
+std::vector<WindowID> WindowManager::GetIDsByCategory(WindowCategory category) const {
+    std::vector<WindowID> result;
+    for (auto &pair : windows_) {
+        if (pair.second.category == category) {
+            result.push_back(pair.first);
+        }
+    }
+    return result;
 }
