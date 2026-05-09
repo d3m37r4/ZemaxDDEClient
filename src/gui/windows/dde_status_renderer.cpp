@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include "gui/sidebar_renderer.h"
+#include "windows/dde_status_renderer.h"
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "lib/imgui/imgui.h"
@@ -17,13 +17,13 @@ namespace {
 }
 
 namespace gui {
-    void SidebarRenderer::renderSidebar(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
+    void DdeStatusRenderer::renderDdeStatus(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
         ImGui::SetNextWindowSizeConstraints(
             ImVec2(SIDEBAR_WIDTH_MIN, SIDEBAR_HEIGHT_MIN),
             ImVec2(FLT_MAX, FLT_MAX)
         );
 
-        if (!ImGui::Begin("Sidebar", nullptr,
+        if (!ImGui::Begin("DDE Status", nullptr,
             ImGuiWindowFlags_NoScrollbar |
             ImGuiWindowFlags_NoScrollWithMouse)) {
             ImGui::End();
@@ -34,23 +34,13 @@ namespace gui {
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10.0f, 10.0f));
         
         // DDE status at the top
-        renderDDEStatusFrame(ddeClient, logger);
-
-        ImGui::Spacing();
-
-        // Page switcher buttons
-        for (size_t i = 0; i < GUI_PAGES_COUNT; ++i) {
-            const auto& page = GUI_PAGES[i];
-            if (ImGui::Button(page.title, ImVec2(-1.0f, 0.0f))) {
-                if (m_onPageSwitch) m_onPageSwitch(page.id);
-            }
-        }
+        renderDdeStatusFrame(ddeClient, logger);
 
         ImGui::PopStyleVar(2);
         ImGui::End();
     }
 
-    void SidebarRenderer::renderDDEStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
+    void DdeStatusRenderer::renderDdeStatusFrame(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger) {
         ImGui::BeginChild("DDE Status Frame", 
             ImVec2(DDE_STATUS_FRAME_WIDTH, DDE_STATUS_FRAME_HEIGHT), 
             ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, 
@@ -101,9 +91,5 @@ namespace gui {
         ImGui::PopStyleVar();
         
         ImGui::EndChild();
-    }
-
-    void SidebarRenderer::setPageSwitcher(std::function<void(gui::GuiPage)> cb) {
-        m_onPageSwitch = std::move(cb);
     }
 }

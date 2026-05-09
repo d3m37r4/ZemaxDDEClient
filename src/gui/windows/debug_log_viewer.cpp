@@ -1,4 +1,4 @@
-#include "gui/debug_log_viewer.h"
+#include "windows/debug_log_viewer.h"
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "lib/imgui/imgui.h"
