@@ -41,8 +41,6 @@ namespace gui {
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(WindowManager* wndMgr) { m_pWndMgr = wndMgr; }
             WindowManager* getWindowManager() const { return m_pWndMgr; }
-            void setShowDDEStatus(bool show) { m_showDDEStatus = show; }
-
             ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
@@ -72,6 +70,5 @@ namespace gui {
             // State
             bool m_showUpdatesPopup{false};
             bool m_showAboutPopup{false};
-            bool m_showDDEStatus{true};
     };
 }

@@ -5,6 +5,25 @@
 #include "lib/imgui/imgui.h"
 
 namespace {
+    void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
+        if (!guiMgr) return;
+        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DDEStatus);
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
+        if (ImGui::Begin("DDE Status", &isVisible,
+            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+            if (guiMgr->getDDEStatusRenderer()) {
+                guiMgr->getDDEStatusRenderer()->render(guiMgr->getLogger());
+            }
+        }
+        ImGui::End();
+        if (!isVisible) {
+            guiMgr->getWindowManager()->SetVisible(WindowID::DDEStatus, false);
+        }
+    }
+
     void RenderSystemInfoWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SystemInfo);
@@ -43,28 +62,17 @@ namespace {
             guiMgr->getWindowManager()->SetVisible(WindowID::DebugLog, false);
         }
     }
-
-    void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
-        if (!guiMgr) return;
-        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DDEStatus);
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
-        if (ImGui::Begin("DDE Status", &isVisible,
-            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-            if (guiMgr->getDDEStatusRenderer()) {
-                guiMgr->getDDEStatusRenderer()->render(guiMgr->getLogger());
-            }
-        }
-        ImGui::End();
-        if (!isVisible) {
-            guiMgr->getWindowManager()->SetVisible(WindowID::DDEStatus, false);
-        }
-    }
 }
 
 void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
+    mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status", WindowCategory::DDE, [guiMgr]() {
+        RenderDDEStatusWindow(guiMgr);
+    });
+
+    mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information", WindowCategory::Tools, [guiMgr]() {
+        RenderSystemInfoWindow(guiMgr);
+    });
+
     mgr.RegisterWindow(WindowID::SagAnalysis, "Surface Sag Cross Section Analysis", WindowCategory::Tools, [guiMgr]() {
         RenderSagAnalysisWindow(guiMgr);
     });
@@ -72,13 +80,5 @@ void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
 
     mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Info, [guiMgr]() {
         RenderDebugLogWindow(guiMgr);
-    });
-
-    mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information", WindowCategory::Tools, [guiMgr]() {
-        RenderSystemInfoWindow(guiMgr);
-    });
-
-    mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status", WindowCategory::DDE, [guiMgr]() {
-        RenderDDEStatusWindow(guiMgr);
     });
 }
