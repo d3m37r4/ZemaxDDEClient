@@ -10,7 +10,7 @@ namespace gui {
     inline constexpr float DEBUG_LOG_WINDOW_HEIGHT_MIN = 460.0f;
 
     // DDE status constraints
-    inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 440.0f;
+    inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 220.0f;
     inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 160.0f;
 
     // DDE status content constraints
