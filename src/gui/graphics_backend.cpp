@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <format>
+#include <algorithm>
 
 #include <windows.h>
 
@@ -10,6 +11,7 @@
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 
 #include "gui/graphics_backend.h"
+#include "gui/constants.h"
 #include "app/config_path.h"
 #include <cmath>
 #include "logger/logger.h"
@@ -41,17 +43,17 @@ namespace gui {
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.IniFilename = app::getImguiIniPath();
 
-        // Use pre-computed DPI scale passed from app initialization
         float dpiScale = initialDpiScale;
-        if (!std::isfinite(dpiScale)) dpiScale = 1.0f;
-        if (dpiScale <= 0.0f) dpiScale = 0.01f;
-        if (dpiScale > 98.0f) dpiScale = 98.0f;
+        if (!std::isfinite(dpiScale) || dpiScale <= 0.0f) dpiScale = MIN_DPI_SCALE;
+        dpiScale = std::clamp(dpiScale, MIN_DPI_SCALE, MAX_DPI_SCALE);
+
         io.DisplayFramebufferScale = ImVec2(dpiScale, dpiScale);
+        io.ConfigDpiScaleFonts = true;
+        io.ConfigDpiScaleViewports = true;
 
         std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
         const std::string fontPathStr = fontPath.string();
 
-        // Load font at base size, then scale via FontGlobalScale
         float baseFontSize = 18.0f;
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize);
 
@@ -60,6 +62,7 @@ namespace gui {
         }
 
         ImGuiStyle& style = ImGui::GetStyle();
+        style.FontScaleDpi = dpiScale;
         style.WindowPadding = ImVec2(8.0f, 8.0f);
         style.FramePadding = ImVec2(4.0f, 4.0f);
         style.ItemSpacing = ImVec2(8.0f, 4.0f);
@@ -78,19 +81,10 @@ namespace gui {
     }
 
     void GraphicsBackend::updateDpiStyle(float dpiScale) {
-        // Clamp to valid range to avoid ImGui assertion failures
-        // Minimum: ImGui FontGlobalScale must be > 0
-        // Maximum: 5.0 (500%) matches Windows 10/11 max display scaling
-        constexpr float MIN_DPI_SCALE = 1.0f;
-        constexpr float MAX_DPI_SCALE = 5.0f;
+        dpiScale = std::clamp(dpiScale, MIN_DPI_SCALE, MAX_DPI_SCALE);
 
-        if (dpiScale < 1.0f) dpiScale = MIN_DPI_SCALE;
-        if (dpiScale > MAX_DPI_SCALE) dpiScale = MAX_DPI_SCALE;
-
-        ImGuiIO& io = ImGui::GetIO();
-
-        // Only scale font globally, not styles (they're already scaled at init)
-        io.FontGlobalScale = dpiScale;
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.FontScaleDpi = dpiScale;
     }
 
     void GraphicsBackend::beginFrame() {
