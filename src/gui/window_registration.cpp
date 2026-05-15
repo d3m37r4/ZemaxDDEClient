@@ -8,8 +8,10 @@ namespace {
     void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DDEStatus);
+        float dpiScale = ImGui::GetWindowDpiScale();
         ImGui::SetNextWindowSizeConstraints(
-            ImVec2(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN),
+            ImVec2(gui::DDE_STATUS_WINDOW_WIDTH_MIN * dpiScale,
+                   gui::DDE_STATUS_WINDOW_HEIGHT_MIN * dpiScale),
             ImVec2(FLT_MAX, FLT_MAX)
         );
         if (ImGui::Begin("DDE Status", &isVisible,
@@ -27,7 +29,12 @@ namespace {
     void RenderSystemInfoWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SystemInfo);
-        ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        float dpiScale = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN * dpiScale,
+                   gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN * dpiScale),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
         if (ImGui::Begin("Optical System Information", &isVisible)) {
             guiMgr->renderOpticalSystemInfo();
         }
@@ -40,7 +47,12 @@ namespace {
     void RenderSagAnalysisWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SagAnalysis);
-        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+        float dpiScale = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN * dpiScale,
+                   gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN * dpiScale),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
         if (ImGui::Begin("Surface Sag Cross Section Analysis", &isVisible)) {
             guiMgr->renderSurfaceSagAnalysis();
         }
@@ -53,7 +65,12 @@ namespace {
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DebugLog);
-        ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        float dpiScale = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(gui::DEBUG_LOG_WINDOW_WIDTH_MIN * dpiScale,
+                   gui::DEBUG_LOG_WINDOW_HEIGHT_MIN * dpiScale),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
         if (ImGui::Begin("Debug Log", &isVisible)) {
             guiMgr->renderDebugLog();
         }
