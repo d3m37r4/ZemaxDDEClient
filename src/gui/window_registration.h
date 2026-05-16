@@ -3,7 +3,7 @@
 #include "window_manager.h"
 
 namespace gui {
-class GuiManager;
+    class GuiManager;
 }
 
 void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr);
