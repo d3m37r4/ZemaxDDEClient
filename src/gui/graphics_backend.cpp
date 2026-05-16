@@ -54,7 +54,7 @@ namespace gui {
         std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
         const std::string fontPathStr = fontPath.string();
 
-        float baseFontSize = 18.0f;
+        float baseFontSize = BASE_FONT_SIZE;
         ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize);
 
         if (!font) {

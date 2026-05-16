@@ -46,4 +46,7 @@ namespace gui {
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;
     inline constexpr float MAX_DPI_SCALE = 5.0f;
+
+    // Font settings
+    inline constexpr float BASE_FONT_SIZE = 18.0f;
 }
