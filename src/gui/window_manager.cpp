@@ -1,6 +1,8 @@
 #include "window_manager.h"
 #include "app/config_path.h"
 #include <fstream>
+#include <algorithm>
+#include <limits>
 #include <nlohmann/json.hpp>
 
 WindowManager::WindowManager() = default;
@@ -57,7 +59,16 @@ std::vector<WindowID> WindowManager::GetIDsByCategory(WindowCategory category) c
             result.push_back(pair.first);
         }
     }
+    std::stable_sort(result.begin(), result.end(), [this](WindowID a, WindowID b) {
+        int orderA = displayOrder_.count(a) ? displayOrder_.at(a) : std::numeric_limits<int>::max();
+        int orderB = displayOrder_.count(b) ? displayOrder_.at(b) : std::numeric_limits<int>::max();
+        return orderA < orderB;
+    });
     return result;
+}
+
+void WindowManager::SetWindowOrder(WindowID id, int order) {
+    displayOrder_[id] = order;
 }
 
 bool WindowManager::IsPopup(WindowID id) const {

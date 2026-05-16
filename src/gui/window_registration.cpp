@@ -86,4 +86,9 @@ void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
     mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Info, WindowType::Dockable, [guiMgr]() {
         RenderDebugLogWindow(guiMgr);
     });
+
+    mgr.SetWindowOrder(WindowID::DDEStatus, 1);
+    mgr.SetWindowOrder(WindowID::SystemInfo, 1);
+    mgr.SetWindowOrder(WindowID::SagAnalysis, 2);
+    mgr.SetWindowOrder(WindowID::DebugLog, 1);
 }
