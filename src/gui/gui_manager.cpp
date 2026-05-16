@@ -5,7 +5,7 @@
 #include "gui/menu_bar_controller.h"
 #include "gui/window_manager.h"
 #include "dde/dde_connection_manager.h"
-#include "windows/dde_status_renderer.h"
+#include "windows/dde_status.h"
 #include "logger/logger.h"
 
 namespace gui {
@@ -24,8 +24,8 @@ namespace gui {
     m_menuBarController->setAboutCallback([this]() {
         m_showAboutPopup = true;
     });
-    m_ddeStatusRenderer = std::make_unique<DDEStatusRenderer>();
-    m_debugLogViewer    = std::make_unique<DebugLogViewer>();
+    m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_zemaxDDEClient);
+    m_debugLogRenderer = std::make_unique<DebugLog>();
     m_appInfoDialog     = std::make_unique<AppInfoDialog>();
 }
 
@@ -106,9 +106,9 @@ void GuiManager::updateDpiStyle(float dpiScale) {
     m_graphics.updateDpiStyle(dpiScale);
 }
 
-void GuiManager::renderDebugLog(bool* pOpen) {
-    if (m_debugLogViewer) {
-        m_debugLogViewer->render(m_logger, pOpen);
+void GuiManager::renderDebugLog() {
+    if (m_debugLogRenderer) {
+        m_debugLogRenderer->render(m_logger);
     }
 }
 

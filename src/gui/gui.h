@@ -12,10 +12,10 @@
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
-#include "windows/dde_status_renderer.h"
+#include "windows/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
-#include "windows/debug_log_viewer.h"
+#include "windows/debug_log.h"
 #include "gui/app_info_dialog.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
@@ -34,7 +34,6 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
-            void renderDebugLog(bool* pOpen = nullptr);
             void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
@@ -42,14 +41,13 @@ namespace gui {
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(WindowManager* wndMgr) { m_pWndMgr = wndMgr; }
             WindowManager* getWindowManager() const { return m_pWndMgr; }
-            void setShowDDEStatus(bool show) { m_showDDEStatus = show; }
-
             ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
             Logger& getLogger() const { return m_logger; }
-            DDEStatusRenderer* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
+            DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
             void renderOpticalSystemInfo();
             void renderSurfaceSagAnalysis();
+            void renderDebugLog();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
@@ -64,14 +62,13 @@ namespace gui {
             std::unique_ptr<SagAnalysisService> m_sagService;
             std::unique_ptr<DDEConnectionManager> m_ddeConnectionManager;
             std::unique_ptr<MenuBarController> m_menuBarController;
-            std::unique_ptr<DDEStatusRenderer> m_ddeStatusRenderer;
-            std::unique_ptr<DebugLogViewer> m_debugLogViewer;
+            std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
+            std::unique_ptr<DebugLog> m_debugLogRenderer;
             std::unique_ptr<AppInfoDialog> m_appInfoDialog;
             WindowManager* m_pWndMgr{nullptr};
 
             // State
             bool m_showUpdatesPopup{false};
             bool m_showAboutPopup{false};
-            bool m_showDDEStatus{true};
     };
 }

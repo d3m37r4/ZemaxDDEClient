@@ -1,5 +1,3 @@
-#include <fstream>
-
 #include <nfd.h>
 
 #include "logger/logger.h"
@@ -24,7 +22,6 @@ namespace App {
     // Base window dimensions and system DPI constant
     constexpr int BASE_WIDTH = 800;
     constexpr int BASE_HEIGHT = 600;
-    constexpr float SYSTEM_DPI = 96.0f;
 
     std::unique_ptr<AppContext> initialize(Logger& logger) {
         auto ctx = std::make_unique<AppContext>();
@@ -60,26 +57,21 @@ namespace App {
 
         logger.addLog("[APP] GLFW initialized");
 
-        // Get initial DPI scale factor
-        HDC hdc = GetDC(NULL);
-        int dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
-        ReleaseDC(NULL, hdc);
-        ctx->dpiScale = static_cast<float>(dpiX) / SYSTEM_DPI;
-        logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f}", ctx->dpiScale));
-
+        glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
-        // Scale window size based on DPI
-        int scaledWidth = static_cast<int>(BASE_WIDTH * ctx->dpiScale);
-        int scaledHeight = static_cast<int>(BASE_HEIGHT * ctx->dpiScale);
-
-        ctx->glfwWindow = glfwCreateWindow(scaledWidth, scaledHeight, APP_TITLE, NULL, NULL);
+        ctx->glfwWindow = glfwCreateWindow(BASE_WIDTH, BASE_HEIGHT, APP_TITLE, NULL, NULL);
         
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");
             glfwTerminate();
             return nullptr;
         }
+
+        float xScale = 0, yScale = 0;
+        glfwGetWindowContentScale(ctx->glfwWindow, &xScale, &yScale);
+        ctx->dpiScale = xScale;
+        logger.addLog(std::format("[APP] Initial DPI scale factor: {:.2f}", ctx->dpiScale));
 
         glfwMakeContextCurrent(ctx->glfwWindow);
         glfwSwapInterval(1);
@@ -210,11 +202,6 @@ namespace App {
 
             Logger& logger = *ctx->pLogger;
             float newDpiScale = (xScale + yScale) / 2.0f;
-
-            // Update window size
-            int scaledWidth = static_cast<int>(BASE_WIDTH * newDpiScale);
-            int scaledHeight = static_cast<int>(BASE_HEIGHT * newDpiScale);
-            glfwSetWindowSize(window, scaledWidth, scaledHeight);
 
             // Update ImGui style
             ctx->gui->updateDpiStyle(newDpiScale);

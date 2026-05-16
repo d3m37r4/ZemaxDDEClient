@@ -89,8 +89,8 @@ set(SOURCES
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/window_manager.cpp
     ${SRC_DIR}/gui/window_registration.cpp
-    ${SRC_DIR}/gui/windows/dde_status_renderer.cpp
-    ${SRC_DIR}/gui/windows/debug_log_viewer.cpp
+    ${SRC_DIR}/gui/windows/dde_status.cpp
+    ${SRC_DIR}/gui/windows/debug_log.cpp
     ${SRC_DIR}/gui/windows/optical_system_info.cpp
     ${SRC_DIR}/gui/windows/surface_sag_analysis.cpp
 )
