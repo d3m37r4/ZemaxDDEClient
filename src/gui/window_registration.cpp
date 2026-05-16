@@ -5,15 +5,18 @@
 #include "lib/imgui/imgui.h"
 
 namespace {
+    void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
+        float dpiScale = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(minWidth * dpiScale, minHeight * dpiScale),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
+    }
+
     void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DDEStatus);
-        float dpiScale = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(gui::DDE_STATUS_WINDOW_WIDTH_MIN * dpiScale,
-                   gui::DDE_STATUS_WINDOW_HEIGHT_MIN * dpiScale),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
+        SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin("DDE Status", &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
             if (guiMgr->getDDEStatusRenderer()) {
@@ -29,12 +32,7 @@ namespace {
     void RenderSystemInfoWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SystemInfo);
-        float dpiScale = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN * dpiScale,
-                   gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN * dpiScale),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
+        SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN, gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin("Optical System Information", &isVisible)) {
             guiMgr->renderOpticalSystemInfo();
         }
@@ -47,12 +45,7 @@ namespace {
     void RenderSagAnalysisWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SagAnalysis);
-        float dpiScale = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN * dpiScale,
-                   gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN * dpiScale),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
+        SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin("Surface Sag Cross Section Analysis", &isVisible)) {
             guiMgr->renderSurfaceSagAnalysis();
         }
@@ -65,12 +58,7 @@ namespace {
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DebugLog);
-        float dpiScale = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(gui::DEBUG_LOG_WINDOW_WIDTH_MIN * dpiScale,
-                   gui::DEBUG_LOG_WINDOW_HEIGHT_MIN * dpiScale),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
+        SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin("Debug Log", &isVisible)) {
             guiMgr->renderDebugLog();
         }
