@@ -57,9 +57,9 @@ namespace gui {
         double semiDiameter = targetSurface.semiDiameter;
         double step = targetSurface.diameter() / (sampling - 1);
 
-    #ifdef DEBUG_LOG
+        #ifdef DEBUG_LOG
         m_logger.addLog(std::format("[GUI] Requesting Sag Cross Section for surface {} at angle {}° with {} points", surface, angle, sampling));
-    #endif
+        #endif
 
         for (int i : std::views::iota(0, sampling)) {
             const double r = -semiDiameter + i * step;

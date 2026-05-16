@@ -33,12 +33,12 @@ namespace ZemaxDDE {
             m_logger.addLog("[DDE] WM_DDE_INITIATE broadcast timed out or failed (hung window detected)");
         }
 
-    #ifdef DEBUG_LOG
+        #ifdef DEBUG_LOG
         char appName[256], topicName[256];
         WideCharToMultiByte(CP_ACP, 0, DDE_APP_NAME, -1, appName, sizeof(appName), NULL, NULL);
         WideCharToMultiByte(CP_ACP, 0, DDE_TOPIC, -1, topicName, sizeof(topicName), NULL, NULL);
         m_logger.addLog(std::format("[DDE] Sent 'WM_DDE_INITIATE' to app='{}', topic='{}'.", appName, topicName));
-    #endif
+        #endif
     
         GlobalDeleteAtom(appAtom);
         GlobalDeleteAtom(topicAtom);
@@ -80,9 +80,10 @@ namespace ZemaxDDE {
     }
 
     void ZemaxDDEClient::sendPostRequest(std::string_view request) {
-    #ifdef DEBUG_LOG
+        #ifdef DEBUG_LOG
         m_logger.addLog(std::format("[DDE] Sending request: {}", request));
-    #endif
+        #endif
+
         int wideCharCount = MultiByteToWideChar(CP_ACP,0, request.data(), static_cast<int>(request.size()), nullptr,0);
         if (wideCharCount == 0) {
             throw std::runtime_error("Failed to convert DDE request to wide string");
@@ -97,10 +98,12 @@ namespace ZemaxDDE {
 
         wItem[wideCharCount] = L'\0';
         ATOM aItem = GlobalAddAtomW(wItem.data());
+
         if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
             GlobalDeleteAtom(aItem);
             throw std::runtime_error("Cannot communicate with Zemax");
         }
+
         waitForData();
     }
 
@@ -124,9 +127,10 @@ namespace ZemaxDDE {
         UINT_PTR lowWord, highWord;
         std::string buffer;
 
-    #ifdef DEBUG_LOG
+        #ifdef DEBUG_LOG
         m_logger.addLog(std::format("[DDE] Received message: {}", iMsg));
-    #endif
+        #endif
+
         switch (iMsg) {
             case WM_DDE_ACK: {
                 if (!m_hwndZemaxServer) {
@@ -137,9 +141,10 @@ namespace ZemaxDDE {
 
                     GlobalDeleteAtom(static_cast<ATOM>(lowWord));
                     GlobalDeleteAtom(static_cast<ATOM>(highWord));
-                #ifdef DEBUG_LOG
+
+                    #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_ACK', m_hwndZemaxServer = {}", reinterpret_cast<uintptr_t>(m_hwndZemaxServer)));
-                #endif
+                    #endif
                 }
 
                 return 0;
@@ -164,9 +169,11 @@ namespace ZemaxDDE {
 
                     m_isDataReceived = true;
                     buffer = reinterpret_cast<char*>(ddeDataLock.as<::DDEDATA>()->Value);
-                #ifdef DEBUG_LOG
+
+                    #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
-                #endif
+                    #endif
+
                     if (command_token == "GetName") {
                         std::string name = extractStringFromDDE(ddeDataHandle);
                         if (name.empty()) {
@@ -175,17 +182,21 @@ namespace ZemaxDDE {
                         }
 
                         m_opticalSystem.lensName = name;
+
                         #ifdef DEBUG_LOG
                         m_logger.addLog(std::format("[DDE] GetName (converted): {}", name));
                         #endif
+
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetFile") {
                         std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
                         m_opticalSystem.fileName = fileNameStr;
+
                         #ifdef DEBUG_LOG
                         m_logger.addLog(std::format("[DDE] GetFile (converted): {}", fileNameStr));
                         #endif
+
                         DdeAck.fAck = TRUE;
                     }
                     if (command_token == "GetSystem") {
@@ -520,18 +531,21 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::checkDDEConnection() {
         const char* const DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED = "No ZemaxDDEServer received, DDE connection to Zemax not established";
         if (!m_hwndZemaxServer) {
-        #ifdef DEBUG_LOG
+            #ifdef DEBUG_LOG
             m_logger.addLog(std::format("[DDE] {}", DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED));
-        #endif
+            #endif
+
             throw std::runtime_error(DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED);
         }
     }
 
     void ZemaxDDEClient::checkResponseStatus(const std::string& errorMsg) {
         if (!m_isDataReceived) {
-        #ifdef DEBUG_LOG
+
+            #ifdef DEBUG_LOG
             m_logger.addLog(std::format("[DDE] {}", errorMsg));
-        #endif
+            #endif
+
             throw std::runtime_error(errorMsg);
         }
     }

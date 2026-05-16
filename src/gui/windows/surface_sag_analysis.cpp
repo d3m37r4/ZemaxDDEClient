@@ -1,6 +1,12 @@
 #include <fstream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <format>
 
-#include "gui/gui_impl.h"
+#include "gui/gui.h"
+#include "gui/constants.h"
+#include "gui/sag_analysis_service.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
@@ -34,7 +40,7 @@ namespace {
 }
 
 namespace gui {
-    void GuiManager::renderPageSurfaceSagAnalysis() {
+    void GuiManager::renderSurfaceSagAnalysis() {
         auto& state = m_sagService->m_surfaceSagAnalysisPageState;
         auto& nominal = m_zemaxDDEClient->getNominalSurface();
         auto& toleranced = m_zemaxDDEClient->getTolerancedSurface();
@@ -73,7 +79,7 @@ namespace gui {
                 m_zemaxDDEClient->clearTolerancedSurface();
             }
         } else {
-            ImGui::BeginDisabled(!isDdeInitialized());
+            ImGui::BeginDisabled(!isDDEInitialized());
             ImGui::Text("Sampling:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
@@ -104,7 +110,7 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Get toleranced surface data")) {
-                if (isDdeInitialized()) {
+                if (isDDEInitialized()) {
                     m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
@@ -149,7 +155,7 @@ namespace gui {
                 m_zemaxDDEClient->clearNominalSurface();
             }
         } else {
-            ImGui::BeginDisabled(!isDdeInitialized());
+            ImGui::BeginDisabled(!isDDEInitialized());
 
             ImGui::Text("Sampling:");
             ImGui::SameLine();
@@ -181,7 +187,7 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Get nominal surface data")) {
-                if (isDdeInitialized()) {
+                if (isDDEInitialized()) {
                     m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);

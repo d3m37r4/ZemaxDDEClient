@@ -1,25 +1,18 @@
-#include "gui/debug_log_viewer.h"
+#include "windows/debug_log.h"
+
+#include <format>
+#include <string>
+
+#include <windows.h>
+#include <shellapi.h>
+
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
-#include <windows.h>
-#include <shellapi.h>
-#include <format>
-#include <string>
 
 namespace gui {
-    void DebugLogViewer::render(Logger& logger) {
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(DEBUG_LOG_WIDTH_MIN, DEBUG_LOG_HEIGHT_MIN),  // min_size
-            ImVec2(FLT_MAX, FLT_MAX)                            // max_size
-        );
-
-        if (!ImGui::Begin("Debug", nullptr)) {
-            ImGui::End();
-            return;
-        }
-
+    void DebugLog::render(Logger& logger) {
         ImGui::BeginChild("DebugLogHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
         if (ImGui::Button("Text")) {
             std::string content;
@@ -69,7 +62,5 @@ namespace gui {
             lastLogSize = logEntries.size();
         }
         ImGui::EndChild();
-
-        ImGui::End();
     }
 }

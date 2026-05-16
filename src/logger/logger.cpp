@@ -2,7 +2,7 @@
 #include <format>
 
 #ifdef DEBUG_LOG
-    #include <iostream>
+#include <iostream>
 #endif
 
 #include "logger.h"
@@ -30,7 +30,7 @@ void Logger::addLog(std::string_view message) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_logs.push_back(std::move(logEntry));
 
-#ifdef DEBUG_LOG
+    #ifdef DEBUG_LOG
     std::cout << m_logs.back() << '\n';
-#endif
+    #endif
 }

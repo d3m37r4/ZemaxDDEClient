@@ -2,10 +2,10 @@
 #include "lib/imgui/imgui.h"
 
 namespace gui {
-    void GuiManager::renderPageOpticalSystemInfo() {
+    void GuiManager::renderOpticalSystemInfo() {
         ImGui::Separator();
         ImGui::Spacing();
-        if (isDdeInitialized()) {
+        if (isDDEInitialized()) {
             const ZemaxDDE::OpticalSystemData& opticalSystem = m_zemaxDDEClient->getOpticalSystemData();
             ImGui::TextUnformatted(std::format("Lens Name: {}", opticalSystem.lensName).c_str());
             ImGui::TextUnformatted(std::format("File Name: {}", opticalSystem.fileName).c_str());

@@ -9,24 +9,22 @@
 #include <windows.h>
 #include <GLFW/glfw3.h>
 
-#include "gui/forwards.h"
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
-#include "gui/sidebar_renderer.h"
-#include "gui/content_router.h"
+#include "windows/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
-#include "gui/debug_log_viewer.h"
+#include "windows/debug_log.h"
 #include "gui/app_info_dialog.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
 
+class WindowManager;
+
 class Logger;
 
 namespace gui {
-    // Free utility functions (declared in utils.h, included above)
-
     class GuiManager {
         public:
             GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
@@ -36,19 +34,23 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
-            // Delegated to components
-            void renderSidebar();
-            void renderContent();
-            void renderDebugLog();
             void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
 
-            void renderPageOpticalSystemInfo();
-            void renderPageSurfaceSagAnalysis();
+            MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
+            void setWindowManager(WindowManager* wndMgr) { m_pWndMgr = wndMgr; }
+            WindowManager* getWindowManager() const { return m_pWndMgr; }
+            ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
+            Logger& getLogger() const { return m_logger; }
+            DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
+
+            void renderOpticalSystemInfo();
+            void renderSurfaceSagAnalysis();
+            void renderDebugLog();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
-            [[nodiscard]] bool isDdeInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
+            [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
             GLFWwindow* m_glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
@@ -56,20 +58,17 @@ namespace gui {
             ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;           // Pointer to a DDE client instance
             Logger& m_logger;                                     // Logger instance (dependency injection)
 
-            // Components (New approach)
             GraphicsBackend m_graphics;
-            std::unique_ptr<SagAnalysisService> m_sagService;     // Sag analysis service (owned by GuiManager)
-            std::unique_ptr<DdeConnectionManager> m_ddeConnectionManager;
+            std::unique_ptr<SagAnalysisService> m_sagService;
+            std::unique_ptr<DDEConnectionManager> m_ddeConnectionManager;
             std::unique_ptr<MenuBarController> m_menuBarController;
-            std::unique_ptr<SidebarRenderer> m_sidebarRenderer;
-            std::unique_ptr<ContentRouter> m_contentRouter;
-            std::unique_ptr<DebugLogViewer> m_debugLogViewer;
+            std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
+            std::unique_ptr<DebugLog> m_debugLogRenderer;
             std::unique_ptr<AppInfoDialog> m_appInfoDialog;
-
-            GuiPage m_currentPage = GuiPage::OpticalSystemInfo;
+            WindowManager* m_pWndMgr{nullptr};
 
             // State
-            bool m_showUpdatesPopup{false};                       // Display flag for popup 'Check for Updates'
-            bool m_showAboutPopup{false};                         // Display flag for popup 'Check for About'
+            bool m_showUpdatesPopup{false};
+            bool m_showAboutPopup{false};
     };
 }

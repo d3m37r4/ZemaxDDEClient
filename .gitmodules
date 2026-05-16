@@ -7,3 +7,6 @@
 [submodule "src/lib/nfd"]
 	path = src/lib/nfd
 	url = https://github.com/mlabbe/nativefiledialog
+[submodule "src/lib/json"]
+	path = src/lib/json
+	url = https://github.com/nlohmann/json.git

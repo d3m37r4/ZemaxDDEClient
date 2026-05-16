@@ -1,14 +1,14 @@
 #include "gui/gui.h"
 #include <imgui.h>
+#include <imgui_internal.h>
 #include "gui/sag_analysis_service.h"
 #include "gui/menu_bar_controller.h"
+#include "gui/window_manager.h"
 #include "dde/dde_connection_manager.h"
-#include "gui/sidebar_renderer.h"
-#include "gui/content_router.h"
+#include "windows/dde_status.h"
 #include "logger/logger.h"
 
 namespace gui {
-
     GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
 : m_glfwWindow(glfwWindow)
 , m_hwndClient(hwndClient)
@@ -16,7 +16,7 @@ namespace gui {
 , m_logger(logger)
 {
     m_sagService = std::make_unique<SagAnalysisService>(ddeClient, logger);
-    m_ddeConnectionManager = std::make_unique<DdeConnectionManager>(m_zemaxDDEClient, m_logger);
+    m_ddeConnectionManager = std::make_unique<DDEConnectionManager>(m_zemaxDDEClient, m_logger);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager.get());
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
@@ -24,20 +24,15 @@ namespace gui {
     m_menuBarController->setAboutCallback([this]() {
         m_showAboutPopup = true;
     });
-    m_sidebarRenderer   = std::make_unique<SidebarRenderer>();
-    m_contentRouter     = std::make_unique<ContentRouter>();
-    m_debugLogViewer    = std::make_unique<DebugLogViewer>();
+    m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_zemaxDDEClient);
+    m_debugLogRenderer = std::make_unique<DebugLog>();
     m_appInfoDialog     = std::make_unique<AppInfoDialog>();
-    if (m_sidebarRenderer) {
-        m_sidebarRenderer->setPageSwitcher([this](GuiPage page){ m_currentPage = page; });
-    }
 }
 
 GuiManager::~GuiManager() = default;
 
 void GuiManager::initialize(float dpiScale) {
-    const char* iniPath = "imgui.ini";
-    m_graphics.initialize(m_glfwWindow, m_logger, iniPath, dpiScale);
+    m_graphics.initialize(m_glfwWindow, m_logger, dpiScale);
 }
 
 void GuiManager::render() {
@@ -46,7 +41,6 @@ void GuiManager::render() {
         m_menuBarController->render();
     }
 
-    // Create main docking space (restored from container.cpp)
     float navbarHeight = ImGui::GetFrameHeight();
     ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
@@ -62,16 +56,13 @@ void GuiManager::render() {
         ImGuiWindowFlags_NoNavFocus
     );
     ImGuiID dockSpaceId = ImGui::GetID("MainDockSpace");
-    ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
+    ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_NoCloseButton);
     ImGui::End();
 
-    renderSidebar();
-    renderContent();
+    if (m_pWndMgr) {
+        m_pWndMgr->RenderAll();
+    }
 
-    // Render debug log window
-    renderDebugLog();
-
-    // Sag analysis windows (delegated to service)
     if (m_sagService->m_showTolerancedSagWindow) {
         auto& surface = m_zemaxDDEClient->getTolerancedSurface();
         if (surface.isValid()) {
@@ -104,7 +95,6 @@ void GuiManager::render() {
         }
     }
 
-    // Render popups
     setPopupPosition();
     renderUpdatesPopup();
     renderAboutPopup();
@@ -112,25 +102,13 @@ void GuiManager::render() {
     m_graphics.endFrame();
 }
 
-void GuiManager::renderSidebar() {
-    if (m_sidebarRenderer) {
-        m_sidebarRenderer->renderSidebar(m_zemaxDDEClient, m_logger);
-    }
-}
-
-void GuiManager::renderContent() {
-    if (m_contentRouter) {
-        m_contentRouter->renderContent(m_currentPage, this);
-    }
-}
-
 void GuiManager::updateDpiStyle(float dpiScale) {
     m_graphics.updateDpiStyle(dpiScale);
 }
 
 void GuiManager::renderDebugLog() {
-    if (m_debugLogViewer) {
-        m_debugLogViewer->render(m_logger);
+    if (m_debugLogRenderer) {
+        m_debugLogRenderer->render(m_logger);
     }
 }
 
@@ -152,4 +130,4 @@ void GuiManager::renderUpdatesPopup() {
     }
 }
 
-} // namespace gui
+}
