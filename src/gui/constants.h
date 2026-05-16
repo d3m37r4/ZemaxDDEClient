@@ -5,7 +5,7 @@
 namespace gui {
     // DDE status window constraints
     inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 220.0f;
-    inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 80.0f;
+    inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 100.0f;
 
     // DDE status content constraints
     inline constexpr float DDE_STATUS_CONTENT_WIDTH  = 0.0f;   // Automatic width
@@ -26,7 +26,7 @@ namespace gui {
     inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_ACTIVE = ImVec4(0.3f, 0.0f, 0.0f, 1.0f);
 
     // Debug log window constraints
-    inline constexpr float DEBUG_LOG_WINDOW_WIDTH_MIN  = 200.0f;
+    inline constexpr float DEBUG_LOG_WINDOW_WIDTH_MIN  = 220.0f;
     inline constexpr float DEBUG_LOG_WINDOW_HEIGHT_MIN = 160.0f;
 
     // System info window constraints

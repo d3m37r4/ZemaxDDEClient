@@ -9,7 +9,7 @@ namespace gui {
     void DDEStatus::render(Logger& logger) {
         ImGui::BeginChild("DDE Status Content",
             ImVec2(gui::DDE_STATUS_CONTENT_WIDTH, gui::DDE_STATUS_CONTENT_HEIGHT),
-            ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY,
+            ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
         );
 
