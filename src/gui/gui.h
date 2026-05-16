@@ -16,7 +16,8 @@
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
 #include "windows/debug_log.h"
-#include "gui/app_info_dialog.h"
+#include "gui/windows/popups/about_dialog.h"
+#include "gui/windows/popups/update_checker.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
 
@@ -64,7 +65,8 @@ namespace gui {
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<DebugLog> m_debugLogRenderer;
-            std::unique_ptr<AppInfoDialog> m_appInfoDialog;
+            std::unique_ptr<AboutDialog> m_aboutDialog;
+            std::unique_ptr<UpdateChecker> m_updateChecker;
             WindowManager* m_pWndMgr{nullptr};
 
             // State

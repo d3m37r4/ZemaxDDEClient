@@ -18,6 +18,10 @@ namespace gui {
         m_onAbout = std::move(cb);
     }
 
+    void MenuBarController::setUpdatesCallback(std::function<void()> cb) {
+        m_onUpdates = std::move(cb);
+    }
+
     void MenuBarController::setDDEConnectionManager(DDEConnectionManager* ddeMgr) {
         m_pDDEClientMgr = ddeMgr;
     }
@@ -88,6 +92,9 @@ namespace gui {
                     if (!ids.empty()) {
                         ImGui::Separator();
                     }
+                }
+                if (ImGui::MenuItem("Check for Updates")) {
+                    if (m_onUpdates) m_onUpdates();
                 }
                 if (ImGui::MenuItem("About")) {
                     if (m_onAbout) m_onAbout();

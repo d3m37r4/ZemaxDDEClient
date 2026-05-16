@@ -15,6 +15,7 @@ namespace gui {
             void render();
             void setExitCallback(std::function<void()> cb);
             void setAboutCallback(std::function<void()> cb);
+            void setUpdatesCallback(std::function<void()> cb);
             void setDDEConnectionManager(DDEConnectionManager* ddeMgr);
             void setWindowManager(WindowManager* wndMgr);
             void setSidebarToggleCallback(std::function<void(bool)> cb);
@@ -22,6 +23,7 @@ namespace gui {
             Logger& m_logger;
             std::function<void()> m_onExit;
             std::function<void()> m_onAbout;
+            std::function<void()> m_onUpdates;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             WindowManager* m_pWndMgr{nullptr};
             std::function<void(bool)> m_onSidebarToggle;

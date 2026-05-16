@@ -6,11 +6,11 @@
 WindowManager::WindowManager() = default;
 WindowManager::~WindowManager() = default;
 
-void WindowManager::RegisterWindow(WindowID id, const char* name, WindowCategory category, std::function<void()> renderFn) {
-    windows_[id] = {category, std::move(renderFn)};
+void WindowManager::RegisterWindow(WindowID id, const char* name, WindowCategory category, WindowType type, std::function<void()> renderFn) {
+    windows_[id] = {category, type, std::move(renderFn)};
     names_[id] = name;
     if (visibility_.find(id) == visibility_.end())
-        visibility_[id] = true;
+        visibility_[id] = type == WindowType::Dockable;
 }
 
 bool WindowManager::IsVisible(WindowID id) const { return visibility_.at(id); }
@@ -53,9 +53,15 @@ void WindowManager::SaveState() {
 std::vector<WindowID> WindowManager::GetIDsByCategory(WindowCategory category) const {
     std::vector<WindowID> result;
     for (auto &pair : windows_) {
-        if (pair.second.category == category) {
+        if (pair.second.category == category && pair.second.type == WindowType::Dockable) {
             result.push_back(pair.first);
         }
     }
     return result;
+}
+
+bool WindowManager::IsPopup(WindowID id) const {
+    auto it = windows_.find(id);
+    if (it == windows_.end()) return false;
+    return it->second.type == WindowType::Popup;
 }

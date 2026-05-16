@@ -70,20 +70,20 @@ namespace {
 }
 
 void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
-    mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status", WindowCategory::DDE, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status", WindowCategory::DDE, WindowType::Dockable, [guiMgr]() {
         RenderDDEStatusWindow(guiMgr);
     });
 
-    mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information", WindowCategory::Tools, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information", WindowCategory::Tools, WindowType::Dockable, [guiMgr]() {
         RenderSystemInfoWindow(guiMgr);
     });
 
-    mgr.RegisterWindow(WindowID::SagAnalysis, "Surface Sag Cross Section Analysis", WindowCategory::Tools, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::SagAnalysis, "Surface Sag Cross Section Analysis", WindowCategory::Tools, WindowType::Dockable, [guiMgr]() {
         RenderSagAnalysisWindow(guiMgr);
     });
     mgr.SetVisible(WindowID::SagAnalysis, false);
 
-    mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Info, [guiMgr]() {
+    mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Info, WindowType::Dockable, [guiMgr]() {
         RenderDebugLogWindow(guiMgr);
     });
 }
