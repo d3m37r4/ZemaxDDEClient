@@ -38,32 +38,32 @@ namespace {
 namespace app {
     const char* getImguiIniPath() {
         if (imguiIniPath.empty()) {
-#ifdef APP_PRODUCTION_BUILD
+            #ifdef APP_PRODUCTION_BUILD
             std::string basePath = getLocalAppDataPath();
             if (!basePath.empty()) {
                 imguiIniPath = basePath + "\\" + std::string(IMGUI_INI_FILENAME);
             } else {
                 imguiIniPath = IMGUI_INI_FILENAME;
             }
-#else
+            #else
             imguiIniPath = IMGUI_INI_FILENAME;
-#endif
+            #endif
         }
         return imguiIniPath.c_str();
     }
 
     const char* getWindowStatePath() {
         if (windowStatePath.empty()) {
-#ifdef APP_PRODUCTION_BUILD
+            #ifdef APP_PRODUCTION_BUILD
             std::string basePath = getLocalAppDataPath();
             if (!basePath.empty()) {
                 windowStatePath = basePath + "\\" + std::string(WINDOW_STATE_FILENAME);
             } else {
                 windowStatePath = WINDOW_STATE_FILENAME;
             }
-#else
+            #else
             windowStatePath = WINDOW_STATE_FILENAME;
-#endif
+            #endif
         }
         return windowStatePath.c_str();
     }

@@ -244,9 +244,10 @@ namespace App {
             struct NFDDeleter { void operator()(nfdchar_t* p) const { std::free(p); } };
             std::unique_ptr<nfdchar_t, NFDDeleter> pathGuard{outPath};
 
-        #ifdef DEBUG_LOG
+            #ifdef DEBUG_LOG
             logger.addLog(std::format("[APP] Selected file: {}", outPath));
-        #endif
+            #endif
+
             int size = MultiByteToWideChar(CP_UTF8, 0, outPath, -1, nullptr, 0);
             std::wstring widePath(size, L'\0');
             MultiByteToWideChar(CP_UTF8, 0, outPath, -1, widePath.data(), size);
@@ -256,14 +257,14 @@ namespace App {
                 MessageBoxW(nullptr, L"Failed to open file. Is Zemax installed?", L"Error", MB_ICONERROR);
                 logger.addLog(std::format("[APP] ShellExecute failed to open file: {}. (Error code: {})", outPath, static_cast<int>(reinterpret_cast<intptr_t>(ret))));
             } else {
-            #ifdef DEBUG_LOG
+                #ifdef DEBUG_LOG
                 logger.addLog(std::format("[APP] Successfully sent file to ShellExecute: {}", outPath));
-            #endif
+                #endif
             }
         } else if (result == NFD_CANCEL) {
-        #ifdef DEBUG_LOG
+            #ifdef DEBUG_LOG
             logger.addLog("[APP] File open dialog canceled by user");
-        #endif
+            #endif
         } else {
             const char* error = NFD_GetError();
             logger.addLog(std::format("[APP] NFD Error: {}", error ? error : "Unknown error"));

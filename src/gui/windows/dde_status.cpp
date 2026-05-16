@@ -44,6 +44,7 @@ namespace gui {
                 } else {
                     m_ddeClient->terminateDDE();
                 }
+                
                 #ifdef DEBUG_LOG
                 logger.addLog("[GUI] " + std::string(connected ? "Connected to Zemax" : "Disconnected from Zemax"));
                 #endif
