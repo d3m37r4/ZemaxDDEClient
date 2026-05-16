@@ -21,6 +21,7 @@ int main() {
 
     WindowManager wndMgr;
     RegisterAllWindows(wndMgr, ctx->gui.get());
+    SetWindowDisplayOrder(wndMgr);
     wndMgr.LoadState();
     ctx->gui->setWindowManager(&wndMgr);
 

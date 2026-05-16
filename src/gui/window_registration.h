@@ -7,3 +7,4 @@ namespace gui {
 }
 
 void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr);
+void SetWindowDisplayOrder(WindowManager& mgr);

@@ -67,28 +67,45 @@ namespace {
             guiMgr->getWindowManager()->SetVisible(WindowID::DebugLog, false);
         }
     }
+
+    void RegisterDDEWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
+        mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status",
+            WindowCategory::DDE, WindowType::Dockable, [guiMgr]() {
+                RenderDDEStatusWindow(guiMgr);
+            });
+    }
+
+    void RegisterToolsWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
+        mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information",
+            WindowCategory::Tools, WindowType::Dockable, [guiMgr]() {
+                RenderSystemInfoWindow(guiMgr);
+            });
+        mgr.SetVisible(WindowID::SystemInfo, true);
+
+        mgr.RegisterWindow(WindowID::SagAnalysis, "Surface Sag Cross Section Analysis",
+            WindowCategory::Tools, WindowType::Dockable, [guiMgr]() {
+                RenderSagAnalysisWindow(guiMgr);
+            });
+        mgr.SetVisible(WindowID::SagAnalysis, false);
+    }
+
+    void RegisterInfoWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
+        mgr.RegisterWindow(WindowID::DebugLog, "Debug Log",
+            WindowCategory::Info, WindowType::Dockable, [guiMgr]() {
+                RenderDebugLogWindow(guiMgr);
+            });
+    }
 }
 
-void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
-    mgr.RegisterWindow(WindowID::DDEStatus, "DDE Status", WindowCategory::DDE, WindowType::Dockable, [guiMgr]() {
-        RenderDDEStatusWindow(guiMgr);
-    });
-
-    mgr.RegisterWindow(WindowID::SystemInfo, "Optical System Information", WindowCategory::Tools, WindowType::Dockable, [guiMgr]() {
-        RenderSystemInfoWindow(guiMgr);
-    });
-
-    mgr.RegisterWindow(WindowID::SagAnalysis, "Surface Sag Cross Section Analysis", WindowCategory::Tools, WindowType::Dockable, [guiMgr]() {
-        RenderSagAnalysisWindow(guiMgr);
-    });
-    mgr.SetVisible(WindowID::SagAnalysis, false);
-
-    mgr.RegisterWindow(WindowID::DebugLog, "Debug Log", WindowCategory::Info, WindowType::Dockable, [guiMgr]() {
-        RenderDebugLogWindow(guiMgr);
-    });
-
+void SetWindowDisplayOrder(WindowManager& mgr) {
     mgr.SetWindowOrder(WindowID::DDEStatus, 1);
     mgr.SetWindowOrder(WindowID::SystemInfo, 1);
     mgr.SetWindowOrder(WindowID::SagAnalysis, 2);
     mgr.SetWindowOrder(WindowID::DebugLog, 1);
+}
+
+void RegisterAllWindows(WindowManager& mgr, gui::GuiManager* guiMgr) {
+    RegisterDDEWindows(mgr, guiMgr);
+    RegisterToolsWindows(mgr, guiMgr);
+    RegisterInfoWindows(mgr, guiMgr);
 }
