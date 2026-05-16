@@ -35,7 +35,6 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
-            void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
 

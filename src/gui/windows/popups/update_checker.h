@@ -18,7 +18,6 @@ namespace gui {
 
             void checkForUpdates();
             void renderPopup(bool& showPopup);
-            void setPopupPosition();
             UpdateInfo getUpdateInfo() const { return m_updateInfo; }
             std::string getCurrentVersion() const;
             std::string getCurrentBuildDate() const;

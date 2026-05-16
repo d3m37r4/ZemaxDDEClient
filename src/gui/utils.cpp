@@ -51,4 +51,9 @@ namespace gui {
             return std::nullopt;
         }
     }
+
+    void SetPopupWindowPosition() {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    }
 }

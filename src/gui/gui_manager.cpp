@@ -99,7 +99,7 @@ void GuiManager::render() {
         }
     }
 
-    setPopupPosition();
+    SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
 
@@ -113,15 +113,6 @@ void GuiManager::updateDpiStyle(float dpiScale) {
 void GuiManager::renderDebugLog() {
     if (m_debugLogRenderer) {
         m_debugLogRenderer->render(m_logger);
-    }
-}
-
-void GuiManager::setPopupPosition() {
-    if (m_aboutDialog) {
-        m_aboutDialog->setPopupPosition();
-    }
-    if (m_updateChecker) {
-        m_updateChecker->setPopupPosition();
     }
 }
 
