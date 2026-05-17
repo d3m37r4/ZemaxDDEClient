@@ -64,16 +64,9 @@ namespace gui {
             }
             if (m_pWndMgr && ImGui::BeginMenu("Tools")) {
                 auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Tools);
-                auto names = m_pWndMgr->GetNames();
                 for (WindowID id : ids) {
                     bool visible = m_pWndMgr->IsVisible(id);
-                    const char* name = nullptr;
-                    for (const auto& pair : names) {
-                        if (pair.first == id) {
-                            name = pair.second.c_str();
-                            break;
-                        }
-                    }
+                    const char* name = m_pWndMgr->GetName(id);
                     if (!name) continue;
                     if (ImGui::MenuItem(name, nullptr, &visible)) {
                         m_pWndMgr->SetVisible(id, visible);
@@ -84,16 +77,9 @@ namespace gui {
             if (ImGui::BeginMenu("Info")) {
                 if (m_pWndMgr) {
                     auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Info);
-                    auto names = m_pWndMgr->GetNames();
                     for (WindowID id : ids) {
                         bool visible = m_pWndMgr->IsVisible(id);
-                        const char* name = nullptr;
-                        for (const auto& pair : names) {
-                            if (pair.first == id) {
-                                name = pair.second.c_str();
-                                break;
-                            }
-                        }
+                        const char* name = m_pWndMgr->GetName(id);
                         if (!name) continue;
                         if (ImGui::MenuItem(name, nullptr, &visible)) {
                             m_pWndMgr->SetVisible(id, visible);

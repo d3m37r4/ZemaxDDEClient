@@ -51,7 +51,6 @@ class DockableWindowsManager {
         void LoadState();
         void SaveState();
 
-        const std::vector<std::pair<WindowID, std::string>> GetNames() const;
         const std::vector<std::pair<WindowID, bool>> GetVisibilities() const;
         std::vector<WindowID> GetIDsByCategory(WindowCategory category) const;
 
