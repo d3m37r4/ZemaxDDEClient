@@ -49,4 +49,8 @@ namespace gui {
 
     // Font settings
     inline constexpr float BASE_FONT_SIZE = 18.0f;
+
+    // Update checker window constraints
+    inline constexpr float UPDATE_WINDOW_WIDTH_MIN  = 320.0f;
+    inline constexpr float UPDATE_WINDOW_HEIGHT_MIN = 200.0f;
 }

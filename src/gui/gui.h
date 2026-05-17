@@ -12,15 +12,16 @@
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
-#include "windows/dde_status.h"
+#include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
-#include "windows/debug_log.h"
-#include "gui/app_info_dialog.h"
+#include "windows_dockable/debug_log.h"
+#include "gui/popups/about_dialog.h"
+#include "gui/popups/update_checker.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
 
-class WindowManager;
+class DockableWindowsManager;
 
 class Logger;
 
@@ -34,13 +35,12 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
-            void setPopupPosition();
             void renderAboutPopup();
             void renderUpdatesPopup();
 
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
-            void setWindowManager(WindowManager* wndMgr) { m_pWndMgr = wndMgr; }
-            WindowManager* getWindowManager() const { return m_pWndMgr; }
+            void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
+            DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }
             ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
@@ -64,8 +64,9 @@ namespace gui {
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<DebugLog> m_debugLogRenderer;
-            std::unique_ptr<AppInfoDialog> m_appInfoDialog;
-            WindowManager* m_pWndMgr{nullptr};
+            std::unique_ptr<AboutDialog> m_aboutDialog;
+            std::unique_ptr<UpdateChecker> m_updateChecker;
+            DockableWindowsManager* m_pWndMgr{nullptr};
 
             // State
             bool m_showUpdatesPopup{false};

@@ -1,4 +1,4 @@
-#include "gui/app_info_dialog.h"
+#include "gui/popups/about_dialog.h"
 #include "lib/imgui/imgui.h"
 #include "app/app.h"
 #include "version.h"
@@ -6,12 +6,7 @@
 #include <format>
 
 namespace gui {
-    void AppInfoDialog::setPopupPosition() {
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    }
-
-    void AppInfoDialog::render(bool& showAboutPopup) {
+    void AboutDialog::render(bool& showAboutPopup) {
         if (showAboutPopup) {
             ImGui::OpenPopup("About");
             showAboutPopup = false;
@@ -54,20 +49,6 @@ namespace gui {
             if (ImGui::Button("OK", ImVec2(button_width, 0))) {
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::EndPopup();
-        }
-    }
-
-    void AppInfoDialog::renderUpdatesPopup(bool& showUpdatesPopup) {
-        if (showUpdatesPopup) {
-            ImGui::OpenPopup("Check for Updates");
-            showUpdatesPopup = false;
-        }
-
-        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Your software is up to date!");
-            ImGui::Separator();
-            if (ImGui::Button("OK", ImVec2(120, 0))) ImGui::CloseCurrentPopup();
             ImGui::EndPopup();
         }
     }

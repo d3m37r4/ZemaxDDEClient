@@ -3,7 +3,7 @@
 #include "logger/logger.h"
 #include "dde/dde_connection_manager.h"
 #include "gui/constants.h"
-#include "gui/window_manager.h"
+#include "gui/dockable_windows_manager.h"
 #include "lib/imgui/imgui.h"
 #include <format>
 
@@ -18,11 +18,15 @@ namespace gui {
         m_onAbout = std::move(cb);
     }
 
+    void MenuBarController::setUpdatesCallback(std::function<void()> cb) {
+        m_onUpdates = std::move(cb);
+    }
+
     void MenuBarController::setDDEConnectionManager(DDEConnectionManager* ddeMgr) {
         m_pDDEClientMgr = ddeMgr;
     }
 
-    void MenuBarController::setWindowManager(WindowManager* wndMgr) {
+    void MenuBarController::setWindowManager(DockableWindowsManager* wndMgr) {
         m_pWndMgr = wndMgr;
     }
 
@@ -60,12 +64,10 @@ namespace gui {
             }
             if (m_pWndMgr && ImGui::BeginMenu("Tools")) {
                 auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Tools);
-                const auto& nameMap = m_pWndMgr->GetNames();
                 for (WindowID id : ids) {
                     bool visible = m_pWndMgr->IsVisible(id);
-                    auto it = nameMap.find(id);
-                    if (it == nameMap.end()) continue;
-                    const char* name = it->second.c_str();
+                    const char* name = m_pWndMgr->GetName(id);
+                    if (!name) continue;
                     if (ImGui::MenuItem(name, nullptr, &visible)) {
                         m_pWndMgr->SetVisible(id, visible);
                     }
@@ -75,12 +77,10 @@ namespace gui {
             if (ImGui::BeginMenu("Info")) {
                 if (m_pWndMgr) {
                     auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Info);
-                    const auto& nameMap = m_pWndMgr->GetNames();
                     for (WindowID id : ids) {
                         bool visible = m_pWndMgr->IsVisible(id);
-                        auto it = nameMap.find(id);
-                        if (it == nameMap.end()) continue;
-                        const char* name = it->second.c_str();
+                        const char* name = m_pWndMgr->GetName(id);
+                        if (!name) continue;
                         if (ImGui::MenuItem(name, nullptr, &visible)) {
                             m_pWndMgr->SetVisible(id, visible);
                         }
@@ -88,6 +88,9 @@ namespace gui {
                     if (!ids.empty()) {
                         ImGui::Separator();
                     }
+                }
+                if (ImGui::MenuItem("Check for Updates")) {
+                    if (m_onUpdates) m_onUpdates();
                 }
                 if (ImGui::MenuItem("About")) {
                     if (m_onAbout) m_onAbout();

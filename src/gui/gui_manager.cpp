@@ -3,9 +3,9 @@
 #include <imgui_internal.h>
 #include "gui/sag_analysis_service.h"
 #include "gui/menu_bar_controller.h"
-#include "gui/window_manager.h"
+#include "gui/dockable_windows_manager.h"
 #include "dde/dde_connection_manager.h"
-#include "windows/dde_status.h"
+#include "windows_dockable/dde_status.h"
 #include "logger/logger.h"
 
 namespace gui {
@@ -24,9 +24,13 @@ namespace gui {
     m_menuBarController->setAboutCallback([this]() {
         m_showAboutPopup = true;
     });
+    m_menuBarController->setUpdatesCallback([this]() {
+        m_showUpdatesPopup = true;
+    });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_zemaxDDEClient);
     m_debugLogRenderer = std::make_unique<DebugLog>();
-    m_appInfoDialog     = std::make_unique<AppInfoDialog>();
+    m_aboutDialog        = std::make_unique<AboutDialog>();
+    m_updateChecker      = std::make_unique<UpdateChecker>();
 }
 
 GuiManager::~GuiManager() = default;
@@ -95,7 +99,7 @@ void GuiManager::render() {
         }
     }
 
-    setPopupPosition();
+    SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
 
@@ -112,21 +116,15 @@ void GuiManager::renderDebugLog() {
     }
 }
 
-void GuiManager::setPopupPosition() {
-    if (m_appInfoDialog) {
-        m_appInfoDialog->setPopupPosition();
-    }
-}
-
 void GuiManager::renderAboutPopup() {
-    if (m_appInfoDialog) {
-        m_appInfoDialog->render(m_showAboutPopup);
+    if (m_aboutDialog) {
+        m_aboutDialog->render(m_showAboutPopup);
     }
 }
 
 void GuiManager::renderUpdatesPopup() {
-    if (m_appInfoDialog) {
-        m_appInfoDialog->renderUpdatesPopup(m_showUpdatesPopup);
+    if (m_updateChecker) {
+        m_updateChecker->renderPopup(m_showUpdatesPopup);
     }
 }
 

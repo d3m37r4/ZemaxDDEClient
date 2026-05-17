@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include "windows/dde_status.h"
+#include "windows_dockable/dde_status.h"
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "lib/imgui/imgui.h"

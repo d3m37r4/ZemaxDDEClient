@@ -85,14 +85,14 @@ set(SOURCES
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/sag_analysis_service.cpp
-    ${SRC_DIR}/gui/app_info_dialog.cpp
     ${SRC_DIR}/gui/utils.cpp
-    ${SRC_DIR}/gui/window_manager.cpp
-    ${SRC_DIR}/gui/window_registration.cpp
-    ${SRC_DIR}/gui/windows/dde_status.cpp
-    ${SRC_DIR}/gui/windows/debug_log.cpp
-    ${SRC_DIR}/gui/windows/optical_system_info.cpp
-    ${SRC_DIR}/gui/windows/surface_sag_analysis.cpp
+    ${SRC_DIR}/gui/popups/about_dialog.cpp
+    ${SRC_DIR}/gui/popups/update_checker.cpp
+    ${SRC_DIR}/gui/dockable_windows_manager.cpp
+    ${SRC_DIR}/gui/windows_dockable/dde_status.cpp
+    ${SRC_DIR}/gui/windows_dockable/debug_log.cpp
+    ${SRC_DIR}/gui/windows_dockable/optical_system_info.cpp
+    ${SRC_DIR}/gui/windows_dockable/surface_sag_analysis.cpp
 )
 
 # Add ImGui source files directly
@@ -148,6 +148,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Comdlg32
     Uuid
     Shell32
+    winhttp
 )
 
 # Compiler flags
