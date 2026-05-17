@@ -5,8 +5,7 @@
 
 #include "logger/logger.h"
 #include "app/app.h"
-#include "gui/window_manager.h"
-#include "gui/window_registration.h"
+#include "gui/dockable_windows_manager.h"
 
 int main() {
     Logger logger;
@@ -19,9 +18,8 @@ int main() {
         return -1;
     }
 
-    WindowManager wndMgr;
-    RegisterAllWindows(wndMgr, ctx->gui.get());
-    SetWindowDisplayOrder(wndMgr);
+    DockableWindowsManager wndMgr;
+    wndMgr.RegisterDockableWindows(ctx->gui.get());
     wndMgr.LoadState();
     ctx->gui->setWindowManager(&wndMgr);
 
