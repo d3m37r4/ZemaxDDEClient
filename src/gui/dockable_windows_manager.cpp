@@ -103,6 +103,13 @@ const std::vector<std::pair<WindowID, bool>> DockableWindowsManager::GetVisibili
     return result;
 }
 
+const char* DockableWindowsManager::GetName(WindowID id) const {
+    for (const auto& w : windows_) {
+        if (w.id == id) return w.name.c_str();
+    }
+    return nullptr;
+}
+
 namespace {
     void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
         float dpiScale = ImGui::GetWindowDpiScale();
@@ -114,9 +121,11 @@ namespace {
 
     void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
-        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DDEStatus);
+        auto* mgr = guiMgr->getWindowManager();
+        bool isVisible = mgr->IsVisible(WindowID::DDEStatus);
+        const char* title = mgr->GetName(WindowID::DDEStatus);
         SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN);
-        if (ImGui::Begin("DDE Status", &isVisible,
+        if (ImGui::Begin(title, &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
             if (guiMgr->getDDEStatusRenderer()) {
                 guiMgr->getDDEStatusRenderer()->render(guiMgr->getLogger());
@@ -130,9 +139,11 @@ namespace {
 
     void RenderSystemInfoWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
-        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SystemInfo);
+        auto* mgr = guiMgr->getWindowManager();
+        bool isVisible = mgr->IsVisible(WindowID::SystemInfo);
+        const char* title = mgr->GetName(WindowID::SystemInfo);
         SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN, gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN);
-        if (ImGui::Begin("Optical System Information", &isVisible)) {
+        if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderOpticalSystemInfo();
         }
         ImGui::End();
@@ -143,9 +154,11 @@ namespace {
 
     void RenderSagAnalysisWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
-        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::SagAnalysis);
+        auto* mgr = guiMgr->getWindowManager();
+        bool isVisible = mgr->IsVisible(WindowID::SagAnalysis);
+        const char* title = mgr->GetName(WindowID::SagAnalysis);
         SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
-        if (ImGui::Begin("Surface Sag Cross Section Analysis", &isVisible)) {
+        if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderSurfaceSagAnalysis();
         }
         ImGui::End();
@@ -156,9 +169,11 @@ namespace {
 
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
-        bool isVisible = guiMgr->getWindowManager()->IsVisible(WindowID::DebugLog);
+        auto* mgr = guiMgr->getWindowManager();
+        bool isVisible = mgr->IsVisible(WindowID::DebugLog);
+        const char* title = mgr->GetName(WindowID::DebugLog);
         SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN);
-        if (ImGui::Begin("Debug Log", &isVisible)) {
+        if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderDebugLog();
         }
         ImGui::End();
