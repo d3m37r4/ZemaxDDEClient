@@ -166,26 +166,26 @@ namespace {
             guiMgr->getWindowManager()->SetVisible(WindowID::DebugLog, false);
         }
     }
+
+    std::function<void()> GetRenderFunction(WindowID id, gui::GuiManager* guiMgr) {
+        switch (id) {
+            case WindowID::DDEStatus:
+                return [guiMgr]() { RenderDDEStatusWindow(guiMgr); };
+            case WindowID::SystemInfo:
+                return [guiMgr]() { RenderSystemInfoWindow(guiMgr); };
+            case WindowID::SagAnalysis:
+                return [guiMgr]() { RenderSagAnalysisWindow(guiMgr); };
+            case WindowID::DebugLog:
+                return [guiMgr]() { RenderDebugLogWindow(guiMgr); };
+            default:
+                return nullptr;
+        }
+    }
 }
 
 void DockableWindowsManager::RegisterDockableWindows(gui::GuiManager* guiMgr) {
     for (const auto& w : DockableWindows) {
-        std::function<void()> renderFn;
-        switch (w.id) {
-            case WindowID::DDEStatus:
-                renderFn = [guiMgr]() { RenderDDEStatusWindow(guiMgr); };
-                break;
-            case WindowID::SystemInfo:
-                renderFn = [guiMgr]() { RenderSystemInfoWindow(guiMgr); };
-                break;
-            case WindowID::SagAnalysis:
-                renderFn = [guiMgr]() { RenderSagAnalysisWindow(guiMgr); };
-                break;
-            case WindowID::DebugLog:
-                renderFn = [guiMgr]() { RenderDebugLogWindow(guiMgr); };
-                break;
-        }
-        
+        auto renderFn = GetRenderFunction(w.id, guiMgr);
         RegisterWindow(w.id, w.name, w.category, std::move(renderFn), w.order, w.isVisible);
     }
 }

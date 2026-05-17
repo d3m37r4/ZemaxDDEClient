@@ -21,7 +21,7 @@ namespace gui {
     class GuiManager;
 }
 
-struct DockableWindowConfig {
+struct DockableWindowData {
     WindowID id;
     WindowCategory category;
     const char* name;
@@ -29,7 +29,7 @@ struct DockableWindowConfig {
     int order;
 };
 
-inline constexpr DockableWindowConfig DockableWindows[] = {
+inline constexpr DockableWindowData DockableWindows[] = {
     { WindowID::DDEStatus, WindowCategory::DDE, "DDE Status", true, 0 },
     { WindowID::SystemInfo, WindowCategory::Tools, "Optical System Information", true, 0 },
     { WindowID::SagAnalysis, WindowCategory::Tools, "Surface Sag Cross Section Analysis", false, 1 },
