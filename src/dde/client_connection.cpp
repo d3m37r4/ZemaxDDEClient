@@ -23,7 +23,7 @@ namespace ZemaxDDE {
             return;
         }
 
-        m_hwndZemaxServer = NULL;
+        m_hwndZemaxServer = nullptr;
 
         ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
         ATOM topicAtom = GlobalAddAtomW(DDE_TOPIC);
@@ -187,7 +187,7 @@ namespace ZemaxDDE {
                         m_logger.addLog(std::format("[DDE] GetName (converted): {}", name));
                         #endif
 
-                        DdeAck.fAck = TRUE;
+                        DdeAck.fAck = true;
                     }
                     if (command_token == "GetFile") {
                         std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
@@ -197,7 +197,7 @@ namespace ZemaxDDE {
                         m_logger.addLog(std::format("[DDE] GetFile (converted): {}", fileNameStr));
                         #endif
 
-                        DdeAck.fAck = TRUE;
+                        DdeAck.fAck = true;
                     }
                     if (command_token == "GetSystem") {
                         const int GET_SYSTEM_PARAMS_COUNT = 9;
@@ -234,7 +234,7 @@ namespace ZemaxDDE {
                             m_opticalSystem.pressure      = std::stod(systemParams[PRESSURE]);
                             m_opticalSystem.globalRefSurf = std::stoi(systemParams[GLOBAL_REF_SURF]);
 
-                            DdeAck.fAck = TRUE;
+                            DdeAck.fAck = true;
                         } catch (const std::invalid_argument& e) {
                             m_logger.addLog(std::format("[DDE] GetSystem: Invalid number format in parameter: {}", e.what()));
                             return 0;
@@ -337,7 +337,7 @@ namespace ZemaxDDE {
                                                     ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS, arg));
                             return 0;
                         }
-                        DdeAck.fAck = TRUE;
+                        DdeAck.fAck = true;
                     }
                     if (command_token == "GetWave") {
                         const int EXPECTED_COMMAND_TOKENS = 2;
@@ -418,7 +418,7 @@ namespace ZemaxDDE {
                                                     ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES, arg));
                             return 0;
                         }
-                        DdeAck.fAck = TRUE;
+                        DdeAck.fAck = true;
                     }
                     if (command_token == "GetSurfaceData") {
                         auto tokens = ZemaxDDE::tokenize(buffer);
@@ -440,11 +440,15 @@ namespace ZemaxDDE {
                         // int arg2 = std::stoi(item_tokens[3]);
 
                         // Selecting target storage
-                        auto& surface = (m_currentStorageTarget == StorageTarget::NOMINAL)
-                            ? m_nominalSurface
-                            : m_tolerancedSurface;
+                        if (!m_currentStorage) {
+                            m_logger.addLog("[DDE] GetSurfaceData: No storage target set");
+                            return 0;
+                        }
+                        
+                        auto& surface = *m_currentStorage;
                         surface.id = currentSurface;
                         surface.units = m_opticalSystem.units;
+                        surface.fileName = m_opticalSystem.fileName;
 
                         switch (code) {
                             case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
@@ -461,7 +465,7 @@ namespace ZemaxDDE {
                             }
                         }
 
-                        DdeAck.fAck = TRUE;
+                        DdeAck.fAck = true;
                         return 0;
                     }
                     if (command_token == "GetSag") {
@@ -496,19 +500,22 @@ namespace ZemaxDDE {
                         double alternateSag = std::stod(values[1]);
 
                         // Selecting target storage
-                        auto& surface = (m_currentStorageTarget == StorageTarget::NOMINAL)
-                            ? m_nominalSurface
-                            : m_tolerancedSurface;
+                        if (!m_currentStorage) {
+                            m_logger.addLog("[DDE] GetSag: No storage target set");
+                            return 0;
+                        }
+                        
+                        auto& surface = *m_currentStorage;
                         surface.id = currentSurface;
                         surface.sagDataPoints.push_back({
                             x, y, sag, alternateSag
                         });
 
-                        DdeAck.fAck = TRUE;
+                        DdeAck.fAck = true;
                         return 0;    
                     }
                 }
-                if (ddeDataLock.as<::DDEDATA>()->fAckReq == TRUE) {
+                if (ddeDataLock.as<::DDEDATA>()->fAckReq == true) {
                     WORD wStatus;
                     memcpy(&wStatus, &DdeAck, sizeof(wStatus));
                     if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
@@ -519,7 +526,7 @@ namespace ZemaxDDE {
                 } else {
                     GlobalDeleteAtom(aItem);
                 }
-                if (ddeDataLock.as<::DDEDATA>()->fRelease == TRUE || DdeAck.fAck == FALSE) {
+                if (ddeDataLock.as<::DDEDATA>()->fRelease == true || DdeAck.fAck == false) {
                     GlobalFree(ddeDataHandle);
                 }
                 return 0;

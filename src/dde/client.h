@@ -17,7 +17,7 @@ namespace ZemaxDDE {
             void initiateDDE();
             void terminateDDE();
 
-            bool isConnected() const noexcept { return m_hwndZemaxServer != NULL; }
+            bool isConnected() const noexcept { return m_hwndZemaxServer != nullptr; }
 
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
@@ -36,31 +36,30 @@ namespace ZemaxDDE {
             void getSag(int surfaceNumber, double x = 0.0, double y = 0.0);
 
             // Getters
-            [[nodiscard]] const StorageTarget& getStorageTarget() const noexcept { return m_currentStorageTarget; }
             [[nodiscard]] const OpticalSystemData& getOpticalSystemData() const noexcept { return m_opticalSystem; }
-            [[nodiscard]] const SurfaceData& getTolerancedSurface() const noexcept { return m_tolerancedSurface; }
-            [[nodiscard]] const SurfaceData& getNominalSurface() const noexcept { return m_nominalSurface; }
+            [[nodiscard]] SurfaceData* getTolerancedSurface() noexcept { return &m_tolerancedSurface; }
+            [[nodiscard]] SurfaceData* getNominalSurface() noexcept { return &m_nominalSurface; }
+            [[nodiscard]] SurfaceData* getCurrentStorage() noexcept { return m_currentStorage; }
 
             // Setters
-            void setStorageTarget(StorageTarget target) noexcept { m_currentStorageTarget = target; }
-            void clearTolerancedSurface() noexcept { m_tolerancedSurface.clear(); }
-            void clearNominalSurface() noexcept { m_nominalSurface.clear(); }
-            void setSurfaceProfileMetadata(ZemaxDDE::StorageTarget target, const SurfaceProfileMetadata& metadata) {
-                SurfaceData& surface = (target == StorageTarget::NOMINAL) ? m_nominalSurface : m_tolerancedSurface;
-                surface.angle = metadata.angle;
-                surface.sampling = metadata.sampling;
+            void setStorageTarget(SurfaceData* targetStorage) noexcept { m_currentStorage = targetStorage; }
+            void setSurfaceProfileMetadata(const SurfaceProfileMetadata& metadata) {
+                if (m_currentStorage) {
+                    m_currentStorage->angle = metadata.angle;
+                    m_currentStorage->sampling = metadata.sampling;
+                }
             }
 
         private:
             HWND m_hwndZemaxServer = nullptr;
-            HWND m_hwndZemaxClient = NULL;
+            HWND m_hwndZemaxClient = nullptr;
             Logger& m_logger;
             OnDDEConnectedCallback m_onDDEConnected;
             OpticalSystemData m_opticalSystem;
             SurfaceData m_tolerancedSurface;
             SurfaceData m_nominalSurface;
-            StorageTarget m_currentStorageTarget = StorageTarget::TOLERANCED;
-            bool m_isDataReceived = false;
+            SurfaceData* m_currentStorage = &m_tolerancedSurface;
+            bool m_isDataReceived{false};
 
             void sendPostRequest(std::string_view request);
             void waitForData();

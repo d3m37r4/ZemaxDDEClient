@@ -5,11 +5,6 @@ namespace ZemaxDDE {
     inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";   // Topic DDE
     static constexpr int DDE_TIMEOUT_MS             = 5000;         // Timeout in ms (5 sec.)
 
-    enum class StorageTarget {
-        TOLERANCED,
-        NOMINAL
-    };
-
     inline constexpr int MIN_FIELDS = 1;
     inline constexpr int MAX_FIELDS = 12;
 
