@@ -42,8 +42,8 @@ namespace {
 namespace gui {
     void GuiManager::renderSurfaceSagAnalysis() {
         auto& state = m_sagService->m_surfaceSagAnalysisPageState;
-        auto& nominal = m_zemaxDDEClient->getNominalSurface();
-        auto& toleranced = m_zemaxDDEClient->getTolerancedSurface();
+        auto* nominal = m_zemaxDDEClient->getNominalSurface();
+        auto* toleranced = m_zemaxDDEClient->getTolerancedSurface();
 
         ImGui::SeparatorText("Toleranced surface parameters");
         ImGui::BeginChild(
@@ -53,17 +53,19 @@ namespace gui {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
-        if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
-            ImGui::TextUnformatted("Optical system: null");
-            ImGui::TextUnformatted(std::format("Surface index: {}", toleranced.id).c_str());
-            ImGui::TextUnformatted(std::format("Surface type: {}", toleranced.type).c_str());
-            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
-            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
+        if (toleranced->isValid() && toleranced->id == state.tolerancedSurfaceIndex) {
+            ImGui::TextUnformatted(std::format("Optical system: {}", toleranced->fileName).c_str());
+            ImGui::TextUnformatted(std::format("Sampling: {}", toleranced->sampling).c_str());
+            ImGui::TextUnformatted(std::format("Angle: {}°", toleranced->angle).c_str());
+            ImGui::TextUnformatted(std::format("Surface index: {}", toleranced->id).c_str());
+            ImGui::TextUnformatted(std::format("Surface type: {}", toleranced->type).c_str());
+            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", toleranced->semiDiameter, getUnitString(toleranced->units)).c_str());
+            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", toleranced->diameter(), getUnitString(toleranced->units)).c_str());
             ImGui::Text("Surface sag data:");
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                m_sagService->saveCrossSectionToFile(toleranced);
+                m_sagService->saveCrossSectionToFile(*toleranced);
             }
 
             ImGui::SameLine();
@@ -76,7 +78,7 @@ namespace gui {
 
             if (ImGui::Button("Clear data")) {
                 m_sagService->m_showTolerancedSagWindow = false;
-                m_zemaxDDEClient->clearTolerancedSurface();
+                toleranced->clear();
             }
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
@@ -111,7 +113,7 @@ namespace gui {
 
             if (ImGui::Button("Get toleranced surface data")) {
                 if (isDDEInitialized()) {
-                    m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::TOLERANCED);
+                    m_zemaxDDEClient->setStorageTarget(m_zemaxDDEClient->getTolerancedSurface());
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
                     m_sagService->calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
@@ -129,17 +131,19 @@ namespace gui {
             ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
-        if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
-            ImGui::TextUnformatted("Optical system: null");
-            ImGui::TextUnformatted(std::format("Surface index: {}", nominal.id).c_str());
-            ImGui::TextUnformatted(std::format("Surface type: {}", nominal.type).c_str());
-            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
-            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
+        if (nominal->isValid() && nominal->id == state.nominalSurfaceIndex) {
+            ImGui::TextUnformatted(std::format("Optical system: {}", nominal->fileName).c_str());
+            ImGui::TextUnformatted(std::format("Sampling: {}", nominal->sampling).c_str());
+            ImGui::TextUnformatted(std::format("Angle: {}°", nominal->angle).c_str());
+            ImGui::TextUnformatted(std::format("Surface index: {}", nominal->id).c_str());
+            ImGui::TextUnformatted(std::format("Surface type: {}", nominal->type).c_str());
+            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal->semiDiameter, getUnitString(nominal->units)).c_str());
+            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal->diameter(), getUnitString(nominal->units)).c_str());
             ImGui::Text("Surface sag data:");
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                m_sagService->saveCrossSectionToFile(nominal);
+                m_sagService->saveCrossSectionToFile(*nominal);
             }
 
             ImGui::SameLine();
@@ -152,7 +156,7 @@ namespace gui {
 
             if (ImGui::Button("Clear data")) {
                 m_sagService->m_showNominalSagWindow = false;
-                m_zemaxDDEClient->clearNominalSurface();
+                nominal->clear();
             }
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
@@ -188,7 +192,7 @@ namespace gui {
 
             if (ImGui::Button("Get nominal surface data")) {
                 if (isDDEInitialized()) {
-                    m_zemaxDDEClient->setStorageTarget(ZemaxDDE::StorageTarget::NOMINAL);
+                    m_zemaxDDEClient->setStorageTarget(m_zemaxDDEClient->getNominalSurface());
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
                     m_sagService->calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
@@ -199,7 +203,7 @@ namespace gui {
         }
         ImGui::EndChild();
 
-        if (nominal.isValid() && toleranced.isValid()) {
+        if (nominal->isValid() && toleranced->isValid()) {
             ImGui::SeparatorText("Profile Comparison");
 
             if (ImGui::Button("Detach Comparison")) {
@@ -220,7 +224,7 @@ namespace gui {
             if (showProfiles || showErrorPlot) {
                 ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoTitleBar);
 
-                auto data = prepareSagCrossSectionData(nominal, toleranced);
+                auto data = prepareSagCrossSectionData(*nominal, *toleranced);
 
                 if (showProfiles) {
                     if (ImPlot::BeginPlot("##Profiles", ImVec2(-1, 200))) {

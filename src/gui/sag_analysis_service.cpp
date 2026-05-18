@@ -34,18 +34,9 @@ namespace gui {
     }
 
     void SagAnalysisService::calculateSagCrossSection(int surface, int sampling, double angle) {
-        const auto targetStorage = m_ddeClient->getStorageTarget();
-        if (targetStorage != ZemaxDDE::StorageTarget::NOMINAL && targetStorage != ZemaxDDE::StorageTarget::TOLERANCED) {
-            m_logger.addLog("[GUI] Invalid storage target for Sag calculation");
-            return;
-        }
+        const ZemaxDDE::SurfaceData* targetSurface = m_ddeClient->getCurrentStorage();
 
-        const ZemaxDDE::SurfaceData& targetSurface =
-            (targetStorage == ZemaxDDE::StorageTarget::NOMINAL)
-                ? m_ddeClient->getNominalSurface()
-                : m_ddeClient->getTolerancedSurface();
-
-        if (targetSurface.id != surface || !targetSurface.isValid()) [[unlikely]] {
+        if (targetSurface->id != surface || !targetSurface->isValid()) [[unlikely]] {
             m_logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
             return;
         }
@@ -54,8 +45,8 @@ namespace gui {
         const double rad = angle * DEG_TO_RAD;
         const double cosAngle = cos(rad);
         const double sinAngle = sin(rad);
-        double semiDiameter = targetSurface.semiDiameter;
-        double step = targetSurface.diameter() / (sampling - 1);
+        double semiDiameter = targetSurface->semiDiameter;
+        double step = targetSurface->diameter() / (sampling - 1);
 
         #ifdef DEBUG_LOG
         m_logger.addLog(std::format("[GUI] Requesting Sag Cross Section for surface {} at angle {}° with {} points", surface, angle, sampling));
@@ -69,7 +60,6 @@ namespace gui {
         }
 
         m_ddeClient->setSurfaceProfileMetadata(
-            targetStorage,
             {.angle = angle, .sampling = sampling}
         );
 
