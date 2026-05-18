@@ -91,7 +91,7 @@ namespace App {
             if (dwmFunc) {
                 // Detect system dark mode via registry (reliable for Windows 10/11)
                 bool isDarkMode = false;
-                HKEY hKey = NULL;
+                HKEY hKey = nullptr;
                 LONG regResult = RegOpenKeyExW(HKEY_CURRENT_USER,
                     L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
                     0, KEY_READ, &hKey);
