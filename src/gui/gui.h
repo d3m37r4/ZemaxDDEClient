@@ -47,6 +47,7 @@ namespace gui {
 
             void renderOpticalSystemInfo();
             void renderSurfaceSagAnalysis();
+            void renderSurfaceMapAnalysis();
             void renderDebugLog();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }

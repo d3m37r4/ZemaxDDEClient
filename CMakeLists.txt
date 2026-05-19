@@ -93,6 +93,7 @@ set(SOURCES
     ${SRC_DIR}/gui/windows_dockable/debug_log.cpp
     ${SRC_DIR}/gui/windows_dockable/optical_system_info.cpp
     ${SRC_DIR}/gui/windows_dockable/surface_sag_analysis.cpp
+    ${SRC_DIR}/gui/windows_dockable/surface_map_analysis.cpp
 )
 
 # Add ImGui source files directly

@@ -159,6 +159,21 @@ namespace {
         }
     }
 
+    void RenderSurfaceMapAnalysisWindow(gui::GuiManager* guiMgr) {
+        if (!guiMgr) return;
+        auto* mgr = guiMgr->getWindowManager();
+        bool isVisible = mgr->IsVisible(WindowID::SurfaceMapAnalysis);
+        const char* title = mgr->GetName(WindowID::SurfaceMapAnalysis);
+        SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
+        if (ImGui::Begin(title, &isVisible)) {
+            guiMgr->renderSurfaceMapAnalysis();
+        }
+        ImGui::End();
+        if (!isVisible) {
+            guiMgr->getWindowManager()->SetVisible(WindowID::SurfaceMapAnalysis, false);
+        }
+    }
+
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
@@ -182,6 +197,8 @@ namespace {
                 return [guiMgr]() { RenderSystemInfoWindow(guiMgr); };
             case WindowID::SagAnalysis:
                 return [guiMgr]() { RenderSagAnalysisWindow(guiMgr); };
+            case WindowID::SurfaceMapAnalysis:
+                return [guiMgr]() { RenderSurfaceMapAnalysisWindow(guiMgr); };
             case WindowID::DebugLog:
                 return [guiMgr]() { RenderDebugLogWindow(guiMgr); };
             default:
