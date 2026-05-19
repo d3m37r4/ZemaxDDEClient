@@ -12,6 +12,7 @@
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
+#include "gui/sag_map_analysis_service.h"
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
@@ -61,6 +62,7 @@ namespace gui {
 
             GraphicsBackend m_graphics;
             std::unique_ptr<SagAnalysisService> m_sagService;
+            std::unique_ptr<SagMapAnalysisService> m_sagMapService;
             std::unique_ptr<DDEConnectionManager> m_ddeConnectionManager;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;

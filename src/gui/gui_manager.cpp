@@ -2,6 +2,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "gui/sag_analysis_service.h"
+#include "gui/sag_map_analysis_service.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/dockable_windows_manager.h"
 #include "dde/dde_connection_manager.h"
@@ -16,6 +17,7 @@ namespace gui {
 , m_logger(logger)
 {
     m_sagService = std::make_unique<SagAnalysisService>(ddeClient, logger);
+    m_sagMapService = std::make_unique<SagMapAnalysisService>(ddeClient, logger);
     m_ddeConnectionManager = std::make_unique<DDEConnectionManager>(m_zemaxDDEClient, m_logger);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager.get());
     m_menuBarController->setExitCallback([this]() {
