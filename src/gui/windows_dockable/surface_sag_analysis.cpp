@@ -113,7 +113,11 @@ namespace gui {
 
             if (ImGui::Button("Get toleranced surface data")) {
                 if (isDDEInitialized()) {
-                    m_zemaxDDEClient->setStorageTarget(m_zemaxDDEClient->getTolerancedSurface());
+                    auto* surface = m_zemaxDDEClient->getTolerancedSurface();
+                    surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
+                    surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+                    m_zemaxDDEClient->setStorageTarget(surface);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
                     m_sagService->calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
@@ -192,7 +196,11 @@ namespace gui {
 
             if (ImGui::Button("Get nominal surface data")) {
                 if (isDDEInitialized()) {
-                    m_zemaxDDEClient->setStorageTarget(m_zemaxDDEClient->getNominalSurface());
+                    auto* surface = m_zemaxDDEClient->getNominalSurface();
+                    surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
+                    surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+                    m_zemaxDDEClient->setStorageTarget(surface);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
                     m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
                     m_sagService->calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);

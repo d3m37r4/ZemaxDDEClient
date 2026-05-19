@@ -447,8 +447,6 @@ namespace ZemaxDDE {
                         
                         auto& surface = *m_currentStorage;
                         surface.id = currentSurface;
-                        surface.units = m_opticalSystem.units;
-                        surface.fileName = m_opticalSystem.fileName;
 
                         switch (code) {
                             case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
