@@ -45,15 +45,6 @@ namespace gui {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("DDE")) {
-                if (m_pDDEClientMgr) {
-                    if (ImGui::MenuItem("Connect to Zemax")) {
-                        m_pDDEClientMgr->connect();
-                    }
-                    if (ImGui::MenuItem("Disconnect from Zemax")) {
-                        m_pDDEClientMgr->disconnect();
-                    }
-                }
-                ImGui::Separator();
                 if (m_pWndMgr) {
                     bool showDDEStatus = m_pWndMgr->IsVisible(WindowID::DDEStatus);
                     if (ImGui::MenuItem("Show DDE Status", nullptr, &showDDEStatus)) {

@@ -60,6 +60,59 @@ namespace ZemaxDDE {
         }
     }
 
+    void ZemaxDDEClient::initiateDDE(HWND targetHwnd) {
+        if (m_hwndZemaxServer != nullptr) {
+            m_logger.addLog("[DDE] DDE already connected. Skipping initiate.");
+            return;
+        }
+
+        m_hwndZemaxServer = nullptr;
+
+        ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
+        ATOM topicAtom = GlobalAddAtomW(DDE_TOPIC);
+        DWORD_PTR dwResult = 0;
+
+        SendMessageTimeoutW(targetHwnd, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom),
+            SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, DDE_TIMEOUT_MS, &dwResult);
+
+        #ifdef DEBUG_LOG
+        char appName[256], topicName[256];
+        WideCharToMultiByte(CP_ACP, 0, DDE_APP_NAME, -1, appName, sizeof(appName), NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, DDE_TOPIC, -1, topicName, sizeof(topicName), NULL, NULL);
+        m_logger.addLog(std::format("[DDE] Sent 'WM_DDE_INITIATE' to app='{}', topic='{}'.", appName, topicName));
+        #endif
+
+        GlobalDeleteAtom(appAtom);
+        GlobalDeleteAtom(topicAtom);
+        checkDDEConnection();
+
+        if (m_hwndZemaxServer) {
+            m_logger.addLog("[DDE] Connection established successfully");
+        } else {
+            m_logger.addLog("[DDE] Connection not established yet (waiting for 'WM_DDE_ACK')");
+        }
+
+        if (m_onDDEConnected) {
+            try {
+                m_onDDEConnected(this);
+            } catch (const std::exception& e) {
+                m_logger.addLog(std::format("[DDE] Error in DDE connected callback: {}", e.what()));
+                throw;
+            }
+        }
+    }
+
+    void ZemaxDDEClient::pumpMessages() {
+        MSG msg;
+        while (PeekMessageW(&msg, m_hwndZemaxClient, WM_DDE_FIRST, WM_DDE_LAST, PM_REMOVE)) {
+            DispatchMessageW(&msg);
+        }
+    }
+
+    void ZemaxDDEClient::processTimeouts() {
+        // Will be used in async DDE phase
+    }
+
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);

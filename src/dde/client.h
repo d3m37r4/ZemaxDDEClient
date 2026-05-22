@@ -15,9 +15,13 @@ namespace ZemaxDDE {
             ~ZemaxDDEClient();
 
             void initiateDDE();
+            void initiateDDE(HWND targetHwnd);
             void terminateDDE();
 
             bool isConnected() const noexcept { return m_hwndZemaxServer != nullptr; }
+
+            void pumpMessages();
+            void processTimeouts();
 
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 

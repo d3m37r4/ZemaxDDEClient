@@ -1,25 +1,46 @@
 #pragma once
 
-#include <functional>
+#include <array>
+#include <memory>
+#include <string>
+#include <vector>
+#include <windows.h>
 
+#include "dde/dde_connection.h"
+
+namespace app { struct ZemaxWindowInfo; }
 namespace ZemaxDDE { class ZemaxDDEClient; }
-
 class Logger;
 
 class DDEConnectionManager {
-    public:
-        DDEConnectionManager(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+public:
+    static constexpr int MAX_CONNECTIONS = 2;
 
-        bool connect();
-        void disconnect();
-        bool isConnected() const;
+    explicit DDEConnectionManager(Logger& logger);
 
-        void setOnConnected(std::function<void()> cb);
-        void setOnDisconnected(std::function<void()> cb);
+    int connectToZemax(HWND targetHwnd, const std::wstring& title);
+    void disconnect(int index);
+    void disconnectAll();
 
-    private:
-        ZemaxDDE::ZemaxDDEClient* m_ddeClient;
-        Logger& m_logger;
-        std::function<void()> m_onConnected;
-        std::function<void()> m_onDisconnected;
+    void setActiveConnection(int index);
+    ZemaxDDE::ZemaxDDEClient* getActiveClient() const;
+    int getActiveIndex() const { return m_activeIndex; }
+
+    DDEConnection* getConnection(int index);
+    const std::array<DDEConnection, MAX_CONNECTIONS>& getConnections() const { return m_connections; }
+
+    bool isAnyConnected() const;
+
+    void pumpAllMessages();
+    void processAllTimeouts();
+
+    std::vector<app::ZemaxWindowInfo> enumerateAvailableTargets();
+
+private:
+    std::array<DDEConnection, MAX_CONNECTIONS> m_connections;
+    Logger& m_logger;
+    int m_activeIndex = -1;
+
+    int findFreeSlot();
+    HWND createClientWindow();
 };
