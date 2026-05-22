@@ -29,8 +29,12 @@ namespace gui {
         public:
             SagMapAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
 
-            void calculateSurfaceMap(int surface, int radialSampling, double angleStepDeg);
-            std::optional<MaxPVResult> findMaxPVSection() const;
+            void calculateSurfaceMap(int surface, int numRadii, double angleStepDeg);
+            // TODO: Re-enable Max-PV analysis
+            // std::optional<MaxPVResult> findMaxPVSection() const;
+
+            bool hasNominalReference() const { return m_ddeClient->getNominalSurface()->isValid(); }
+            const ZemaxDDE::SurfaceData& getNominalReference() const { return *m_ddeClient->getNominalSurface(); }
 
             bool hasData() const { return !m_sections.empty(); }
             void clearData() { m_sections.clear(); }

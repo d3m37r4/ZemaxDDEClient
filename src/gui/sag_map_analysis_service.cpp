@@ -17,88 +17,98 @@ namespace gui {
     {
     }
 
-    void SagMapAnalysisService::calculateSurfaceMap(int surface, int radialSampling, double angleStepDeg) {
-        if (angleStepDeg <= 0.0 || angleStepDeg > 180.0) {
-            m_logger.addLog("[SagMap] Invalid angle step, must be in range (0, 180]");
+    void SagMapAnalysisService::calculateSurfaceMap(int surface, int numRadii, double angleStepDeg) {
+        if (angleStepDeg <= 0.0 || angleStepDeg > 360.0) {
+            m_logger.addLog("[SagMap] Invalid angle step, must be in range (0, 360]");
+            return;
+        }
+
+        if (numRadii < 2) {
+            m_logger.addLog("[SagMap] Invalid number of radii, must be >= 2");
             return;
         }
 
         clearData();
 
-        m_logger.addLog(std::format("[SagMap] Calculating surface map for surface {}, sampling={}, angle step={} deg",
-            surface, radialSampling, angleStepDeg));
+        m_logger.addLog(std::format("[SagMap] Calculating surface map for surface {}, radii={}, angle step={} deg",
+            surface, numRadii, angleStepDeg));
 
-        m_ddeClient->setStorageTarget(m_ddeClient->getNominalSurface());
-        m_ddeClient->getSurfaceData(surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-        m_ddeClient->getSurfaceData(surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-
-        const ZemaxDDE::SurfaceData* nominalSurface = m_ddeClient->getNominalSurface();
-        if (!nominalSurface->isValid()) {
-            m_logger.addLog("[SagMap] Failed to get nominal surface data");
+        auto* toleranced = m_ddeClient->getTolerancedSurface();
+        if (!toleranced->isValid() || toleranced->semiDiameter <= 0.0) {
+            m_logger.addLog("[SagMap] Toleranced surface not initialized or invalid");
             return;
         }
 
-        double semiDiameter = nominalSurface->semiDiameter;
-        if (semiDiameter <= 0.0) {
-            m_logger.addLog("[SagMap] Invalid semi-diameter");
-            return;
-        }
+        double semiDiameter = toleranced->semiDiameter;
+        double radiusStep = semiDiameter / (numRadii - 1);
+        int numAngles = static_cast<int>(360.0 / angleStepDeg);
 
-        double step = nominalSurface->diameter() / (radialSampling - 1);
-        int numAngles = static_cast<int>(180.0 / angleStepDeg) + 1;
+        for (int i = 0; i < numRadii; ++i) {
+            double r = i * radiusStep;
 
-        m_ddeClient->setStorageTarget(m_ddeClient->getTolerancedSurface());
+            ZemaxDDE::SurfaceData ring;
+            ring.id = surface;
+            ring.semiDiameter = semiDiameter;
+            ring.units = toleranced->units;
+            ring.type = toleranced->type;
+            ring.fileName = toleranced->fileName;
 
-        for (int i = 0; i < numAngles; ++i) {
-            double angle = i * angleStepDeg;
-            double rad = angle * DEG_TO_RAD;
-            double cosAngle = std::cos(rad);
-            double sinAngle = std::sin(rad);
+            for (int j = 0; j < numAngles; ++j) {
+                double angle = j * angleStepDeg;
+                double rad = angle * DEG_TO_RAD;
+                double x = r * std::cos(rad);
+                double y = r * std::sin(rad);
 
-            m_ddeClient->getTolerancedSurface()->clear();
-            m_ddeClient->getTolerancedSurface()->id = surface;
-            m_ddeClient->getTolerancedSurface()->units = nominalSurface->units;
-            m_ddeClient->getTolerancedSurface()->semiDiameter = semiDiameter;
-            m_ddeClient->getTolerancedSurface()->type = nominalSurface->type;
-            m_ddeClient->getTolerancedSurface()->fileName = nominalSurface->fileName;
-
-            for (int j : std::views::iota(0, radialSampling)) {
-                double r = -semiDiameter + j * step;
-                double x = r * cosAngle;
-                double y = r * sinAngle;
+                toleranced->sagDataPoints.clear();
                 m_ddeClient->getSag(surface, x, y);
+
+                if (!toleranced->sagDataPoints.empty()) {
+                    ring.sagDataPoints.push_back(toleranced->sagDataPoints.back());
+                }
             }
 
-            m_sections.push_back(*m_ddeClient->getTolerancedSurface());
+            m_sections.push_back(ring);
         }
 
         m_state.tolerancedSurfaceIndex = surface;
-        m_state.tolerancedSampling = radialSampling;
+        m_state.tolerancedSampling = numRadii;
         m_state.tolerancedAngleStep = angleStepDeg;
 
-        m_logger.addLog(std::format("[SagMap] Surface map calculated: {} sections", m_sections.size()));
+        m_logger.addLog(std::format("[SagMap] Surface map calculated: {} rings", m_sections.size()));
     }
 
+    // TODO: Re-enable Max-PV analysis
+    /*
     std::optional<MaxPVResult> SagMapAnalysisService::findMaxPVSection() const {
-        if (m_sections.empty()) {
+        if (m_sections.empty() || !hasNominalReference()) {
             m_logger.addLog("[SagMap] No data available for Max-PV search");
+            return std::nullopt;
+        }
+
+        const auto* nominal = m_ddeClient->getNominalSurface();
+        if (nominal->sagDataPoints.empty()) {
+            m_logger.addLog("[SagMap] Nominal reference has no sag data");
             return std::nullopt;
         }
 
         MaxPVResult worst;
         worst.pv = 0.0;
+        worst.angle = 0.0;
+        worst.peak = 0.0;
+        worst.valley = 0.0;
 
         for (const auto& section : m_sections) {
-            if (section.sagDataPoints.empty()) {
+            if (section.sagDataPoints.size() != nominal->sagDataPoints.size()) {
                 continue;
             }
 
             double localPeak = -1e100;
             double localValley = 1e100;
 
-            for (const auto& point : section.sagDataPoints) {
-                localPeak = std::max(localPeak, point.sag);
-                localValley = std::min(localValley, point.sag);
+            for (size_t i = 0; i < section.sagDataPoints.size(); ++i) {
+                double deviation = section.sagDataPoints[i].sag - nominal->sagDataPoints[i].sag;
+                localPeak = std::max(localPeak, deviation);
+                localValley = std::min(localValley, deviation);
             }
 
             double pv = localPeak - localValley;
@@ -115,4 +125,5 @@ namespace gui {
 
         return worst;
     }
+    */
 }
