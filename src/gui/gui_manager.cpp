@@ -41,6 +41,9 @@ void GuiManager::initialize(float dpiScale) {
 }
 
 void GuiManager::render() {
+    // Refresh active DDE client in case connection changed via DDE Status UI
+    m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
+
     m_graphics.beginFrame();
     if (m_menuBarController) {
         m_menuBarController->render();
