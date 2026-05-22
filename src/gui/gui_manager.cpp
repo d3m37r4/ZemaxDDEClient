@@ -10,16 +10,15 @@
 #include "logger/logger.h"
 
 namespace gui {
-    GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
+    GuiManager::GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger)
 : m_glfwWindow(glfwWindow)
-, m_hwndClient(hwndClient)
-, m_zemaxDDEClient(ddeClient)
+, m_ddeConnectionManager(ddeConnectionManager)
+, m_zemaxDDEClient(ddeConnectionManager ? ddeConnectionManager->getActiveClient() : nullptr)
 , m_logger(logger)
 {
-    m_sagService = std::make_unique<SagAnalysisService>(ddeClient, logger);
-    m_sagMapService = std::make_unique<SagMapAnalysisService>(ddeClient, logger);
-    m_ddeConnectionManager = std::make_unique<DDEConnectionManager>(m_logger);
-    m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager.get());
+    m_sagService = std::make_unique<SagAnalysisService>(m_zemaxDDEClient, logger);
+    m_sagMapService = std::make_unique<SagMapAnalysisService>(m_zemaxDDEClient, logger);
+    m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
     });

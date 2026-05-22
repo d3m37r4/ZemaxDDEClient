@@ -4,8 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <windows.h>
 
-#include "dde/client.h"
 #include "gui/gui.h"
+#include "dde/dde_connection_manager.h"
 #include "version.h"
 
 class Logger;
@@ -15,8 +15,7 @@ class Logger;
 
 struct AppContext {
     GLFWwindow* glfwWindow = nullptr;
-    HWND hwndClient = nullptr;
-    std::unique_ptr<ZemaxDDE::ZemaxDDEClient> ddeClient;
+    std::unique_ptr<DDEConnectionManager> ddeConnectionManager;
     std::unique_ptr<gui::GuiManager> gui;
     Logger* pLogger = nullptr;
     float dpiScale = 1.0f;
