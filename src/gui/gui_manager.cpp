@@ -16,8 +16,8 @@ namespace gui {
 , m_zemaxDDEClient(ddeConnectionManager ? ddeConnectionManager->getActiveClient() : nullptr)
 , m_logger(logger)
 {
-    m_sagService = std::make_unique<SagAnalysisService>(m_zemaxDDEClient, logger);
-    m_sagMapService = std::make_unique<SagMapAnalysisService>(m_zemaxDDEClient, logger);
+    m_sagService = std::make_unique<SagAnalysisService>(m_ddeConnectionManager, logger);
+    m_sagMapService = std::make_unique<SagMapAnalysisService>(m_ddeConnectionManager, logger);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);

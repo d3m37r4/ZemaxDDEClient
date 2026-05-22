@@ -10,8 +10,8 @@
 #include "logger/logger.h"
 
 namespace gui {
-    SagAnalysisService::SagAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
-        : m_ddeClient(ddeClient)
+    SagAnalysisService::SagAnalysisService(DDEConnectionManager* connectionManager, Logger& logger)
+        : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
     }
@@ -34,7 +34,7 @@ namespace gui {
     }
 
     void SagAnalysisService::calculateSagCrossSection(int surface, int sampling, double angle) {
-        const ZemaxDDE::SurfaceData* targetSurface = m_ddeClient->getCurrentStorage();
+        const ZemaxDDE::SurfaceData* targetSurface = getClient()->getCurrentStorage();
 
         if (targetSurface->id != surface || !targetSurface->isValid()) [[unlikely]] {
             m_logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
@@ -56,10 +56,10 @@ namespace gui {
             const double r = -semiDiameter + i * step;
             const double x = r * cosAngle;
             const double y = r * sinAngle;
-            m_ddeClient->getSag(surface, x, y);
+            getClient()->getSag(surface, x, y);
         }
 
-        m_ddeClient->setSurfaceProfileMetadata(
+        getClient()->setSurfaceProfileMetadata(
             {.angle = angle, .sampling = sampling}
         );
 
@@ -170,5 +170,9 @@ namespace gui {
             }
         }
         ImGui::End();
+    }
+
+    ZemaxDDE::ZemaxDDEClient* SagAnalysisService::getClient() const {
+        return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
     }
 }

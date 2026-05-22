@@ -3,6 +3,7 @@
 #include <optional>
 #include <vector>
 
+#include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 
 class Logger;
@@ -27,14 +28,12 @@ namespace gui {
 
     class SagMapAnalysisService {
         public:
-            SagMapAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+            SagMapAnalysisService(DDEConnectionManager* connectionManager, Logger& logger);
 
             void calculateSurfaceMap(int surface, int numRadii, double angleStepDeg);
-            // TODO: Re-enable Max-PV analysis
-            // std::optional<MaxPVResult> findMaxPVSection() const;
 
-            bool hasNominalReference() const { return m_ddeClient->getNominalSurface()->isValid(); }
-            const ZemaxDDE::SurfaceData& getNominalReference() const { return *m_ddeClient->getNominalSurface(); }
+            bool hasNominalReference() const;
+            const ZemaxDDE::SurfaceData& getNominalReference() const;
 
             bool hasData() const { return !m_sections.empty(); }
             void clearData() { m_sections.clear(); }
@@ -44,7 +43,9 @@ namespace gui {
             SagMapAnalysisState m_state;
 
         private:
-            ZemaxDDE::ZemaxDDEClient* m_ddeClient;
+            ZemaxDDE::ZemaxDDEClient* getClient() const { return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr; }
+
+            DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
 
             std::vector<ZemaxDDE::SurfaceData> m_sections;

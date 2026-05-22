@@ -11,8 +11,8 @@ namespace {
 }
 
 namespace gui {
-    SagMapAnalysisService::SagMapAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
-        : m_ddeClient(ddeClient)
+    SagMapAnalysisService::SagMapAnalysisService(DDEConnectionManager* connectionManager, Logger& logger)
+        : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
     }
@@ -33,7 +33,13 @@ namespace gui {
         m_logger.addLog(std::format("[SagMap] Calculating surface map for surface {}, radii={}, angle step={} deg",
             surface, numRadii, angleStepDeg));
 
-        auto* toleranced = m_ddeClient->getTolerancedSurface();
+        auto* client = getClient();
+        if (!client) {
+            m_logger.addLog("[SagMap] No active DDE connection");
+            return;
+        }
+
+        auto* toleranced = client->getTolerancedSurface();
         if (!toleranced->isValid() || toleranced->semiDiameter <= 0.0) {
             m_logger.addLog("[SagMap] Toleranced surface not initialized or invalid");
             return;
@@ -60,7 +66,7 @@ namespace gui {
                 double y = r * std::sin(rad);
 
                 toleranced->sagDataPoints.clear();
-                m_ddeClient->getSag(surface, x, y);
+                client->getSag(surface, x, y);
 
                 if (!toleranced->sagDataPoints.empty()) {
                     ring.sagDataPoints.push_back(toleranced->sagDataPoints.back());
@@ -77,6 +83,15 @@ namespace gui {
         m_logger.addLog(std::format("[SagMap] Surface map calculated: {} rings", m_sections.size()));
     }
 
+    bool SagMapAnalysisService::hasNominalReference() const {
+        auto* client = getClient();
+        return client && client->getNominalSurface()->isValid();
+    }
+
+    const ZemaxDDE::SurfaceData& SagMapAnalysisService::getNominalReference() const {
+        return *getClient()->getNominalSurface();
+    }
+
     // TODO: Re-enable Max-PV analysis
     /*
     std::optional<MaxPVResult> SagMapAnalysisService::findMaxPVSection() const {
@@ -85,7 +100,7 @@ namespace gui {
             return std::nullopt;
         }
 
-        const auto* nominal = m_ddeClient->getNominalSurface();
+        const auto* nominal = getClient()->getNominalSurface();
         if (nominal->sagDataPoints.empty()) {
             m_logger.addLog("[SagMap] Nominal reference has no sag data");
             return std::nullopt;

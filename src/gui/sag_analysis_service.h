@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 
 class Logger;
@@ -26,34 +27,28 @@ namespace gui {
     // Write sag cross section data to a temporary text file
     std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content);
 
-    /**
-     * @brief Sag analysis service — business logic for surface sag cross section analysis.
-     *        Handles data calculation, export, and ImPlot rendering.
-     */
     class SagAnalysisService {
         public:
-            SagAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+            SagAnalysisService(DDEConnectionManager* connectionManager, Logger& logger);
 
-            // Business logic
             void calculateSagCrossSection(int surface, int sampling, double angle = 0.0);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
-            // Detached plot windows
             void renderCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
             void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
             void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
 
-            // Window visibility state
             bool m_showTolerancedSagWindow{false};
             bool m_showNominalSagWindow{false};
             bool m_showComparisonWindow{false};
             bool m_showErrorWindow{false};
 
-            // Page state
             SagAnalysisState m_surfaceSagAnalysisPageState;
 
         private:
-            ZemaxDDE::ZemaxDDEClient* m_ddeClient;
+            ZemaxDDE::ZemaxDDEClient* getClient() const;
+
+            DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
     };
 }
