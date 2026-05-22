@@ -28,7 +28,7 @@ namespace gui {
     m_menuBarController->setUpdatesCallback([this]() {
         m_showUpdatesPopup = true;
     });
-    m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_zemaxDDEClient);
+    m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_debugLogRenderer = std::make_unique<DebugLog>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();

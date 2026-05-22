@@ -6,6 +6,7 @@
 
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "logger/logger.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 #include "lib/implot3d/implot3d.h"
