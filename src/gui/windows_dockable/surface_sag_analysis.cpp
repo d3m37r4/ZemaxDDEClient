@@ -41,6 +41,7 @@ namespace {
 
 namespace gui {
     void GuiManager::renderSurfaceSagAnalysis() {
+        if (!m_zemaxDDEClient) return;
         auto& state = m_sagService->m_surfaceSagAnalysisPageState;
         auto* nominal = m_zemaxDDEClient->getNominalSurface();
         auto* toleranced = m_zemaxDDEClient->getTolerancedSurface();

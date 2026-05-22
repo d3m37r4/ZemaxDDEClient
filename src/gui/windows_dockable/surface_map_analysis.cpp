@@ -35,6 +35,7 @@ namespace {
 
 namespace gui {
     void GuiManager::renderSurfaceMapAnalysis() {
+        if (!m_zemaxDDEClient) return;
         auto& state = m_sagMapService->m_state;
 
         ImGui::SeparatorText("Nominal surface parameters");

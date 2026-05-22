@@ -20,18 +20,20 @@ namespace {
         return result;
     }
 
+    extern "C" LRESULT CALLBACK DDEClientWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
+        if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
+            auto* client = reinterpret_cast<ZemaxDDE::ZemaxDDEClient*>(
+                GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            if (client) {
+                return client->handleDDEMessages(iMsg, wParam, lParam);
+            }
+        }
+        return DefWindowProcW(hwnd, iMsg, wParam, lParam);
+    }
+
     ATOM registerDDEClientClass() {
         WNDCLASSW wndClass{};
-        wndClass.lpfnWndProc = [](HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) -> LRESULT {
-            if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
-                auto* client = reinterpret_cast<ZemaxDDE::ZemaxDDEClient*>(
-                    GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-                if (client) {
-                    return client->handleDDEMessages(iMsg, wParam, lParam);
-                }
-            }
-            return DefWindowProcW(hwnd, iMsg, wParam, lParam);
-        };
+        wndClass.lpfnWndProc = DDEClientWndProc;
         wndClass.hInstance = GetModuleHandleW(nullptr);
         wndClass.lpszClassName = L"ZEMAX_DDE_Client";
         return RegisterClassW(&wndClass);
