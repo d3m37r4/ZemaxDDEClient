@@ -2,7 +2,6 @@
 
 #include "windows_dockable/dde_status.h"
 #include "gui/constants.h"
-#include "app/zemax_window_enumerator.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -23,7 +22,6 @@ namespace gui {
         }
         int activeIdx = m_connectionManager->getActiveIndex();
 
-        // --- Connection status indicator ---
         {
             const bool connected = (activeIdx >= 0);
             const char* label = "Zemax DDE Status:";
@@ -44,7 +42,6 @@ namespace gui {
             ImGui::PopStyleColor();
         }
 
-        // --- Active target dropdown (only when connected) ---
         if (connectionCount > 0) {
             ImGui::Separator();
             ImGui::Text("Active Target:");
@@ -77,13 +74,20 @@ namespace gui {
                         ImGui::SetItemDefaultFocus();
                     }
                 }
+
+                if (connectionCount < DDEConnectionManager::MAX_CONNECTIONS) {
+                    ImGui::Separator();
+                    if (ImGui::Selectable("+ Connect to another Zemax...")) {
+                        m_showConnectPopup = true;
+                    }
+                }
+
                 ImGui::EndCombo();
             }
         }
 
         ImGui::Separator();
 
-        // --- Connect / Disconnect button ---
         bool connected = (activeIdx >= 0);
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
@@ -92,7 +96,7 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_ACTIVE : gui::DDE_BUTTON_CONNECT_COLOR_ACTIVE);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
-        if (ImGui::Button(connected ? "Disconnect" : "Connect to Zemax...", ImVec2(-1.0f, 0.0f))) {
+        if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             if (connected) {
                 m_connectionManager->disconnect(activeIdx);
                 logger.addLog("[DDE] Disconnected from Zemax");
@@ -107,84 +111,8 @@ namespace gui {
 
         ImGui::EndChild();
 
-        // --- Connect popup ---
-        if (m_showConnectPopup) {
-            renderConnectPopup(logger);
-        }
-    }
-
-    void DDEStatus::renderConnectPopup(Logger& logger) {
-        ImGui::OpenPopup("Connect to Zemax");
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_Appearing);
-
-        if (ImGui::BeginPopupModal("Connect to Zemax", &m_showConnectPopup, ImGuiWindowFlags_NoResize)) {
-            ImGui::TextWrapped("Select a Zemax window to connect to:");
-
-            ImGui::Separator();
-
-            // Refresh button
-            if (ImGui::Button("Refresh")) {
-                m_selectedWindowIndex = -1;
-            }
-
-            ImGui::SameLine();
-
-            // Scan & list windows
-            auto windows = app::ZemaxWindowEnumerator::enumerate();
-
-            ImGui::BeginChild("ZemaxWindowList", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 10), ImGuiChildFlags_Borders);
-
-            for (size_t i = 0; i < windows.size(); ++i) {
-                const auto& wnd = windows[i];
-                std::string title(wnd.title.begin(), wnd.title.end());
-                std::string label = std::format("{} (PID: {})", title, wnd.pid);
-
-                if (ImGui::Selectable(label.c_str(), m_selectedWindowIndex == static_cast<int>(i))) {
-                    m_selectedWindowIndex = static_cast<int>(i);
-                }
-            }
-
-            if (windows.empty()) {
-                ImGui::TextDisabled("No Zemax windows found");
-            }
-
-            ImGui::EndChild();
-
-            // Bottom buttons
-            bool canConnect = (m_selectedWindowIndex >= 0 && m_selectedWindowIndex < static_cast<int>(windows.size()));
-
-            if (!canConnect) {
-                ImGui::BeginDisabled();
-            }
-
-            if (ImGui::Button("Connect", ImVec2(120, 0))) {
-                const auto& wnd = windows[m_selectedWindowIndex];
-                int slot = m_connectionManager->connectToZemax(wnd.hwnd, wnd.title);
-                if (slot >= 0) {
-                    std::string title(wnd.title.begin(), wnd.title.end());
-                    logger.addLog(std::format("[DDE] Connected to Zemax: {} (PID: {})", title, wnd.pid));
-                    m_showConnectPopup = false;
-                    m_selectedWindowIndex = -1;
-                } else {
-                    std::string title(wnd.title.begin(), wnd.title.end());
-                    logger.addLog(std::format("[DDE] Failed to connect to: {}", title));
-                }
-            }
-
-            if (!canConnect) {
-                ImGui::EndDisabled();
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                m_showConnectPopup = false;
-                m_selectedWindowIndex = -1;
-            }
-
-            ImGui::EndPopup();
+        if (m_showConnectPopup && m_connectPopup) {
+            m_connectPopup->render(m_showConnectPopup, logger);
         }
     }
 }

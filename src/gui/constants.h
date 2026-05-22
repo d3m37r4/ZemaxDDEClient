@@ -5,7 +5,7 @@
 namespace gui {
     // DDE status window constraints
     inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 220.0f;
-    inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 100.0f;
+    inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 130.0f;
 
     // DDE status content constraints
     inline constexpr float DDE_STATUS_CONTENT_WIDTH  = 0.0f;   // Automatic width
@@ -42,6 +42,10 @@ namespace gui {
     inline constexpr int MAX_SAMPLING = 16385;
     // Minimum: Zemax requires at least 33 for valid profile calculation
     inline constexpr int MIN_SAMPLING = 33;
+
+    // Connect DDE popup constraints
+    inline constexpr float CONNECT_DDE_POPUP_WIDTH_MIN  = 260.0f;
+    inline constexpr float CONNECT_DDE_POPUP_HEIGHT_MIN = 100.0f;
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;

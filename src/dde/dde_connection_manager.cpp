@@ -99,15 +99,18 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     conn.serverTitle = title;
     conn.isConnected = true;
 
+    DWORD pid = 0;
+    GetWindowThreadProcessId(targetHwnd, &pid);
+    conn.serverPid = pid;
+
     if (m_activeIndex < 0) {
         m_activeIndex = idx;
     }
 
-    m_logger.addLog(std::format("[DDE] Connected to slot {}: {}", idx, ws2s(title)));
-
-    DWORD pid = 0;
-    GetWindowThreadProcessId(targetHwnd, &pid);
-    conn.serverPid = pid;
+    m_logger.addLog(std::format("[DDE] Connected slot {}: \"{}\" (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
+        idx, ws2s(title), pid,
+        reinterpret_cast<uintptr_t>(conn.hwndClient),
+        reinterpret_cast<uintptr_t>(conn.hwndServer)));
 
     return idx;
 }
@@ -118,7 +121,10 @@ void DDEConnectionManager::disconnect(int index) {
     auto& conn = m_connections[index];
     if (!conn.isConnected) return;
 
-    m_logger.addLog(std::format("[DDE] Disconnecting slot {}", index));
+    m_logger.addLog(std::format("[DDE] Disconnected slot {}: \"{}\" (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
+        index, ws2s(conn.serverTitle), conn.serverPid,
+        reinterpret_cast<uintptr_t>(conn.hwndClient),
+        reinterpret_cast<uintptr_t>(conn.hwndServer)));
 
     if (conn.client) {
         conn.client->terminateDDE();

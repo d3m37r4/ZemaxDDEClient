@@ -23,6 +23,18 @@ namespace app {
             return TRUE;
         }
 
+        if (GetWindow(hwnd, GW_OWNER) != nullptr) {
+            return TRUE;
+        }
+
+        if (GetParent(hwnd) != nullptr) {
+            return TRUE;
+        }
+
+        if (GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_CHILD) {
+            return TRUE;
+        }
+
         wchar_t title[256];
         int len = GetWindowTextW(hwnd, title, sizeof(title) / sizeof(title[0]));
         if (len == 0) {

@@ -56,4 +56,12 @@ namespace gui {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }
+
+    void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
+        float dpiScale = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2(minWidth * dpiScale, minHeight * dpiScale),
+            ImVec2(FLT_MAX, FLT_MAX)
+        );
+    }
 }
