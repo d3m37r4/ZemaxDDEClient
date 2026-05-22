@@ -1,11 +1,18 @@
 #include <algorithm>
+#include <cmath>
 #include <format>
+#include <vector>
+#include <numbers>
 
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "lib/imgui/imgui.h"
+#include "lib/implot/implot.h"
+#include "lib/implot3d/implot3d.h"
 
 namespace {
+    constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
+
     std::string getSamplingTooltip() {
         return std::format(
             "Number of points to sample along the surface diameter (min={}, max={}).\n"
@@ -15,8 +22,9 @@ namespace {
     }
 
     std::string getAngleStepTooltip() {
-        return "Angular step between cross sections in degrees (0-180).\n"
-               "Smaller step = more detailed map, slower calculation.";
+        return "Angular step between points on each ring in degrees.\n"
+               "Full circle: 0° to 360°.\n"
+               "Smaller step = more detailed surface, slower calculation.";
     }
 
     std::string getAngleTooltip() {
@@ -26,13 +34,7 @@ namespace {
 
 namespace gui {
     void GuiManager::renderSurfaceMapAnalysis() {
-        static int nominalSurfaceIndex = 0;
-        static int nominalSampling = 128;
-        static double nominalAngle = 0.0;
-
-        static int tolerancedSurfaceIndex = 0;
-        static int tolerancedSampling = 128;
-        static double tolerancedAngleStep = 1.0;
+        auto& state = m_sagMapService->m_state;
 
         ImGui::SeparatorText("Nominal surface parameters");
 
@@ -48,31 +50,37 @@ namespace gui {
         ImGui::Text("Surface number:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputInt("##nominal_surf_num", &nominalSurfaceIndex, 1, 10);
-        nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, nominalSurfaceIndex));
+        ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
+        state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
 
         ImGui::Text("Sampling:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputInt("##nominal_sampling", &nominalSampling, 10, 50);
-        nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, nominalSampling));
+        ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
+        state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
         ImGui::SameLine();
         HelpMarker(getSamplingTooltip().c_str());
 
         ImGui::Text("Angle:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputDouble("##nominal_angle", &nominalAngle, 1.0, 10.0, "%.2f");
-        nominalAngle = std::clamp(nominalAngle, -360.0, 360.0);
+        ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
+        state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
         ImGui::SameLine();
         HelpMarker(getAngleTooltip().c_str());
 
         if (ImGui::Button("Get nominal surface data")) {
             if (isDDEInitialized()) {
-                m_zemaxDDEClient->setStorageTarget(m_zemaxDDEClient->getNominalSurface());
-                m_zemaxDDEClient->getSurfaceData(nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                m_zemaxDDEClient->getSurfaceData(nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                m_sagService->calculateSagCrossSection(nominalSurfaceIndex, nominalSampling, nominalAngle);
+                auto* nominal = m_zemaxDDEClient->getNominalSurface();
+                nominal->units = m_zemaxDDEClient->getOpticalSystemData().units;
+                nominal->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+                m_zemaxDDEClient->setStorageTarget(nominal);
+                m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+                m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+                m_sagService->calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+
+                m_logger.addLog("[SagMap] Nominal reference set for surface map analysis");
             }
         }
 
@@ -94,22 +102,22 @@ namespace gui {
         ImGui::Text("Surface number:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputInt("##toleranced_surf_num", &tolerancedSurfaceIndex, 1, 10);
-        tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, tolerancedSurfaceIndex));
+        ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
+        state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
 
         ImGui::Text("Sampling:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputInt("##toleranced_sampling", &tolerancedSampling, 10, 50);
-        tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, tolerancedSampling));
+        ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
+        state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling));
         ImGui::SameLine();
         HelpMarker(getSamplingTooltip().c_str());
 
         ImGui::Text("Angle step:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputDouble("##toleranced_angle_step", &tolerancedAngleStep, 0.1, 1.0, "%.2f");
-        tolerancedAngleStep = std::clamp(tolerancedAngleStep, 0.01, 180.0);
+        ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
+        state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 360.0);
         ImGui::SameLine();
         HelpMarker(getAngleStepTooltip().c_str());
 
@@ -121,8 +129,138 @@ namespace gui {
 
         ImGui::BeginDisabled(!isDDEInitialized());
         if (ImGui::Button("Calculate Surface Map")) {
-            // TODO: implement calculation
+            auto* toleranced = m_zemaxDDEClient->getTolerancedSurface();
+            toleranced->clear();
+            toleranced->units = m_zemaxDDEClient->getOpticalSystemData().units;
+            toleranced->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+            m_zemaxDDEClient->setStorageTarget(toleranced);
+            m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
+            m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
+
+            toleranced->sampling = state.tolerancedSampling;
+
+            m_sagMapService->calculateSurfaceMap(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
         }
         ImGui::EndDisabled();
+
+        // TODO: Re-enable Max-PV analysis
+        /*
+        ImGui::SameLine();
+
+        ImGui::BeginDisabled(!isDDEInitialized() || !hasData || !hasNominal);
+        if (ImGui::Button("Find Max-PV Section")) {
+            auto result = m_sagMapService->findMaxPVSection();
+            if (result.has_value()) {
+                m_logger.addLog(std::format("[SagMap] Max-PV: Angle={:.2f}°, Peak={:.6f}, Valley={:.6f}, PV={:.6f}",
+                    result->angle, result->peak, result->valley, result->pv));
+            }
+        }
+        ImGui::EndDisabled();
+        */
+
+        bool hasData = m_sagMapService->hasData();
+
+        if (hasData) {
+            ImGui::SeparatorText("Results");
+            ImGui::Text(std::format("Rings calculated: {}", m_sagMapService->getSections().size()).c_str());
+
+            const auto& sections = m_sagMapService->getSections();
+            int numRadii = static_cast<int>(sections.size());
+            if (numRadii > 0) {
+                int numAngles = static_cast<int>(sections[0].sagDataPoints.size());
+                double semiDiameter = sections[0].semiDiameter;
+                double angleStepDeg = m_sagMapService->m_state.tolerancedAngleStep;
+                double radiusStep = semiDiameter / (numRadii - 1);
+
+                std::vector<float> X(numRadii * numAngles);
+                std::vector<float> Y(numRadii * numAngles);
+                std::vector<float> Z(numRadii * numAngles);
+
+                float zMin = 0, zMax = 0;
+                bool first = true;
+
+                for (int i = 0; i < numRadii; ++i) {
+                    double r = i * radiusStep;
+                    for (int j = 0; j < numAngles; ++j) {
+                        double angle = j * angleStepDeg * DEG_TO_RAD;
+                        X[i * numAngles + j] = static_cast<float>(r * std::cos(angle));
+                        Y[i * numAngles + j] = static_cast<float>(r * std::sin(angle));
+
+                        const auto& pt = sections[i].sagDataPoints[j];
+                        Z[i * numAngles + j] = static_cast<float>(pt.sag);
+
+                        if (first) {
+                            zMin = pt.sag;
+                            zMax = pt.sag;
+                            first = false;
+                        } else {
+                            zMin = std::min(zMin, static_cast<float>(pt.sag));
+                            zMax = std::max(zMax, static_cast<float>(pt.sag));
+                        }
+                    }
+                }
+
+                ImGui::Text("Toleranced Surface (absolute sag):");
+                if (ImPlot3D::BeginPlot("##Surface3D", ImVec2(-1, 400))) {
+                    ImPlot3D::SetupAxes("X (mm)", "Y (mm)", "Z (mm)");
+                    ImPlot3D::PlotSurface("Lens Surface", X.data(), Y.data(), Z.data(),
+                                          numRadii, numAngles, zMin, zMax);
+                    ImPlot3D::EndPlot();
+                }
+
+                // TODO: Re-enable deviation heatmap
+                /*
+                if (hasNominal) {
+                    const auto& nominal = m_sagMapService->getNominalReference();
+                    if (nominal.sagDataPoints.size() == numRadialPoints) {
+                        std::vector<double> deviationValues(numAngles * numRadialPoints);
+                        double devMin = 0, devMax = 0;
+                        bool first = true;
+
+                        for (int i = 0; i < numAngles; ++i) {
+                            for (int j = 0; j < numRadialPoints; ++j) {
+                                double deviation = sections[i].sagDataPoints[j].sag - nominal.sagDataPoints[j].sag;
+                                deviationValues[i * numRadialPoints + j] = deviation;
+                                if (first) {
+                                    devMin = deviation;
+                                    devMax = deviation;
+                                    first = false;
+                                } else {
+                                    devMin = std::min(devMin, deviation);
+                                    devMax = std::max(devMax, deviation);
+                                }
+                            }
+                        }
+
+                        double absMax = std::max(std::abs(devMin), std::abs(devMax));
+
+                        ImGui::Spacing();
+                        ImGui::Text("Deviation (Toleranced - Nominal):");
+                        if (ImPlot::BeginPlot("##DeviationMap", ImVec2(-1, 200))) {
+                            ImPlot::SetupAxes("Angle (deg)", "Radial Position");
+                            ImPlot::PlotHeatmap("##DeviationHeatmap", deviationValues.data(), numAngles, numRadialPoints,
+                                -absMax, absMax, nullptr,
+                                ImPlotPoint(0, 0), ImPlotPoint(180, numRadialPoints));
+                            ImPlot::EndPlot();
+                        }
+                    }
+                }
+                */
+
+                // TODO: Re-enable Max-PV analysis
+                /*
+                auto maxPV = m_sagMapService->findMaxPVSection();
+                if (maxPV.has_value()) {
+                    ImGui::SeparatorText("Max-PV Result");
+                    auto& pv = maxPV.value();
+                    ImGui::TextUnformatted(std::format("Max-PV Section at {:.2f}°", pv.angle).c_str());
+                    ImGui::TextUnformatted(std::format("Peak: {:.6f} mm", pv.peak).c_str());
+                    ImGui::TextUnformatted(std::format("Valley: {:.6f} mm", pv.valley).c_str());
+                    ImGui::TextUnformatted(std::format("PV: {:.6f} mm", pv.pv).c_str());
+                }
+                */
+            }
+        }
     }
 }
