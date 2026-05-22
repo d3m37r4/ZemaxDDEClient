@@ -7,6 +7,7 @@
 
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
+#include "lib/implot3d/implot3d.h"
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 
@@ -22,6 +23,7 @@ namespace gui {
             ImGui_ImplOpenGL3_DestroyDeviceObjects();
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplGlfw_Shutdown();
+            ImPlot3D::DestroyContext();
             ImPlot::DestroyContext();
             ImGui::DestroyContext();
         }
@@ -38,6 +40,7 @@ namespace gui {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImPlot::CreateContext();
+        ImPlot3D::CreateContext();
 
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;

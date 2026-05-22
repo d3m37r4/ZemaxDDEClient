@@ -14,6 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(SRC_DIR "src")
 set(IMGUI_DIR "${SRC_DIR}/lib/imgui")
 set(IMPLOT_DIR "${SRC_DIR}/lib/implot")
+set(IMPLOT3D_DIR "${SRC_DIR}/lib/implot3d")
 set(NFD_DIR "${SRC_DIR}/lib/nfd")
 set(JSON_DIR "${SRC_DIR}/lib/json")
 
@@ -113,6 +114,12 @@ list(APPEND SOURCES
     ${IMPLOT_DIR}/implot_items.cpp
 )
 
+# Add ImPlot3D source files directly
+list(APPEND SOURCES
+    ${IMPLOT3D_DIR}/implot3d.cpp
+    ${IMPLOT3D_DIR}/implot3d_items.cpp
+)
+
 # Add NFD source files directly
 list(APPEND SOURCES
     ${NFD_DIR}/src/nfd_common.c
@@ -134,6 +141,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${IMPLOT_DIR}
+    ${IMPLOT3D_DIR}
     ${NFD_DIR}/src/include
     ${JSON_DIR}/single_include
     ${MINGW_INCLUDE}
