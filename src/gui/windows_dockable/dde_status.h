@@ -1,19 +1,23 @@
 #pragma once
 
-#include <functional>
+#include <memory>
 
 #include "gui/constants.h"
-#include "logger/logger.h"
-#include "dde/client.h"
-
-class ZemaxDDEClient;
+#include "gui/popups/connect_dde.h"
+#include "dde/dde_connection_manager.h"
 
 namespace gui {
     class DDEStatus {
     public:
-        DDEStatus(ZemaxDDE::ZemaxDDEClient* ddeClient) : m_ddeClient(ddeClient) {}
+        explicit DDEStatus(DDEConnectionManager* connectionManager)
+            : m_connectionManager(connectionManager)
+            , m_connectPopup(std::make_unique<ConnectDDEPopup>(connectionManager)) {}
+
         void render(Logger& logger);
+
     private:
-        ZemaxDDE::ZemaxDDEClient* m_ddeClient;
+        DDEConnectionManager* m_connectionManager;
+        std::unique_ptr<ConnectDDEPopup> m_connectPopup;
+        bool m_showConnectPopup = false;
     };
 }

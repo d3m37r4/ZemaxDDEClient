@@ -12,6 +12,7 @@
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/sag_analysis_service.h"
+#include "gui/sag_map_analysis_service.h"
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
@@ -28,7 +29,7 @@ class Logger;
 namespace gui {
     class GuiManager {
         public:
-            GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger);
+            GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger);
             ~GuiManager();
 
             void initialize(float dpiScale = 1.0f);
@@ -41,26 +42,28 @@ namespace gui {
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
             DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }
+            DDEConnectionManager* getDDEConnectionManager() const { return m_ddeConnectionManager; }
             ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
             void renderOpticalSystemInfo();
             void renderSurfaceSagAnalysis();
+            void renderSurfaceMapAnalysis();
             void renderDebugLog();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
-            GLFWwindow* m_glfwWindow;                             // Pointer to handle of GLFW graphics window used for rendering interface
-            HWND m_hwndClient;                                    // DDE client window handle
-            ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;           // Pointer to a DDE client instance
-            Logger& m_logger;                                     // Logger instance (dependency injection)
+            GLFWwindow* m_glfwWindow;
+            DDEConnectionManager* m_ddeConnectionManager;
+            ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;
+            Logger& m_logger;
 
             GraphicsBackend m_graphics;
             std::unique_ptr<SagAnalysisService> m_sagService;
-            std::unique_ptr<DDEConnectionManager> m_ddeConnectionManager;
+            std::unique_ptr<SagMapAnalysisService> m_sagMapService;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<DebugLog> m_debugLogRenderer;

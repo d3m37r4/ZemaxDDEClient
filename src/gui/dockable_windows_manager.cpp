@@ -1,5 +1,6 @@
 #include "dockable_windows_manager.h"
 #include "gui.h"
+#include "gui/utils.h"
 #include "app/config_path.h"
 #include <fstream>
 #include <algorithm>
@@ -103,20 +104,12 @@ const char* DockableWindowsManager::GetName(WindowID id) const {
 }
 
 namespace {
-    void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
-        float dpiScale = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(minWidth * dpiScale, minHeight * dpiScale),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
-    }
-
     void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::DDEStatus);
         const char* title = mgr->GetName(WindowID::DDEStatus);
-        SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN);
+        gui::SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
             if (guiMgr->getDDEStatusRenderer()) {
@@ -134,7 +127,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::SystemInfo);
         const char* title = mgr->GetName(WindowID::SystemInfo);
-        SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN, gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN);
+        gui::SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN, gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderOpticalSystemInfo();
         }
@@ -149,7 +142,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::SagAnalysis);
         const char* title = mgr->GetName(WindowID::SagAnalysis);
-        SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
+        gui::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderSurfaceSagAnalysis();
         }
@@ -159,12 +152,27 @@ namespace {
         }
     }
 
+    void RenderSurfaceMapAnalysisWindow(gui::GuiManager* guiMgr) {
+        if (!guiMgr) return;
+        auto* mgr = guiMgr->getWindowManager();
+        bool isVisible = mgr->IsVisible(WindowID::SurfaceMapAnalysis);
+        const char* title = mgr->GetName(WindowID::SurfaceMapAnalysis);
+        gui::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
+        if (ImGui::Begin(title, &isVisible)) {
+            guiMgr->renderSurfaceMapAnalysis();
+        }
+        ImGui::End();
+        if (!isVisible) {
+            guiMgr->getWindowManager()->SetVisible(WindowID::SurfaceMapAnalysis, false);
+        }
+    }
+
     void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::DebugLog);
         const char* title = mgr->GetName(WindowID::DebugLog);
-        SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN);
+        gui::SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderDebugLog();
         }
@@ -182,6 +190,8 @@ namespace {
                 return [guiMgr]() { RenderSystemInfoWindow(guiMgr); };
             case WindowID::SagAnalysis:
                 return [guiMgr]() { RenderSagAnalysisWindow(guiMgr); };
+            case WindowID::SurfaceMapAnalysis:
+                return [guiMgr]() { RenderSurfaceMapAnalysisWindow(guiMgr); };
             case WindowID::DebugLog:
                 return [guiMgr]() { RenderDebugLogWindow(guiMgr); };
             default:

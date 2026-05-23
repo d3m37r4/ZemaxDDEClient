@@ -2,6 +2,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "gui/sag_analysis_service.h"
+#include "gui/sag_map_analysis_service.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/dockable_windows_manager.h"
 #include "dde/dde_connection_manager.h"
@@ -9,15 +10,15 @@
 #include "logger/logger.h"
 
 namespace gui {
-    GuiManager::GuiManager(GLFWwindow* glfwWindow, HWND hwndClient, ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
+    GuiManager::GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger)
 : m_glfwWindow(glfwWindow)
-, m_hwndClient(hwndClient)
-, m_zemaxDDEClient(ddeClient)
+, m_ddeConnectionManager(ddeConnectionManager)
+, m_zemaxDDEClient(ddeConnectionManager ? ddeConnectionManager->getActiveClient() : nullptr)
 , m_logger(logger)
 {
-    m_sagService = std::make_unique<SagAnalysisService>(ddeClient, logger);
-    m_ddeConnectionManager = std::make_unique<DDEConnectionManager>(m_zemaxDDEClient, m_logger);
-    m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager.get());
+    m_sagService = std::make_unique<SagAnalysisService>(m_ddeConnectionManager, logger);
+    m_sagMapService = std::make_unique<SagMapAnalysisService>(m_ddeConnectionManager, logger);
+    m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
     });
@@ -27,7 +28,7 @@ namespace gui {
     m_menuBarController->setUpdatesCallback([this]() {
         m_showUpdatesPopup = true;
     });
-    m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_zemaxDDEClient);
+    m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_debugLogRenderer = std::make_unique<DebugLog>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
@@ -40,6 +41,9 @@ void GuiManager::initialize(float dpiScale) {
 }
 
 void GuiManager::render() {
+    // Refresh active DDE client in case connection changed via DDE Status UI
+    m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
+
     m_graphics.beginFrame();
     if (m_menuBarController) {
         m_menuBarController->render();
@@ -67,35 +71,37 @@ void GuiManager::render() {
         m_pWndMgr->RenderAll();
     }
 
-    if (m_sagService->m_showTolerancedSagWindow) {
-        auto& surface = m_zemaxDDEClient->getTolerancedSurface();
-        if (surface.isValid()) {
-            std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
-            m_sagService->renderCrossSectionWindow(title.c_str(), "Toleranced", surface, &m_sagService->m_showTolerancedSagWindow);
+    if (m_zemaxDDEClient) {
+        if (m_sagService->m_showTolerancedSagWindow) {
+            auto* surface = m_zemaxDDEClient->getTolerancedSurface();
+            if (surface->isValid()) {
+                std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface->angle, surface->sampling);
+                m_sagService->renderCrossSectionWindow(title.c_str(), "Toleranced", *surface, &m_sagService->m_showTolerancedSagWindow);
+            }
         }
-    }
 
-    if (m_sagService->m_showNominalSagWindow) {
-        auto& surface = m_zemaxDDEClient->getNominalSurface();
-        if (surface.isValid()) {
-            std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface.angle, surface.sampling);
-            m_sagService->renderCrossSectionWindow(title.c_str(), "Nominal", surface, &m_sagService->m_showNominalSagWindow);
+        if (m_sagService->m_showNominalSagWindow) {
+            auto* surface = m_zemaxDDEClient->getNominalSurface();
+            if (surface->isValid()) {
+                std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface->angle, surface->sampling);
+                m_sagService->renderCrossSectionWindow(title.c_str(), "Nominal", *surface, &m_sagService->m_showNominalSagWindow);
+            }
         }
-    }
 
-    if (m_sagService->m_showComparisonWindow) {
-        auto& nom = m_zemaxDDEClient->getNominalSurface();
-        auto& tol = m_zemaxDDEClient->getTolerancedSurface();
-        if (nom.isValid() && tol.isValid()) {
-            m_sagService->renderComparisonWindow(nom, tol, &m_sagService->m_showComparisonWindow);
+        if (m_sagService->m_showComparisonWindow) {
+            auto* nom = m_zemaxDDEClient->getNominalSurface();
+            auto* tol = m_zemaxDDEClient->getTolerancedSurface();
+            if (nom->isValid() && tol->isValid()) {
+                m_sagService->renderComparisonWindow(*nom, *tol, &m_sagService->m_showComparisonWindow);
+            }
         }
-    }
 
-    if (m_sagService->m_showErrorWindow) {
-        auto& nom = m_zemaxDDEClient->getNominalSurface();
-        auto& tol = m_zemaxDDEClient->getTolerancedSurface();
-        if (nom.isValid() && tol.isValid() && nom.sagDataPoints.size() == tol.sagDataPoints.size()) {
-            m_sagService->renderErrorWindow(nom, tol, &m_sagService->m_showErrorWindow);
+        if (m_sagService->m_showErrorWindow) {
+            auto* nom = m_zemaxDDEClient->getNominalSurface();
+            auto* tol = m_zemaxDDEClient->getTolerancedSurface();
+            if (nom->isValid() && tol->isValid() && nom->sagDataPoints.size() == tol->sagDataPoints.size()) {
+                m_sagService->renderErrorWindow(*nom, *tol, &m_sagService->m_showErrorWindow);
+            }
         }
     }
 

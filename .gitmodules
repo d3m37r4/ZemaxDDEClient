@@ -10,3 +10,6 @@
 [submodule "src/lib/json"]
 	path = src/lib/json
 	url = https://github.com/nlohmann/json.git
+[submodule "src/lib/implot3d"]
+	path = src/lib/implot3d
+	url = https://github.com/brenocq/implot3d.git

@@ -14,6 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(SRC_DIR "src")
 set(IMGUI_DIR "${SRC_DIR}/lib/imgui")
 set(IMPLOT_DIR "${SRC_DIR}/lib/implot")
+set(IMPLOT3D_DIR "${SRC_DIR}/lib/implot3d")
 set(NFD_DIR "${SRC_DIR}/lib/nfd")
 set(JSON_DIR "${SRC_DIR}/lib/json")
 
@@ -76,23 +77,28 @@ set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
     ${SRC_DIR}/app/config_path.cpp
+    ${SRC_DIR}/app/zemax_window_enumerator.cpp
     ${SRC_DIR}/logger/logger.cpp
     ${SRC_DIR}/dde/client_connection.cpp
-    ${SRC_DIR}/dde/client_commands.cpp
+    ${SRC_DIR}/dde/operation_monitor.cpp
+    ${SRC_DIR}/dde/initial_data_load_service.cpp
     ${SRC_DIR}/dde/utils.cpp
     ${SRC_DIR}/dde/dde_connection_manager.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/sag_analysis_service.cpp
+    ${SRC_DIR}/gui/sag_map_analysis_service.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
     ${SRC_DIR}/gui/popups/update_checker.cpp
+    ${SRC_DIR}/gui/popups/connect_dde.cpp
     ${SRC_DIR}/gui/dockable_windows_manager.cpp
     ${SRC_DIR}/gui/windows_dockable/dde_status.cpp
     ${SRC_DIR}/gui/windows_dockable/debug_log.cpp
     ${SRC_DIR}/gui/windows_dockable/optical_system_info.cpp
     ${SRC_DIR}/gui/windows_dockable/surface_sag_analysis.cpp
+    ${SRC_DIR}/gui/windows_dockable/surface_map_analysis.cpp
 )
 
 # Add ImGui source files directly
@@ -109,6 +115,12 @@ list(APPEND SOURCES
 list(APPEND SOURCES
     ${IMPLOT_DIR}/implot.cpp
     ${IMPLOT_DIR}/implot_items.cpp
+)
+
+# Add ImPlot3D source files directly
+list(APPEND SOURCES
+    ${IMPLOT3D_DIR}/implot3d.cpp
+    ${IMPLOT3D_DIR}/implot3d_items.cpp
 )
 
 # Add NFD source files directly
@@ -132,6 +144,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${IMPLOT_DIR}
+    ${IMPLOT3D_DIR}
     ${NFD_DIR}/src/include
     ${JSON_DIR}/single_include
     ${MINGW_INCLUDE}

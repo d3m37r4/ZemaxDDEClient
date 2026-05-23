@@ -1,35 +1,94 @@
-#include <stdexcept>
+#include <format>
+
 #include "windows_dockable/dde_status.h"
-#include "gui/gui.h"
 #include "gui/constants.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
 namespace gui {
     void DDEStatus::render(Logger& logger) {
+        if (!m_connectionManager) return;
+
         ImGui::BeginChild("DDE Status Content",
             ImVec2(gui::DDE_STATUS_CONTENT_WIDTH, gui::DDE_STATUS_CONTENT_HEIGHT),
             ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
         );
 
-        const char* label = "Zemax DDE Status:";
-        const char* value = m_ddeClient && m_ddeClient->isConnected() ? "Connected" : "Disconnected";
+        int connectionCount = 0;
+        for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+            auto* conn = m_connectionManager->getConnection(i);
+            if (conn && conn->isConnected) ++connectionCount;
+        }
+        int activeIdx = m_connectionManager->getActiveIndex();
 
-        float availableWidth = ImGui::GetContentRegionAvail().x;
-        float labelWidth = ImGui::CalcTextSize(label).x;
-        float valueWidth = ImGui::CalcTextSize(value).x;
-        float totalWidth = labelWidth + valueWidth + 4.0f;
-        float offsetX = (availableWidth - totalWidth) * 0.5f;
-        if (offsetX > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
+        {
+            const bool connected = (activeIdx >= 0);
+            const char* label = "Zemax DDE Status:";
+            const char* value = connected ? "Connected" : "Disconnected";
 
-        ImGui::TextUnformatted(label);
-        ImGui::SameLine(0.0f, 4.0f);
+            float availableWidth = ImGui::GetContentRegionAvail().x;
+            float labelWidth = ImGui::CalcTextSize(label).x;
+            float valueWidth = ImGui::CalcTextSize(value).x;
+            float totalWidth = labelWidth + valueWidth + 4.0f;
+            float offsetX = (availableWidth - totalWidth) * 0.5f;
+            if (offsetX > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
 
-        bool connected = m_ddeClient && m_ddeClient->isConnected();
-        ImGui::PushStyleColor(ImGuiCol_Text, connected ? gui::DDE_STATUS_COLOR_CONNECTED : gui::DDE_STATUS_COLOR_DISCONNECTED);
-        ImGui::TextUnformatted(value);
-        ImGui::PopStyleColor();
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(0.0f, 4.0f);
+
+            ImGui::PushStyleColor(ImGuiCol_Text, connected ? gui::DDE_STATUS_COLOR_CONNECTED : gui::DDE_STATUS_COLOR_DISCONNECTED);
+            ImGui::TextUnformatted(value);
+            ImGui::PopStyleColor();
+        }
+
+        if (connectionCount > 0) {
+            ImGui::Separator();
+            ImGui::Text("Active Target:");
+
+            std::string preview;
+            for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                auto* conn = m_connectionManager->getConnection(i);
+                if (!conn || !conn->isConnected) continue;
+                std::string title(conn->serverTitle.begin(), conn->serverTitle.end());
+                std::string itemLabel = std::format("[{}] {}", i, title);
+                if (i == activeIdx) {
+                    preview = itemLabel;
+                }
+            }
+
+            ImGui::SetNextItemWidth(-1.0f);
+            if (ImGui::BeginCombo("##TargetCombo", preview.c_str())) {
+                for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                    auto* conn = m_connectionManager->getConnection(i);
+                    if (!conn || !conn->isConnected) continue;
+                    std::string title(conn->serverTitle.begin(), conn->serverTitle.end());
+                    std::string itemLabel = std::format("[{}] {}", i, title);
+
+                    bool isSelected = (i == activeIdx);
+                    if (ImGui::Selectable(itemLabel.c_str(), isSelected)) {
+                        m_connectionManager->setActiveConnection(i);
+                        logger.addLog(std::format("[DDE] Switched active target to [{}] {}", i, title));
+                    }
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+
+                if (connectionCount < DDEConnectionManager::MAX_CONNECTIONS) {
+                    ImGui::Separator();
+                    if (ImGui::Selectable("+ Connect to another Zemax...")) {
+                        m_showConnectPopup = true;
+                    }
+                }
+
+                ImGui::EndCombo();
+            }
+        }
+
+        ImGui::Separator();
+
+        bool connected = (activeIdx >= 0);
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
         ImGui::PushStyleColor(ImGuiCol_Button, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_NORMAL : gui::DDE_BUTTON_CONNECT_COLOR_NORMAL);
@@ -38,18 +97,11 @@ namespace gui {
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
         if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
-            try {
-                if (!connected) {
-                    m_ddeClient->initiateDDE();
-                } else {
-                    m_ddeClient->terminateDDE();
-                }
-                
-                #ifdef DEBUG_LOG
-                logger.addLog("[GUI] " + std::string(connected ? "Connected to Zemax" : "Disconnected from Zemax"));
-                #endif
-            } catch (const std::runtime_error& e) {
-                logger.addLog("[GUI] DDE connection failed: " + std::string(e.what()));
+            if (connected) {
+                m_connectionManager->disconnect(activeIdx);
+                logger.addLog("[DDE] Disconnected from Zemax");
+            } else {
+                m_showConnectPopup = true;
             }
         }
 
@@ -58,5 +110,9 @@ namespace gui {
         ImGui::PopStyleVar();
 
         ImGui::EndChild();
+
+        if (m_showConnectPopup && m_connectPopup) {
+            m_connectPopup->render(m_showConnectPopup, logger);
+        }
     }
 }

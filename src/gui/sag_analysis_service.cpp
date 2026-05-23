@@ -1,17 +1,20 @@
-#include <fstream>
-#include <ranges>
+#include <format>
 #include <cmath>
+
+#include "dde/constants.h"
+#include "dde/utils.h"
 
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
 #include "gui/sag_analysis_service.h"
+#include "dde/operation_monitor.h"
 #include "gui/gui.h"
 #include "logger/logger.h"
 
 namespace gui {
-    SagAnalysisService::SagAnalysisService(ZemaxDDE::ZemaxDDEClient* ddeClient, Logger& logger)
-        : m_ddeClient(ddeClient)
+    SagAnalysisService::SagAnalysisService(DDEConnectionManager* connectionManager, Logger& logger)
+        : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
     }
@@ -33,50 +36,196 @@ namespace gui {
         return {std::move(x_vals), std::move(y_vals)};
     }
 
-    void SagAnalysisService::calculateSagCrossSection(int surface, int sampling, double angle) {
-        const auto targetStorage = m_ddeClient->getStorageTarget();
-        if (targetStorage != ZemaxDDE::StorageTarget::NOMINAL && targetStorage != ZemaxDDE::StorageTarget::TOLERANCED) {
-            m_logger.addLog("[GUI] Invalid storage target for Sag calculation");
+    void SagAnalysisService::startAsyncSagCalculation(int surface, int sampling, double angle) {
+        auto* client = getClient();
+        if (!client) {
+            m_calcState = SagCalcState::Failed;
+            m_calcError = "No active DDE connection";
+            if (onCalculationComplete) onCalculationComplete();
             return;
         }
 
-        const ZemaxDDE::SurfaceData& targetSurface =
-            (targetStorage == ZemaxDDE::StorageTarget::NOMINAL)
-                ? m_ddeClient->getNominalSurface()
-                : m_ddeClient->getTolerancedSurface();
+        auto* monitor = getMonitor();
+        m_operationId = monitor ? monitor->registerOperation("SagAnalysis", sampling) : 0;
 
-        if (targetSurface.id != surface || !targetSurface.isValid()) [[unlikely]] {
-            m_logger.addLog(std::format("[GUI] Surface {} does not exist in the current optical system", surface));
+        m_calcState = SagCalcState::FetchingSurfaceData;
+        m_calcError.clear();
+        m_targetSurface = surface;
+        m_targetSampling = sampling;
+        m_targetAngle = angle;
+        m_sagPointIndex = 0;
+        m_skippedPoints = 0;
+        m_resultSurface = {};
+        m_resultSurface.id = surface;
+        m_resultSurface.sagDataPoints.clear();
+        m_surfaceRequestsRemaining = 2;
+
+        m_logger.addLog(std::format("[SagService] Starting async sag calc for surface {} ({} pts, {}°)", surface, sampling, angle));
+
+        client->enqueueRequest(
+            std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
+            [this](const std::string& result) {
+                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result);
+            },
+            [this](const std::string& error) {
+                onError(std::format("GetSurfaceData(TYPE_NAME) failed: {}", error));
+            },
+            2000, 1, "SagAnalysis");
+
+        client->enqueueRequest(
+            std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
+            [this](const std::string& result) {
+                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result);
+            },
+            [this](const std::string& error) {
+                onError(std::format("GetSurfaceData(SEMI_DIAMETER) failed: {}", error));
+            },
+            2000, 1, "SagAnalysis");
+    }
+
+    void SagAnalysisService::onSurfaceDataReceived(int code, const std::string& value) {
+        auto tokens = ZemaxDDE::tokenize(value);
+        if (tokens.empty()) {
+            onError(std::format("GetSurfaceData({}): empty response", code));
+            return;
+        }
+
+        if (code == ZemaxDDE::SurfaceDataCode::TYPE_NAME) {
+            m_resultSurface.type = tokens[0];
+        } else if (code == ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER) {
+            try {
+                m_resultSurface.semiDiameter = std::stod(tokens[0]);
+            } catch (...) {
+                onError("GetSurfaceData(SEMI_DIAMETER): invalid number");
+                return;
+            }
+        }
+
+        if (--m_surfaceRequestsRemaining > 0) return;
+
+        m_calcState = SagCalcState::FetchingSagPoints;
+        sendNextSagRequest();
+    }
+
+    void SagAnalysisService::sendNextSagRequest() {
+        if (m_sagPointIndex >= m_targetSampling) {
+            m_resultSurface.sampling = m_targetSampling;
+            m_resultSurface.angle = m_targetAngle;
+            m_calcState = SagCalcState::Completed;
+
+            auto* monitor = getMonitor();
+            if (monitor) {
+                auto msg = m_skippedPoints > 0
+                    ? std::format("Completed ({} points, {} skipped)", m_resultSurface.sagDataPoints.size(), m_skippedPoints)
+                    : std::format("Completed ({} points)", m_resultSurface.sagDataPoints.size());
+                monitor->reportProgress(m_operationId, m_targetSampling, msg);
+                monitor->onCompleted(m_operationId);
+            }
+
+            m_logger.addLog(std::format("[SagService] Sag calc completed: {} points", m_resultSurface.sagDataPoints.size()));
+            if (onCalculationComplete) onCalculationComplete();
+            return;
+        }
+
+        auto* monitor = getMonitor();
+        if (monitor && monitor->isCancelled(m_operationId)) {
+            m_calcState = SagCalcState::Failed;
+            m_calcError = "Cancelled";
+            monitor->onError(m_operationId, "Cancelled");
+            m_logger.addLog("[SagService] Calculation cancelled by user");
+            if (onCalculationComplete) onCalculationComplete();
+            return;
+        }
+
+        if (monitor) {
+            monitor->reportProgress(m_operationId, m_sagPointIndex,
+                std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
+        }
+
+        constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
+        const double rad = m_targetAngle * DEG_TO_RAD;
+        double semiDiameter = m_resultSurface.semiDiameter;
+        double step = (2.0 * semiDiameter) / (m_targetSampling - 1);
+        double r = -semiDiameter + m_sagPointIndex * step;
+        double x = r * std::cos(rad);
+        double y = r * std::sin(rad);
+
+        auto* client = getClient();
+        if (!client) {
+            onError("Connection lost during sag calculation");
+            return;
+        }
+
+        client->enqueueRequest(
+            std::format("GetSag,{},{},{}", m_targetSurface, x, y),
+            [this](const std::string& result) {
+                onSagDataReceived(result);
+            },
+            [this](const std::string& error) {
+                if (error == "Timeout") {
+                    onSagTimeout();
+                } else {
+                    onError(std::format("GetSag failed: {}", error));
+                }
+            },
+            1000, 1, "SagAnalysis");
+    }
+
+    void SagAnalysisService::onSagDataReceived(const std::string& buffer) {
+        auto tokens = ZemaxDDE::tokenize(buffer);
+        if (tokens.size() < 2) {
+            onError("GetSag: invalid response format");
             return;
         }
 
         constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
-        const double rad = angle * DEG_TO_RAD;
-        const double cosAngle = cos(rad);
-        const double sinAngle = sin(rad);
-        double semiDiameter = targetSurface.semiDiameter;
-        double step = targetSurface.diameter() / (sampling - 1);
+        const double rad = m_targetAngle * DEG_TO_RAD;
+        double semiDiameter = m_resultSurface.semiDiameter;
+        double step = (2.0 * semiDiameter) / (m_targetSampling - 1);
+        double r = -semiDiameter + m_sagPointIndex * step;
 
-        #ifdef DEBUG_LOG
-        m_logger.addLog(std::format("[GUI] Requesting Sag Cross Section for surface {} at angle {}° with {} points", surface, angle, sampling));
-        #endif
-
-        for (int i : std::views::iota(0, sampling)) {
-            const double r = -semiDiameter + i * step;
-            const double x = r * cosAngle;
-            const double y = r * sinAngle;
-            m_ddeClient->getSag(surface, x, y);
+        try {
+            ZemaxDDE::SagData point;
+            point.x = r * std::cos(rad);
+            point.y = r * std::sin(rad);
+            point.sag = std::stod(tokens[0]);
+            point.alternateSag = std::stod(tokens[1]);
+            m_resultSurface.sagDataPoints.push_back(point);
+        } catch (...) {
+            onError("GetSag: failed to parse sag values");
+            return;
         }
 
-        m_ddeClient->setSurfaceProfileMetadata(
-            targetStorage,
-            {.angle = angle, .sampling = sampling}
-        );
+        m_sagPointIndex++;
+        sendNextSagRequest();
+    }
 
-        // Auto-update state after successful calculation
-        m_surfaceSagAnalysisPageState.tolerancedSurfaceIndex = surface;
-        m_surfaceSagAnalysisPageState.tolerancedSampling = sampling;
-        m_surfaceSagAnalysisPageState.tolerancedAngle = angle;
+    void SagAnalysisService::onSagTimeout() {
+        m_logger.addLog(std::format("[SagService] Point {} timed out, skipping", m_sagPointIndex));
+        m_skippedPoints++;
+        m_sagPointIndex++;
+        sendNextSagRequest();
+    }
+
+    void SagAnalysisService::onError(const std::string& error) {
+        m_calcState = SagCalcState::Failed;
+        m_calcError = error;
+
+        auto* monitor = getMonitor();
+        if (monitor) monitor->onError(m_operationId, error);
+
+        m_logger.addLog(std::format("[SagService] {}", error));
+        if (onCalculationComplete) onCalculationComplete();
+    }
+
+    void SagAnalysisService::cancelCalculation() {
+        auto* monitor = getMonitor();
+        if (monitor && m_operationId > 0) monitor->requestCancel(m_operationId);
+    }
+
+    ZemaxDDE::OperationMonitor* SagAnalysisService::getMonitor() const {
+        auto* client = getClient();
+        return client ? client->getOperationMonitor() : nullptr;
     }
 
     void SagAnalysisService::saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
@@ -180,5 +329,9 @@ namespace gui {
             }
         }
         ImGui::End();
+    }
+
+    ZemaxDDE::ZemaxDDEClient* SagAnalysisService::getClient() const {
+        return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
     }
 }
