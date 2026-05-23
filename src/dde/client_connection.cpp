@@ -204,45 +204,6 @@ namespace ZemaxDDE {
         }
     }
 
-    void ZemaxDDEClient::waitForData() {
-        MSG msg;
-        DWORD dwTime = GetTickCount();
-        m_isDataReceived = false;
-        while ((GetTickCount() - dwTime < DDE_TIMEOUT_MS) && !m_isDataReceived) {
-            while (PeekMessage(&msg, m_hwndZemaxClient, WM_DDE_FIRST, WM_DDE_LAST, PM_REMOVE)) {
-                DispatchMessage(&msg);
-            }
-        }
-    }
-
-    void ZemaxDDEClient::sendPostRequest(std::string_view request) {
-        #ifdef DEBUG_LOG
-        m_logger.addLog(std::format("[DDE] Sending request: {}", request));
-        #endif
-
-        int wideCharCount = MultiByteToWideChar(CP_ACP,0, request.data(), static_cast<int>(request.size()), nullptr,0);
-        if (wideCharCount == 0) {
-            throw std::runtime_error("Failed to convert DDE request to wide string");
-        }
-
-        std::vector<wchar_t> wItem(wideCharCount + 1);
-
-        int converted = MultiByteToWideChar(CP_ACP, 0, request.data(), static_cast<int>(request.size()), wItem.data(), wideCharCount);
-        if (converted == 0 || converted != wideCharCount) {
-            throw std::runtime_error("Failed to convert DDE request to wide string");
-        }
-
-        wItem[wideCharCount] = L'\0';
-        ATOM aItem = GlobalAddAtomW(wItem.data());
-
-        if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
-            GlobalDeleteAtom(aItem);
-            throw std::runtime_error("Cannot communicate with Zemax");
-        }
-
-        waitForData();
-    }
-
     class GlobalLockGuard {
         HGLOBAL m_handle;
         void* m_ptr;
@@ -573,91 +534,12 @@ namespace ZemaxDDE {
                         }
                     }
                     if (command_token == "GetSurfaceData") {
-                        if (!routeAsync("GetSurfaceData")) {
-                            auto tokens = ZemaxDDE::tokenize(buffer);
-
-                            int currentSurface = std::stoi(item_tokens[1]);
-                            if (currentSurface < 0 || currentSurface > m_opticalSystem.numSurfs) {
-                                m_logger.addLog(std::format("[DDE] GetSurfaceData: Invalid current surface value: {}. Must be in range [{}, {}]",
-                                                        currentSurface, 0, m_opticalSystem.numSurfs));
-                                return 0;
-                            }
-
-                            int code = std::stoi(item_tokens[2]);
-                            if (!ZemaxDDE::SurfaceDataCode::isValid(code)) {
-                                m_logger.addLog(std::format("[DDE] GetSurfaceData: Invalid surface data code received: {}", code));
-                                return 0;
-                            }
-
-                            if (!m_currentStorage) {
-                                m_logger.addLog("[DDE] GetSurfaceData: No storage target set");
-                                return 0;
-                            }
-                            
-                            auto& surface = *m_currentStorage;
-                            surface.id = currentSurface;
-
-                            switch (code) {
-                                case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
-                                    surface.type = tokens[0];
-                                    break;
-                                }
-                                case ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER: {
-                                    surface.semiDiameter = std::stod(tokens[0]);
-                                    break;
-                                }
-                                default: {
-                                    m_logger.addLog(std::format("[DDE] GetSurfaceData: Unsupported code for storage: {}", code));
-                                    return 0;
-                                }
-                            }
-                        }
+                        routeAsync("GetSurfaceData");
                         DdeAck.fAck = true;
                         return 0;
                     }
                     if (command_token == "GetSag") {
-                        if (!routeAsync("GetSag")) {
-                            auto tokens = ZemaxDDE::tokenize(buffer);
-
-                            int currentSurface = std::stoi(item_tokens[1]);
-                            if (currentSurface < 0 || currentSurface > m_opticalSystem.numSurfs) {
-                                m_logger.addLog(std::format("[DDE] GetSag: Invalid current surface value: {}. Must be in range [{}, {}]",
-                                                        currentSurface, 0, m_opticalSystem.numSurfs));
-                                return 0;
-                            }
-
-                            double x = 0.0;
-                            double y = 0.0;
-
-                            try {
-                                x = std::stod(item_tokens[2]);
-                                y = std::stod(item_tokens[3]);
-                        } catch (const std::exception& e) {
-                            m_logger.addLog(std::format("[DDE] GetSag: Failed to parse x/y: {}", e.what()));
-                            return 0;
-                        }
-                        
-                        auto values = ZemaxDDE::tokenize(buffer);
-                        if (values.empty()) {
-                            m_logger.addLog("[DDE] GetSag: No values in response");
-                            return 0;
-                        }
-
-                        double sag = std::stod(values[0]);
-                        double alternateSag = std::stod(values[1]);
-
-                        // Selecting target storage
-                        if (!m_currentStorage) {
-                            m_logger.addLog("[DDE] GetSag: No storage target set");
-                            return 0;
-                        }
-                        
-                        auto& surface = *m_currentStorage;
-                        surface.id = currentSurface;
-                        surface.sagDataPoints.push_back({
-                            x, y, sag, alternateSag
-                        });
-                        }
+                        routeAsync("GetSag");
                         DdeAck.fAck = true;
                         return 0;    
                     }
@@ -690,17 +572,6 @@ namespace ZemaxDDE {
             #endif
 
             throw std::runtime_error(DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED);
-        }
-    }
-
-    void ZemaxDDEClient::checkResponseStatus(const std::string& errorMsg) {
-        if (!m_isDataReceived) {
-
-            #ifdef DEBUG_LOG
-            m_logger.addLog(std::format("[DDE] {}", errorMsg));
-            #endif
-
-            throw std::runtime_error(errorMsg);
         }
     }
 }
