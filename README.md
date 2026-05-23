@@ -72,6 +72,8 @@ This project uses the following third-party libraries:
 - **[Dear ImGui](https://github.com/ocornut/imgui)** by Omar Cornut — Immediate Mode GUI
 - **[ImPlot](https://github.com/epezent/implot)** by Evan Pezent — 2D plotting library for Dear ImGui
 - **[Native File Dialog (NFD)](https://github.com/mlabbe/nativefiledialog)** by Michael Labbe — Cross-platform file dialogs
+- **[ImPlot3D](https://github.com/brenocq/implot3d)** by brenocq — 3D plotting library for Dear ImGui
+- **[JSON for Modern C++](https://github.com/nlohmann/json)** by Niels Lohmann — Header-only JSON library
 
 ## 🚀 Build Setup
 1. Clone the repository:
