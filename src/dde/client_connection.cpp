@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <stdexcept>
 #include <fstream>
 #include <vector>
@@ -109,8 +110,85 @@ namespace ZemaxDDE {
         }
     }
 
+    uint64_t ZemaxDDEClient::sendRequest(const std::string& command,
+        std::function<void(const std::string&)> onResult,
+        std::function<void(const std::string&)> onError) {
+
+        uint64_t id = m_nextRequestId++;
+
+        int wideCharCount = MultiByteToWideChar(CP_ACP, 0, command.data(),
+            static_cast<int>(command.size()), nullptr, 0);
+        if (wideCharCount == 0) {
+            if (onError) onError("Failed to convert request to wide string");
+            return id;
+        }
+
+        std::vector<wchar_t> wItem(wideCharCount + 1);
+        int converted = MultiByteToWideChar(CP_ACP, 0, command.data(),
+            static_cast<int>(command.size()), wItem.data(), wideCharCount);
+        if (converted == 0 || converted != wideCharCount) {
+            if (onError) onError("Failed to convert request to wide string");
+            return id;
+        }
+
+        wItem[wideCharCount] = L'\0';
+        ATOM aItem = GlobalAddAtomW(wItem.data());
+
+        if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
+            GlobalDeleteAtom(aItem);
+            if (onError) onError("Cannot communicate with Zemax");
+            return id;
+        }
+
+        PendingRequest req;
+        req.id = id;
+        req.command = command;
+        req.rawRequest = command;
+        req.onResult = std::move(onResult);
+        req.onError = std::move(onError);
+        req.startTime = GetTickCount();
+        m_pendingRequests.push_back(std::move(req));
+
+        return id;
+    }
+
     void ZemaxDDEClient::processTimeouts() {
-        // Will be used in async DDE phase
+        DWORD now = GetTickCount();
+        std::vector<size_t> completed;
+
+        for (size_t i = 0; i < m_pendingRequests.size(); ++i) {
+            auto& req = m_pendingRequests[i];
+            if (now - req.startTime < DDE_TIMEOUT_MS) continue;
+
+            if (req.retryCount < 3) {
+                req.retryCount++;
+                req.startTime = now;
+
+                int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
+                    req.rawRequest.data(), static_cast<int>(req.rawRequest.size()),
+                    nullptr, 0);
+                if (wideCharCount > 0) {
+                    std::vector<wchar_t> wItem(wideCharCount + 1);
+                    MultiByteToWideChar(CP_ACP, 0, req.rawRequest.data(),
+                        static_cast<int>(req.rawRequest.size()),
+                        wItem.data(), wideCharCount);
+                    wItem[wideCharCount] = L'\0';
+                    ATOM aItem = GlobalAddAtomW(wItem.data());
+                    PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
+                        reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+                        PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
+                }
+            } else {
+                if (req.onError) {
+                    req.onError("Max retries exceeded");
+                }
+                completed.push_back(i);
+            }
+        }
+
+        for (auto it = completed.rbegin(); it != completed.rend(); ++it) {
+            m_pendingRequests.erase(m_pendingRequests.begin() + static_cast<ptrdiff_t>(*it));
+        }
     }
 
     void ZemaxDDEClient::terminateDDE() {
@@ -220,12 +298,28 @@ namespace ZemaxDDE {
                     std::vector<std::string> item_tokens = ZemaxDDE::tokenize(dde_item_str);
                     std::string command_token = item_tokens.empty() ? "" : item_tokens[0];
 
-                    m_isDataReceived = true;
                     buffer = reinterpret_cast<char*>(ddeDataLock.as<::DDEDATA>()->Value);
 
                     #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
                     #endif
+
+                    auto findPendingRequest = [&](const std::string& cmd) {
+                        return std::find_if(m_pendingRequests.begin(), m_pendingRequests.end(),
+                            [&](const PendingRequest& req) {
+                                return req.rawRequest.rfind(cmd, 0) == 0;
+                            });
+                    };
+
+                    auto routeAsync = [&](const std::string& cmdToken) -> bool {
+                        auto it = findPendingRequest(cmdToken);
+                        if (it != m_pendingRequests.end()) {
+                            if (it->onResult) it->onResult(buffer);
+                            m_pendingRequests.erase(it);
+                            return true;
+                        }
+                        return false;
+                    };
 
                     if (command_token == "GetName") {
                         std::string name = extractStringFromDDE(ddeDataHandle);
@@ -234,308 +328,301 @@ namespace ZemaxDDE {
                             m_logger.addLog("[DDE] GetName: empty lens name, using default 'unknown'");
                         }
 
-                        m_opticalSystem.lensName = name;
-
-                        #ifdef DEBUG_LOG
-                        m_logger.addLog(std::format("[DDE] GetName (converted): {}", name));
-                        #endif
+                        if (!routeAsync("GetName")) {
+                            m_opticalSystem.lensName = name;
+                        }
 
                         DdeAck.fAck = true;
                     }
                     if (command_token == "GetFile") {
                         std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
-                        m_opticalSystem.fileName = fileNameStr;
 
-                        #ifdef DEBUG_LOG
-                        m_logger.addLog(std::format("[DDE] GetFile (converted): {}", fileNameStr));
-                        #endif
+                        if (!routeAsync("GetFile")) {
+                            m_opticalSystem.fileName = fileNameStr;
+                        }
 
                         DdeAck.fAck = true;
                     }
                     if (command_token == "GetSystem") {
-                        const int GET_SYSTEM_PARAMS_COUNT = 9;
-                        auto systemParams = ZemaxDDE::tokenize(buffer);
-                        int params = static_cast<int>(systemParams.size());
+                        if (!routeAsync("GetSystem")) {
+                            const int GET_SYSTEM_PARAMS_COUNT = 9;
+                            auto systemParams = ZemaxDDE::tokenize(buffer);
+                            int params = static_cast<int>(systemParams.size());
 
-                        if (params != GET_SYSTEM_PARAMS_COUNT) {
-                            m_logger.addLog(std::format("[DDE] GetSystem: Invalid parameter count. Expected exactly {}, got {}",
-                                                    GET_SYSTEM_PARAMS_COUNT, params));
-                            return 0;
-                        }
-
-                        try {
-                            // GetSystem parameter indexes
-                            enum {
-                                NUM_SURFS,                      // Number of surfaces
-                                UNIT_CODE,                      // Unit code (0=mm, 1=cm, 2=in, 3=M)
-                                STOP_SURF,                      // Stop surface number
-                                NON_AXIAL_FLAG,                 // Non-axial symmetry flag (0=axial, 1=non-axial)
-                                RAY_AIMING_TYPE,                // Ray aiming type (0=off, 1=paraxial, 2=real)
-                                ADJUST_INDEX,                   // Index adjustment flag (0=false, 1=true)
-                                TEMP,                           // Temperature
-                                PRESSURE,                       // Pressure
-                                GLOBAL_REF_SURF                 // Global reference surface
-                            };
-
-                            m_opticalSystem.numSurfs      = std::stoi(systemParams[NUM_SURFS]);
-                            m_opticalSystem.units         = std::stoi(systemParams[UNIT_CODE]);
-                            m_opticalSystem.stopSurf      = std::stoi(systemParams[STOP_SURF]);
-                            m_opticalSystem.nonAxialFlag  = std::stoi(systemParams[NON_AXIAL_FLAG]);
-                            m_opticalSystem.rayAimingType = std::stoi(systemParams[RAY_AIMING_TYPE]);
-                            m_opticalSystem.adjustIndex   = std::stoi(systemParams[ADJUST_INDEX]);
-                            m_opticalSystem.temp          = std::stod(systemParams[TEMP]);
-                            m_opticalSystem.pressure      = std::stod(systemParams[PRESSURE]);
-                            m_opticalSystem.globalRefSurf = std::stoi(systemParams[GLOBAL_REF_SURF]);
-
-                            DdeAck.fAck = true;
-                        } catch (const std::invalid_argument& e) {
-                            m_logger.addLog(std::format("[DDE] GetSystem: Invalid number format in parameter: {}", e.what()));
-                            return 0;
-                        } catch (const std::out_of_range& e) {
-                            m_logger.addLog(std::format("[DDE] GetSystem: Number out of range: {}", e.what()));
-                            return 0;
-                        } catch (const std::exception& e) {
-                            m_logger.addLog(std::format("[DDE] GetSystem: Unexpected error: {}", e.what()));
-                            return 0;
-                        }
-                    }
-                    if (command_token == "GetField") {
-                        const int EXPECTED_COMMAND_TOKENS = 2;
-                        int params = static_cast<int>(item_tokens.size());
-
-                        if (params != EXPECTED_COMMAND_TOKENS) {
-                            m_logger.addLog(std::format("[DDE] GetField: Invalid command format. Expected exactly {} tokens, got {}",
-                                                    EXPECTED_COMMAND_TOKENS, params));
-                            return 0;
-                        }
-
-                        int arg = -1;
-                        try {
-                            arg = std::stoi(item_tokens[1]);
-                        } catch (const std::invalid_argument&) {
-                            m_logger.addLog(std::format("[DDE] GetField: Invalid field index '{}'. Not a number.", item_tokens[1]));
-                            return 0;
-                        } catch (const std::out_of_range&) {
-                            m_logger.addLog(std::format("[DDE] GetField: Field index '{}' is out of range (too large).", item_tokens[1]));
-                            return 0;
-                        }
-
-                        if (arg == 0 || (arg >= ZemaxDDE::MIN_FIELDS && arg <= ZemaxDDE::MAX_FIELDS)) {
-                            auto tokens = ZemaxDDE::tokenize(buffer);
-                            int dataCount = static_cast<int>(tokens.size());
-
-                            if(arg == 0) {
-                                const int GET_FIELD_META_COUNT = 5;     // fieldType, numFields, maxX, maxY, normalizationMethod
-                                if (dataCount != GET_FIELD_META_COUNT) {
-                                    m_logger.addLog(std::format("[DDE] GetField: Invalid parameter count for field metadata. Expected exactly {}, got {}",
-                                                            GET_FIELD_META_COUNT, dataCount));
-                                    return 0;
-                                }
-
-                                try {
-                                    enum  {
-                                        FIELD_TYPE,
-                                        NUM_FIELDS,
-                                        MAX_X_FIELD,
-                                        MAX_Y_FIELD,
-                                        NORMALIZATION_METHOD
-                                    };
-
-                                    m_opticalSystem.fieldType = std::stoi(tokens[FIELD_TYPE]);
-
-                                    int numFields = std::stoi(tokens[NUM_FIELDS]);
-                                    if (numFields < ZemaxDDE::MIN_FIELDS || numFields > ZemaxDDE::MAX_FIELDS) {
-                                        m_logger.addLog(std::format("[DDE] GetField: Invalid numFields value: {}. Must be in range [{}, {}]",
-                                                                numFields, ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS));
-                                        return 0;
-                                    }
-
-                                    m_opticalSystem.numFields = numFields;
-                                    m_opticalSystem.maxXField = std::stod(tokens[MAX_X_FIELD]);
-                                    m_opticalSystem.maxYField = std::stod(tokens[MAX_Y_FIELD]);
-                                    m_opticalSystem.normalizationMethod = std::stoi(tokens[NORMALIZATION_METHOD]);
-                                } catch (const std::exception& e) {
-                                    m_logger.addLog(std::format("[DDE] GetField: Failed to parse field metadata: {}", e.what()));
-                                    return 0;
-                                }
-                            } else {
-                                const int GET_FIELD_DATA_COUNT = 8;     // xField, yField, weight, vDx, vDy, vCx, vCy, vAn
-                                if (dataCount != GET_FIELD_DATA_COUNT) {
-                                    m_logger.addLog(std::format("[DDE] GetField: Invalid parameter count for field data. Expected exactly {}, got {}",
-                                                            GET_FIELD_DATA_COUNT, dataCount));
-                                    return 0;
-                                }
-
-                                try {
-                                    enum {
-                                        XFIELD,
-                                        YFIELD,
-                                        // WEIGHT,
-                                        // VDX,
-                                        // VDY,
-                                        // VCX,
-                                        // VCY,
-                                        // VAN
-                                    };
-
-                                    m_opticalSystem.xField[arg] = std::stod(tokens[XFIELD]);
-                                    m_opticalSystem.yField[arg] = std::stod(tokens[YFIELD]);
-                                } catch (const std::exception& e) {
-                                    m_logger.addLog(std::format("[DDE] GetField: Failed to parse data for field {}: {}", arg, e.what()));
-                                    return 0;
-                                }
+                            if (params != GET_SYSTEM_PARAMS_COUNT) {
+                                m_logger.addLog(std::format("[DDE] GetSystem: Invalid parameter count. Expected exactly {}, got {}",
+                                                        GET_SYSTEM_PARAMS_COUNT, params));
+                                return 0;
                             }
-                        } else {
-                            m_logger.addLog(std::format("[DDE] GetField: Field index must be 0 (metadata) or in range [{}, {}]. Got: {}",
-                                                    ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS, arg));
-                            return 0;
-                        }
-                        DdeAck.fAck = true;
-                    }
-                    if (command_token == "GetWave") {
-                        const int EXPECTED_COMMAND_TOKENS = 2;
-                        int params = static_cast<int>(item_tokens.size());
 
-                        if (params != EXPECTED_COMMAND_TOKENS) {
-                            m_logger.addLog(std::format("[DDE] GetWave: Invalid command format. Expected exactly {} tokens, got {}",
-                                                    EXPECTED_COMMAND_TOKENS, params));
-                            return 0;
-                        }
+                            try {
+                                enum {
+                                    NUM_SURFS,
+                                    UNIT_CODE,
+                                    STOP_SURF,
+                                    NON_AXIAL_FLAG,
+                                    RAY_AIMING_TYPE,
+                                    ADJUST_INDEX,
+                                    TEMP,
+                                    PRESSURE,
+                                    GLOBAL_REF_SURF
+                                };
 
-                        int arg = -1;
-                        try {
-                            arg = std::stoi(item_tokens[1]);
-                        } catch (const std::invalid_argument&) {
-                            m_logger.addLog(std::format("[DDE] GetWave: Invalid wave index '{}'. Not a number.", item_tokens[1]));
-                            return 0;
-                        } catch (const std::out_of_range&) {
-                            m_logger.addLog(std::format("[DDE] GetWave: Wave index '{}' is out of range (too large).", item_tokens[1]));
-                            return 0;
-                        }
+                                m_opticalSystem.numSurfs      = std::stoi(systemParams[NUM_SURFS]);
+                                m_opticalSystem.units         = std::stoi(systemParams[UNIT_CODE]);
+                                m_opticalSystem.stopSurf      = std::stoi(systemParams[STOP_SURF]);
+                                m_opticalSystem.nonAxialFlag  = std::stoi(systemParams[NON_AXIAL_FLAG]);
+                                m_opticalSystem.rayAimingType = std::stoi(systemParams[RAY_AIMING_TYPE]);
+                                m_opticalSystem.adjustIndex   = std::stoi(systemParams[ADJUST_INDEX]);
+                                m_opticalSystem.temp          = std::stod(systemParams[TEMP]);
+                                m_opticalSystem.pressure      = std::stod(systemParams[PRESSURE]);
+                                m_opticalSystem.globalRefSurf = std::stoi(systemParams[GLOBAL_REF_SURF]);
 
-                        if (arg == 0 || (arg >= ZemaxDDE::MIN_WAVES && arg <= ZemaxDDE::MAX_WAVES)) {
-                            auto tokens = ZemaxDDE::tokenize(buffer);
-                            int dataCount = static_cast<int>(tokens.size());
-
-                            if(arg == 0) {
-                                const int GET_WAVE_META_COUNT = 2;     // primary, number
-                                if (dataCount != GET_WAVE_META_COUNT) {
-                                    m_logger.addLog(std::format("[DDE] GetWave: Invalid parameter count for wave metadata. Expected exactly {}, got {}",
-                                                            GET_WAVE_META_COUNT, dataCount));
-                                    return 0;
-                                }
-
-                                try {
-                                    enum  {
-                                        PRIM_WAVE,
-                                        NUM_WAVES
-                                    };
-
-                                    m_opticalSystem.primWave = std::stoi(tokens[PRIM_WAVE]);
-
-                                    int numWaves = std::stoi(tokens[NUM_WAVES]);
-                                    if (numWaves < ZemaxDDE::MIN_WAVES || numWaves > ZemaxDDE::MAX_WAVES) {
-                                        m_logger.addLog(std::format("[DDE] GetWave: Invalid numWaves value: {}. Must be in range [{}, {}]",
-                                                                numWaves, ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES));
-                                        return 0;
-                                    }
-
-                                    m_opticalSystem.numWaves = numWaves;
-                                } catch (const std::exception& e) {
-                                    m_logger.addLog(std::format("[DDE] GetWave: Failed to parse wave metadata: {}", e.what()));
-                                    return 0;
-                                }
-                            } else {
-                                const int GET_WAVE_DATA_COUNT = 2;     // waveLen, weight
-                                if (dataCount != GET_WAVE_DATA_COUNT) {
-                                    m_logger.addLog(std::format("[DDE] GetWave: Invalid parameter count for wave data. Expected exactly {}, got {}",
-                                                            GET_WAVE_DATA_COUNT, dataCount));
-                                    return 0;
-                                }
-
-                                try {
-                                    enum {
-                                        WAVE_LENGTH,
-                                        WEIGHT,
-                                    };
-
-                                    m_opticalSystem.waveData[arg].value  = std::stod(tokens[WAVE_LENGTH]);
-                                    m_opticalSystem.waveData[arg].weight = std::stod(tokens[WEIGHT]);
-                                } catch (const std::exception& e) {
-                                    m_logger.addLog(std::format("[DDE] GetWave: Failed to parse data for wave {}: {}", arg, e.what()));
-                                    return 0;
-                                }
-                            }
-                        } else {
-                            m_logger.addLog(std::format("[DDE] GetWave: Wave index must be 0 (metadata) or in range [{}, {}]. Got: {}",
-                                                    ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES, arg));
-                            return 0;
-                        }
-                        DdeAck.fAck = true;
-                    }
-                    if (command_token == "GetSurfaceData") {
-                        auto tokens = ZemaxDDE::tokenize(buffer);
-                        // int params = static_cast<int>(tokens.size());
-
-                        int currentSurface = std::stoi(item_tokens[1]);
-                        if (currentSurface < 0 || currentSurface > m_opticalSystem.numSurfs) {
-                            m_logger.addLog(std::format("[DDE] GetSurfaceData: Invalid current surface value: {}. Must be in range [{}, {}]",
-                                                    currentSurface, 0, m_opticalSystem.numSurfs));
-                            return 0;
-                        }
-
-                        int code = std::stoi(item_tokens[2]);
-                        if (!ZemaxDDE::SurfaceDataCode::isValid(code)) {
-                            m_logger.addLog(std::format("[DDE] GetSurfaceData: Invalid surface data code received: {}", code));
-                            return 0;
-                        }
-
-                        // int arg2 = std::stoi(item_tokens[3]);
-
-                        // Selecting target storage
-                        if (!m_currentStorage) {
-                            m_logger.addLog("[DDE] GetSurfaceData: No storage target set");
-                            return 0;
-                        }
-                        
-                        auto& surface = *m_currentStorage;
-                        surface.id = currentSurface;
-
-                        switch (code) {
-                            case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
-                                surface.type = tokens[0];
-                                break;
-                            }
-                            case ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER: {
-                                surface.semiDiameter = std::stod(tokens[0]);
-                                break;
-                            }
-                            default: {
-                                m_logger.addLog(std::format("[DDE] GetSurfaceData: Unsupported code for storage: {}", code));
+                                DdeAck.fAck = true;
+                            } catch (const std::invalid_argument& e) {
+                                m_logger.addLog(std::format("[DDE] GetSystem: Invalid number format in parameter: {}", e.what()));
+                                return 0;
+                            } catch (const std::out_of_range& e) {
+                                m_logger.addLog(std::format("[DDE] GetSystem: Number out of range: {}", e.what()));
+                                return 0;
+                            } catch (const std::exception& e) {
+                                m_logger.addLog(std::format("[DDE] GetSystem: Unexpected error: {}", e.what()));
                                 return 0;
                             }
                         }
+                    }
+                    if (command_token == "GetField") {
+                        if (!routeAsync("GetField")) {
+                            const int EXPECTED_COMMAND_TOKENS = 2;
+                            int params = static_cast<int>(item_tokens.size());
 
+                            if (params != EXPECTED_COMMAND_TOKENS) {
+                                m_logger.addLog(std::format("[DDE] GetField: Invalid command format. Expected exactly {} tokens, got {}",
+                                                        EXPECTED_COMMAND_TOKENS, params));
+                                return 0;
+                            }
+
+                            int arg = -1;
+                            try {
+                                arg = std::stoi(item_tokens[1]);
+                            } catch (const std::invalid_argument&) {
+                                m_logger.addLog(std::format("[DDE] GetField: Invalid field index '{}'. Not a number.", item_tokens[1]));
+                                return 0;
+                            } catch (const std::out_of_range&) {
+                                m_logger.addLog(std::format("[DDE] GetField: Field index '{}' is out of range (too large).", item_tokens[1]));
+                                return 0;
+                            }
+
+                            if (arg == 0 || (arg >= ZemaxDDE::MIN_FIELDS && arg <= ZemaxDDE::MAX_FIELDS)) {
+                                auto tokens = ZemaxDDE::tokenize(buffer);
+                                int dataCount = static_cast<int>(tokens.size());
+
+                                if(arg == 0) {
+                                    const int GET_FIELD_META_COUNT = 5;
+                                    if (dataCount != GET_FIELD_META_COUNT) {
+                                        m_logger.addLog(std::format("[DDE] GetField: Invalid parameter count for field metadata. Expected exactly {}, got {}",
+                                                                GET_FIELD_META_COUNT, dataCount));
+                                        return 0;
+                                    }
+
+                                    try {
+                                        enum  {
+                                            FIELD_TYPE,
+                                            NUM_FIELDS,
+                                            MAX_X_FIELD,
+                                            MAX_Y_FIELD,
+                                            NORMALIZATION_METHOD
+                                        };
+
+                                        m_opticalSystem.fieldType = std::stoi(tokens[FIELD_TYPE]);
+
+                                        int numFields = std::stoi(tokens[NUM_FIELDS]);
+                                        if (numFields < ZemaxDDE::MIN_FIELDS || numFields > ZemaxDDE::MAX_FIELDS) {
+                                            m_logger.addLog(std::format("[DDE] GetField: Invalid numFields value: {}. Must be in range [{}, {}]",
+                                                                    numFields, ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS));
+                                            return 0;
+                                        }
+
+                                        m_opticalSystem.numFields = numFields;
+                                        m_opticalSystem.maxXField = std::stod(tokens[MAX_X_FIELD]);
+                                        m_opticalSystem.maxYField = std::stod(tokens[MAX_Y_FIELD]);
+                                        m_opticalSystem.normalizationMethod = std::stoi(tokens[NORMALIZATION_METHOD]);
+                                    } catch (const std::exception& e) {
+                                        m_logger.addLog(std::format("[DDE] GetField: Failed to parse field metadata: {}", e.what()));
+                                        return 0;
+                                    }
+                                } else {
+                                    const int GET_FIELD_DATA_COUNT = 8;
+                                    if (dataCount != GET_FIELD_DATA_COUNT) {
+                                        m_logger.addLog(std::format("[DDE] GetField: Invalid parameter count for field data. Expected exactly {}, got {}",
+                                                                GET_FIELD_DATA_COUNT, dataCount));
+                                        return 0;
+                                    }
+
+                                    try {
+                                        enum {
+                                            XFIELD,
+                                            YFIELD,
+                                        };
+
+                                        m_opticalSystem.xField[arg] = std::stod(tokens[XFIELD]);
+                                        m_opticalSystem.yField[arg] = std::stod(tokens[YFIELD]);
+                                    } catch (const std::exception& e) {
+                                        m_logger.addLog(std::format("[DDE] GetField: Failed to parse data for field {}: {}", arg, e.what()));
+                                        return 0;
+                                    }
+                                }
+                            } else {
+                                m_logger.addLog(std::format("[DDE] GetField: Field index must be 0 (metadata) or in range [{}, {}]. Got: {}",
+                                                        ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS, arg));
+                                return 0;
+                            }
+                            DdeAck.fAck = true;
+                        }
+                    }
+                    if (command_token == "GetWave") {
+                        if (!routeAsync("GetWave")) {
+                            const int EXPECTED_COMMAND_TOKENS = 2;
+                            int params = static_cast<int>(item_tokens.size());
+
+                            if (params != EXPECTED_COMMAND_TOKENS) {
+                                m_logger.addLog(std::format("[DDE] GetWave: Invalid command format. Expected exactly {} tokens, got {}",
+                                                        EXPECTED_COMMAND_TOKENS, params));
+                                return 0;
+                            }
+
+                            int arg = -1;
+                            try {
+                                arg = std::stoi(item_tokens[1]);
+                            } catch (const std::invalid_argument&) {
+                                m_logger.addLog(std::format("[DDE] GetWave: Invalid wave index '{}'. Not a number.", item_tokens[1]));
+                                return 0;
+                            } catch (const std::out_of_range&) {
+                                m_logger.addLog(std::format("[DDE] GetWave: Wave index '{}' is out of range (too large).", item_tokens[1]));
+                                return 0;
+                            }
+
+                            if (arg == 0 || (arg >= ZemaxDDE::MIN_WAVES && arg <= ZemaxDDE::MAX_WAVES)) {
+                                auto tokens = ZemaxDDE::tokenize(buffer);
+                                int dataCount = static_cast<int>(tokens.size());
+
+                                if(arg == 0) {
+                                    const int GET_WAVE_META_COUNT = 2;
+                                    if (dataCount != GET_WAVE_META_COUNT) {
+                                        m_logger.addLog(std::format("[DDE] GetWave: Invalid parameter count for wave metadata. Expected exactly {}, got {}",
+                                                                GET_WAVE_META_COUNT, dataCount));
+                                        return 0;
+                                    }
+
+                                    try {
+                                        enum  {
+                                            PRIM_WAVE,
+                                            NUM_WAVES
+                                        };
+
+                                        m_opticalSystem.primWave = std::stoi(tokens[PRIM_WAVE]);
+
+                                        int numWaves = std::stoi(tokens[NUM_WAVES]);
+                                        if (numWaves < ZemaxDDE::MIN_WAVES || numWaves > ZemaxDDE::MAX_WAVES) {
+                                            m_logger.addLog(std::format("[DDE] GetWave: Invalid numWaves value: {}. Must be in range [{}, {}]",
+                                                                    numWaves, ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES));
+                                            return 0;
+                                        }
+
+                                        m_opticalSystem.numWaves = numWaves;
+                                    } catch (const std::exception& e) {
+                                        m_logger.addLog(std::format("[DDE] GetWave: Failed to parse wave metadata: {}", e.what()));
+                                        return 0;
+                                    }
+                                } else {
+                                    const int GET_WAVE_DATA_COUNT = 2;
+                                    if (dataCount != GET_WAVE_DATA_COUNT) {
+                                        m_logger.addLog(std::format("[DDE] GetWave: Invalid parameter count for wave data. Expected exactly {}, got {}",
+                                                                GET_WAVE_DATA_COUNT, dataCount));
+                                        return 0;
+                                    }
+
+                                    try {
+                                        enum {
+                                            WAVE_LENGTH,
+                                            WEIGHT,
+                                        };
+
+                                        m_opticalSystem.waveData[arg].value  = std::stod(tokens[WAVE_LENGTH]);
+                                        m_opticalSystem.waveData[arg].weight = std::stod(tokens[WEIGHT]);
+                                    } catch (const std::exception& e) {
+                                        m_logger.addLog(std::format("[DDE] GetWave: Failed to parse data for wave {}: {}", arg, e.what()));
+                                        return 0;
+                                    }
+                                }
+                            } else {
+                                m_logger.addLog(std::format("[DDE] GetWave: Wave index must be 0 (metadata) or in range [{}, {}]. Got: {}",
+                                                        ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES, arg));
+                                return 0;
+                            }
+                            DdeAck.fAck = true;
+                        }
+                    }
+                    if (command_token == "GetSurfaceData") {
+                        if (!routeAsync("GetSurfaceData")) {
+                            auto tokens = ZemaxDDE::tokenize(buffer);
+
+                            int currentSurface = std::stoi(item_tokens[1]);
+                            if (currentSurface < 0 || currentSurface > m_opticalSystem.numSurfs) {
+                                m_logger.addLog(std::format("[DDE] GetSurfaceData: Invalid current surface value: {}. Must be in range [{}, {}]",
+                                                        currentSurface, 0, m_opticalSystem.numSurfs));
+                                return 0;
+                            }
+
+                            int code = std::stoi(item_tokens[2]);
+                            if (!ZemaxDDE::SurfaceDataCode::isValid(code)) {
+                                m_logger.addLog(std::format("[DDE] GetSurfaceData: Invalid surface data code received: {}", code));
+                                return 0;
+                            }
+
+                            if (!m_currentStorage) {
+                                m_logger.addLog("[DDE] GetSurfaceData: No storage target set");
+                                return 0;
+                            }
+                            
+                            auto& surface = *m_currentStorage;
+                            surface.id = currentSurface;
+
+                            switch (code) {
+                                case ZemaxDDE::SurfaceDataCode::TYPE_NAME:{
+                                    surface.type = tokens[0];
+                                    break;
+                                }
+                                case ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER: {
+                                    surface.semiDiameter = std::stod(tokens[0]);
+                                    break;
+                                }
+                                default: {
+                                    m_logger.addLog(std::format("[DDE] GetSurfaceData: Unsupported code for storage: {}", code));
+                                    return 0;
+                                }
+                            }
+                        }
                         DdeAck.fAck = true;
                         return 0;
                     }
                     if (command_token == "GetSag") {
-                        auto tokens = ZemaxDDE::tokenize(buffer);
-                        // int params = static_cast<int>(tokens.size());
+                        if (!routeAsync("GetSag")) {
+                            auto tokens = ZemaxDDE::tokenize(buffer);
 
-                        int currentSurface = std::stoi(item_tokens[1]);
-                        if (currentSurface < 0 || currentSurface > m_opticalSystem.numSurfs) {
-                            m_logger.addLog(std::format("[DDE] GetSag: Invalid current surface value: {}. Must be in range [{}, {}]",
-                                                    currentSurface, 0, m_opticalSystem.numSurfs));
-                            return 0;
-                        }
+                            int currentSurface = std::stoi(item_tokens[1]);
+                            if (currentSurface < 0 || currentSurface > m_opticalSystem.numSurfs) {
+                                m_logger.addLog(std::format("[DDE] GetSag: Invalid current surface value: {}. Must be in range [{}, {}]",
+                                                        currentSurface, 0, m_opticalSystem.numSurfs));
+                                return 0;
+                            }
 
-                        double x = 0.0;
-                        double y = 0.0;
+                            double x = 0.0;
+                            double y = 0.0;
 
-                        try {
-                            x = std::stod(item_tokens[2]);
-                            y = std::stod(item_tokens[3]);
+                            try {
+                                x = std::stod(item_tokens[2]);
+                                y = std::stod(item_tokens[3]);
                         } catch (const std::exception& e) {
                             m_logger.addLog(std::format("[DDE] GetSag: Failed to parse x/y: {}", e.what()));
                             return 0;
@@ -561,7 +648,7 @@ namespace ZemaxDDE {
                         surface.sagDataPoints.push_back({
                             x, y, sag, alternateSag
                         });
-
+                        }
                         DdeAck.fAck = true;
                         return 0;    
                     }

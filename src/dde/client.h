@@ -1,8 +1,10 @@
 #pragma once
 
-#include <string_view>
-#include <windows.h>
+#include <cstdint>
 #include <functional>
+#include <string>
+#include <vector>
+#include <windows.h>
 
 #include "types.h"
 
@@ -27,6 +29,20 @@ namespace ZemaxDDE {
 
             using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
             void setOnDDEConnectedCallback(OnDDEConnectedCallback callback);
+
+            struct PendingRequest {
+                uint64_t id;
+                std::string command;
+                std::string rawRequest;
+                std::function<void(const std::string&)> onResult;
+                std::function<void(const std::string&)> onError;
+                int retryCount = 0;
+                DWORD startTime = 0;
+            };
+
+            uint64_t sendRequest(const std::string& command,
+                std::function<void(const std::string&)> onResult,
+                std::function<void(const std::string&)> onError);
 
             // DDE Commands
             void getLensName();
@@ -64,6 +80,9 @@ namespace ZemaxDDE {
             SurfaceData m_nominalSurface;
             SurfaceData* m_currentStorage = &m_tolerancedSurface;
             bool m_isDataReceived{false};
+
+            std::vector<PendingRequest> m_pendingRequests;
+            uint64_t m_nextRequestId = 1;
 
             void sendPostRequest(std::string_view request);
             void waitForData();
