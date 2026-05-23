@@ -28,10 +28,9 @@ namespace ZemaxDDE {
 
         private:
             void loadSystem();
-            void loadFields(int numFields);
-            void loadWaves(int numWaves);
+            void loadNextField();
+            void loadNextWave();
             void onError(const std::string& msg);
-            void checkCompletion();
 
             ZemaxDDEClient& m_client;
             OpticalSystemData& m_opticalSystem;
@@ -39,7 +38,10 @@ namespace ZemaxDDE {
 
             LoadState m_state = LoadState::Idle;
             std::string m_error;
-            int m_pendingRequests = 0;
+            int m_currentField = 0;
+            int m_totalFields = 0;
+            int m_currentWave = 0;
+            int m_totalWaves = 0;
     };
 
 }
