@@ -10,6 +10,10 @@
 
 class Logger;
 
+namespace ZemaxDDE {
+    class OperationMonitor;
+}
+
 namespace gui {
 
     enum class SagMapState {
@@ -53,15 +57,25 @@ namespace gui {
 
             SagMapState getMapState() const { return m_mapState; }
             const std::string& getMapError() const { return m_mapError; }
+
+            uint64_t getOperationId() const { return m_operationId; }
+            int getTotalSteps() const { return m_numRadii * m_numAngles; }
+            int getCurrentStep() const { return m_currentRing * m_numAngles + m_currentAngle; }
+            int getSkippedPoints() const { return m_skippedPoints; }
+
+            void cancelCalculation();
+
             std::function<void()> onCalculationComplete;
 
             SagMapAnalysisState m_state;
 
         private:
             ZemaxDDE::ZemaxDDEClient* getClient() const { return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr; }
+            ZemaxDDE::OperationMonitor* getMonitor() const;
             void sendNextSagPoint();
             void onSurfaceDataReceived(int code, const std::string& value);
             void onSagPointReceived(const std::string& buffer);
+            void onSagTimeout();
             void onMapError(const std::string& error);
 
             DDEConnectionManager* m_connectionManager;
@@ -78,7 +92,9 @@ namespace gui {
             int m_numAngles = 0;
             double m_semiDiameter = 0.0;
             int m_units = 0;
-            int m_pendingSurfaceRequests = 0;
+            int m_surfaceRequestsRemaining = 0;
+            uint64_t m_operationId = 0;
+            int m_skippedPoints = 0;
 
             int m_currentRing = 0;
             int m_currentAngle = 0;

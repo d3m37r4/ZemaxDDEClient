@@ -1,6 +1,7 @@
 #include <cmath>
 #include <format>
 #include "dde/constants.h"
+#include "dde/operation_monitor.h"
 #include "dde/utils.h"
 
 #include "sag_map_analysis_service.h"
@@ -36,6 +37,10 @@ namespace gui {
             return;
         }
 
+        int totalPoints = numRadii * static_cast<int>(360.0 / angleStepDeg);
+        auto* monitor = getMonitor();
+        m_operationId = monitor ? monitor->registerOperation("SagMapAnalysis", totalPoints) : 0;
+
         m_mapState = SagMapState::FetchingSurfaceData;
         m_mapError.clear();
         m_targetSurface = surface;
@@ -44,32 +49,33 @@ namespace gui {
         m_numAngles = static_cast<int>(360.0 / angleStepDeg);
         m_currentRing = 0;
         m_currentAngle = 0;
+        m_skippedPoints = 0;
         m_sections.clear();
-        m_pendingSurfaceRequests = 2;
+        m_surfaceRequestsRemaining = 2;
         m_units = client->getOpticalSystemData().units;
 
-        m_logger.addLog(std::format("[SagMap] Starting async surface map: surface {}, radii={}, angle step={} deg",
-            surface, numRadii, angleStepDeg));
+        m_logger.addLog(std::format("[SagMap] Starting async surface map: surface {}, radii={}, angle step={} deg ({} total points)",
+            surface, numRadii, angleStepDeg, totalPoints));
 
-        client->sendRequest(
+        client->enqueueRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
             [this](const std::string& result) {
                 onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result);
             },
             [this](const std::string& error) {
                 onMapError(std::format("GetSurfaceData(TYPE_NAME): {}", error));
-            }
-        );
+            },
+            2000, 1, "SagMapAnalysis");
 
-        client->sendRequest(
+        client->enqueueRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
             [this](const std::string& result) {
                 onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result);
             },
             [this](const std::string& error) {
                 onMapError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error));
-            }
-        );
+            },
+            2000, 1, "SagMapAnalysis");
     }
 
     void SagMapAnalysisService::onSurfaceDataReceived(int code, const std::string& value) {
@@ -90,7 +96,7 @@ namespace gui {
             }
         }
 
-        if (--m_pendingSurfaceRequests > 0) return;
+        if (--m_surfaceRequestsRemaining > 0) return;
 
         if (m_semiDiameter <= 0.0) {
             onMapError("Surface semi-diameter is zero or negative");
@@ -113,6 +119,16 @@ namespace gui {
             m_state.tolerancedSurfaceIndex = m_targetSurface;
             m_state.tolerancedSampling = m_numRadii;
             m_state.tolerancedAngleStep = m_angleStepDeg;
+
+            auto* monitor = getMonitor();
+            if (monitor) {
+                auto msg = m_skippedPoints > 0
+                    ? std::format("Completed ({} rings, {} skipped)", m_sections.size(), m_skippedPoints)
+                    : std::format("Completed ({} rings)", m_sections.size());
+                monitor->reportProgress(m_operationId, m_numRadii * m_numAngles, msg);
+                monitor->onCompleted(m_operationId);
+            }
+
             m_logger.addLog(std::format("[SagMap] Surface map completed: {} rings", m_sections.size()));
             if (onCalculationComplete) onCalculationComplete();
             return;
@@ -130,6 +146,22 @@ namespace gui {
             return;
         }
 
+        auto* monitor = getMonitor();
+        if (monitor && monitor->isCancelled(m_operationId)) {
+            m_mapState = SagMapState::Failed;
+            m_mapError = "Cancelled";
+            monitor->onError(m_operationId, "Cancelled");
+            m_logger.addLog("[SagMap] Map calculation cancelled by user");
+            if (onCalculationComplete) onCalculationComplete();
+            return;
+        }
+
+        if (monitor) {
+            int currentPoint = m_currentRing * m_numAngles + m_currentAngle;
+            monitor->reportProgress(m_operationId, currentPoint,
+                std::format("Ring {}/{} angle {}/{}", m_currentRing + 1, m_numRadii, m_currentAngle, m_numAngles));
+        }
+
         double radiusStep = m_semiDiameter / (m_numRadii - 1);
         double r = m_currentRing * radiusStep;
         double angle = m_currentAngle * m_angleStepDeg;
@@ -143,15 +175,19 @@ namespace gui {
             return;
         }
 
-        client->sendRequest(
+        client->enqueueRequest(
             std::format("GetSag,{},{},{}", m_targetSurface, x, y),
             [this](const std::string& result) {
                 onSagPointReceived(result);
             },
             [this](const std::string& error) {
-                onMapError(std::format("GetSag failed: {}", error));
-            }
-        );
+                if (error == "Timeout") {
+                    onSagTimeout();
+                } else {
+                    onMapError(std::format("GetSag failed: {}", error));
+                }
+            },
+            1000, 1, "SagMapAnalysis");
     }
 
     void SagMapAnalysisService::onSagPointReceived(const std::string& buffer) {
@@ -182,11 +218,33 @@ namespace gui {
         sendNextSagPoint();
     }
 
+    void SagMapAnalysisService::onSagTimeout() {
+        m_logger.addLog(std::format("[SagMap] Point (ring {}, angle {}) timed out, skipping",
+            m_currentRing, m_currentAngle));
+        m_skippedPoints++;
+        m_currentAngle++;
+        sendNextSagPoint();
+    }
+
     void SagMapAnalysisService::onMapError(const std::string& error) {
         m_mapState = SagMapState::Failed;
         m_mapError = error;
+
+        auto* monitor = getMonitor();
+        if (monitor) monitor->onError(m_operationId, error);
+
         m_logger.addLog(std::format("[SagMap] {}", error));
         if (onCalculationComplete) onCalculationComplete();
+    }
+
+    void SagMapAnalysisService::cancelCalculation() {
+        auto* monitor = getMonitor();
+        if (monitor && m_operationId > 0) monitor->requestCancel(m_operationId);
+    }
+
+    ZemaxDDE::OperationMonitor* SagMapAnalysisService::getMonitor() const {
+        auto* client = getClient();
+        return client ? client->getOperationMonitor() : nullptr;
     }
 
     bool SagMapAnalysisService::hasNominalReference() const {
