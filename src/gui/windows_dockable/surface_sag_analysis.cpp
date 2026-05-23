@@ -115,27 +115,41 @@ namespace gui {
             bool isCalculating = (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
                                   m_sagService->getCalcState() == SagCalcState::FetchingSagPoints);
 
-            if (isCalculating) ImGui::BeginDisabled();
+            if (isCalculating) {
+                float progress = m_sagService->getTotalSteps() > 0
+                    ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
+                    : 0.0f;
+                ImGui::ProgressBar(progress, ImVec2(-1, 0),
+                    std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
 
-            if (ImGui::Button(isCalculating ? "Calculating..." : "Get toleranced surface data")) {
-                if (isDDEInitialized()) {
-                    auto* surface = m_zemaxDDEClient->getTolerancedSurface();
-                    surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
-                    surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_sagService->cancelCalculation();
+                }
 
-                    m_sagService->onCalculationComplete = [this]() {
-                        const auto& result = m_sagService->getResult();
+                if (m_sagService->getSkippedPoints() > 0) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
+                        "%d points skipped (timeout)", m_sagService->getSkippedPoints());
+                }
+            } else {
+                if (ImGui::Button("Get toleranced surface data")) {
+                    if (isDDEInitialized()) {
                         auto* surface = m_zemaxDDEClient->getTolerancedSurface();
-                        surface->semiDiameter = result.semiDiameter;
-                        surface->sampling = result.sampling;
-                        surface->angle = result.angle;
-                        surface->sagDataPoints = result.sagDataPoints;
-                    };
-                    m_sagService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                        surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
+                        surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+                        m_sagService->onCalculationComplete = [this]() {
+                            const auto& result = m_sagService->getResult();
+                            auto* surface = m_zemaxDDEClient->getTolerancedSurface();
+                            surface->semiDiameter = result.semiDiameter;
+                            surface->sampling = result.sampling;
+                            surface->angle = result.angle;
+                            surface->sagDataPoints = result.sagDataPoints;
+                        };
+                        m_sagService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                    }
                 }
             }
-
-            if (isCalculating) ImGui::EndDisabled();
 
             ImGui::EndDisabled();
         }
@@ -207,21 +221,40 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Get nominal surface data")) {
-                if (isDDEInitialized()) {
-                    auto* surface = m_zemaxDDEClient->getNominalSurface();
-                    surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
-                    surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+            if (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                m_sagService->getCalcState() == SagCalcState::FetchingSagPoints) {
+                float progress = m_sagService->getTotalSteps() > 0
+                    ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
+                    : 0.0f;
+                ImGui::ProgressBar(progress, ImVec2(-1, 0),
+                    std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
 
-                    m_sagService->onCalculationComplete = [this]() {
-                        const auto& result = m_sagService->getResult();
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_sagService->cancelCalculation();
+                }
+
+                if (m_sagService->getSkippedPoints() > 0) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
+                        "%d points skipped (timeout)", m_sagService->getSkippedPoints());
+                }
+            } else {
+                if (ImGui::Button("Get nominal surface data")) {
+                    if (isDDEInitialized()) {
                         auto* surface = m_zemaxDDEClient->getNominalSurface();
-                        surface->semiDiameter = result.semiDiameter;
-                        surface->sampling = result.sampling;
-                        surface->angle = result.angle;
-                        surface->sagDataPoints = result.sagDataPoints;
-                    };
-                    m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                        surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
+                        surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+                        m_sagService->onCalculationComplete = [this]() {
+                            const auto& result = m_sagService->getResult();
+                            auto* surface = m_zemaxDDEClient->getNominalSurface();
+                            surface->semiDiameter = result.semiDiameter;
+                            surface->sampling = result.sampling;
+                            surface->angle = result.angle;
+                            surface->sagDataPoints = result.sagDataPoints;
+                        };
+                        m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    }
                 }
             }
 
