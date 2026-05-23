@@ -112,18 +112,30 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Get toleranced surface data")) {
+            bool isCalculating = (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                                  m_sagService->getCalcState() == SagCalcState::FetchingSagPoints);
+
+            if (isCalculating) ImGui::BeginDisabled();
+
+            if (ImGui::Button(isCalculating ? "Calculating..." : "Get toleranced surface data")) {
                 if (isDDEInitialized()) {
                     auto* surface = m_zemaxDDEClient->getTolerancedSurface();
                     surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
                     surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                    m_zemaxDDEClient->setStorageTarget(surface);
-                    m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                    m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                    m_sagService->calculateSagCrossSection(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                    m_sagService->onCalculationComplete = [this]() {
+                        const auto& result = m_sagService->getResult();
+                        auto* surface = m_zemaxDDEClient->getTolerancedSurface();
+                        surface->semiDiameter = result.semiDiameter;
+                        surface->sampling = result.sampling;
+                        surface->angle = result.angle;
+                        surface->sagDataPoints = result.sagDataPoints;
+                    };
+                    m_sagService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
                 }
             }
+
+            if (isCalculating) ImGui::EndDisabled();
 
             ImGui::EndDisabled();
         }
@@ -201,10 +213,15 @@ namespace gui {
                     surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
                     surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                    m_zemaxDDEClient->setStorageTarget(surface);
-                    m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                    m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                    m_sagService->calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    m_sagService->onCalculationComplete = [this]() {
+                        const auto& result = m_sagService->getResult();
+                        auto* surface = m_zemaxDDEClient->getNominalSurface();
+                        surface->semiDiameter = result.semiDiameter;
+                        surface->sampling = result.sampling;
+                        surface->angle = result.angle;
+                        surface->sagDataPoints = result.sagDataPoints;
+                    };
+                    m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                 }
             }
 

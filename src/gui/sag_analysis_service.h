@@ -1,7 +1,9 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -11,6 +13,15 @@
 class Logger;
 
 namespace gui {
+
+    enum class SagCalcState {
+        Idle,
+        FetchingSurfaceData,
+        FetchingSagPoints,
+        Completed,
+        Failed
+    };
+
     struct SagAnalysisState {
         int tolerancedSurfaceIndex = 0;
         int nominalSurfaceIndex = 0;
@@ -21,17 +32,15 @@ namespace gui {
         double nominalAngle = 0.0;
     };
 
-    // Free utility function — extracts X and Sag coordinates from surface data
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface);
 
-    // Write sag cross section data to a temporary text file
     std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content);
 
     class SagAnalysisService {
         public:
             SagAnalysisService(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void calculateSagCrossSection(int surface, int sampling, double angle = 0.0);
+            void startAsyncSagCalculation(int surface, int sampling, double angle);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
             void renderCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
@@ -45,10 +54,30 @@ namespace gui {
 
             SagAnalysisState m_surfaceSagAnalysisPageState;
 
+            SagCalcState getCalcState() const { return m_calcState; }
+            const std::string& getCalcError() const { return m_calcError; }
+            const ZemaxDDE::SurfaceData& getResult() const { return m_resultSurface; }
+            std::function<void()> onCalculationComplete;
+
         private:
             ZemaxDDE::ZemaxDDEClient* getClient() const;
+            void sendNextSagRequest();
+            void onSurfaceDataReceived(int code, const std::string& value);
+            void onSagDataReceived(const std::string& buffer);
+            void onError(const std::string& error);
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
+
+            SagCalcState m_calcState = SagCalcState::Idle;
+            std::string m_calcError;
+
+            int m_targetSurface = 0;
+            int m_targetSampling = 0;
+            double m_targetAngle = 0.0;
+            int m_sagPointIndex = 0;
+            int m_pendingSurfaceRequests = 0;
+
+            ZemaxDDE::SurfaceData m_resultSurface;
     };
 }

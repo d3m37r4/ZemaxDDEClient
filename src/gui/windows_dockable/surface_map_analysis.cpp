@@ -71,20 +71,31 @@ namespace gui {
         ImGui::SameLine();
         HelpMarker(getAngleTooltip().c_str());
 
-        if (ImGui::Button("Get nominal surface data")) {
+        bool isSagCalculating = (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                                 m_sagService->getCalcState() == SagCalcState::FetchingSagPoints);
+
+        if (isSagCalculating) ImGui::BeginDisabled();
+
+        if (ImGui::Button(isSagCalculating ? "Calculating..." : "Get nominal surface data")) {
             if (isDDEInitialized()) {
                 auto* nominal = m_zemaxDDEClient->getNominalSurface();
                 nominal->units = m_zemaxDDEClient->getOpticalSystemData().units;
                 nominal->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                m_zemaxDDEClient->setStorageTarget(nominal);
-                m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-                m_zemaxDDEClient->getSurfaceData(state.nominalSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-                m_sagService->calculateSagCrossSection(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
-
-                m_logger.addLog("[SagMap] Nominal reference set for surface map analysis");
+                m_sagService->onCalculationComplete = [this]() {
+                    const auto& result = m_sagService->getResult();
+                    auto* nominal = m_zemaxDDEClient->getNominalSurface();
+                    nominal->semiDiameter = result.semiDiameter;
+                    nominal->sampling = result.sampling;
+                    nominal->angle = result.angle;
+                    nominal->sagDataPoints = result.sagDataPoints;
+                    m_logger.addLog("[SagMap] Nominal reference set for surface map analysis");
+                };
+                m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
             }
         }
+
+        if (isSagCalculating) ImGui::EndDisabled();
 
         ImGui::EndDisabled();
 
@@ -129,20 +140,12 @@ namespace gui {
 
         ImGui::SeparatorText("Analysis");
 
-        ImGui::BeginDisabled(!isDDEInitialized());
-        if (ImGui::Button("Calculate Surface Map")) {
-            auto* toleranced = m_zemaxDDEClient->getTolerancedSurface();
-            toleranced->clear();
-            toleranced->units = m_zemaxDDEClient->getOpticalSystemData().units;
-            toleranced->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+        bool isMapCalculating = (m_sagMapService->getMapState() == SagMapState::FetchingSurfaceData ||
+                                 m_sagMapService->getMapState() == SagMapState::FetchingSagPoints);
 
-            m_zemaxDDEClient->setStorageTarget(toleranced);
-            m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::TYPE_NAME);
-            m_zemaxDDEClient->getSurfaceData(state.tolerancedSurfaceIndex, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER);
-
-            toleranced->sampling = state.tolerancedSampling;
-
-            m_sagMapService->calculateSurfaceMap(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
+        ImGui::BeginDisabled(!isDDEInitialized() || isMapCalculating);
+        if (ImGui::Button(isMapCalculating ? "Calculating..." : "Calculate Surface Map")) {
+            m_sagMapService->startAsyncMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
         }
         ImGui::EndDisabled();
 
