@@ -4,11 +4,16 @@
 #include <vector>
 
 #include "client.h"
+#include "initial_data_load_service.h"
 #include "utils.h"
 #include "logger/logger.h"
 
 namespace ZemaxDDE {
-    ZemaxDDEClient::ZemaxDDEClient(HWND hwndClient, Logger& logger) : m_hwndZemaxClient(hwndClient), m_logger(logger) {}
+    ZemaxDDEClient::ZemaxDDEClient(HWND hwndClient, Logger& logger)
+        : m_hwndZemaxClient(hwndClient)
+        , m_logger(logger)
+        , m_initialDataLoad(std::make_unique<InitialDataLoadService>(*this, m_opticalSystem, m_logger))
+    {}
 
     ZemaxDDEClient::~ZemaxDDEClient() {
         terminateDDE();
@@ -269,6 +274,10 @@ namespace ZemaxDDE {
                     FreeDDElParam(WM_DDE_ACK, lParam);
 
                     m_hwndZemaxServer = reinterpret_cast<HWND>(wParam);
+
+                    if (m_initialDataLoad) {
+                        m_initialDataLoad->start();
+                    }
 
                     GlobalDeleteAtom(static_cast<ATOM>(lowWord));
                     GlobalDeleteAtom(static_cast<ATOM>(highWord));

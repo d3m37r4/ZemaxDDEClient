@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 #include <windows.h>
@@ -11,6 +12,8 @@
 class Logger;
 
 namespace ZemaxDDE {
+    class InitialDataLoadService;
+
     class ZemaxDDEClient {
         public:
             ZemaxDDEClient(HWND hwndClient, Logger& logger);
@@ -80,6 +83,8 @@ namespace ZemaxDDE {
             SurfaceData m_nominalSurface;
             SurfaceData* m_currentStorage = &m_tolerancedSurface;
             bool m_isDataReceived{false};
+
+            std::unique_ptr<InitialDataLoadService> m_initialDataLoad;
 
             std::vector<PendingRequest> m_pendingRequests;
             uint64_t m_nextRequestId = 1;
