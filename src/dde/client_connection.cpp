@@ -5,6 +5,7 @@
 
 #include "client.h"
 #include "initial_data_load_service.h"
+#include "operation_monitor.h"
 #include "utils.h"
 #include "logger/logger.h"
 
@@ -13,6 +14,7 @@ namespace ZemaxDDE {
         : m_hwndZemaxClient(hwndClient)
         , m_logger(logger)
         , m_initialDataLoad(std::make_unique<InitialDataLoadService>(*this, m_opticalSystem, m_logger))
+        , m_operationMonitor(std::make_unique<OperationMonitor>())
     {}
 
     ZemaxDDEClient::~ZemaxDDEClient() {
@@ -115,84 +117,115 @@ namespace ZemaxDDE {
         }
     }
 
-    uint64_t ZemaxDDEClient::sendRequest(const std::string& command,
-        std::function<void(const std::string&)> onResult,
-        std::function<void(const std::string&)> onError) {
+    uint64_t ZemaxDDEClient::enqueueRequest(const std::string& command,
+        std::function<void(const std::string&)> onSuccess,
+        std::function<void(const std::string&)> onError,
+        DWORD timeoutMs,
+        int retries,
+        const std::string& serviceId) {
 
         uint64_t id = m_nextRequestId++;
+        DdeRequest req;
+        req.id = id;
+        req.command = command;
+        req.onSuccess = std::move(onSuccess);
+        req.onError = std::move(onError);
+        req.timeoutMs = timeoutMs;
+        req.retriesLeft = retries;
+        req.serviceId = serviceId;
+        req.startTime = GetTickCount();
+        m_requestQueue.push_back(std::move(req));
 
-        int wideCharCount = MultiByteToWideChar(CP_ACP, 0, command.data(),
-            static_cast<int>(command.size()), nullptr, 0);
+        m_logger.addLog(std::format("[DDE] Enqueued request #{}: '{}' (svc={}, timeout={}ms, retries={})",
+            id, command, serviceId, timeoutMs, retries));
+
+        if (!m_activeRequest) {
+            dequeueAndSend();
+        }
+
+        return id;
+    }
+
+    void ZemaxDDEClient::dequeueAndSend() {
+        if (m_requestQueue.empty()) return;
+
+        DdeRequest req = std::move(m_requestQueue.front());
+        m_requestQueue.pop_front();
+
+        int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
+            req.command.data(), static_cast<int>(req.command.size()),
+            nullptr, 0);
         if (wideCharCount == 0) {
-            if (onError) onError("Failed to convert request to wide string");
-            return id;
+            if (req.onError) req.onError("Failed to convert request to wide string");
+            dequeueAndSend();
+            return;
         }
 
         std::vector<wchar_t> wItem(wideCharCount + 1);
-        int converted = MultiByteToWideChar(CP_ACP, 0, command.data(),
-            static_cast<int>(command.size()), wItem.data(), wideCharCount);
+        int converted = MultiByteToWideChar(CP_ACP, 0,
+            req.command.data(), static_cast<int>(req.command.size()),
+            wItem.data(), wideCharCount);
         if (converted == 0 || converted != wideCharCount) {
-            if (onError) onError("Failed to convert request to wide string");
-            return id;
+            if (req.onError) req.onError("Failed to convert request to wide string");
+            dequeueAndSend();
+            return;
         }
 
         wItem[wideCharCount] = L'\0';
         ATOM aItem = GlobalAddAtomW(wItem.data());
 
-        if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
+        if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
+                reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+                PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
             GlobalDeleteAtom(aItem);
-            if (onError) onError("Cannot communicate with Zemax");
-            return id;
+            if (req.onError) req.onError("Cannot communicate with Zemax");
+            dequeueAndSend();
+            return;
         }
 
-        PendingRequest req;
-        req.id = id;
-        req.command = command;
-        req.rawRequest = command;
-        req.onResult = std::move(onResult);
-        req.onError = std::move(onError);
         req.startTime = GetTickCount();
-        m_pendingRequests.push_back(std::move(req));
+        m_activeRequest = std::move(req);
 
-        return id;
+        m_logger.addLog(std::format("[DDE] Sent request #{}: '{}'", m_activeRequest->id, m_activeRequest->command));
     }
 
     void ZemaxDDEClient::processTimeouts() {
+        if (!m_activeRequest) return;
+
         DWORD now = GetTickCount();
-        std::vector<size_t> completed;
+        auto& req = *m_activeRequest;
 
-        for (size_t i = 0; i < m_pendingRequests.size(); ++i) {
-            auto& req = m_pendingRequests[i];
-            if (now - req.startTime < DDE_TIMEOUT_MS) continue;
+        if (now - req.startTime < req.timeoutMs) return;
 
-            if (req.retryCount < 3) {
-                req.retryCount++;
-                req.startTime = now;
+        if (req.retriesLeft > 0) {
+            req.retriesLeft--;
+            req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
+            req.startTime = now;
 
-                int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
-                    req.rawRequest.data(), static_cast<int>(req.rawRequest.size()),
-                    nullptr, 0);
-                if (wideCharCount > 0) {
-                    std::vector<wchar_t> wItem(wideCharCount + 1);
-                    MultiByteToWideChar(CP_ACP, 0, req.rawRequest.data(),
-                        static_cast<int>(req.rawRequest.size()),
-                        wItem.data(), wideCharCount);
-                    wItem[wideCharCount] = L'\0';
-                    ATOM aItem = GlobalAddAtomW(wItem.data());
-                    PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
-                        reinterpret_cast<WPARAM>(m_hwndZemaxClient),
-                        PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
-                }
-            } else {
-                if (req.onError) {
-                    req.onError("Max retries exceeded");
-                }
-                completed.push_back(i);
+            int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
+                req.command.data(), static_cast<int>(req.command.size()),
+                nullptr, 0);
+            if (wideCharCount > 0) {
+                std::vector<wchar_t> wItem(wideCharCount + 1);
+                MultiByteToWideChar(CP_ACP, 0, req.command.data(),
+                    static_cast<int>(req.command.size()),
+                    wItem.data(), wideCharCount);
+                wItem[wideCharCount] = L'\0';
+                ATOM aItem = GlobalAddAtomW(wItem.data());
+                PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
+                    reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+                    PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
             }
-        }
 
-        for (auto it = completed.rbegin(); it != completed.rend(); ++it) {
-            m_pendingRequests.erase(m_pendingRequests.begin() + static_cast<ptrdiff_t>(*it));
+            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
+                m_activeRequest->retriesLeft, req.id, req.command, req.timeoutMs));
+        } else {
+            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}'", req.id, req.command));
+            if (req.onError) {
+                req.onError("Timeout");
+            }
+            m_activeRequest.reset();
+            dequeueAndSend();
         }
     }
 
@@ -274,47 +307,39 @@ namespace ZemaxDDE {
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
                     #endif
 
-                    auto findPendingRequest = [&](const std::string& cmd) {
-                        return std::find_if(m_pendingRequests.begin(), m_pendingRequests.end(),
-                            [&](const PendingRequest& req) {
-                                return req.rawRequest.rfind(cmd, 0) == 0;
-                            });
-                    };
-
-                    auto routeAsync = [&](const std::string& cmdToken) -> bool {
-                        auto it = findPendingRequest(cmdToken);
-                        if (it != m_pendingRequests.end()) {
-                            if (it->onResult) it->onResult(buffer);
-                            m_pendingRequests.erase(it);
-                            return true;
+                    bool matched = false;
+                    if (m_activeRequest && dde_item_str == m_activeRequest->command) {
+                        if (m_activeRequest->onSuccess) {
+                            m_activeRequest->onSuccess(buffer);
                         }
-                        return false;
-                    };
+                        m_logger.addLog(std::format("[DDE] Routed to request #{} ('{}', svc={})",
+                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId));
+                        m_activeRequest.reset();
+                        dequeueAndSend();
+                        DdeAck.fAck = true;
+                        matched = true;
+                    }
 
-                    if (command_token == "GetName") {
-                        std::string name = extractStringFromDDE(ddeDataHandle);
-                        if (name.empty()) {
-                            name = "unknown";
-                            m_logger.addLog("[DDE] GetName: empty lens name, using default 'unknown'");
-                        }
+                    if (!matched) {
+                        #ifdef DEBUG_LOG
+                        m_logger.addLog(std::format("[DDE] No matching active request, using fallback for '{}'", command_token));
+                        #endif
 
-                        if (!routeAsync("GetName")) {
+                        if (command_token == "GetName") {
+                            std::string name = extractStringFromDDE(ddeDataHandle);
+                            if (name.empty()) {
+                                name = "unknown";
+                                m_logger.addLog("[DDE] GetName: empty lens name, using default 'unknown'");
+                            }
                             m_opticalSystem.lensName = name;
+                            DdeAck.fAck = true;
                         }
-
-                        DdeAck.fAck = true;
-                    }
-                    if (command_token == "GetFile") {
-                        std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
-
-                        if (!routeAsync("GetFile")) {
+                        if (command_token == "GetFile") {
+                            std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
                             m_opticalSystem.fileName = fileNameStr;
+                            DdeAck.fAck = true;
                         }
-
-                        DdeAck.fAck = true;
-                    }
-                    if (command_token == "GetSystem") {
-                        if (!routeAsync("GetSystem")) {
+                        if (command_token == "GetSystem") {
                             const int GET_SYSTEM_PARAMS_COUNT = 9;
                             auto systemParams = ZemaxDDE::tokenize(buffer);
                             int params = static_cast<int>(systemParams.size());
@@ -360,9 +385,7 @@ namespace ZemaxDDE {
                                 return 0;
                             }
                         }
-                    }
-                    if (command_token == "GetField") {
-                        if (!routeAsync("GetField")) {
+                        if (command_token == "GetField") {
                             const int EXPECTED_COMMAND_TOKENS = 2;
                             int params = static_cast<int>(item_tokens.size());
 
@@ -449,9 +472,7 @@ namespace ZemaxDDE {
                             }
                             DdeAck.fAck = true;
                         }
-                    }
-                    if (command_token == "GetWave") {
-                        if (!routeAsync("GetWave")) {
+                        if (command_token == "GetWave") {
                             const int EXPECTED_COMMAND_TOKENS = 2;
                             int params = static_cast<int>(item_tokens.size());
 
@@ -527,21 +548,17 @@ namespace ZemaxDDE {
                                 }
                             } else {
                                 m_logger.addLog(std::format("[DDE] GetWave: Wave index must be 0 (metadata) or in range [{}, {}]. Got: {}",
-                                                        ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES, arg));
+                                                        ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_FIELDS, arg));
                                 return 0;
                             }
                             DdeAck.fAck = true;
                         }
-                    }
-                    if (command_token == "GetSurfaceData") {
-                        routeAsync("GetSurfaceData");
-                        DdeAck.fAck = true;
-                        return 0;
-                    }
-                    if (command_token == "GetSag") {
-                        routeAsync("GetSag");
-                        DdeAck.fAck = true;
-                        return 0;    
+                        if (command_token == "GetSurfaceData") {
+                            DdeAck.fAck = true;
+                        }
+                        if (command_token == "GetSag") {
+                            DdeAck.fAck = true;
+                        }
                     }
                 }
                 if (ddeDataLock.as<::DDEDATA>()->fAckReq == true) {
