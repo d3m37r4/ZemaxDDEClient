@@ -103,12 +103,14 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     GetWindowThreadProcessId(targetHwnd, &pid);
     conn.serverPid = pid;
 
-    if (m_activeIndex < 0) {
-        m_activeIndex = idx;
-    }
+    m_activeIndex = idx;
 
     m_logger.addLog(std::format("[DDE] Connected slot {}: \"{}\" (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
         idx, ws2s(title), pid,
+        reinterpret_cast<uintptr_t>(conn.hwndClient),
+        reinterpret_cast<uintptr_t>(conn.hwndServer)));
+    m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: \"{}\" (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
+        idx, ws2s(conn.serverTitle), conn.serverPid,
         reinterpret_cast<uintptr_t>(conn.hwndClient),
         reinterpret_cast<uintptr_t>(conn.hwndServer)));
 
@@ -163,8 +165,11 @@ void DDEConnectionManager::disconnectAll() {
 void DDEConnectionManager::setActiveConnection(int index) {
     if (index >= 0 && index < MAX_CONNECTIONS && m_connections[index].isConnected) {
         m_activeIndex = index;
-        m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: {}",
-            index, ws2s(m_connections[index].serverTitle)));
+        auto& conn = m_connections[index];
+        m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: \"{}\" (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
+            index, ws2s(conn.serverTitle), conn.serverPid,
+            reinterpret_cast<uintptr_t>(conn.hwndClient),
+            reinterpret_cast<uintptr_t>(conn.hwndServer)));
     }
 }
 

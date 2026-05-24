@@ -68,7 +68,6 @@ namespace gui {
                     bool isSelected = (i == activeIdx);
                     if (ImGui::Selectable(itemLabel.c_str(), isSelected)) {
                         m_connectionManager->setActiveConnection(i);
-                        logger.addLog(std::format("[DDE] Switched active target to [{}] {}", i, title));
                     }
                     if (isSelected) {
                         ImGui::SetItemDefaultFocus();
