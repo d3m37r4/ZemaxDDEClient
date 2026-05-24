@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 
 class Logger;
@@ -42,6 +43,7 @@ namespace ZemaxDDE {
             int m_totalFields = 0;
             int m_currentWave = 0;
             int m_totalWaves = 0;
+            std::chrono::steady_clock::time_point m_startTime;
     };
 
 }

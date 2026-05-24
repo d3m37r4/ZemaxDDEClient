@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <filesystem>
 #include <functional>
 #include <optional>
@@ -92,6 +93,7 @@ namespace gui {
             int m_surfaceRequestsRemaining = 0;
             uint64_t m_operationId = 0;
             int m_skippedPoints = 0;
+            std::chrono::steady_clock::time_point m_calcStartTime;
 
             ZemaxDDE::SurfaceData m_resultSurface;
     };

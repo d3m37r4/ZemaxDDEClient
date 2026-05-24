@@ -292,11 +292,11 @@ namespace ZemaxDDE {
 
                     bool matched = false;
                     if (m_activeRequest && dde_item_str == m_activeRequest->command) {
+                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={})",
+                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId));
                         if (m_activeRequest->onSuccess) {
                             m_activeRequest->onSuccess(buffer);
                         }
-                        m_logger.addLog(std::format("[DDE] Routed to request #{} ('{}', svc={})",
-                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId));
                         finishRequest();
                         DdeAck.fAck = true;
                         matched = true;

@@ -20,7 +20,8 @@ namespace ZemaxDDE {
         if (m_state != LoadState::Idle) return;
         m_state = LoadState::LoadingSystem;
         m_error.clear();
-        m_logger.addLog("[InitLoad] Starting initial data load");
+        m_startTime = std::chrono::steady_clock::now();
+        m_logger.addLog("[InitLoadService] Starting initial data load");
         loadSystem();
     }
 
@@ -31,7 +32,7 @@ namespace ZemaxDDE {
                 while (!name.empty() && (name.back() == '\0' || name.back() == '\r' || name.back() == '\n' || name.back() == ' '))
                     name.pop_back();
                 m_opticalSystem.lensName = name.empty() ? "unknown" : name;
-                m_logger.addLog(std::format("[InitLoad] lensName = '{}'", m_opticalSystem.lensName));
+                m_logger.addLog(std::format("[InitLoadService] lensName = '{}'", m_opticalSystem.lensName));
 
                 m_client.submitRequest("GetFile",
                     [this](const std::string& buf) {
@@ -39,7 +40,7 @@ namespace ZemaxDDE {
                         while (!fileName.empty() && (fileName.back() == '\0' || fileName.back() == '\r' || fileName.back() == '\n' || fileName.back() == ' '))
                             fileName.pop_back();
                         m_opticalSystem.fileName = fileName;
-                        m_logger.addLog(std::format("[InitLoad] fileName = '{}'", fileName));
+                        m_logger.addLog(std::format("[InitLoadService] fileName = '{}'", fileName));
 
                         m_client.submitRequest("GetSystem",
                             [this](const std::string& sysBuf) {
@@ -60,14 +61,14 @@ namespace ZemaxDDE {
                                     m_opticalSystem.temp          = std::stod(tokens[TEMP]);
                                     m_opticalSystem.pressure      = std::stod(tokens[PRESSURE]);
                                     m_opticalSystem.globalRefSurf = std::stoi(tokens[GLOBAL_REF_SURF]);
-                                    m_logger.addLog(std::format("[InitLoad] System: {} surfaces, unit={}, stop={}", m_opticalSystem.numSurfs, m_opticalSystem.units, m_opticalSystem.stopSurf));
+                                    m_logger.addLog(std::format("[InitLoadService] System: {} surfaces, unit={}, stop={}", m_opticalSystem.numSurfs, m_opticalSystem.units, m_opticalSystem.stopSurf));
                                 } catch (const std::exception& e) {
                                     onError(std::format("GetSystem: parse error: {}", e.what()));
                                     return;
                                 }
 
                                 m_state = LoadState::LoadingFields;
-                                m_logger.addLog("[InitLoad] System loaded, loading fields");
+                                m_logger.addLog("[InitLoadService] System loaded, loading fields");
 
                                 m_client.submitRequest("GetField,0",
                                     [this](const std::string& fBuf) {
@@ -89,7 +90,7 @@ namespace ZemaxDDE {
                                             m_opticalSystem.maxXField = std::stod(ftokens[MAX_X_FIELD]);
                                             m_opticalSystem.maxYField = std::stod(ftokens[MAX_Y_FIELD]);
                                             m_opticalSystem.normalizationMethod = std::stoi(ftokens[NORMALIZATION_METHOD]);
-                                            m_logger.addLog(std::format("[InitLoad] Fields: type={}, count={}", m_opticalSystem.fieldType, numFields));
+                                            m_logger.addLog(std::format("[InitLoadService] Fields: type={}, count={}", m_opticalSystem.fieldType, numFields));
 
                                             m_totalFields = numFields;
                                             m_currentField = MIN_FIELDS;
@@ -122,7 +123,7 @@ namespace ZemaxDDE {
     void InitialDataLoadService::loadNextField() {
         if (m_currentField > m_totalFields) {
             m_state = LoadState::LoadingWaves;
-            m_logger.addLog("[InitLoad] Fields loaded, loading waves");
+            m_logger.addLog("[InitLoadService] Fields loaded, loading waves");
 
             m_client.submitRequest("GetWave,0",
                 [this](const std::string& buffer) {
@@ -141,7 +142,7 @@ namespace ZemaxDDE {
                             return;
                         }
                         m_opticalSystem.numWaves = numWaves;
-                        m_logger.addLog(std::format("[InitLoad] Waves: primary={}, count={}", m_opticalSystem.primWave, numWaves));
+                        m_logger.addLog(std::format("[InitLoadService] Waves: primary={}, count={}", m_opticalSystem.primWave, numWaves));
 
                         m_totalWaves = numWaves;
                         m_currentWave = MIN_WAVES;
@@ -181,7 +182,11 @@ namespace ZemaxDDE {
     void InitialDataLoadService::loadNextWave() {
         if (m_currentWave > m_totalWaves) {
             m_state = LoadState::Completed;
-            m_logger.addLog(std::format("[InitLoad] Data load completed: {} fields, {} waves", m_opticalSystem.numFields, m_opticalSystem.numWaves));
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - m_startTime);
+            m_logger.addLog(std::format("[InitLoadService] Data load completed: {} fields, {} waves in {}",
+                m_opticalSystem.numFields, m_opticalSystem.numWaves,
+                ZemaxDDE::formatDuration(elapsed)));
             return;
         }
 
@@ -209,7 +214,7 @@ namespace ZemaxDDE {
     void InitialDataLoadService::onError(const std::string& msg) {
         m_state = LoadState::Failed;
         m_error = msg;
-        m_logger.addLog(std::format("[InitLoad] Error: {}", msg));
+        m_logger.addLog(std::format("[InitLoadService] Error: {}", msg));
     }
 
 }

@@ -55,12 +55,13 @@ namespace gui {
         m_targetAngle = angle;
         m_sagPointIndex = 0;
         m_skippedPoints = 0;
+        m_calcStartTime = std::chrono::steady_clock::now();
         m_resultSurface = {};
         m_resultSurface.id = surface;
         m_resultSurface.sagDataPoints.clear();
         m_surfaceRequestsRemaining = 2;
 
-        m_logger.addLog(std::format("[SagService] Starting async sag calc for surface {} ({} pts, {}°)", surface, sampling, angle));
+        m_logger.addLog(std::format("[SagService] Starting sag calc for surface {} ({} pts, {}°)", surface, sampling, angle));
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
@@ -122,7 +123,17 @@ namespace gui {
                 monitor->onCompleted(m_operationId);
             }
 
-            m_logger.addLog(std::format("[SagService] Sag calc completed: {} points", m_resultSurface.sagDataPoints.size()));
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - m_calcStartTime);
+            if (m_skippedPoints > 0) {
+                m_logger.addLog(std::format("[SagService] Sag calc completed: {}/{} points ({} skipped) in {}",
+                    m_resultSurface.sagDataPoints.size(), m_targetSampling, m_skippedPoints,
+                    ZemaxDDE::formatDuration(elapsed)));
+            } else {
+                m_logger.addLog(std::format("[SagService] Sag calc completed: {}/{} points in {}",
+                    m_resultSurface.sagDataPoints.size(), m_targetSampling,
+                    ZemaxDDE::formatDuration(elapsed)));
+            }
             if (onCalculationComplete) onCalculationComplete();
             return;
         }
