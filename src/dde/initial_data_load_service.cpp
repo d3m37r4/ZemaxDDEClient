@@ -25,7 +25,7 @@ namespace ZemaxDDE {
     }
 
     void InitialDataLoadService::loadSystem() {
-        m_client.enqueueRequest("GetName",
+        m_client.submitRequest("GetName",
             [this](const std::string& buffer) {
                 std::string name = cp1251_to_utf8(buffer.data(), buffer.size());
                 while (!name.empty() && (name.back() == '\0' || name.back() == '\r' || name.back() == '\n' || name.back() == ' '))
@@ -33,7 +33,7 @@ namespace ZemaxDDE {
                 m_opticalSystem.lensName = name.empty() ? "unknown" : name;
                 m_logger.addLog(std::format("[InitLoad] lensName = '{}'", m_opticalSystem.lensName));
 
-                m_client.enqueueRequest("GetFile",
+                m_client.submitRequest("GetFile",
                     [this](const std::string& buf) {
                         std::string fileName = cp1251_to_utf8(buf.data(), buf.size());
                         while (!fileName.empty() && (fileName.back() == '\0' || fileName.back() == '\r' || fileName.back() == '\n' || fileName.back() == ' '))
@@ -41,7 +41,7 @@ namespace ZemaxDDE {
                         m_opticalSystem.fileName = fileName;
                         m_logger.addLog(std::format("[InitLoad] fileName = '{}'", fileName));
 
-                        m_client.enqueueRequest("GetSystem",
+                        m_client.submitRequest("GetSystem",
                             [this](const std::string& sysBuf) {
                                 auto tokens = tokenize(sysBuf);
                                 constexpr int EXPECTED = 9;
@@ -69,7 +69,7 @@ namespace ZemaxDDE {
                                 m_state = LoadState::LoadingFields;
                                 m_logger.addLog("[InitLoad] System loaded, loading fields");
 
-                                m_client.enqueueRequest("GetField,0",
+                                m_client.submitRequest("GetField,0",
                                     [this](const std::string& fBuf) {
                                         auto ftokens = tokenize(fBuf);
                                         constexpr int FEXPECTED = 5;
@@ -124,7 +124,7 @@ namespace ZemaxDDE {
             m_state = LoadState::LoadingWaves;
             m_logger.addLog("[InitLoad] Fields loaded, loading waves");
 
-            m_client.enqueueRequest("GetWave,0",
+            m_client.submitRequest("GetWave,0",
                 [this](const std::string& buffer) {
                     auto tokens = tokenize(buffer);
                     constexpr int EXPECTED = 2;
@@ -157,7 +157,7 @@ namespace ZemaxDDE {
             return;
         }
 
-        m_client.enqueueRequest(std::format("GetField,{}", m_currentField),
+        m_client.submitRequest(std::format("GetField,{}", m_currentField),
             [this](const std::string& buffer) {
                 auto tokens = tokenize(buffer);
                 if (tokens.size() >= 2) {
@@ -185,7 +185,7 @@ namespace ZemaxDDE {
             return;
         }
 
-        m_client.enqueueRequest(std::format("GetWave,{}", m_currentWave),
+        m_client.submitRequest(std::format("GetWave,{}", m_currentWave),
             [this](const std::string& buffer) {
                 auto tokens = tokenize(buffer);
                 if (tokens.size() >= 2) {

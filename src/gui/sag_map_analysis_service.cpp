@@ -57,7 +57,7 @@ namespace gui {
         m_logger.addLog(std::format("[SagMap] Starting async surface map: surface {}, radii={}, angle step={} deg ({} total points)",
             surface, numRadii, angleStepDeg, totalPoints));
 
-        client->enqueueRequest(
+        client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
             [this](const std::string& result) {
                 onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result);
@@ -67,7 +67,7 @@ namespace gui {
             },
             2000, 1, "SagMapAnalysis");
 
-        client->enqueueRequest(
+        client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
             [this](const std::string& result) {
                 onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result);
@@ -175,7 +175,7 @@ namespace gui {
             return;
         }
 
-        client->enqueueRequest(
+        client->submitRequest(
             std::format("GetSag,{},{},{}", m_targetSurface, x, y),
             [this](const std::string& result) {
                 onSagPointReceived(result);
