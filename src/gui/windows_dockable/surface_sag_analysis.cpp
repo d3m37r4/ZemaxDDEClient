@@ -55,9 +55,9 @@ namespace gui {
         );
         if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
             ImGui::TextUnformatted(std::format("Optical system: {}", nominal.fileName).c_str());
+            ImGui::TextUnformatted(std::format("Surface index: {}", nominal.id).c_str());
             ImGui::TextUnformatted(std::format("Sampling: {}", nominal.sampling).c_str());
             ImGui::TextUnformatted(std::format("Angle: {}°", nominal.angle).c_str());
-            ImGui::TextUnformatted(std::format("Surface index: {}", nominal.id).c_str());
             ImGui::TextUnformatted(std::format("Surface type: {}", nominal.type).c_str());
             ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
             ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
@@ -82,6 +82,13 @@ namespace gui {
             }
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
+
+            {
+                auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+                ImGui::Text("Optical system:");
+                ImGui::SameLine();
+                ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+            }
 
             ImGui::Text("Surface number:");
             ImGui::SameLine();
@@ -164,9 +171,9 @@ namespace gui {
 
         if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
             ImGui::TextUnformatted(std::format("Optical system: {}", toleranced.fileName).c_str());
+            ImGui::TextUnformatted(std::format("Surface index: {}", toleranced.id).c_str());
             ImGui::TextUnformatted(std::format("Sampling: {}", toleranced.sampling).c_str());
             ImGui::TextUnformatted(std::format("Angle: {}°", toleranced.angle).c_str());
-            ImGui::TextUnformatted(std::format("Surface index: {}", toleranced.id).c_str());
             ImGui::TextUnformatted(std::format("Surface type: {}", toleranced.type).c_str());
             ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
             ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
@@ -191,6 +198,13 @@ namespace gui {
             }
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
+
+            {
+                auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+                ImGui::Text("Optical system:");
+                ImGui::SameLine();
+                ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+            }
 
             ImGui::Text("Surface number:");
             ImGui::SameLine();
