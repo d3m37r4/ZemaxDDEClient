@@ -46,6 +46,113 @@ namespace gui {
         auto* nominal = m_zemaxDDEClient->getNominalSurface();
         auto* toleranced = m_zemaxDDEClient->getTolerancedSurface();
 
+        ImGui::SeparatorText("Nominal surface parameters");
+        ImGui::BeginChild(
+            "NominalSurfaceContent",
+            ImVec2(0.0f, 0.0f),
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
+        );
+        if (nominal->isValid() && nominal->id == state.nominalSurfaceIndex) {
+            ImGui::TextUnformatted(std::format("Optical system: {}", nominal->fileName).c_str());
+            ImGui::TextUnformatted(std::format("Sampling: {}", nominal->sampling).c_str());
+            ImGui::TextUnformatted(std::format("Angle: {}°", nominal->angle).c_str());
+            ImGui::TextUnformatted(std::format("Surface index: {}", nominal->id).c_str());
+            ImGui::TextUnformatted(std::format("Surface type: {}", nominal->type).c_str());
+            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal->semiDiameter, getUnitString(nominal->units)).c_str());
+            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal->diameter(), getUnitString(nominal->units)).c_str());
+            ImGui::Text("Surface sag data:");
+            ImGui::SameLine();
+
+            if (ImGui::Button("Text")) {
+                m_sagService->saveCrossSectionToFile(*nominal);
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Show profile graphic")) {
+                m_sagService->m_showNominalSagWindow = true;
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Clear data")) {
+                m_sagService->m_showNominalSagWindow = false;
+                nominal->clear();
+            }
+        } else {
+            ImGui::BeginDisabled(!isDDEInitialized());
+
+            ImGui::Text("Surface number:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
+            state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
+
+            ImGui::Text("Sampling:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
+            state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
+            ImGui::SameLine();
+            HelpMarker(getSamplingTooltip().c_str());
+
+            ImGui::Text("Angle:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
+            state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
+            ImGui::SameLine();
+            HelpMarker(getAngleTooltip().c_str());
+
+            if (ImGui::Button("Copy toleranced surface settings")) {
+                state.nominalSampling = state.tolerancedSampling;
+                state.nominalAngle = state.tolerancedAngle;
+            }
+
+            ImGui::SameLine();
+
+            if (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                m_sagService->getCalcState() == SagCalcState::FetchingSagPoints) {
+                float progress = m_sagService->getTotalSteps() > 0
+                    ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
+                    : 0.0f;
+                ImGui::ProgressBar(progress, ImVec2(-1, 0),
+                    std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
+
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_sagService->cancelCalculation();
+                }
+
+                if (m_sagService->getSkippedPoints() > 0) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
+                        "%d points skipped (timeout)", m_sagService->getSkippedPoints());
+                }
+            } else {
+                if (ImGui::Button("Get nominal surface data")) {
+                    if (isDDEInitialized()) {
+                        auto* surface = m_zemaxDDEClient->getNominalSurface();
+                        surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
+                        surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+
+                        m_sagService->onCalculationComplete = [this]() {
+                            const auto& result = m_sagService->getResult();
+                            auto* surface = m_zemaxDDEClient->getNominalSurface();
+                            surface->semiDiameter = result.semiDiameter;
+                            surface->sampling = result.sampling;
+                            surface->angle = result.angle;
+                            surface->sagDataPoints = result.sagDataPoints;
+                        };
+                        m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    }
+                }
+            }
+
+            ImGui::EndDisabled();
+        }
+        ImGui::EndChild();
+
         ImGui::SeparatorText("Toleranced surface parameters");
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
@@ -83,6 +190,13 @@ namespace gui {
             }
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
+
+            ImGui::Text("Surface number:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
+            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
+
             ImGui::Text("Sampling:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
@@ -98,12 +212,6 @@ namespace gui {
             state.tolerancedAngle = std::clamp(state.tolerancedAngle, -360.0, 360.0);
             ImGui::SameLine();
             HelpMarker(getAngleTooltip().c_str());
-
-            ImGui::Text("Surface number:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
 
             if (ImGui::Button("Copy nominal surface settings")) {
                 state.tolerancedSampling = state.nominalSampling;
@@ -147,113 +255,6 @@ namespace gui {
                             surface->sagDataPoints = result.sagDataPoints;
                         };
                         m_sagService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
-                    }
-                }
-            }
-
-            ImGui::EndDisabled();
-        }
-        ImGui::EndChild();
-
-        ImGui::SeparatorText("Nominal surface parameters");
-        ImGui::BeginChild(
-            "NominalSurfaceContent",
-            ImVec2(0.0f, 0.0f),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
-            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
-        );
-        if (nominal->isValid() && nominal->id == state.nominalSurfaceIndex) {
-            ImGui::TextUnformatted(std::format("Optical system: {}", nominal->fileName).c_str());
-            ImGui::TextUnformatted(std::format("Sampling: {}", nominal->sampling).c_str());
-            ImGui::TextUnformatted(std::format("Angle: {}°", nominal->angle).c_str());
-            ImGui::TextUnformatted(std::format("Surface index: {}", nominal->id).c_str());
-            ImGui::TextUnformatted(std::format("Surface type: {}", nominal->type).c_str());
-            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal->semiDiameter, getUnitString(nominal->units)).c_str());
-            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal->diameter(), getUnitString(nominal->units)).c_str());
-            ImGui::Text("Surface sag data:");
-            ImGui::SameLine();
-
-            if (ImGui::Button("Text")) {
-                m_sagService->saveCrossSectionToFile(*nominal);
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button("Show profile graphic")) {
-                m_sagService->m_showNominalSagWindow = true;
-            }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button("Clear data")) {
-                m_sagService->m_showNominalSagWindow = false;
-                nominal->clear();
-            }
-        } else {
-            ImGui::BeginDisabled(!isDDEInitialized());
-
-            ImGui::Text("Sampling:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-            state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
-            ImGui::SameLine();
-            HelpMarker(getSamplingTooltip().c_str());
-
-            ImGui::Text("Angle:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
-            state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
-            ImGui::SameLine();
-            HelpMarker(getAngleTooltip().c_str());
-
-            ImGui::Text("Surface number:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-            state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
-
-            if (ImGui::Button("Copy toleranced surface settings")) {
-                state.nominalSampling = state.tolerancedSampling;
-                state.nominalAngle = state.tolerancedAngle;
-            }
-
-            ImGui::SameLine();
-
-            if (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                m_sagService->getCalcState() == SagCalcState::FetchingSagPoints) {
-                float progress = m_sagService->getTotalSteps() > 0
-                    ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
-                    : 0.0f;
-                ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                    std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
-
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel")) {
-                    m_sagService->cancelCalculation();
-                }
-
-                if (m_sagService->getSkippedPoints() > 0) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                        "%d points skipped (timeout)", m_sagService->getSkippedPoints());
-                }
-            } else {
-                if (ImGui::Button("Get nominal surface data")) {
-                    if (isDDEInitialized()) {
-                        auto* surface = m_zemaxDDEClient->getNominalSurface();
-                        surface->units = m_zemaxDDEClient->getOpticalSystemData().units;
-                        surface->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
-
-                        m_sagService->onCalculationComplete = [this]() {
-                            const auto& result = m_sagService->getResult();
-                            auto* surface = m_zemaxDDEClient->getNominalSurface();
-                            surface->semiDiameter = result.semiDiameter;
-                            surface->sampling = result.sampling;
-                            surface->angle = result.angle;
-                            surface->sagDataPoints = result.sagDataPoints;
-                        };
-                        m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                     }
                 }
             }
