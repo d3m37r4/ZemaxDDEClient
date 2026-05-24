@@ -41,7 +41,6 @@ namespace {
 
 namespace gui {
     void GuiManager::renderSurfaceSagAnalysis() {
-        if (!m_zemaxDDEClient) return;
         auto& state = m_sagService->m_surfaceSagAnalysisPageState;
         auto& nominal = m_sagService->m_nominalSurfaceData;
         auto& toleranced = m_sagService->m_tolerancedSurfaceData;
@@ -81,10 +80,15 @@ namespace gui {
                 nominal.clear();
             }
         } else {
+            if (!isDDEInitialized()) {
+                ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+                ImGui::Spacing();
+            }
+
             ImGui::BeginDisabled(!isDDEInitialized());
 
             {
-                auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+                auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
                 ImGui::Text("Optical system:");
                 ImGui::SameLine();
                 ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
@@ -94,7 +98,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-            state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
+            state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.nominalSurfaceIndex));
 
             ImGui::Text("Sampling:");
             ImGui::SameLine();
@@ -197,10 +201,15 @@ namespace gui {
                 toleranced.clear();
             }
         } else {
+            if (!isDDEInitialized()) {
+                ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+                ImGui::Spacing();
+            }
+
             ImGui::BeginDisabled(!isDDEInitialized());
 
             {
-                auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+                auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
                 ImGui::Text("Optical system:");
                 ImGui::SameLine();
                 ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
@@ -210,7 +219,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
+            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.tolerancedSurfaceIndex));
 
             ImGui::Text("Sampling:");
             ImGui::SameLine();
