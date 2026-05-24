@@ -71,36 +71,33 @@ void GuiManager::render() {
         m_pWndMgr->RenderAll();
     }
 
-    if (m_zemaxDDEClient) {
+    {
+        auto& tolSurface = m_sagService->m_tolerancedSurfaceData;
+        auto& nomSurface = m_sagService->m_nominalSurfaceData;
+
         if (m_sagService->m_showTolerancedSagWindow) {
-            auto* surface = m_zemaxDDEClient->getTolerancedSurface();
-            if (surface->isValid()) {
-                std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface->angle, surface->sampling);
-                m_sagService->renderCrossSectionWindow(title.c_str(), "Toleranced", *surface, &m_sagService->m_showTolerancedSagWindow);
+            if (tolSurface.isValid()) {
+                std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", tolSurface.angle, tolSurface.sampling);
+                m_sagService->renderCrossSectionWindow(title.c_str(), "Toleranced", tolSurface, &m_sagService->m_showTolerancedSagWindow);
             }
         }
 
         if (m_sagService->m_showNominalSagWindow) {
-            auto* surface = m_zemaxDDEClient->getNominalSurface();
-            if (surface->isValid()) {
-                std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface->angle, surface->sampling);
-                m_sagService->renderCrossSectionWindow(title.c_str(), "Nominal", *surface, &m_sagService->m_showNominalSagWindow);
+            if (nomSurface.isValid()) {
+                std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", nomSurface.angle, nomSurface.sampling);
+                m_sagService->renderCrossSectionWindow(title.c_str(), "Nominal", nomSurface, &m_sagService->m_showNominalSagWindow);
             }
         }
 
         if (m_sagService->m_showComparisonWindow) {
-            auto* nom = m_zemaxDDEClient->getNominalSurface();
-            auto* tol = m_zemaxDDEClient->getTolerancedSurface();
-            if (nom->isValid() && tol->isValid()) {
-                m_sagService->renderComparisonWindow(*nom, *tol, &m_sagService->m_showComparisonWindow);
+            if (nomSurface.isValid() && tolSurface.isValid()) {
+                m_sagService->renderComparisonWindow(nomSurface, tolSurface, &m_sagService->m_showComparisonWindow);
             }
         }
 
         if (m_sagService->m_showErrorWindow) {
-            auto* nom = m_zemaxDDEClient->getNominalSurface();
-            auto* tol = m_zemaxDDEClient->getTolerancedSurface();
-            if (nom->isValid() && tol->isValid() && nom->sagDataPoints.size() == tol->sagDataPoints.size()) {
-                m_sagService->renderErrorWindow(*nom, *tol, &m_sagService->m_showErrorWindow);
+            if (nomSurface.isValid() && tolSurface.isValid() && nomSurface.sagDataPoints.size() == tolSurface.sagDataPoints.size()) {
+                m_sagService->renderErrorWindow(nomSurface, tolSurface, &m_sagService->m_showErrorWindow);
             }
         }
     }

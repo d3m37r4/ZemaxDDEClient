@@ -67,6 +67,9 @@ namespace gui {
 
             std::function<void()> onCalculationComplete;
 
+            ZemaxDDE::SurfaceData m_nominalSurfaceData;
+            ZemaxDDE::SurfaceData m_tolerancedSurfaceData;
+
         private:
             ZemaxDDE::ZemaxDDEClient* getClient() const;
             ZemaxDDE::OperationMonitor* getMonitor() const;
