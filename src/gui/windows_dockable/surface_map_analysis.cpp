@@ -6,6 +6,7 @@
 
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "gui/imgui_utils.h"
 #include "logger/logger.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
@@ -61,7 +62,7 @@ namespace gui {
         ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
         state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
         ImGui::SameLine();
-        HelpMarker(getSamplingTooltip().c_str());
+        ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
         ImGui::Text("Angle:");
         ImGui::SameLine();
@@ -69,7 +70,7 @@ namespace gui {
         ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
         state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
         ImGui::SameLine();
-        HelpMarker(getAngleTooltip().c_str());
+        ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
 
         bool isSagCalculating = (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
                                  m_sagService->getCalcState() == SagCalcState::FetchingSagPoints);
@@ -138,7 +139,7 @@ namespace gui {
         ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
         state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling));
         ImGui::SameLine();
-        HelpMarker(getSamplingTooltip().c_str());
+        ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
         ImGui::Text("Angle step:");
         ImGui::SameLine();
@@ -146,7 +147,7 @@ namespace gui {
         ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
         state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 360.0);
         ImGui::SameLine();
-        HelpMarker(getAngleStepTooltip().c_str());
+        ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
 
         ImGui::EndDisabled();
 

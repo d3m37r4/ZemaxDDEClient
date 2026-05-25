@@ -23,17 +23,6 @@ namespace gui {
         }
     }
 
-    void HelpMarker(const char* desc) {
-        ImGui::TextDisabled("(?)");
-
-        if (ImGui::BeginItemTooltip()) {
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45.0f);
-            ImGui::TextUnformatted(desc);
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        }
-    }
-
     std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content) {
         try {
             const auto tempPath = std::filesystem::temp_directory_path() / filename;
@@ -52,16 +41,4 @@ namespace gui {
         }
     }
 
-    void SetPopupWindowPosition() {
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    }
-
-    void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
-        float dpiScale = ImGui::GetWindowDpiScale();
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(minWidth * dpiScale, minHeight * dpiScale),
-            ImVec2(FLT_MAX, FLT_MAX)
-        );
-    }
 }

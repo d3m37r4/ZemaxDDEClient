@@ -1,6 +1,7 @@
 #include "dockable_windows_manager.h"
 #include "gui.h"
 #include "gui/utils.h"
+#include "gui/imgui_utils.h"
 #include "app/config_path.h"
 #include <fstream>
 #include <algorithm>
@@ -109,7 +110,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::DDEStatus);
         const char* title = mgr->GetName(WindowID::DDEStatus);
-        gui::SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN);
+        ImGuiUtils::SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_WIDTH_MIN, gui::DDE_STATUS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
             if (guiMgr->getDDEStatusRenderer()) {
@@ -127,7 +128,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::SystemInfo);
         const char* title = mgr->GetName(WindowID::SystemInfo);
-        gui::SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN, gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN);
+        ImGuiUtils::SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_WIDTH_MIN, gui::SYSTEM_INFO_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderOpticalSystemInfo();
         }
@@ -142,7 +143,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::SagAnalysis);
         const char* title = mgr->GetName(WindowID::SagAnalysis);
-        gui::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
+        ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderSurfaceSagAnalysis();
         }
@@ -157,7 +158,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::SurfaceMapAnalysis);
         const char* title = mgr->GetName(WindowID::SurfaceMapAnalysis);
-        gui::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
+        ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderSurfaceMapAnalysis();
         }
@@ -172,7 +173,7 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         bool isVisible = mgr->IsVisible(WindowID::DebugLog);
         const char* title = mgr->GetName(WindowID::DebugLog);
-        gui::SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN);
+        ImGuiUtils::SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_WIDTH_MIN, gui::DEBUG_LOG_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
             guiMgr->renderDebugLog();
         }

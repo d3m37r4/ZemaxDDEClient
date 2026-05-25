@@ -7,6 +7,7 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "gui/sag_analysis_service.h"
+#include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
@@ -106,7 +107,7 @@ namespace gui {
             ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
             state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
             ImGui::SameLine();
-            HelpMarker(getSamplingTooltip().c_str());
+            ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
             ImGui::Text("Angle:");
             ImGui::SameLine();
@@ -114,7 +115,9 @@ namespace gui {
             ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
             state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
             ImGui::SameLine();
-            HelpMarker(getAngleTooltip().c_str());
+            ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
+
+            ImGuiUtils::SpacingY(0.5f);
 
             if (ImGui::Button("Copy toleranced surface settings")) {
                 state.nominalSampling = state.tolerancedSampling;
@@ -227,7 +230,7 @@ namespace gui {
             ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
             state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling));
             ImGui::SameLine();
-            HelpMarker(getSamplingTooltip().c_str());
+            ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
             ImGui::Text("Angle:");
             ImGui::SameLine();
@@ -235,7 +238,9 @@ namespace gui {
             ImGui::InputDouble("##toleranced_angle", &state.tolerancedAngle, 1.0, 10.0, "%.2f");
             state.tolerancedAngle = std::clamp(state.tolerancedAngle, -360.0, 360.0);
             ImGui::SameLine();
-            HelpMarker(getAngleTooltip().c_str());
+            ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
+
+            ImGuiUtils::SpacingY(0.5f);
 
             if (ImGui::Button("Copy nominal surface settings")) {
                 state.tolerancedSampling = state.nominalSampling;

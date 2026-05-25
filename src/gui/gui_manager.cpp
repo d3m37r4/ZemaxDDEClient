@@ -4,6 +4,7 @@
 #include "gui/sag_analysis_service.h"
 #include "gui/sag_map_analysis_service.h"
 #include "gui/menu_bar_controller.h"
+#include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
 #include "dde/dde_connection_manager.h"
 #include "windows_dockable/dde_status.h"
@@ -102,7 +103,7 @@ void GuiManager::render() {
         }
     }
 
-    SetPopupWindowPosition();
+    ImGuiUtils::SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
 

@@ -1,4 +1,5 @@
 #include "gui/gui.h"
+#include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
 
 namespace gui {
@@ -11,10 +12,10 @@ namespace gui {
             ImGui::TextUnformatted(std::format("File Name: {}", opticalSystem.fileName).c_str());
             ImGui::TextUnformatted(std::format("There are {} surfaces", opticalSystem.numSurfs).c_str());
             ImGui::TextUnformatted(std::format("The units are {}", getUnitString(opticalSystem.units)).c_str());
-            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGuiUtils::SpacingY(0.5f);
             ImGui::TextUnformatted(std::format("Stop Surface: {}", opticalSystem.stopSurf).c_str());
             ImGui::TextUnformatted(std::format("Global Reference Surface: {}", opticalSystem.globalRefSurf).c_str());
-            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGuiUtils::SpacingY(0.5f);
             ImGui::TextUnformatted(std::format("Number of Fields: {} (Type {})", opticalSystem.numFields, opticalSystem.fieldType).c_str());
             ImGui::BeginChild("FieldDataContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
             if (ImGui::CollapsingHeader("Field data")) {
@@ -36,7 +37,7 @@ namespace gui {
                 }
             }
             ImGui::EndChild();
-            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGuiUtils::SpacingY(0.5f);
             ImGui::TextUnformatted(std::format("There are {} wavelengths", opticalSystem.numWaves).c_str());
             ImGui::TextUnformatted(std::format("The primary wavelength is {}", opticalSystem.primWave).c_str());
             ImGui::BeginChild("WaveDataContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
@@ -59,11 +60,11 @@ namespace gui {
                 }
             }
             ImGui::EndChild();
-            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGuiUtils::SpacingY(0.5f);
             ImGui::TextUnformatted(std::format("Non-Axial Flag: {}", opticalSystem.nonAxialFlag ? "Non-Axial" : "Axial").c_str());
             ImGui::TextUnformatted(std::format("Ray Aiming Type: {}", gui::getRayAimingTypeString(opticalSystem.rayAimingType)).c_str());
             ImGui::TextUnformatted(std::format("Adjust Index: {}", opticalSystem.adjustIndex ? "True" : "False").c_str());
-            ImGui::Dummy(ImVec2(0.0f, 6.0f));
+            ImGuiUtils::SpacingY(0.5f);
             ImGui::TextUnformatted(std::format("Temperature: {:.4f} \u00b0C", opticalSystem.temp).c_str());
             ImGui::TextUnformatted(std::format("Pressure: {:.4f} atm", opticalSystem.pressure).c_str());
         } else {
