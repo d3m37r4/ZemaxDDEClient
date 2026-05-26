@@ -7,13 +7,13 @@
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
-#include "gui/sag_analysis_service.h"
+#include "gui/surface_profile_service.h"
 #include "dde/operation_monitor.h"
 #include "gui/gui.h"
 #include "logger/logger.h"
 
 namespace gui {
-    SagAnalysisService::SagAnalysisService(DDEConnectionManager* connectionManager, Logger& logger)
+    SurfaceProfileService::SurfaceProfileService(DDEConnectionManager* connectionManager, Logger& logger)
         : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
@@ -36,7 +36,7 @@ namespace gui {
         return {std::move(x_vals), std::move(y_vals)};
     }
 
-    void SagAnalysisService::startAsyncSagCalculation(int surface, int sampling, double angle) {
+    void SurfaceProfileService::startAsyncSagCalculation(int surface, int sampling, double angle) {
         auto* client = getClient();
         if (!client) {
             m_calcState = SagCalcState::Failed;
@@ -46,7 +46,7 @@ namespace gui {
         }
 
         auto* monitor = getMonitor();
-        m_operationId = monitor ? monitor->registerOperation("SagAnalysis", sampling) : 0;
+        m_operationId = monitor ? monitor->registerOperation("SurfaceProfile", sampling) : 0;
 
         m_calcState = SagCalcState::FetchingSurfaceData;
         m_calcError.clear();
@@ -61,7 +61,7 @@ namespace gui {
         m_resultSurface.sagDataPoints.clear();
         m_surfaceRequestsRemaining = 2;
 
-        m_logger.addLog(std::format("[SagService] Starting sag calc for surface {} ({} pts, {}°)", surface, sampling, angle));
+        m_logger.addLog(std::format("[SurfaceProfileService] Starting profile calculation for surface {} ({} pts, {}°)", surface, sampling, angle));
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
@@ -71,7 +71,7 @@ namespace gui {
             [this](const std::string& error) {
                 onError(std::format("GetSurfaceData(TYPE_NAME) failed: {}", error));
             },
-            2000, 1, "SagAnalysis");
+            2000, 1, "SurfaceProfile");
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
@@ -81,10 +81,10 @@ namespace gui {
             [this](const std::string& error) {
                 onError(std::format("GetSurfaceData(SEMI_DIAMETER) failed: {}", error));
             },
-            2000, 1, "SagAnalysis");
+            2000, 1, "SurfaceProfile");
     }
 
-    void SagAnalysisService::onSurfaceDataReceived(int code, const std::string& value) {
+    void SurfaceProfileService::onSurfaceDataReceived(int code, const std::string& value) {
         auto tokens = ZemaxDDE::tokenize(value);
         if (tokens.empty()) {
             onError(std::format("GetSurfaceData({}): empty response", code));
@@ -108,7 +108,7 @@ namespace gui {
         sendNextSagRequest();
     }
 
-    void SagAnalysisService::sendNextSagRequest() {
+    void SurfaceProfileService::sendNextSagRequest() {
         if (m_sagPointIndex >= m_targetSampling) {
             m_resultSurface.sampling = m_targetSampling;
             m_resultSurface.angle = m_targetAngle;
@@ -126,11 +126,11 @@ namespace gui {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - m_calcStartTime);
             if (m_skippedPoints > 0) {
-                m_logger.addLog(std::format("[SagService] Sag calc completed: {}/{} points ({} skipped) in {}",
+                m_logger.addLog(std::format("[SurfaceProfileService] Profile completed: {}/{} points ({} skipped) in {}",
                     m_resultSurface.sagDataPoints.size(), m_targetSampling, m_skippedPoints,
                     ZemaxDDE::formatDuration(elapsed)));
             } else {
-                m_logger.addLog(std::format("[SagService] Sag calc completed: {}/{} points in {}",
+                m_logger.addLog(std::format("[SurfaceProfileService] Profile completed: {}/{} points in {}",
                     m_resultSurface.sagDataPoints.size(), m_targetSampling,
                     ZemaxDDE::formatDuration(elapsed)));
             }
@@ -143,7 +143,7 @@ namespace gui {
             m_calcState = SagCalcState::Failed;
             m_calcError = "Cancelled";
             monitor->onError(m_operationId, "Cancelled");
-            m_logger.addLog("[SagService] Calculation cancelled by user");
+            m_logger.addLog("[SurfaceProfileService] Calculation cancelled by user");
             if (onCalculationComplete) onCalculationComplete();
             return;
         }
@@ -163,7 +163,7 @@ namespace gui {
 
         auto* client = getClient();
         if (!client) {
-            onError("Connection lost during sag calculation");
+            onError("Connection lost during profile calculation");
             return;
         }
 
@@ -179,10 +179,10 @@ namespace gui {
                     onError(std::format("GetSag failed: {}", error));
                 }
             },
-            1000, 1, "SagAnalysis");
+            1000, 1, "SurfaceProfile");
     }
 
-    void SagAnalysisService::onSagDataReceived(const std::string& buffer) {
+    void SurfaceProfileService::onSagDataReceived(const std::string& buffer) {
         auto tokens = ZemaxDDE::tokenize(buffer);
         if (tokens.size() < 2) {
             onError("GetSag: invalid response format");
@@ -211,35 +211,35 @@ namespace gui {
         sendNextSagRequest();
     }
 
-    void SagAnalysisService::onSagTimeout() {
-        m_logger.addLog(std::format("[SagService] Point {} timed out, skipping", m_sagPointIndex));
+    void SurfaceProfileService::onSagTimeout() {
+        m_logger.addLog(std::format("[SurfaceProfileService] Point {} timed out, skipping", m_sagPointIndex));
         m_skippedPoints++;
         m_sagPointIndex++;
         sendNextSagRequest();
     }
 
-    void SagAnalysisService::onError(const std::string& error) {
+    void SurfaceProfileService::onError(const std::string& error) {
         m_calcState = SagCalcState::Failed;
         m_calcError = error;
 
         auto* monitor = getMonitor();
         if (monitor) monitor->onError(m_operationId, error);
 
-        m_logger.addLog(std::format("[SagService] {}", error));
+        m_logger.addLog(std::format("[SurfaceProfileService] {}", error));
         if (onCalculationComplete) onCalculationComplete();
     }
 
-    void SagAnalysisService::cancelCalculation() {
+    void SurfaceProfileService::cancelCalculation() {
         auto* monitor = getMonitor();
         if (monitor && m_operationId > 0) monitor->requestCancel(m_operationId);
     }
 
-    ZemaxDDE::OperationMonitor* SagAnalysisService::getMonitor() const {
+    ZemaxDDE::OperationMonitor* SurfaceProfileService::getMonitor() const {
         auto* client = getClient();
         return client ? client->getOperationMonitor() : nullptr;
     }
 
-    void SagAnalysisService::saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
+    void SurfaceProfileService::saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {
         if (surface.sagDataPoints.empty()) {
             m_logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
             return;
@@ -269,7 +269,7 @@ namespace gui {
         m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
     }
 
-    void SagAnalysisService::renderSurfaceProfilePlot(const char* plotLabel, const ZemaxDDE::SurfaceData& surface, const ImVec2& size) {
+    void SurfaceProfileService::renderSurfaceProfilePlot(const char* plotLabel, const ZemaxDDE::SurfaceData& surface, const ImVec2& size) {
         if (surface.sagDataPoints.empty()) return;
 
         auto [x_vals, y_vals] = extractSagCoordinates(surface);
@@ -284,7 +284,7 @@ namespace gui {
         }
     }
 
-    void SagAnalysisService::renderProfileComparisonPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
+    void SurfaceProfileService::renderProfileComparisonPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
         auto [x_nom, y_nom] = extractSagCoordinates(nominal);
         auto [x_tol, y_tol] = extractSagCoordinates(toleranced);
 
@@ -297,7 +297,7 @@ namespace gui {
         }
     }
 
-    void SagAnalysisService::renderProfileDeviationPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
+    void SurfaceProfileService::renderProfileDeviationPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
         auto [x_nom, y_nom] = extractSagCoordinates(nominal);
         auto [x_tol, y_tol] = extractSagCoordinates(toleranced);
 
@@ -316,7 +316,7 @@ namespace gui {
         }
     }
 
-    ZemaxDDE::ZemaxDDEClient* SagAnalysisService::getClient() const {
+    ZemaxDDE::ZemaxDDEClient* SurfaceProfileService::getClient() const {
         return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
     }
 }

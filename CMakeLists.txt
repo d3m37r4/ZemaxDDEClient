@@ -87,7 +87,7 @@ set(SOURCES
     ${SRC_DIR}/gui/gui_manager.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
-    ${SRC_DIR}/gui/sag_analysis_service.cpp
+    ${SRC_DIR}/gui/surface_profile_service.cpp
     ${SRC_DIR}/gui/sag_map_analysis_service.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
@@ -97,7 +97,7 @@ set(SOURCES
     ${SRC_DIR}/gui/windows_dockable/dde_status.cpp
     ${SRC_DIR}/gui/windows_dockable/debug_log.cpp
     ${SRC_DIR}/gui/windows_dockable/optical_system_info.cpp
-    ${SRC_DIR}/gui/windows_dockable/surface_sag_analysis.cpp
+    ${SRC_DIR}/gui/windows_dockable/surface_profile_inspector.cpp
     ${SRC_DIR}/gui/windows_dockable/surface_map_analysis.cpp
 )
 

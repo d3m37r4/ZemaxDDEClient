@@ -11,7 +11,7 @@
 
 #include "gui/constants.h"
 #include "gui/utils.h"
-#include "gui/sag_analysis_service.h"
+#include "gui/surface_profile_service.h"
 #include "gui/sag_map_analysis_service.h"
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
@@ -48,7 +48,7 @@ namespace gui {
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
             void renderOpticalSystemInfo();
-            void renderSurfaceSagAnalysis();
+            void renderSurfaceProfileInspector();
             void renderSurfaceMapAnalysis();
             void renderDebugLog();
 
@@ -62,7 +62,7 @@ namespace gui {
             Logger& m_logger;
 
             GraphicsBackend m_graphics;
-            std::unique_ptr<SagAnalysisService> m_sagService;
+            std::unique_ptr<SurfaceProfileService> m_profileService;
             std::unique_ptr<SagMapAnalysisService> m_sagMapService;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;

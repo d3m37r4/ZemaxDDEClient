@@ -5,7 +5,7 @@
 
 #include "gui/gui.h"
 #include "gui/constants.h"
-#include "gui/sag_analysis_service.h"
+#include "gui/surface_profile_service.h"
 #include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
 
@@ -24,10 +24,10 @@ namespace {
 }
 
 namespace gui {
-    void GuiManager::renderSurfaceSagAnalysis() {
-        auto& state = m_sagService->m_surfaceSagAnalysisPageState;
-        auto& nominal = m_sagService->m_nominalSurfaceData;
-        auto& toleranced = m_sagService->m_tolerancedSurfaceData;
+    void GuiManager::renderSurfaceProfileInspector() {
+        auto& state = m_profileService->m_pageState;
+        auto& nominal = m_profileService->m_nominalSurfaceData;
+        auto& toleranced = m_profileService->m_tolerancedSurfaceData;
 
         ImGui::SeparatorText("Nominal surface parameters");
         ImGui::BeginChild(
@@ -48,19 +48,19 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                m_sagService->saveCrossSectionToFile(nominal);
+                m_profileService->saveCrossSectionToFile(nominal);
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                m_sagService->m_showNominalProfileWindow = true;
+                m_profileService->m_showNominalProfileWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                m_sagService->m_showNominalProfileWindow = false;
+                m_profileService->m_showNominalProfileWindow = false;
                 nominal.clear();
             }
         } else {
@@ -109,22 +109,22 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                m_sagService->getCalcState() == SagCalcState::FetchingSagPoints) {
-                float progress = m_sagService->getTotalSteps() > 0
-                    ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
+            if (m_profileService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                m_profileService->getCalcState() == SagCalcState::FetchingSagPoints) {
+                float progress = m_profileService->getTotalSteps() > 0
+                    ? static_cast<float>(m_profileService->getCurrentStep()) / m_profileService->getTotalSteps()
                     : 0.0f;
                 ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                    std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
+                    std::format("{}/{}", m_profileService->getCurrentStep(), m_profileService->getTotalSteps()).c_str());
 
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
-                    m_sagService->cancelCalculation();
+                    m_profileService->cancelCalculation();
                 }
 
-                if (m_sagService->getSkippedPoints() > 0) {
+                if (m_profileService->getSkippedPoints() > 0) {
                     ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                        "%d points skipped (timeout)", m_sagService->getSkippedPoints());
+                        "%d points skipped (timeout)", m_profileService->getSkippedPoints());
                 }
             } else {
                 if (ImGui::Button("Get nominal surface data")) {
@@ -132,8 +132,8 @@ namespace gui {
                         nominal.units = m_zemaxDDEClient->getOpticalSystemData().units;
                         nominal.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                        m_sagService->onCalculationComplete = [this, &nominal]() {
-                            const auto& result = m_sagService->getResult();
+                        m_profileService->onCalculationComplete = [this, &nominal]() {
+                            const auto& result = m_profileService->getResult();
                             nominal.id = result.id;
                             nominal.type = result.type;
                             nominal.units = result.units;
@@ -142,7 +142,7 @@ namespace gui {
                             nominal.angle = result.angle;
                             nominal.sagDataPoints = result.sagDataPoints;
                         };
-                        m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                        m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                     }
                 }
             }
@@ -171,19 +171,19 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Text")) {
-                m_sagService->saveCrossSectionToFile(toleranced);
+                m_profileService->saveCrossSectionToFile(toleranced);
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                m_sagService->m_showTolerancedProfileWindow = true;
+                m_profileService->m_showTolerancedProfileWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                m_sagService->m_showTolerancedProfileWindow = false;
+                m_profileService->m_showTolerancedProfileWindow = false;
                 toleranced.clear();
             }
         } else {
@@ -232,24 +232,24 @@ namespace gui {
 
             ImGui::SameLine();
 
-            bool isCalculating = (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                                  m_sagService->getCalcState() == SagCalcState::FetchingSagPoints);
+            bool isCalculating = (m_profileService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                                  m_profileService->getCalcState() == SagCalcState::FetchingSagPoints);
 
             if (isCalculating) {
-                float progress = m_sagService->getTotalSteps() > 0
-                    ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
+                float progress = m_profileService->getTotalSteps() > 0
+                    ? static_cast<float>(m_profileService->getCurrentStep()) / m_profileService->getTotalSteps()
                     : 0.0f;
                 ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                    std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
+                    std::format("{}/{}", m_profileService->getCurrentStep(), m_profileService->getTotalSteps()).c_str());
 
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
-                    m_sagService->cancelCalculation();
+                    m_profileService->cancelCalculation();
                 }
 
-                if (m_sagService->getSkippedPoints() > 0) {
+                if (m_profileService->getSkippedPoints() > 0) {
                     ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                        "%d points skipped (timeout)", m_sagService->getSkippedPoints());
+                        "%d points skipped (timeout)", m_profileService->getSkippedPoints());
                 }
             } else {
                 if (ImGui::Button("Get toleranced surface data")) {
@@ -257,8 +257,8 @@ namespace gui {
                         toleranced.units = m_zemaxDDEClient->getOpticalSystemData().units;
                         toleranced.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                        m_sagService->onCalculationComplete = [this, &toleranced]() {
-                            const auto& result = m_sagService->getResult();
+                        m_profileService->onCalculationComplete = [this, &toleranced]() {
+                            const auto& result = m_profileService->getResult();
                             toleranced.id = result.id;
                             toleranced.type = result.type;
                             toleranced.units = result.units;
@@ -267,7 +267,7 @@ namespace gui {
                             toleranced.angle = result.angle;
                             toleranced.sagDataPoints = result.sagDataPoints;
                         };
-                        m_sagService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                        m_profileService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
                     }
                 }
             }
@@ -280,13 +280,13 @@ namespace gui {
             ImGui::SeparatorText("Surface profile analysis results");
 
             if (ImGui::Button("Show comparison graphic")) {
-                m_sagService->m_showComparisonProfileWindow = true;
+                m_profileService->m_showComparisonProfileWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Show deviation graphic")) {
-                m_sagService->m_showDeviationProfileWindow = true;
+                m_profileService->m_showDeviationProfileWindow = true;
             }
         }
 

@@ -37,9 +37,9 @@ namespace gui {
 
     std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content);
 
-    class SagAnalysisService {
+    class SurfaceProfileService {
         public:
-            SagAnalysisService(DDEConnectionManager* connectionManager, Logger& logger);
+            SurfaceProfileService(DDEConnectionManager* connectionManager, Logger& logger);
 
             void startAsyncSagCalculation(int surface, int sampling, double angle);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
@@ -53,7 +53,7 @@ namespace gui {
             bool m_showComparisonProfileWindow{false};
             bool m_showDeviationProfileWindow{false};
 
-            SagAnalysisState m_surfaceSagAnalysisPageState;
+            SagAnalysisState m_pageState;
 
             SagCalcState getCalcState() const { return m_calcState; }
             const std::string& getCalcError() const { return m_calcError; }

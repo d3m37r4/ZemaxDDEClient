@@ -5,7 +5,7 @@
 #include <vector>
 
 enum class WindowID {
-    SagAnalysis,
+    SurfaceProfileInspector,
     SurfaceMapAnalysis,
     DebugLog,
     SystemInfo,
@@ -33,7 +33,7 @@ struct DockableWindowData {
 inline constexpr DockableWindowData DockableWindows[] = {
     { WindowID::DDEStatus, WindowCategory::DDE, "DDE Status", true, 0 },
     { WindowID::SystemInfo, WindowCategory::Tools, "Optical System Information", true, 0 },
-    { WindowID::SagAnalysis, WindowCategory::Tools, "Surface Sag Cross Section Analysis", false, 1 },
+    { WindowID::SurfaceProfileInspector, WindowCategory::Tools, "Surface Profile Inspector", false, 1 },
     { WindowID::SurfaceMapAnalysis, WindowCategory::Tools, "Surface Map Analysis", false, 2 },
     { WindowID::DebugLog, WindowCategory::Info, "Debug Log", true, 0 },
 };

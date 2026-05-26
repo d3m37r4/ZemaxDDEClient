@@ -72,24 +72,24 @@ namespace gui {
         ImGui::SameLine();
         ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
 
-        bool isSagCalculating = (m_sagService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                                 m_sagService->getCalcState() == SagCalcState::FetchingSagPoints);
+        bool isSagCalculating = (m_profileService->getCalcState() == SagCalcState::FetchingSurfaceData ||
+                                 m_profileService->getCalcState() == SagCalcState::FetchingSagPoints);
 
         if (isSagCalculating) {
-            float progress = m_sagService->getTotalSteps() > 0
-                ? static_cast<float>(m_sagService->getCurrentStep()) / m_sagService->getTotalSteps()
+            float progress = m_profileService->getTotalSteps() > 0
+                ? static_cast<float>(m_profileService->getCurrentStep()) / m_profileService->getTotalSteps()
                 : 0.0f;
             ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                std::format("{}/{}", m_sagService->getCurrentStep(), m_sagService->getTotalSteps()).c_str());
+                std::format("{}/{}", m_profileService->getCurrentStep(), m_profileService->getTotalSteps()).c_str());
 
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
-                m_sagService->cancelCalculation();
+                m_profileService->cancelCalculation();
             }
 
-            if (m_sagService->getSkippedPoints() > 0) {
+            if (m_profileService->getSkippedPoints() > 0) {
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                    "%d points skipped (timeout)", m_sagService->getSkippedPoints());
+                    "%d points skipped (timeout)", m_profileService->getSkippedPoints());
             }
         } else {
             if (ImGui::Button("Get nominal surface data")) {
@@ -98,8 +98,8 @@ namespace gui {
                     nominal->units = m_zemaxDDEClient->getOpticalSystemData().units;
                     nominal->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                    m_sagService->onCalculationComplete = [this]() {
-                        const auto& result = m_sagService->getResult();
+                    m_profileService->onCalculationComplete = [this]() {
+                        const auto& result = m_profileService->getResult();
                         auto* nominal = m_zemaxDDEClient->getNominalSurface();
                         nominal->semiDiameter = result.semiDiameter;
                         nominal->sampling = result.sampling;
@@ -107,7 +107,7 @@ namespace gui {
                         nominal->sagDataPoints = result.sagDataPoints;
                         m_logger.addLog("[SagMap] Nominal reference set for surface map analysis");
                     };
-                    m_sagService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
                 }
             }
         }
