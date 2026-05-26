@@ -30,11 +30,17 @@ namespace gui {
         auto& nominal = m_profileService->m_nominalSurfaceData;
         auto& toleranced = m_profileService->m_tolerancedSurfaceData;
 
+        ImGui::BeginChild("##SurfaceProfileContent",
+            ImVec2(0.0f, 0.0f),
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
+        );
+
         ImGui::SeparatorText("Nominal surface parameters");
         ImGui::BeginChild(
             "NominalSurfaceContent",
             ImVec2(0.0f, 0.0f),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
         if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
@@ -156,7 +162,7 @@ namespace gui {
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
             ImVec2(0.0f, 0.0f),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
@@ -291,5 +297,6 @@ namespace gui {
             }
         }
 
+        ImGui::EndChild();
     }
 }
