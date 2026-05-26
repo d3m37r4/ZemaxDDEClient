@@ -1,4 +1,3 @@
-#include <fstream>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -9,24 +8,8 @@
 #include "gui/sag_analysis_service.h"
 #include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
-#include "lib/implot/implot.h"
 
 namespace {
-    struct SagCrossSectionPair {
-        std::vector<double> x_nom, y_nom;
-        std::vector<double> x_tol, y_tol;
-    };
-
-    SagCrossSectionPair prepareSagCrossSectionData(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced) {
-        auto [x_nom, y_nom] = gui::extractSagCoordinates(nominal);
-        auto [x_tol, y_tol] = gui::extractSagCoordinates(toleranced);
-
-        return SagCrossSectionPair{
-            std::move(x_nom), std::move(y_nom),
-            std::move(x_tol), std::move(y_tol)
-        };
-    }
-
     std::string getSamplingTooltip() {
         return std::format(
             "Number of points to sample along the surface diameter (min={}, max={}).\n"
@@ -71,13 +54,13 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                m_sagService->m_showNominalSagWindow = true;
+                m_sagService->m_showNominalProfileWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                m_sagService->m_showNominalSagWindow = false;
+                m_sagService->m_showNominalProfileWindow = false;
                 nominal.clear();
             }
         } else {
@@ -194,13 +177,13 @@ namespace gui {
             ImGui::SameLine();
 
             if (ImGui::Button("Show profile graphic")) {
-                m_sagService->m_showTolerancedSagWindow = true;
+                m_sagService->m_showTolerancedProfileWindow = true;
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Clear data")) {
-                m_sagService->m_showTolerancedSagWindow = false;
+                m_sagService->m_showTolerancedProfileWindow = false;
                 toleranced.clear();
             }
         } else {
@@ -294,57 +277,16 @@ namespace gui {
         ImGui::EndChild();
 
         if (nominal.isValid() && toleranced.isValid()) {
-            ImGui::SeparatorText("Profile Comparison");
+            ImGui::SeparatorText("Surface profile analysis results");
 
-            if (ImGui::Button("Detach Comparison")) {
-                m_sagService->m_showComparisonWindow = true;
+            if (ImGui::Button("Show comparison graphic")) {
+                m_sagService->m_showComparisonProfileWindow = true;
             }
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Detach Error")) {
-                m_sagService->m_showErrorWindow = true;
-            }
-
-            ImGui::SameLine();
-
-            bool showProfiles = !m_sagService->m_showComparisonWindow;
-            bool showErrorPlot = !m_sagService->m_showErrorWindow;
-
-            if (showProfiles || showErrorPlot) {
-                ImGui::BeginChild("ComparisonContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoTitleBar);
-
-                auto data = prepareSagCrossSectionData(nominal, toleranced);
-
-                if (showProfiles) {
-                    if (ImPlot::BeginPlot("##Profiles", ImVec2(-1, 200))) {
-                        ImPlot::SetupAxes("X (mm)", "Sag (mm)");
-                        ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-                        ImPlot::PlotLine("Nominal", data.x_nom.data(), data.y_nom.data(), data.x_nom.size());
-                        ImPlot::PlotLine("Toleranced", data.x_tol.data(), data.y_tol.data(), data.x_tol.size());
-                        ImPlot::EndPlot();
-                    }
-                }
-
-                ImGui::Spacing();
-
-                if (showErrorPlot && data.x_nom.size() == data.x_tol.size()) {
-                    if (ImPlot::BeginPlot("##Error", ImVec2(-1, 200))) {
-                        ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
-                        ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-
-                        std::vector<double> error;
-
-                        for (size_t i = 0; i < data.x_nom.size(); ++i) {
-                            error.push_back(data.y_nom[i] - data.y_tol[i]);
-                        }
-
-                        ImPlot::PlotLine("Error", data.x_nom.data(), error.data(), data.x_nom.size());
-                        ImPlot::EndPlot();
-                    }
-                }
-
-                ImGui::EndChild();
+            if (ImGui::Button("Show deviation graphic")) {
+                m_sagService->m_showDeviationProfileWindow = true;
             }
         }
 

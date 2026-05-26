@@ -44,14 +44,14 @@ namespace gui {
             void startAsyncSagCalculation(int surface, int sampling, double angle);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
-            void renderCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag);
-            void renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
-            void renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag);
+            void renderSurfaceProfilePlot(const char* plotLabel, const ZemaxDDE::SurfaceData& surface, const ImVec2& size);
+            void renderProfileComparisonPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size);
+            void renderProfileDeviationPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size);
 
-            bool m_showTolerancedSagWindow{false};
-            bool m_showNominalSagWindow{false};
-            bool m_showComparisonWindow{false};
-            bool m_showErrorWindow{false};
+            bool m_showTolerancedProfileWindow{false};
+            bool m_showNominalProfileWindow{false};
+            bool m_showComparisonProfileWindow{false};
+            bool m_showDeviationProfileWindow{false};
 
             SagAnalysisState m_surfaceSagAnalysisPageState;
 

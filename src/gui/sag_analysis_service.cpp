@@ -269,77 +269,51 @@ namespace gui {
         m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
     }
 
-    void SagAnalysisService::renderCrossSectionWindow(const char* title, const char* label, const ZemaxDDE::SurfaceData& surface, bool* openFlag) {
-        if (!openFlag || !*openFlag) return;
+    void SagAnalysisService::renderSurfaceProfilePlot(const char* plotLabel, const ZemaxDDE::SurfaceData& surface, const ImVec2& size) {
         if (surface.sagDataPoints.empty()) return;
-
-        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-
-        if (!ImGui::Begin(title, openFlag)) {
-            ImGui::End();
-            return;
-        }
 
         auto [x_vals, y_vals] = extractSagCoordinates(surface);
 
-        if (ImPlot::BeginPlot(label, ImVec2(-1, -1))) {
+        if (ImPlot::BeginPlot(plotLabel, size)) {
             std::string unitName = getUnitString(surface.units);
-            std::string xAxisLabel = std::format("X ({})", unitName);
-            std::string yAxisLabel = std::format("Sag ({})", unitName);
-
-            ImPlot::SetupAxes(xAxisLabel.c_str(), yAxisLabel.c_str());
+            ImPlot::SetupAxes(std::format("X ({})", unitName).c_str(),
+                              std::format("Sag ({})", unitName).c_str());
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine(label, x_vals.data(), y_vals.data(), x_vals.size());
+            ImPlot::PlotLine("Surface", x_vals.data(), y_vals.data(), x_vals.size());
             ImPlot::EndPlot();
         }
-
-        ImGui::End();
     }
 
-    void SagAnalysisService::renderComparisonWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
-        if (!openFlag || !*openFlag) return;
+    void SagAnalysisService::renderProfileComparisonPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
+        auto [x_nom, y_nom] = extractSagCoordinates(nominal);
+        auto [x_tol, y_tol] = extractSagCoordinates(toleranced);
 
-        if (ImGui::Begin("Profile Comparison", openFlag)) {
-            auto [x_nom, y_nom] = extractSagCoordinates(nominal);
-            auto [x_tol, y_tol] = extractSagCoordinates(toleranced);
-
-            if (ImPlot::BeginPlot("##DetachedProfiles", ImVec2(-1, -1))) {
-                ImPlot::SetupAxes("X (mm)", "Sag (mm)");
-                ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-                ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size());
-                ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size());
-                ImPlot::EndPlot();
-            }
+        if (ImPlot::BeginPlot(plotLabel, size)) {
+            ImPlot::SetupAxes("X (mm)", "Sag (mm)");
+            ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size());
+            ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size());
+            ImPlot::EndPlot();
         }
-        ImGui::End();
     }
 
-    void SagAnalysisService::renderErrorWindow(const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, bool* openFlag) {
-        if (!openFlag || !*openFlag) return;
-
+    void SagAnalysisService::renderProfileDeviationPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
         auto [x_nom, y_nom] = extractSagCoordinates(nominal);
         auto [x_tol, y_tol] = extractSagCoordinates(toleranced);
 
         if (x_nom.size() != x_tol.size()) return;
 
-        if (ImGui::Begin("Sag Error (Toleranced - Nominal)", openFlag)) {
-            std::vector<double> x, y;
-            x.reserve(x_nom.size());
-            y.reserve(x_nom.size());
+        std::vector<double> y_dev;
+        y_dev.reserve(x_nom.size());
+        for (size_t i = 0; i < x_nom.size(); ++i)
+            y_dev.push_back(y_tol[i] - y_nom[i]);
 
-            for (size_t i = 0; i < x_nom.size(); ++i) {
-                x.push_back(x_nom[i]);
-                y.push_back(y_nom[i] - y_tol[i]);
-            }
-
-            if (ImPlot::BeginPlot("##DetachedError", ImVec2(-1, -1))) {
-                ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
-                ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-                ImPlot::PlotLine("Error", x.data(), y.data(), x.size());
-                ImPlot::EndPlot();
-            }
+        if (ImPlot::BeginPlot(plotLabel, size)) {
+            ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
+            ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            ImPlot::PlotLine("Deviation", x_nom.data(), y_dev.data(), x_nom.size());
+            ImPlot::EndPlot();
         }
-        ImGui::End();
     }
 
     ZemaxDDE::ZemaxDDEClient* SagAnalysisService::getClient() const {
