@@ -36,6 +36,29 @@ namespace gui {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
+        float cp = ImGui::GetStyle().CellPadding.x;
+        const char* dataLabels[] = {
+            "Optical system", "Surface", "Sampling", "Angle",
+            "Type", "Semi-diameter", "Diameter"
+        };
+        float maxLabelWidth = 0.0f;
+        for (auto* l : dataLabels)
+            maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
+        maxLabelWidth += cp * 2.0f;
+
+        auto gridRow = [&](const char* label, const char* value) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(label);
+            ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(value);
+        };
+
+        auto dataTable = [&](const char* id) {
+            ImGui::BeginTable(id, 2,
+                ImGuiTableFlags_SizingFixedFit);
+            ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, maxLabelWidth);
+            ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
+        };
+
         ImGui::SeparatorText("Nominal surface parameters");
         ImGui::BeginChild(
             "NominalSurfaceContent",
@@ -44,17 +67,18 @@ namespace gui {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
         if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
-            ImGui::TextUnformatted(std::format("Optical system: {}", nominal.fileName).c_str());
-            ImGui::TextUnformatted(std::format("Surface index: {}", nominal.id).c_str());
-            ImGui::TextUnformatted(std::format("Sampling: {}", nominal.sampling).c_str());
-            ImGui::TextUnformatted(std::format("Angle: {}°", nominal.angle).c_str());
-            ImGui::TextUnformatted(std::format("Surface type: {}", nominal.type).c_str());
-            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
-            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
-            ImGui::Text("Surface sag data:");
-            ImGui::SameLine();
+            dataTable("##NominalData");
+            gridRow("Optical system", nominal.fileName.c_str());
+            gridRow("Surface", std::to_string(nominal.id).c_str());
+            gridRow("Sampling", std::to_string(nominal.sampling).c_str());
+            gridRow("Angle", std::format("{}°", nominal.angle).c_str());
+            gridRow("Type", nominal.type.c_str());
+            gridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
+            gridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
+            ImGui::EndTable();
+            ImGuiUtils::SpacingY(0.25f);
 
-            if (ImGui::Button("Text")) {
+            if (ImGui::Button("Export txt")) {
                 m_profileService->saveCrossSectionToFile(nominal);
             }
 
@@ -80,18 +104,18 @@ namespace gui {
 
             {
                 auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
-                ImGui::Text("Optical system:");
+                ImGui::TextUnformatted("Optical system:");
                 ImGui::SameLine();
                 ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
             }
 
-            ImGui::Text("Surface number:");
+            ImGui::TextUnformatted("Surface number:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
             state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.nominalSurfaceIndex));
 
-            ImGui::Text("Sampling:");
+            ImGui::TextUnformatted("Sampling:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
@@ -99,7 +123,7 @@ namespace gui {
             ImGui::SameLine();
             ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
-            ImGui::Text("Angle:");
+            ImGui::TextUnformatted("Angle:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
@@ -167,17 +191,18 @@ namespace gui {
         );
 
         if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
-            ImGui::TextUnformatted(std::format("Optical system: {}", toleranced.fileName).c_str());
-            ImGui::TextUnformatted(std::format("Surface index: {}", toleranced.id).c_str());
-            ImGui::TextUnformatted(std::format("Sampling: {}", toleranced.sampling).c_str());
-            ImGui::TextUnformatted(std::format("Angle: {}°", toleranced.angle).c_str());
-            ImGui::TextUnformatted(std::format("Surface type: {}", toleranced.type).c_str());
-            ImGui::TextUnformatted(std::format("Semi-diameter: {:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
-            ImGui::TextUnformatted(std::format("Diameter: {:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
-            ImGui::Text("Surface sag data:");
-            ImGui::SameLine();
+            dataTable("##TolerancedData");
+            gridRow("Optical system", toleranced.fileName.c_str());
+            gridRow("Surface", std::to_string(toleranced.id).c_str());
+            gridRow("Sampling", std::to_string(toleranced.sampling).c_str());
+            gridRow("Angle", std::format("{}°", toleranced.angle).c_str());
+            gridRow("Type", toleranced.type.c_str());
+            gridRow("Semi-diameter", std::format("{:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
+            gridRow("Diameter", std::format("{:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
+            ImGui::EndTable();
+            ImGuiUtils::SpacingY(0.25f);
 
-            if (ImGui::Button("Text")) {
+            if (ImGui::Button("Export txt")) {
                 m_profileService->saveCrossSectionToFile(toleranced);
             }
 
@@ -203,18 +228,18 @@ namespace gui {
 
             {
                 auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
-                ImGui::Text("Optical system:");
+                ImGui::TextUnformatted("Optical system:");
                 ImGui::SameLine();
                 ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
             }
 
-            ImGui::Text("Surface number:");
+            ImGui::TextUnformatted("Surface number:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
             state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.tolerancedSurfaceIndex));
 
-            ImGui::Text("Sampling:");
+            ImGui::TextUnformatted("Sampling:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
@@ -222,7 +247,7 @@ namespace gui {
             ImGui::SameLine();
             ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
-            ImGui::Text("Angle:");
+            ImGui::TextUnformatted("Angle:");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputDouble("##toleranced_angle", &state.tolerancedAngle, 1.0, 10.0, "%.2f");
