@@ -109,8 +109,9 @@ namespace gui {
     }
 
     void SurfaceProfileService::sendNextSagRequest() {
-        if (m_sagPointIndex >= m_targetSampling) {
-            m_resultSurface.sampling = m_targetSampling;
+        int totalPoints = 2 * m_targetSampling - 1;
+        if (m_sagPointIndex >= totalPoints) {
+            m_resultSurface.sampling = totalPoints;
             m_resultSurface.angle = m_targetAngle;
             m_calcState = SagCalcState::Completed;
 
@@ -119,7 +120,7 @@ namespace gui {
                 auto msg = m_skippedPoints > 0
                     ? std::format("Completed ({} points, {} skipped)", m_resultSurface.sagDataPoints.size(), m_skippedPoints)
                     : std::format("Completed ({} points)", m_resultSurface.sagDataPoints.size());
-                monitor->reportProgress(m_operationId, m_targetSampling, msg);
+                monitor->reportProgress(m_operationId, totalPoints, msg);
                 monitor->onCompleted(m_operationId);
             }
 
@@ -127,11 +128,11 @@ namespace gui {
                 std::chrono::steady_clock::now() - m_calcStartTime);
             if (m_skippedPoints > 0) {
                 m_logger.addLog(std::format("[SurfaceProfileService] Profile completed: {}/{} points ({} skipped) in {}",
-                    m_resultSurface.sagDataPoints.size(), m_targetSampling, m_skippedPoints,
+                    m_resultSurface.sagDataPoints.size(), totalPoints, m_skippedPoints,
                     ZemaxDDE::formatDuration(elapsed)));
             } else {
                 m_logger.addLog(std::format("[SurfaceProfileService] Profile completed: {}/{} points in {}",
-                    m_resultSurface.sagDataPoints.size(), m_targetSampling,
+                    m_resultSurface.sagDataPoints.size(), totalPoints,
                     ZemaxDDE::formatDuration(elapsed)));
             }
             if (onCalculationComplete) onCalculationComplete();
@@ -150,13 +151,13 @@ namespace gui {
 
         if (monitor) {
             monitor->reportProgress(m_operationId, m_sagPointIndex,
-                std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
+                std::format("Point {}/{}", m_sagPointIndex, totalPoints));
         }
 
         constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
         const double rad = m_targetAngle * DEG_TO_RAD;
         double semiDiameter = m_resultSurface.semiDiameter;
-        double step = (2.0 * semiDiameter) / (m_targetSampling - 1);
+        double step = semiDiameter / (m_targetSampling - 1);
         double r = -semiDiameter + m_sagPointIndex * step;
         double x = r * std::cos(rad);
         double y = r * std::sin(rad);
@@ -192,7 +193,7 @@ namespace gui {
         constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
         const double rad = m_targetAngle * DEG_TO_RAD;
         double semiDiameter = m_resultSurface.semiDiameter;
-        double step = (2.0 * semiDiameter) / (m_targetSampling - 1);
+        double step = semiDiameter / (m_targetSampling - 1);
         double r = -semiDiameter + m_sagPointIndex * step;
 
         try {

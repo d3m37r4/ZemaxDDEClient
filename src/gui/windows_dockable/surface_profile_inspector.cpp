@@ -12,7 +12,8 @@
 namespace {
     std::string getSamplingTooltip() {
         return std::format(
-            "Number of points to sample along the surface diameter (min={}, max={}).\n"
+            "Number of points per half-profile (from center to edge, min={}, max={}).\n"
+            "Total points across full diameter = 2 × half − 1.\n"
             "Higher values = smoother profile, slower calculation.",
             gui::MIN_SAMPLING, gui::MAX_SAMPLING
         );

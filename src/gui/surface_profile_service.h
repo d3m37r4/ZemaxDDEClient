@@ -27,9 +27,9 @@ namespace gui {
         int tolerancedSurfaceIndex = 0;
         int nominalSurfaceIndex = 0;
 
-        int tolerancedSampling = 128;
+        int tolerancedSampling = 64;
         double tolerancedAngle = 0.0;
-        int nominalSampling = 128;
+        int nominalSampling = 64;
         double nominalAngle = 0.0;
     };
 
@@ -60,7 +60,7 @@ namespace gui {
             const ZemaxDDE::SurfaceData& getResult() const { return m_resultSurface; }
 
             uint64_t getOperationId() const { return m_operationId; }
-            int getTotalSteps() const { return m_targetSampling; }
+            int getTotalSteps() const { return 2 * m_targetSampling - 1; }
             int getCurrentStep() const { return m_sagPointIndex; }
             int getSkippedPoints() const { return m_skippedPoints; }
 
