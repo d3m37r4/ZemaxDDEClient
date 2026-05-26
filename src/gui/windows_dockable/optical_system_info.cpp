@@ -74,40 +74,28 @@ namespace gui {
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
         maxLabelWidth += 8.0f;
 
-        auto gridRow = [&](const char* label, const char* value) {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(label);
-            ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(value);
-        };
-
-        auto gridTable = [&](const char* id) {
-            ImGui::BeginTable(id, 2);
-            ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, maxLabelWidth);
-            ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
-        };
-
         ImGui::SeparatorText("File");
-        gridTable("##File");
-        gridRow("Lens Name", s.lensName.c_str());
-        gridRow("File Name", s.fileName.c_str());
-        ImGui::EndTable();
+        ImGuiUtils::BeginPropertyGrid("##File", maxLabelWidth);
+        ImGuiUtils::PropertyGridRow("Lens Name", s.lensName.c_str());
+        ImGuiUtils::PropertyGridRow("File Name", s.fileName.c_str());
+        ImGuiUtils::EndPropertyGrid();
         ImGuiUtils::SpacingY(0.25f);
 
         ImGui::SeparatorText("System");
-        gridTable("##System");
-        gridRow("Surfaces", std::to_string(s.numSurfs).c_str());
-        gridRow("Units", getUnitString(s.units));
-        gridRow("Stop Surface", std::to_string(s.stopSurf).c_str());
-        gridRow("Global Reference Surface", std::to_string(s.globalRefSurf).c_str());
-        ImGui::EndTable();
+        ImGuiUtils::BeginPropertyGrid("##System", maxLabelWidth);
+        ImGuiUtils::PropertyGridRow("Surfaces", std::to_string(s.numSurfs).c_str());
+        ImGuiUtils::PropertyGridRow("Units", getUnitString(s.units));
+        ImGuiUtils::PropertyGridRow("Stop Surface", std::to_string(s.stopSurf).c_str());
+        ImGuiUtils::PropertyGridRow("Global Reference Surface", std::to_string(s.globalRefSurf).c_str());
+        ImGuiUtils::EndPropertyGrid();
         ImGuiUtils::SpacingY(0.25f);
 
         ImGui::SeparatorText("Fields & Waves");
-        gridTable("##Fields");
-        gridRow("Fields", std::format("{} (Type {})", s.numFields, s.fieldType).c_str());
-        gridRow("Wavelengths", std::to_string(s.numWaves).c_str());
-        gridRow("Primary Wave", std::to_string(s.primWave).c_str());
-        ImGui::EndTable();
+        ImGuiUtils::BeginPropertyGrid("##Fields", maxLabelWidth);
+        ImGuiUtils::PropertyGridRow("Fields", std::format("{} (Type {})", s.numFields, s.fieldType).c_str());
+        ImGuiUtils::PropertyGridRow("Wavelengths", std::to_string(s.numWaves).c_str());
+        ImGuiUtils::PropertyGridRow("Primary Wave", std::to_string(s.primWave).c_str());
+        ImGuiUtils::EndPropertyGrid();
         ImGuiUtils::SpacingY(0.25f);
         ImGui::BeginChild("##FieldWaveBlock", ImVec2(blockW, 0.0f), ImGuiChildFlags_AutoResizeY);
         renderFieldTable();
@@ -116,18 +104,18 @@ namespace gui {
         ImGuiUtils::SpacingY(0.25f);
 
         ImGui::SeparatorText("Settings");
-        gridTable("##Settings");
-        gridRow("Non-Axial", s.nonAxialFlag ? "Non-Axial" : "Axial");
-        gridRow("Ray Aiming", getRayAimingTypeString(s.rayAimingType));
-        gridRow("Adjust Index", s.adjustIndex ? "Yes" : "No");
-        ImGui::EndTable();
+        ImGuiUtils::BeginPropertyGrid("##Settings", maxLabelWidth);
+        ImGuiUtils::PropertyGridRow("Non-Axial", s.nonAxialFlag ? "Non-Axial" : "Axial");
+        ImGuiUtils::PropertyGridRow("Ray Aiming", getRayAimingTypeString(s.rayAimingType));
+        ImGuiUtils::PropertyGridRow("Adjust Index", s.adjustIndex ? "Yes" : "No");
+        ImGuiUtils::EndPropertyGrid();
         ImGuiUtils::SpacingY(0.25f);
 
         ImGui::SeparatorText("Environment");
-        gridTable("##Env");
-        gridRow("Temperature", std::format("{:.4f} °C", s.temp).c_str());
-        gridRow("Pressure", std::format("{:.4f} atm", s.pressure).c_str());
-        ImGui::EndTable();
+        ImGuiUtils::BeginPropertyGrid("##Env", maxLabelWidth);
+        ImGuiUtils::PropertyGridRow("Temperature", std::format("{:.4f} °C", s.temp).c_str());
+        ImGuiUtils::PropertyGridRow("Pressure", std::format("{:.4f} atm", s.pressure).c_str());
+        ImGuiUtils::EndPropertyGrid();
         ImGuiUtils::SpacingY(0.25f);
 
         ImGui::EndChild();

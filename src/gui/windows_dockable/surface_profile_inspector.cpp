@@ -46,19 +46,6 @@ namespace gui {
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
         maxLabelWidth += cp * 2.0f;
 
-        auto gridRow = [&](const char* label, const char* value) {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(label);
-            ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(value);
-        };
-
-        auto dataTable = [&](const char* id) {
-            ImGui::BeginTable(id, 2,
-                ImGuiTableFlags_SizingFixedFit);
-            ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, maxLabelWidth);
-            ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
-        };
-
         ImGui::SeparatorText("Nominal surface parameters");
         ImGui::BeginChild(
             "NominalSurfaceContent",
@@ -67,15 +54,15 @@ namespace gui {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
         if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
-            dataTable("##NominalData");
-            gridRow("Optical system", nominal.fileName.c_str());
-            gridRow("Surface", std::to_string(nominal.id).c_str());
-            gridRow("Sampling", std::to_string(nominal.sampling).c_str());
-            gridRow("Angle", std::format("{}°", nominal.angle).c_str());
-            gridRow("Type", nominal.type.c_str());
-            gridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
-            gridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
-            ImGui::EndTable();
+            ImGuiUtils::BeginPropertyGrid("##NominalData", maxLabelWidth);
+            ImGuiUtils::PropertyGridRow("Optical system", nominal.fileName.c_str());
+            ImGuiUtils::PropertyGridRow("Surface", std::to_string(nominal.id).c_str());
+            ImGuiUtils::PropertyGridRow("Sampling", std::to_string(nominal.sampling).c_str());
+            ImGuiUtils::PropertyGridRow("Angle", std::format("{}°", nominal.angle).c_str());
+            ImGuiUtils::PropertyGridRow("Type", nominal.type.c_str());
+            ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
+            ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
+            ImGuiUtils::EndPropertyGrid();
             ImGuiUtils::SpacingY(0.25f);
 
             if (ImGui::Button("Export txt")) {
@@ -191,15 +178,15 @@ namespace gui {
         );
 
         if (toleranced.isValid() && toleranced.id == state.tolerancedSurfaceIndex) {
-            dataTable("##TolerancedData");
-            gridRow("Optical system", toleranced.fileName.c_str());
-            gridRow("Surface", std::to_string(toleranced.id).c_str());
-            gridRow("Sampling", std::to_string(toleranced.sampling).c_str());
-            gridRow("Angle", std::format("{}°", toleranced.angle).c_str());
-            gridRow("Type", toleranced.type.c_str());
-            gridRow("Semi-diameter", std::format("{:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
-            gridRow("Diameter", std::format("{:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
-            ImGui::EndTable();
+            ImGuiUtils::BeginPropertyGrid("##TolerancedData", maxLabelWidth);
+            ImGuiUtils::PropertyGridRow("Optical system", toleranced.fileName.c_str());
+            ImGuiUtils::PropertyGridRow("Surface", std::to_string(toleranced.id).c_str());
+            ImGuiUtils::PropertyGridRow("Sampling", std::to_string(toleranced.sampling).c_str());
+            ImGuiUtils::PropertyGridRow("Angle", std::format("{}°", toleranced.angle).c_str());
+            ImGuiUtils::PropertyGridRow("Type", toleranced.type.c_str());
+            ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
+            ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
+            ImGuiUtils::EndPropertyGrid();
             ImGuiUtils::SpacingY(0.25f);
 
             if (ImGui::Button("Export txt")) {

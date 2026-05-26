@@ -41,6 +41,25 @@ namespace ImGuiUtils {
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }
 
+    /// Begin a two-column property grid (label | value).
+    inline void BeginPropertyGrid(const char* id, float labelWidth) {
+        ImGui::BeginTable(id, 2);
+        ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, labelWidth);
+        ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
+    }
+
+    inline void EndPropertyGrid() {
+        ImGui::EndTable();
+    }
+
+    inline void PropertyGridRow(const char* label, const char* value) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(label);
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextUnformatted(value);
+    }
+
     /// Applies DPI-aware min-size constraints to the next window.
     inline void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
         float dpiScale = ImGui::GetWindowDpiScale();
