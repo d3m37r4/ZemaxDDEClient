@@ -73,12 +73,13 @@ void GuiManager::render() {
     }
 
     {
+        constexpr ImVec2 kDetachedWindowSize(600, 400);
         auto& tolSurface = m_sagService->m_tolerancedSurfaceData;
         auto& nomSurface = m_sagService->m_nominalSurfaceData;
 
         if (m_sagService->m_showTolerancedProfileWindow) {
             if (tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 std::string title = std::format("Toleranced Surface Profile ({}°, {} pts)", tolSurface.angle, tolSurface.sampling);
                 if (ImGui::Begin(title.c_str(), &m_sagService->m_showTolerancedProfileWindow)) {
                     m_sagService->renderSurfaceProfilePlot("Toleranced", tolSurface, ImVec2(-1, -1));
@@ -89,7 +90,7 @@ void GuiManager::render() {
 
         if (m_sagService->m_showNominalProfileWindow) {
             if (nomSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 std::string title = std::format("Nominal Surface Profile ({}°, {} pts)", nomSurface.angle, nomSurface.sampling);
                 if (ImGui::Begin(title.c_str(), &m_sagService->m_showNominalProfileWindow)) {
                     m_sagService->renderSurfaceProfilePlot("Nominal", nomSurface, ImVec2(-1, -1));
@@ -100,7 +101,7 @@ void GuiManager::render() {
 
         if (m_sagService->m_showComparisonProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 if (ImGui::Begin("Surface Profile Comparison", &m_sagService->m_showComparisonProfileWindow)) {
                     m_sagService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
                 }
@@ -110,7 +111,7 @@ void GuiManager::render() {
 
         if (m_sagService->m_showDeviationProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 if (ImGui::Begin("Surface Profile Irregularity (PV)", &m_sagService->m_showDeviationProfileWindow)) {
                     m_sagService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
                 }
