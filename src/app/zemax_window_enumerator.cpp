@@ -3,7 +3,6 @@
 #include <tlhelp32.h>
 
 namespace app {
-
     struct EnumWindowContext {
         DWORD targetPid;
         std::vector<ZemaxWindowInfo>& results;
@@ -77,5 +76,4 @@ namespace app {
         CloseHandle(snapshot);
         return results;
     }
-
 }
