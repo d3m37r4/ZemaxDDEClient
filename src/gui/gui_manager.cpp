@@ -55,10 +55,11 @@ void GuiManager::render() {
     }
 
     float navbarHeight = ImGui::GetFrameHeight();
+    float statusBarHeight = m_uiOpMonitor.hasActiveTasks() ? ImGui::GetFrameHeight() * 1.5f : 0.0f;
     ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
         ImGui::GetIO().DisplaySize.x,
-        ImGui::GetIO().DisplaySize.y - navbarHeight
+        ImGui::GetIO().DisplaySize.y - navbarHeight - statusBarHeight
     ));
     ImGui::Begin("MainDockSpace", nullptr,
         ImGuiWindowFlags_NoTitleBar |
@@ -128,6 +129,8 @@ void GuiManager::render() {
     renderUpdatesPopup();
     renderAboutPopup();
 
+    m_uiOpMonitor.renderGlobalStatusBar();
+
     m_graphics.endFrame();
 }
 
@@ -154,3 +157,4 @@ void GuiManager::renderUpdatesPopup() {
 }
 
 }
+

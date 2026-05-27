@@ -27,6 +27,11 @@ public:
     void requestCancel(uint64_t taskId);
     uint64_t getDdeOperationId(uint64_t taskId) const;
 
+    bool isActive(TaskSource source) const;
+    bool hasActiveTasks() const;
+
+    void renderGlobalStatusBar();
+
 private:
     struct TaskRecord {
         uint64_t taskId;
