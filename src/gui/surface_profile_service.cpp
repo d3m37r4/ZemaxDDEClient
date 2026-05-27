@@ -36,7 +36,7 @@ namespace gui {
         return {std::move(x_vals), std::move(y_vals)};
     }
 
-    void SurfaceProfileService::startAsyncSagCalculation(int surface, int sampling, double angle) {
+    void SurfaceProfileService::startAsyncSagCalculation(int surface, int sampling, double angle, TaskSource source) {
         auto* client = getClient();
         if (!client) {
             m_calcState = SagCalcState::Failed;
@@ -45,8 +45,14 @@ namespace gui {
             return;
         }
 
-        auto* monitor = getMonitor();
-        m_operationId = monitor ? monitor->registerOperation("SurfaceProfile", sampling) : 0;
+        m_taskSource = source;
+        if (m_uiOpMonitor) {
+            std::string label = (source == TaskSource::NominalSurfaceProfile)
+                ? "Nominal Profile" : "Toleranced Profile";
+            int totalPoints = 2 * sampling - 1;
+            m_taskId = m_uiOpMonitor->startTask(source, label, totalPoints);
+            m_operationId = m_uiOpMonitor->getDdeOperationId(m_taskId);
+        }
 
         m_calcState = SagCalcState::FetchingSurfaceData;
         m_calcError.clear();
@@ -115,13 +121,8 @@ namespace gui {
             m_resultSurface.angle = m_targetAngle;
             m_calcState = SagCalcState::Completed;
 
-            auto* monitor = getMonitor();
-            if (monitor) {
-                auto msg = m_skippedPoints > 0
-                    ? std::format("Completed ({} points, {} skipped)", m_resultSurface.sagDataPoints.size(), m_skippedPoints)
-                    : std::format("Completed ({} points)", m_resultSurface.sagDataPoints.size());
-                monitor->reportProgress(m_operationId, totalPoints, msg);
-                monitor->onCompleted(m_operationId);
+            if (m_uiOpMonitor) {
+                m_uiOpMonitor->completeTask(m_taskId);
             }
 
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -139,19 +140,18 @@ namespace gui {
             return;
         }
 
-        auto* monitor = getMonitor();
-        if (monitor && monitor->isCancelled(m_operationId)) {
+        if (m_uiOpMonitor && m_uiOpMonitor->isCancelled(m_taskId)) {
             m_calcState = SagCalcState::Failed;
             m_calcError = "Cancelled";
-            monitor->onError(m_operationId, "Cancelled");
+            m_uiOpMonitor->failTask(m_taskId, "Cancelled");
             m_logger.addLog("[SurfaceProfileService] Calculation cancelled by user");
             if (onCalculationComplete) onCalculationComplete();
             return;
         }
 
-        if (monitor) {
-            monitor->reportProgress(m_operationId, m_sagPointIndex,
-                std::format("Point {}/{}", m_sagPointIndex, totalPoints));
+        if (m_uiOpMonitor) {
+            m_uiOpMonitor->reportProgress(m_taskId, m_sagPointIndex,
+                std::format("Point {}/{}", m_sagPointIndex, 2 * m_targetSampling - 1));
         }
 
         constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
@@ -223,21 +223,18 @@ namespace gui {
         m_calcState = SagCalcState::Failed;
         m_calcError = error;
 
-        auto* monitor = getMonitor();
-        if (monitor) monitor->onError(m_operationId, error);
+        if (m_uiOpMonitor) {
+            m_uiOpMonitor->failTask(m_taskId, error);
+        }
 
         m_logger.addLog(std::format("[SurfaceProfileService] {}", error));
         if (onCalculationComplete) onCalculationComplete();
     }
 
     void SurfaceProfileService::cancelCalculation() {
-        auto* monitor = getMonitor();
-        if (monitor && m_operationId > 0) monitor->requestCancel(m_operationId);
-    }
-
-    ZemaxDDE::OperationMonitor* SurfaceProfileService::getMonitor() const {
-        auto* client = getClient();
-        return client ? client->getOperationMonitor() : nullptr;
+        if (m_uiOpMonitor && m_taskId > 0) {
+            m_uiOpMonitor->requestCancel(m_taskId);
+        }
     }
 
     void SurfaceProfileService::saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface) {

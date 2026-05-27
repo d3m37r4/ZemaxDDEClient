@@ -7,6 +7,7 @@
 
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
+#include "gui/ui_operation_monitor.h"
 
 class Logger;
 
@@ -45,6 +46,8 @@ namespace gui {
         public:
             SagMapAnalysisService(DDEConnectionManager* connectionManager, Logger& logger);
 
+            void setUiOperationMonitor(UiOperationMonitor* monitor) { m_uiOpMonitor = monitor; }
+
             void startAsyncMapCalculation(int surface, int numRadii, double angleStepDeg);
 
             bool hasNominalReference() const;
@@ -80,6 +83,7 @@ namespace gui {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
+            UiOperationMonitor* m_uiOpMonitor{nullptr};
 
             std::vector<ZemaxDDE::SurfaceData> m_sections;
 
@@ -93,6 +97,7 @@ namespace gui {
             double m_semiDiameter = 0.0;
             int m_units = 0;
             int m_surfaceRequestsRemaining = 0;
+            uint64_t m_taskId{0};
             uint64_t m_operationId = 0;
             int m_skippedPoints = 0;
 

@@ -13,6 +13,7 @@
 #include "gui/utils.h"
 #include "gui/surface_profile_service.h"
 #include "gui/sag_map_analysis_service.h"
+#include "gui/ui_operation_monitor.h"
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
@@ -70,6 +71,8 @@ namespace gui {
             std::unique_ptr<AboutDialog> m_aboutDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
             DockableWindowsManager* m_pWndMgr{nullptr};
+
+            UiOperationMonitor m_uiOpMonitor;
 
             // State
             bool m_showUpdatesPopup{false};

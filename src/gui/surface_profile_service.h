@@ -10,6 +10,7 @@
 
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
+#include "gui/ui_operation_monitor.h"
 
 class Logger;
 
@@ -41,7 +42,8 @@ namespace gui {
         public:
             SurfaceProfileService(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void startAsyncSagCalculation(int surface, int sampling, double angle);
+            void setUiOperationMonitor(UiOperationMonitor* monitor) { m_uiOpMonitor = monitor; }
+            void startAsyncSagCalculation(int surface, int sampling, double angle, TaskSource source = TaskSource::None);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
             void renderSurfaceProfilePlot(const char* plotLabel, const ZemaxDDE::SurfaceData& surface, const ImVec2& size);
@@ -82,10 +84,13 @@ namespace gui {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
+            UiOperationMonitor* m_uiOpMonitor{nullptr};
 
             SagCalcState m_calcState = SagCalcState::Idle;
             std::string m_calcError;
 
+            TaskSource m_taskSource{TaskSource::None};
+            uint64_t m_taskId{0};
             int m_targetSurface = 0;
             int m_targetSampling = 0;
             double m_targetAngle = 0.0;

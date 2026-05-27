@@ -89,6 +89,7 @@ set(SOURCES
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/surface_profile_service.cpp
     ${SRC_DIR}/gui/sag_map_analysis_service.cpp
+    ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
     ${SRC_DIR}/gui/popups/update_checker.cpp

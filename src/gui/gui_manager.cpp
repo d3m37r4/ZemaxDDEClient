@@ -19,6 +19,9 @@ namespace gui {
 {
     m_profileService = std::make_unique<SurfaceProfileService>(m_ddeConnectionManager, logger);
     m_sagMapService = std::make_unique<SagMapAnalysisService>(m_ddeConnectionManager, logger);
+    m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
+    m_profileService->setUiOperationMonitor(&m_uiOpMonitor);
+    m_sagMapService->setUiOperationMonitor(&m_uiOpMonitor);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
@@ -44,6 +47,7 @@ void GuiManager::initialize(float dpiScale) {
 void GuiManager::render() {
     // Refresh active DDE client in case connection changed via DDE Status UI
     m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
+    m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
 
     m_graphics.beginFrame();
     if (m_menuBarController) {

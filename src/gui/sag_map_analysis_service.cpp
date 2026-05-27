@@ -38,8 +38,11 @@ namespace gui {
         }
 
         int totalPoints = numRadii * static_cast<int>(360.0 / angleStepDeg);
-        auto* monitor = getMonitor();
-        m_operationId = monitor ? monitor->registerOperation("SagMapAnalysis", totalPoints) : 0;
+        if (m_uiOpMonitor) {
+            m_taskId = m_uiOpMonitor->startTask(TaskSource::SurfaceMapAnalysis,
+                "Surface Map", totalPoints);
+            m_operationId = m_uiOpMonitor->getDdeOperationId(m_taskId);
+        }
 
         m_mapState = SagMapState::FetchingSurfaceData;
         m_mapError.clear();
@@ -120,13 +123,10 @@ namespace gui {
             m_state.tolerancedSampling = m_numRadii;
             m_state.tolerancedAngleStep = m_angleStepDeg;
 
-            auto* monitor = getMonitor();
-            if (monitor) {
-                auto msg = m_skippedPoints > 0
-                    ? std::format("Completed ({} rings, {} skipped)", m_sections.size(), m_skippedPoints)
-                    : std::format("Completed ({} rings)", m_sections.size());
-                monitor->reportProgress(m_operationId, m_numRadii * m_numAngles, msg);
-                monitor->onCompleted(m_operationId);
+            if (m_uiOpMonitor) {
+                m_uiOpMonitor->reportProgress(m_taskId, m_numRadii * m_numAngles,
+                    std::format("Completed ({} rings)", m_sections.size()));
+                m_uiOpMonitor->completeTask(m_taskId);
             }
 
             m_logger.addLog(std::format("[SagMap] Surface map completed: {} rings", m_sections.size()));
@@ -146,19 +146,20 @@ namespace gui {
             return;
         }
 
-        auto* monitor = getMonitor();
-        if (monitor && monitor->isCancelled(m_operationId)) {
+        if (m_uiOpMonitor && m_uiOpMonitor->isCancelled(m_taskId)) {
             m_mapState = SagMapState::Failed;
             m_mapError = "Cancelled";
-            monitor->onError(m_operationId, "Cancelled");
+            if (m_uiOpMonitor) {
+                m_uiOpMonitor->failTask(m_taskId, "Cancelled");
+            }
             m_logger.addLog("[SagMap] Map calculation cancelled by user");
             if (onCalculationComplete) onCalculationComplete();
             return;
         }
 
-        if (monitor) {
+        if (m_uiOpMonitor) {
             int currentPoint = m_currentRing * m_numAngles + m_currentAngle;
-            monitor->reportProgress(m_operationId, currentPoint,
+            m_uiOpMonitor->reportProgress(m_taskId, currentPoint,
                 std::format("Ring {}/{} angle {}/{}", m_currentRing + 1, m_numRadii, m_currentAngle, m_numAngles));
         }
 
@@ -230,21 +231,18 @@ namespace gui {
         m_mapState = SagMapState::Failed;
         m_mapError = error;
 
-        auto* monitor = getMonitor();
-        if (monitor) monitor->onError(m_operationId, error);
+        if (m_uiOpMonitor) {
+            m_uiOpMonitor->failTask(m_taskId, error);
+        }
 
         m_logger.addLog(std::format("[SagMap] {}", error));
         if (onCalculationComplete) onCalculationComplete();
     }
 
     void SagMapAnalysisService::cancelCalculation() {
-        auto* monitor = getMonitor();
-        if (monitor && m_operationId > 0) monitor->requestCancel(m_operationId);
-    }
-
-    ZemaxDDE::OperationMonitor* SagMapAnalysisService::getMonitor() const {
-        auto* client = getClient();
-        return client ? client->getOperationMonitor() : nullptr;
+        if (m_uiOpMonitor && m_taskId > 0) {
+            m_uiOpMonitor->requestCancel(m_taskId);
+        }
     }
 
     bool SagMapAnalysisService::hasNominalReference() const {
