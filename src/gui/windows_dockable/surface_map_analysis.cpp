@@ -72,25 +72,22 @@ namespace gui {
         ImGui::SameLine();
         ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
 
-        bool isSagCalculating = (m_profileService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                                 m_profileService->getCalcState() == SagCalcState::FetchingSagPoints);
-
-        if (isSagCalculating) {
-            float progress = m_profileService->getTotalSteps() > 0
-                ? static_cast<float>(m_profileService->getCurrentStep()) / m_profileService->getTotalSteps()
-                : 0.0f;
-            ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                std::format("{}/{}", m_profileService->getCurrentStep(), m_profileService->getTotalSteps()).c_str());
-
+        if (m_uiOpMonitor.isActive(TaskSource::NominalSurfaceProfile)) {
+            ImGuiUtils::SpinnerButton("Processing...", true);
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
                 m_profileService->cancelCalculation();
+                m_profileService->onCalculationComplete = nullptr;
+                m_zemaxDDEClient->getNominalSurface()->clear();
             }
-
-            if (m_profileService->getSkippedPoints() > 0) {
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                    "%d points skipped (timeout)", m_profileService->getSkippedPoints());
+        } else if (m_uiOpMonitor.hasActiveTasks()) {
+            ImGui::BeginDisabled(true);
+            ImGui::Button("Get nominal surface data");
+            if (ImGui::BeginItemTooltip()) {
+                ImGui::TextUnformatted("Another calculation is in progress");
+                ImGui::EndTooltip();
             }
+            ImGui::EndDisabled();
         } else {
             if (ImGui::Button("Get nominal surface data")) {
                 if (isDDEInitialized()) {
@@ -107,7 +104,7 @@ namespace gui {
                         nominal->sagDataPoints = result.sagDataPoints;
                         m_logger.addLog("[SagMap] Nominal reference set for surface map analysis");
                     };
-                    m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                    m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                 }
             }
         }
@@ -155,25 +152,22 @@ namespace gui {
 
         ImGui::SeparatorText("Analysis");
 
-        bool isMapCalculating = (m_sagMapService->getMapState() == SagMapState::FetchingSurfaceData ||
-                                 m_sagMapService->getMapState() == SagMapState::FetchingSagPoints);
-
-        if (isMapCalculating) {
-            int total = m_sagMapService->getTotalSteps();
-            int current = m_sagMapService->getCurrentStep();
-            float progress = total > 0 ? static_cast<float>(current) / total : 0.0f;
-            ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                std::format("{}/{}", current, total).c_str());
-
+        if (m_uiOpMonitor.isActive(TaskSource::SurfaceMapAnalysis)) {
+            ImGuiUtils::SpinnerButton("Processing...", true);
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
                 m_sagMapService->cancelCalculation();
+                m_sagMapService->onCalculationComplete = nullptr;
+                m_sagMapService->clearData();
             }
-
-            if (m_sagMapService->getSkippedPoints() > 0) {
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                    "%d points skipped (timeout)", m_sagMapService->getSkippedPoints());
+        } else if (m_uiOpMonitor.hasActiveTasks()) {
+            ImGui::BeginDisabled(true);
+            ImGui::Button("Calculate Surface Map");
+            if (ImGui::BeginItemTooltip()) {
+                ImGui::TextUnformatted("Another calculation is in progress");
+                ImGui::EndTooltip();
             }
+            ImGui::EndDisabled();
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
             if (ImGui::Button("Calculate Surface Map")) {

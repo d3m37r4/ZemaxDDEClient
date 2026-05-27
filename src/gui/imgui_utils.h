@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+#include <numbers>
 #include "imgui.h"
 
 namespace ImGuiUtils {
@@ -67,5 +70,52 @@ namespace ImGuiUtils {
             ImVec2(minWidth * dpiScale, minHeight * dpiScale),
             ImVec2(FLT_MAX, FLT_MAX)
         );
+    }
+
+    /// Disabled button with animated spinner arc (3/4 circle) inside.
+    /// Shows a spinning indicator when @p isActive=true, otherwise a normal Button.
+    /// @return true only when clicked in non-active state.
+    inline bool SpinnerButton(const char* label, bool isActive,
+                              const ImVec2& size = ImVec2(0, 0)) {
+        if (!isActive)
+            return ImGui::Button(label, size);
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImVec2 textSize = ImGui::CalcTextSize(label);
+
+        float spinnerRadius = (textSize.y + style.FramePadding.y * 2.0f) * 0.3f;
+        float spinnerDiameter = spinnerRadius * 2.0f;
+        float spacing = style.ItemSpacing.x;
+
+        ImVec2 btnSize = size;
+        if (btnSize.x == 0.0f) {
+            btnSize.x = textSize.x + spinnerDiameter + spacing + style.FramePadding.x * 2.0f;
+            btnSize.y = textSize.y + style.FramePadding.y * 2.0f;
+        }
+
+        ImGui::PushID(label);
+        ImGui::InvisibleButton("##spinner", btnSize);
+        ImGui::PopID();
+
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        const ImVec2& pos = ImGui::GetItemRectMin();
+
+        float disabledAlpha = style.DisabledAlpha;
+        dl->AddRectFilled(pos, ImVec2(pos.x + btnSize.x, pos.y + btnSize.y),
+                          ImGui::GetColorU32(ImGuiCol_Button, disabledAlpha),
+                          style.FrameRounding);
+
+        float angle = ImGui::GetTime() * 5.0f;
+        ImVec2 spinnerCenter(pos.x + style.FramePadding.x + spinnerRadius,
+                             pos.y + btnSize.y * 0.5f);
+        dl->PathArcTo(spinnerCenter, spinnerRadius, angle,
+                      angle + static_cast<float>(std::numbers::pi) * 1.5f, 32);
+        dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, 2.0f);
+
+        ImVec2 textPos(pos.x + style.FramePadding.x + spinnerDiameter + spacing,
+                       pos.y + (btnSize.y - textSize.y) * 0.5f);
+        dl->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), label);
+
+        return false;
     }
 } // namespace ImGuiUtils

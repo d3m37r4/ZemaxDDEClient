@@ -127,23 +127,22 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (m_profileService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                m_profileService->getCalcState() == SagCalcState::FetchingSagPoints) {
-                float progress = m_profileService->getTotalSteps() > 0
-                    ? static_cast<float>(m_profileService->getCurrentStep()) / m_profileService->getTotalSteps()
-                    : 0.0f;
-                ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                    std::format("{}/{}", m_profileService->getCurrentStep(), m_profileService->getTotalSteps()).c_str());
-
+            if (m_uiOpMonitor.isActive(TaskSource::NominalSurfaceProfile)) {
+                ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
                     m_profileService->cancelCalculation();
+                    m_profileService->onCalculationComplete = nullptr;
+                    nominal.clear();
                 }
-
-                if (m_profileService->getSkippedPoints() > 0) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                        "%d points skipped (timeout)", m_profileService->getSkippedPoints());
+            } else if (m_uiOpMonitor.hasActiveTasks()) {
+                ImGui::BeginDisabled(true);
+                ImGui::Button("Get nominal surface data");
+                if (ImGui::BeginItemTooltip()) {
+                    ImGui::TextUnformatted("Another calculation is in progress");
+                    ImGui::EndTooltip();
                 }
+                ImGui::EndDisabled();
             } else {
                 if (ImGui::Button("Get nominal surface data")) {
                     if (isDDEInitialized()) {
@@ -160,7 +159,7 @@ namespace gui {
                             nominal.angle = result.angle;
                             nominal.sagDataPoints = result.sagDataPoints;
                         };
-                        m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle);
+                        m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                     }
                 }
             }
@@ -251,25 +250,22 @@ namespace gui {
 
             ImGui::SameLine();
 
-            bool isCalculating = (m_profileService->getCalcState() == SagCalcState::FetchingSurfaceData ||
-                                  m_profileService->getCalcState() == SagCalcState::FetchingSagPoints);
-
-            if (isCalculating) {
-                float progress = m_profileService->getTotalSteps() > 0
-                    ? static_cast<float>(m_profileService->getCurrentStep()) / m_profileService->getTotalSteps()
-                    : 0.0f;
-                ImGui::ProgressBar(progress, ImVec2(-1, 0),
-                    std::format("{}/{}", m_profileService->getCurrentStep(), m_profileService->getTotalSteps()).c_str());
-
+            if (m_uiOpMonitor.isActive(TaskSource::TolerancedSurfaceProfile)) {
+                ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
                     m_profileService->cancelCalculation();
+                    m_profileService->onCalculationComplete = nullptr;
+                    toleranced.clear();
                 }
-
-                if (m_profileService->getSkippedPoints() > 0) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                        "%d points skipped (timeout)", m_profileService->getSkippedPoints());
+            } else if (m_uiOpMonitor.hasActiveTasks()) {
+                ImGui::BeginDisabled(true);
+                ImGui::Button("Get toleranced surface data");
+                if (ImGui::BeginItemTooltip()) {
+                    ImGui::TextUnformatted("Another calculation is in progress");
+                    ImGui::EndTooltip();
                 }
+                ImGui::EndDisabled();
             } else {
                 if (ImGui::Button("Get toleranced surface data")) {
                     if (isDDEInitialized()) {
@@ -286,7 +282,7 @@ namespace gui {
                             toleranced.angle = result.angle;
                             toleranced.sagDataPoints = result.sagDataPoints;
                         };
-                        m_profileService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle);
+                        m_profileService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
                     }
                 }
             }
