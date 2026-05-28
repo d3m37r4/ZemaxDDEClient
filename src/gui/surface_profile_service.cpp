@@ -49,7 +49,7 @@ namespace gui {
         if (m_uiOpMonitor) {
             std::string label = (source == TaskSource::NominalSurfaceProfile)
                 ? "Nominal Profile" : "Toleranced Profile";
-            int totalPoints = 2 * sampling - 1;
+            int totalPoints = sampling;
             m_taskId = m_uiOpMonitor->startTask(source, label, totalPoints);
             m_operationId = m_uiOpMonitor->getDdeOperationId(m_taskId);
         }
@@ -115,9 +115,9 @@ namespace gui {
     }
 
     void SurfaceProfileService::sendNextSagRequest() {
-        int totalPoints = 2 * m_targetSampling - 1;
+        int totalPoints = m_targetSampling;
         if (m_sagPointIndex >= totalPoints) {
-            m_resultSurface.sampling = totalPoints;
+            m_resultSurface.sampling = m_targetSampling;
             m_resultSurface.angle = m_targetAngle;
             m_calcState = SagCalcState::Completed;
 
@@ -151,13 +151,13 @@ namespace gui {
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->reportProgress(m_taskId, m_sagPointIndex,
-                std::format("Point {}/{}", m_sagPointIndex, 2 * m_targetSampling - 1));
+                std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
         }
 
         constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
         const double rad = m_targetAngle * DEG_TO_RAD;
         double semiDiameter = m_resultSurface.semiDiameter;
-        double step = semiDiameter / (m_targetSampling - 1);
+        double step = 2.0 * semiDiameter / (m_targetSampling - 1);
         double r = -semiDiameter + m_sagPointIndex * step;
         double x = r * std::cos(rad);
         double y = r * std::sin(rad);
@@ -193,7 +193,7 @@ namespace gui {
         constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
         const double rad = m_targetAngle * DEG_TO_RAD;
         double semiDiameter = m_resultSurface.semiDiameter;
-        double step = semiDiameter / (m_targetSampling - 1);
+        double step = 2.0 * semiDiameter / (m_targetSampling - 1);
         double r = -semiDiameter + m_sagPointIndex * step;
 
         try {

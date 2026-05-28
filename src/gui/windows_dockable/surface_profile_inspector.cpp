@@ -12,8 +12,8 @@
 namespace {
     std::string getSamplingTooltip() {
         return std::format(
-            "Number of points per half-profile (from center to edge, min={}, max={}).\n"
-            "Total points across full diameter = 2 × half − 1.\n"
+            "Total number of sample points across the full surface diameter (min={}, max={}).\n"
+            "Automatically rounded up to the nearest odd number to ensure a center point at r=0.\n"
             "Higher values = smoother profile, slower calculation.",
             gui::MIN_SAMPLING, gui::MAX_SAMPLING
         );
@@ -106,7 +106,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-            state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling));
+            state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling)) | 1;
             ImGui::SameLine();
             ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 
@@ -229,7 +229,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-            state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling));
+            state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
             ImGui::SameLine();
             ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
 

@@ -41,7 +41,7 @@ namespace gui {
     // Maximum: Zemax tool "Surface Sag Cross Section" limit
     inline constexpr int MAX_SAMPLING = 16385;
     // Minimum: Zemax requires at least 33 for valid profile calculation
-    inline constexpr int MIN_SAMPLING = 32;
+    inline constexpr int MIN_SAMPLING = 33;
 
     // Connect DDE popup constraints
     inline constexpr float CONNECT_DDE_POPUP_WIDTH_MIN  = 260.0f;
