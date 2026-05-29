@@ -11,7 +11,7 @@ namespace gui {
         None,
         NominalSurfaceProfile,
         TolerancedSurfaceProfile,
-        SurfaceMapAnalysis
+        SurfaceIrregularityMap
     };
 
     class UiOperationMonitor {

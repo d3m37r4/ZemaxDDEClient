@@ -6,7 +6,7 @@
 
 enum class WindowID {
     SurfaceProfileInspector,
-    SurfaceMapAnalysis,
+    SurfaceIrregularityMap,
     DebugLog,
     SystemInfo,
     DDEStatus,
@@ -34,7 +34,7 @@ inline constexpr DockableWindowData DockableWindows[] = {
     { WindowID::DDEStatus, WindowCategory::DDE, "DDE Status", true, 0 },
     { WindowID::SystemInfo, WindowCategory::Tools, "Optical System Information", true, 0 },
     { WindowID::SurfaceProfileInspector, WindowCategory::Tools, "Surface Profile Inspector", false, 1 },
-    { WindowID::SurfaceMapAnalysis, WindowCategory::Tools, "Surface Map Analysis", false, 2 },
+    { WindowID::SurfaceIrregularityMap, WindowCategory::Tools, "Surface Irregularity Map", false, 2 },
     { WindowID::DebugLog, WindowCategory::Info, "Debug Log", true, 0 },
 };
 

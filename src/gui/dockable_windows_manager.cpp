@@ -153,18 +153,18 @@ namespace {
         }
     }
 
-    void RenderSurfaceMapAnalysisWindow(gui::GuiManager* guiMgr) {
+    void RenderSurfaceIrregularityMapWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
-        bool isVisible = mgr->IsVisible(WindowID::SurfaceMapAnalysis);
-        const char* title = mgr->GetName(WindowID::SurfaceMapAnalysis);
+        bool isVisible = mgr->IsVisible(WindowID::SurfaceIrregularityMap);
+        const char* title = mgr->GetName(WindowID::SurfaceIrregularityMap);
         ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_WIDTH_MIN, gui::SAG_ANALYSIS_WINDOW_HEIGHT_MIN);
         if (ImGui::Begin(title, &isVisible)) {
-            guiMgr->renderSurfaceMapAnalysis();
+            guiMgr->renderSurfaceIrregularityMap();
         }
         ImGui::End();
         if (!isVisible) {
-            guiMgr->getWindowManager()->SetVisible(WindowID::SurfaceMapAnalysis, false);
+            guiMgr->getWindowManager()->SetVisible(WindowID::SurfaceIrregularityMap, false);
         }
     }
 
@@ -191,8 +191,8 @@ namespace {
                 return [guiMgr]() { RenderSystemInfoWindow(guiMgr); };
             case WindowID::SurfaceProfileInspector:
                 return [guiMgr]() { RenderSurfaceProfileInspectorWindow(guiMgr); };
-            case WindowID::SurfaceMapAnalysis:
-                return [guiMgr]() { RenderSurfaceMapAnalysisWindow(guiMgr); };
+            case WindowID::SurfaceIrregularityMap:
+                return [guiMgr]() { RenderSurfaceIrregularityMapWindow(guiMgr); };
             case WindowID::DebugLog:
                 return [guiMgr]() { RenderDebugLogWindow(guiMgr); };
             default:

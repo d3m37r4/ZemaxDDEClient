@@ -12,7 +12,7 @@
 #include "gui/constants.h"
 #include "gui/utils.h"
 #include "gui/surface_profile_service.h"
-#include "gui/sag_map_analysis_service.h"
+#include "gui/surface_irregularity_map_service.h"
 #include "gui/ui_operation_monitor.h"
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
@@ -50,7 +50,7 @@ namespace gui {
 
             void renderOpticalSystemInfo();
             void renderSurfaceProfileInspector();
-            void renderSurfaceMapAnalysis();
+            void renderSurfaceIrregularityMap();
             void renderDebugLog();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
@@ -64,7 +64,7 @@ namespace gui {
 
             GraphicsBackend m_graphics;
             std::unique_ptr<SurfaceProfileService> m_profileService;
-            std::unique_ptr<SagMapAnalysisService> m_sagMapService;
+            std::unique_ptr<SurfaceIrregularityMapService> m_irregularityMapService;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<DebugLog> m_debugLogRenderer;

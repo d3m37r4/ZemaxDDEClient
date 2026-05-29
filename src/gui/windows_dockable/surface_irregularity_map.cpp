@@ -36,10 +36,10 @@ namespace {
 }
 
 namespace gui {
-    void GuiManager::renderSurfaceMapAnalysis() {
-        auto& state = m_sagMapService->m_state;
+    void GuiManager::renderSurfaceIrregularityMap() {
+        auto& state = m_irregularityMapService->m_state;
 
-        ImGui::BeginChild("##SurfaceMapContent",
+        ImGui::BeginChild("##SurfaceIrregularityMapContent",
             ImVec2(0.0f, 0.0f),
             ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
@@ -159,7 +159,7 @@ namespace gui {
                                 nominal->sampling = result.sampling;
                                 nominal->angle = result.angle;
                                 nominal->sagDataPoints = result.sagDataPoints;
-                                m_logger.addLog("[SagMap] Nominal reference set for surface map analysis");
+                                m_logger.addLog("[IrregularityMapService] Nominal reference set for surface map analysis");
                             };
                             m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
@@ -224,13 +224,13 @@ namespace gui {
 
         ImGui::SeparatorText("Analysis");
 
-        if (m_uiOpMonitor.isActive(TaskSource::SurfaceMapAnalysis)) {
+        if (m_uiOpMonitor.isActive(TaskSource::SurfaceIrregularityMap)) {
             ImGuiUtils::SpinnerButton("Processing...", true);
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
-                m_sagMapService->cancelCalculation();
-                m_sagMapService->onCalculationComplete = nullptr;
-                m_sagMapService->clearData();
+                m_irregularityMapService->cancelCalculation();
+                m_irregularityMapService->onCalculationComplete = nullptr;
+                m_irregularityMapService->clearData();
             }
         } else if (m_uiOpMonitor.hasActiveTasks()) {
             ImGui::BeginDisabled(true);
@@ -243,7 +243,7 @@ namespace gui {
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
             if (ImGui::Button("Calculate Surface Map")) {
-                m_sagMapService->startAsyncMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
+                m_irregularityMapService->startAsyncMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
             }
             ImGui::EndDisabled();
         }
@@ -254,27 +254,27 @@ namespace gui {
 
         ImGui::BeginDisabled(!isDDEInitialized() || !hasData || !hasNominal);
         if (ImGui::Button("Find Max-PV Section")) {
-            auto result = m_sagMapService->findMaxPVSection();
+            auto result = m_irregularityMapService->findMaxPVSection();
             if (result.has_value()) {
-                m_logger.addLog(std::format("[SagMap] Max-PV: Angle={:.2f}°, Peak={:.6f}, Valley={:.6f}, PV={:.6f}",
+                m_logger.addLog(std::format("[IrregularityMapService] Max-PV: Angle={:.2f}°, Peak={:.6f}, Valley={:.6f}, PV={:.6f}",
                     result->angle, result->peak, result->valley, result->pv));
             }
         }
         ImGui::EndDisabled();
         */
 
-        bool hasData = m_sagMapService->hasData();
+        bool hasData = m_irregularityMapService->hasData();
 
         if (hasData) {
             ImGui::SeparatorText("Results");
-            ImGui::Text(std::format("Rings calculated: {}", m_sagMapService->getSections().size()).c_str());
+            ImGui::Text(std::format("Rings calculated: {}", m_irregularityMapService->getSections().size()).c_str());
 
-            const auto& sections = m_sagMapService->getSections();
+            const auto& sections = m_irregularityMapService->getSections();
             int numRadii = static_cast<int>(sections.size());
             if (numRadii > 0) {
                 int numAngles = static_cast<int>(sections[0].sagDataPoints.size());
                 double semiDiameter = sections[0].semiDiameter;
-                double angleStepDeg = m_sagMapService->m_state.tolerancedAngleStep;
+                double angleStepDeg = m_irregularityMapService->m_state.tolerancedAngleStep;
                 double radiusStep = semiDiameter / (numRadii - 1);
 
                 std::vector<float> X(numRadii * numAngles);
@@ -316,7 +316,7 @@ namespace gui {
                 // TODO: Re-enable deviation heatmap
                 /*
                 if (hasNominal) {
-                    const auto& nominal = m_sagMapService->getNominalReference();
+                    const auto& nominal = m_irregularityMapService->getNominalReference();
                     if (nominal.sagDataPoints.size() == numRadialPoints) {
                         std::vector<double> deviationValues(numAngles * numRadialPoints);
                         double devMin = 0, devMax = 0;
@@ -354,7 +354,7 @@ namespace gui {
 
                 // TODO: Re-enable Max-PV analysis
                 /*
-                auto maxPV = m_sagMapService->findMaxPVSection();
+                auto maxPV = m_irregularityMapService->findMaxPVSection();
                 if (maxPV.has_value()) {
                     ImGui::SeparatorText("Max-PV Result");
                     auto& pv = maxPV.value();

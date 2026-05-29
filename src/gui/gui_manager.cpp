@@ -2,7 +2,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "gui/surface_profile_service.h"
-#include "gui/sag_map_analysis_service.h"
+#include "gui/surface_irregularity_map_service.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
@@ -18,10 +18,10 @@ namespace gui {
 , m_logger(logger)
 {
     m_profileService = std::make_unique<SurfaceProfileService>(m_ddeConnectionManager, logger);
-    m_sagMapService = std::make_unique<SagMapAnalysisService>(m_ddeConnectionManager, logger);
+    m_irregularityMapService = std::make_unique<SurfaceIrregularityMapService>(m_ddeConnectionManager, logger);
     m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
     m_profileService->setUiOperationMonitor(&m_uiOpMonitor);
-    m_sagMapService->setUiOperationMonitor(&m_uiOpMonitor);
+    m_irregularityMapService->setUiOperationMonitor(&m_uiOpMonitor);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);

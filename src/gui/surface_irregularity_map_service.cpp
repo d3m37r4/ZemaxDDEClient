@@ -4,7 +4,7 @@
 #include "dde/operation_monitor.h"
 #include "dde/utils.h"
 
-#include "sag_map_analysis_service.h"
+#include "surface_irregularity_map_service.h"
 #include "logger/logger.h"
 
 namespace {
@@ -12,16 +12,16 @@ namespace {
 }
 
 namespace gui {
-    SagMapAnalysisService::SagMapAnalysisService(DDEConnectionManager* connectionManager, Logger& logger)
+    SurfaceIrregularityMapService::SurfaceIrregularityMapService(DDEConnectionManager* connectionManager, Logger& logger)
         : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
     }
 
-    void SagMapAnalysisService::startAsyncMapCalculation(int surface, int numRadii, double angleStepDeg) {
+    void SurfaceIrregularityMapService::startAsyncMapCalculation(int surface, int numRadii, double angleStepDeg) {
         auto* client = getClient();
         if (!client) {
-            m_mapState = SagMapState::Failed;
+            m_mapState = SurfaceIrregularityMapState::Failed;
             m_mapError = "No active DDE connection";
             if (onCalculationComplete) onCalculationComplete();
             return;
@@ -39,12 +39,12 @@ namespace gui {
 
         int totalPoints = numRadii * static_cast<int>(360.0 / angleStepDeg);
         if (m_uiOpMonitor) {
-            m_taskId = m_uiOpMonitor->startTask(TaskSource::SurfaceMapAnalysis,
+            m_taskId = m_uiOpMonitor->startTask(TaskSource::SurfaceIrregularityMap,
                 "Surface Map", totalPoints);
             m_operationId = m_uiOpMonitor->getDdeOperationId(m_taskId);
         }
 
-        m_mapState = SagMapState::FetchingSurfaceData;
+        m_mapState = SurfaceIrregularityMapState::FetchingSurfaceData;
         m_mapError.clear();
         m_targetSurface = surface;
         m_numRadii = numRadii;
@@ -57,7 +57,7 @@ namespace gui {
         m_surfaceRequestsRemaining = 2;
         m_units = client->getOpticalSystemData().units;
 
-        m_logger.addLog(std::format("[SagMap] Starting async surface map: surface {}, radii={}, angle step={} deg ({} total points)",
+        m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, radii={}, angle step={} deg ({} total points)",
             surface, numRadii, angleStepDeg, totalPoints));
 
         client->submitRequest(
@@ -68,7 +68,7 @@ namespace gui {
             [this](const std::string& error) {
                 onMapError(std::format("GetSurfaceData(TYPE_NAME): {}", error));
             },
-            2000, 1, "SagMapAnalysis");
+            2000, 1, "SurfaceIrregularityMap");
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
@@ -78,10 +78,10 @@ namespace gui {
             [this](const std::string& error) {
                 onMapError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error));
             },
-            2000, 1, "SagMapAnalysis");
+            2000, 1, "SurfaceIrregularityMap");
     }
 
-    void SagMapAnalysisService::onSurfaceDataReceived(int code, const std::string& value) {
+    void SurfaceIrregularityMapService::onSurfaceDataReceived(int code, const std::string& value) {
         auto tokens = ZemaxDDE::tokenize(value);
         if (tokens.empty()) {
             onMapError(std::format("GetSurfaceData({}): empty response", code));
@@ -106,7 +106,7 @@ namespace gui {
             return;
         }
 
-        m_mapState = SagMapState::FetchingSagPoints;
+        m_mapState = SurfaceIrregularityMapState::FetchingSagPoints;
         m_currentRing = 0;
         m_currentAngle = 0;
         m_currentRingData = {};
@@ -116,9 +116,9 @@ namespace gui {
         sendNextSagPoint();
     }
 
-    void SagMapAnalysisService::sendNextSagPoint() {
+    void SurfaceIrregularityMapService::sendNextSagPoint() {
         if (m_currentRing >= m_numRadii) {
-            m_mapState = SagMapState::Completed;
+            m_mapState = SurfaceIrregularityMapState::Completed;
             m_state.tolerancedSurfaceIndex = m_targetSurface;
             m_state.tolerancedSampling = m_numRadii;
             m_state.tolerancedAngleStep = m_angleStepDeg;
@@ -129,7 +129,7 @@ namespace gui {
                 m_uiOpMonitor->completeTask(m_taskId);
             }
 
-            m_logger.addLog(std::format("[SagMap] Surface map completed: {} rings", m_sections.size()));
+            m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} rings", m_sections.size()));
             if (onCalculationComplete) onCalculationComplete();
             return;
         }
@@ -147,12 +147,12 @@ namespace gui {
         }
 
         if (m_uiOpMonitor && m_uiOpMonitor->isCancelled(m_taskId)) {
-            m_mapState = SagMapState::Failed;
+            m_mapState = SurfaceIrregularityMapState::Failed;
             m_mapError = "Cancelled";
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->failTask(m_taskId, "Cancelled");
             }
-            m_logger.addLog("[SagMap] Map calculation cancelled by user");
+            m_logger.addLog("[IrregularityMapService] Map calculation cancelled by user");
             if (onCalculationComplete) onCalculationComplete();
             return;
         }
@@ -188,10 +188,10 @@ namespace gui {
                     onMapError(std::format("GetSag failed: {}", error));
                 }
             },
-            1000, 1, "SagMapAnalysis");
+            1000, 1, "SurfaceIrregularityMap");
     }
 
-    void SagMapAnalysisService::onSagPointReceived(const std::string& buffer) {
+    void SurfaceIrregularityMapService::onSagPointReceived(const std::string& buffer) {
         auto tokens = ZemaxDDE::tokenize(buffer);
         if (tokens.size() < 2) {
             onMapError("GetSag: invalid response format");
@@ -219,38 +219,38 @@ namespace gui {
         sendNextSagPoint();
     }
 
-    void SagMapAnalysisService::onSagTimeout() {
-        m_logger.addLog(std::format("[SagMap] Point (ring {}, angle {}) timed out, skipping",
+    void SurfaceIrregularityMapService::onSagTimeout() {
+        m_logger.addLog(std::format("[IrregularityMapService] Point (ring {}, angle {}) timed out, skipping",
             m_currentRing, m_currentAngle));
         m_skippedPoints++;
         m_currentAngle++;
         sendNextSagPoint();
     }
 
-    void SagMapAnalysisService::onMapError(const std::string& error) {
-        m_mapState = SagMapState::Failed;
+    void SurfaceIrregularityMapService::onMapError(const std::string& error) {
+        m_mapState = SurfaceIrregularityMapState::Failed;
         m_mapError = error;
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->failTask(m_taskId, error);
         }
 
-        m_logger.addLog(std::format("[SagMap] {}", error));
+        m_logger.addLog(std::format("[IrregularityMapService] {}", error));
         if (onCalculationComplete) onCalculationComplete();
     }
 
-    void SagMapAnalysisService::cancelCalculation() {
+    void SurfaceIrregularityMapService::cancelCalculation() {
         if (m_uiOpMonitor && m_taskId > 0) {
             m_uiOpMonitor->requestCancel(m_taskId);
         }
     }
 
-    bool SagMapAnalysisService::hasNominalReference() const {
+    bool SurfaceIrregularityMapService::hasNominalReference() const {
         auto* client = getClient();
         return client && client->getNominalSurface()->isValid();
     }
 
-    const ZemaxDDE::SurfaceData& SagMapAnalysisService::getNominalReference() const {
+    const ZemaxDDE::SurfaceData& SurfaceIrregularityMapService::getNominalReference() const {
         return *getClient()->getNominalSurface();
     }
 }
