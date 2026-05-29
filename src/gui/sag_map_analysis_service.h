@@ -27,11 +27,11 @@ namespace gui {
 
     struct SagMapAnalysisState {
         int nominalSurfaceIndex = 0;
-        int nominalSampling = 128;
+        int nominalSampling = 65;
         double nominalAngle = 0.0;
 
         int tolerancedSurfaceIndex = 0;
-        int tolerancedSampling = 128;
+        int tolerancedSampling = 65;
         double tolerancedAngleStep = 1.0;
     };
 
