@@ -88,6 +88,7 @@ set(SOURCES
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/surface_profile_service.cpp
+    ${SRC_DIR}/gui/surface_profile_calculator.cpp
     ${SRC_DIR}/gui/surface_irregularity_map_service.cpp
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp

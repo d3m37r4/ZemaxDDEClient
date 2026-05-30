@@ -26,7 +26,7 @@ namespace {
 
 namespace gui {
     void GuiManager::renderSurfaceProfileInspector() {
-        auto& state = m_profileService->m_pageState;
+        auto& state = m_profileService->m_windowState;
         auto& nominal = m_profileService->m_nominalSurfaceData;
         auto& toleranced = m_profileService->m_tolerancedSurfaceData;
 
@@ -159,7 +159,7 @@ namespace gui {
                             nominal.angle = result.angle;
                             nominal.sagDataPoints = result.sagDataPoints;
                         };
-                        m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
+                        m_profileService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                     }
                 }
             }
@@ -282,7 +282,7 @@ namespace gui {
                             toleranced.angle = result.angle;
                             toleranced.sagDataPoints = result.sagDataPoints;
                         };
-                        m_profileService->startAsyncSagCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
+                        m_profileService->startCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
                     }
                 }
             }

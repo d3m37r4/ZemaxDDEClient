@@ -1,30 +1,20 @@
 #pragma once
 
-#include <chrono>
-#include <filesystem>
 #include <functional>
-#include <optional>
+#include <filesystem>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 #include "gui/ui_operation_monitor.h"
+#include "gui/surface_profile_calculator.h"
 
 class Logger;
 
 namespace gui {
 
-    enum class SagCalcState {
-        Idle,
-        FetchingSurfaceData,
-        FetchingSagPoints,
-        Completed,
-        Failed
-    };
-
-    struct SagAnalysisState {
+    struct ProfileWindowState {
         int tolerancedSurfaceIndex = 0;
         int nominalSurfaceIndex = 0;
 
@@ -42,8 +32,8 @@ namespace gui {
         public:
             SurfaceProfileService(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void setUiOperationMonitor(UiOperationMonitor* monitor) { m_uiOpMonitor = monitor; }
-            void startAsyncSagCalculation(int surface, int sampling, double angle, TaskSource source = TaskSource::None);
+            void setUiOperationMonitor(UiOperationMonitor* monitor);
+            void startCalculation(int surface, int sampling, double angle, TaskSource source = TaskSource::None);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
             void renderSurfaceProfilePlot(const char* plotLabel, const ZemaxDDE::SurfaceData& surface, const ImVec2& size);
@@ -55,16 +45,9 @@ namespace gui {
             bool m_showComparisonProfileWindow{false};
             bool m_showDeviationProfileWindow{false};
 
-            SagAnalysisState m_pageState;
+            ProfileWindowState m_windowState;
 
-            SagCalcState getCalcState() const { return m_calcState; }
-            const std::string& getCalcError() const { return m_calcError; }
-            const ZemaxDDE::SurfaceData& getResult() const { return m_resultSurface; }
-
-            uint64_t getOperationId() const { return m_operationId; }
-            int getTotalSteps() const { return m_targetSampling; }
-            int getCurrentStep() const { return m_sagPointIndex; }
-            int getSkippedPoints() const { return m_skippedPoints; }
+            const ZemaxDDE::SurfaceData& getResult() const;
 
             void cancelCalculation();
 
@@ -74,32 +57,12 @@ namespace gui {
             ZemaxDDE::SurfaceData m_tolerancedSurfaceData;
 
         private:
-            ZemaxDDE::ZemaxDDEClient* getClient() const;
-            ZemaxDDE::OperationMonitor* getMonitor() const;
-            void sendNextSagRequest();
-            void onSurfaceDataReceived(int code, const std::string& value);
-            void onSagDataReceived(const std::string& buffer);
-            void onError(const std::string& error);
-            void onSagTimeout();
+            void onCalculatorComplete();
+            void onCalculatorFailed();
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
-            UiOperationMonitor* m_uiOpMonitor{nullptr};
-
-            SagCalcState m_calcState = SagCalcState::Idle;
-            std::string m_calcError;
-
+            SurfaceProfileCalculator m_calculator;
             TaskSource m_taskSource{TaskSource::None};
-            uint64_t m_taskId{0};
-            int m_targetSurface = 0;
-            int m_targetSampling = 0;
-            double m_targetAngle = 0.0;
-            int m_sagPointIndex = 0;
-            int m_surfaceRequestsRemaining = 0;
-            uint64_t m_operationId = 0;
-            int m_skippedPoints = 0;
-            std::chrono::steady_clock::time_point m_calcStartTime;
-
-            ZemaxDDE::SurfaceData m_resultSurface;
     };
 }

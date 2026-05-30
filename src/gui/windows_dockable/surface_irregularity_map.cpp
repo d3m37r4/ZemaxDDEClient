@@ -37,7 +37,7 @@ namespace {
 
 namespace gui {
     void GuiManager::renderSurfaceIrregularityMap() {
-        auto& state = m_irregularityMapService->m_state;
+        auto& state = m_irregularityMapService->m_windowState;
 
         ImGui::BeginChild("##SurfaceIrregularityMapContent",
             ImVec2(0.0f, 0.0f),
@@ -65,7 +65,7 @@ namespace gui {
         );
 
         {
-            const auto& nominal = m_irregularityMapService->getNominalData();
+            const auto& nominal = m_irregularityMapService->m_nominalSurfaceData;
 
             if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
                 ImGuiUtils::BeginPropertyGrid("##NominalData", maxLabelWidth);
@@ -86,7 +86,7 @@ namespace gui {
                 ImGui::SameLine();
 
                 if (ImGui::Button("Clear data")) {
-                    m_irregularityMapService->clearNominalData();
+                    m_irregularityMapService->m_nominalSurfaceData.clear();
                 }
             } else {
                 if (!isDDEInitialized()) {
@@ -132,9 +132,9 @@ namespace gui {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
                     if (ImGui::Button("Cancel")) {
-                        m_profileService->cancelCalculation();
-                        m_profileService->onCalculationComplete = nullptr;
-                        m_irregularityMapService->clearNominalData();
+                        m_irregularityMapService->cancelCalculation();
+                        m_irregularityMapService->onCalculationComplete = nullptr;
+                        m_irregularityMapService->m_nominalSurfaceData.clear();
                     }
                 } else if (m_uiOpMonitor.hasActiveTasks()) {
                     ImGui::BeginDisabled(true);
@@ -150,14 +150,12 @@ namespace gui {
                             auto units = m_zemaxDDEClient->getOpticalSystemData().units;
                             auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                            m_profileService->onCalculationComplete = [this, units, fileName]() {
-                                auto result = m_profileService->getResult();
-                                result.units = units;
-                                result.fileName = fileName;
-                                m_irregularityMapService->setNominalData(result);
+                            m_irregularityMapService->onCalculationComplete = [this, units, fileName]() {
+                                m_irregularityMapService->m_nominalSurfaceData.units = units;
+                                m_irregularityMapService->m_nominalSurfaceData.fileName = fileName;
                                 m_logger.addLog("[IrregularityMapService] Nominal reference set");
                             };
-                            m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
+                            m_irregularityMapService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
                     }
                 }
@@ -224,8 +222,7 @@ namespace gui {
             ImGuiUtils::SpinnerButton("Processing...", true);
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
-                m_irregularityMapService->cancelCalculation();
-                m_irregularityMapService->onCalculationComplete = nullptr;
+                m_irregularityMapService->cancelMapCalculation();
                 m_irregularityMapService->clearData();
             }
         } else if (m_uiOpMonitor.hasActiveTasks()) {
@@ -239,7 +236,7 @@ namespace gui {
         } else {
             ImGui::BeginDisabled(!isDDEInitialized());
             if (ImGui::Button("Calculate Surface Map")) {
-                m_irregularityMapService->startAsyncMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
+                m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
             }
             ImGui::EndDisabled();
         }
@@ -259,103 +256,12 @@ namespace gui {
         ImGui::EndDisabled();
         */
 
-        bool hasData = m_irregularityMapService->hasData();
-
-        if (hasData) {
+        if (m_irregularityMapService->hasData()) {
             ImGui::SeparatorText("Results");
             ImGui::Text(std::format("Rings calculated: {}", m_irregularityMapService->getSections().size()).c_str());
 
-            const auto& sections = m_irregularityMapService->getSections();
-            int numRadii = static_cast<int>(sections.size());
-            if (numRadii > 0) {
-                int numAngles = static_cast<int>(sections[0].sagDataPoints.size());
-                double semiDiameter = sections[0].semiDiameter;
-                double angleStepDeg = m_irregularityMapService->m_state.tolerancedAngleStep;
-                double radiusStep = semiDiameter / (numRadii - 1);
-
-                std::vector<float> X(numRadii * numAngles);
-                std::vector<float> Y(numRadii * numAngles);
-                std::vector<float> Z(numRadii * numAngles);
-
-                float zMin = 0, zMax = 0;
-                bool first = true;
-
-                for (int i = 0; i < numRadii; ++i) {
-                    double r = i * radiusStep;
-                    for (int j = 0; j < numAngles; ++j) {
-                        double angle = j * angleStepDeg * DEG_TO_RAD;
-                        X[i * numAngles + j] = static_cast<float>(r * std::cos(angle));
-                        Y[i * numAngles + j] = static_cast<float>(r * std::sin(angle));
-
-                        const auto& pt = sections[i].sagDataPoints[j];
-                        Z[i * numAngles + j] = static_cast<float>(pt.sag);
-
-                        if (first) {
-                            zMin = pt.sag;
-                            zMax = pt.sag;
-                            first = false;
-                        } else {
-                            zMin = std::min(zMin, static_cast<float>(pt.sag));
-                            zMax = std::max(zMax, static_cast<float>(pt.sag));
-                        }
-                    }
-                }
-
-                if (ImGui::Button("Show 3D surface map")) {
-                    m_irregularityMapService->m_showTolerancedSurfaceMap = true;
-                }
-
-                // TODO: Re-enable deviation heatmap
-                /*
-                if (hasNominal) {
-                    const auto& nominal = m_irregularityMapService->getNominalReference();
-                    if (nominal.sagDataPoints.size() == numRadialPoints) {
-                        std::vector<double> deviationValues(numAngles * numRadialPoints);
-                        double devMin = 0, devMax = 0;
-                        bool first = true;
-
-                        for (int i = 0; i < numAngles; ++i) {
-                            for (int j = 0; j < numRadialPoints; ++j) {
-                                double deviation = sections[i].sagDataPoints[j].sag - nominal.sagDataPoints[j].sag;
-                                deviationValues[i * numRadialPoints + j] = deviation;
-                                if (first) {
-                                    devMin = deviation;
-                                    devMax = deviation;
-                                    first = false;
-                                } else {
-                                    devMin = std::min(devMin, deviation);
-                                    devMax = std::max(devMax, deviation);
-                                }
-                            }
-                        }
-
-                        double absMax = std::max(std::abs(devMin), std::abs(devMax));
-
-                        ImGui::Spacing();
-                        ImGui::Text("Deviation (Toleranced - Nominal):");
-                        if (ImPlot::BeginPlot("##DeviationMap", ImVec2(-1, 200))) {
-                            ImPlot::SetupAxes("Angle (deg)", "Radial Position");
-                            ImPlot::PlotHeatmap("##DeviationHeatmap", deviationValues.data(), numAngles, numRadialPoints,
-                                -absMax, absMax, nullptr,
-                                ImPlotPoint(0, 0), ImPlotPoint(180, numRadialPoints));
-                            ImPlot::EndPlot();
-                        }
-                    }
-                }
-                */
-
-                // TODO: Re-enable Max-PV analysis
-                /*
-                auto maxPV = m_irregularityMapService->findMaxPVSection();
-                if (maxPV.has_value()) {
-                    ImGui::SeparatorText("Max-PV Result");
-                    auto& pv = maxPV.value();
-                    ImGui::TextUnformatted(std::format("Max-PV Section at {:.2f}°", pv.angle).c_str());
-                    ImGui::TextUnformatted(std::format("Peak: {:.6f} mm", pv.peak).c_str());
-                    ImGui::TextUnformatted(std::format("Valley: {:.6f} mm", pv.valley).c_str());
-                    ImGui::TextUnformatted(std::format("PV: {:.6f} mm", pv.pv).c_str());
-                }
-                */
+            if (ImGui::Button("Show 3D surface map")) {
+                m_irregularityMapService->m_showTolerancedSurfaceMap = true;
             }
         }
 

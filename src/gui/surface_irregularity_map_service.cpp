@@ -16,15 +16,42 @@ namespace gui {
     SurfaceIrregularityMapService::SurfaceIrregularityMapService(DDEConnectionManager* connectionManager, Logger& logger)
         : m_connectionManager(connectionManager)
         , m_logger(logger)
+        , m_calculator(connectionManager, logger)
     {
     }
 
-    void SurfaceIrregularityMapService::startAsyncMapCalculation(int surface, int numRadii, double angleStepDeg) {
+    void SurfaceIrregularityMapService::setUiOperationMonitor(UiOperationMonitor* monitor) {
+        m_uiOpMonitor = monitor;
+        m_calculator.setMonitor(monitor);
+    }
+
+    // --- Profile calculation (via SurfaceProfileCalculator) ---
+
+    void SurfaceIrregularityMapService::startCalculation(int surface, int sampling, double angle, TaskSource source) {
+        m_calculator.onComplete = [this]() {
+            m_nominalSurfaceData = m_calculator.getResult();
+            if (m_nominalSurfaceData.isValid()) {
+                m_logger.addLog("[IrregularityMapService] Nominal reference set");
+            }
+            if (onCalculationComplete) onCalculationComplete();
+        };
+        m_calculator.onFailed = [this]() {
+            if (onCalculationComplete) onCalculationComplete();
+        };
+
+        m_calculator.startCalculation(surface, sampling, angle, source);
+    }
+
+    void SurfaceIrregularityMapService::cancelCalculation() {
+        m_calculator.cancel();
+    }
+
+    // --- Map calculation (own logic) ---
+
+    void SurfaceIrregularityMapService::startMapCalculation(int surface, int numRadii, double angleStepDeg) {
         auto* client = getClient();
         if (!client) {
-            m_mapState = SurfaceIrregularityMapState::Failed;
             m_mapError = "No active DDE connection";
-            if (onCalculationComplete) onCalculationComplete();
             return;
         }
 
@@ -39,13 +66,10 @@ namespace gui {
         }
 
         int totalPoints = numRadii * static_cast<int>(360.0 / angleStepDeg);
-        if (m_uiOpMonitor) {
-            m_taskId = m_uiOpMonitor->startTask(TaskSource::SurfaceIrregularityMap,
-                "Surface Map", totalPoints);
-            m_operationId = m_uiOpMonitor->getDdeOperationId(m_taskId);
+        if (m_calculator.getSource() != TaskSource::None) {
+            // Reuse monitor through calculator's mechanism if available
         }
 
-        m_mapState = SurfaceIrregularityMapState::FetchingSurfaceData;
         m_mapError.clear();
         m_targetSurface = surface;
         m_numRadii = numRadii;
@@ -54,6 +78,7 @@ namespace gui {
         m_currentRing = 0;
         m_currentAngle = 0;
         m_skippedPoints = 0;
+        m_mapTaskId = 0;
         m_sections.clear();
         m_surfaceRequestsRemaining = 2;
         m_units = client->getOpticalSystemData().units;
@@ -64,7 +89,7 @@ namespace gui {
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
             [this](const std::string& result) {
-                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result);
+                onMapSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result);
             },
             [this](const std::string& error) {
                 onMapError(std::format("GetSurfaceData(TYPE_NAME): {}", error));
@@ -74,7 +99,7 @@ namespace gui {
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
             [this](const std::string& result) {
-                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result);
+                onMapSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result);
             },
             [this](const std::string& error) {
                 onMapError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error));
@@ -82,7 +107,13 @@ namespace gui {
             2000, 1, "SurfaceIrregularityMap");
     }
 
-    void SurfaceIrregularityMapService::onSurfaceDataReceived(int code, const std::string& value) {
+    void SurfaceIrregularityMapService::cancelMapCalculation() {
+        if (m_uiOpMonitor && m_mapTaskId > 0) {
+            m_uiOpMonitor->requestCancel(m_mapTaskId);
+        }
+    }
+
+    void SurfaceIrregularityMapService::onMapSurfaceDataReceived(int code, const std::string& value) {
         auto tokens = ZemaxDDE::tokenize(value);
         if (tokens.empty()) {
             onMapError(std::format("GetSurfaceData({}): empty response", code));
@@ -107,31 +138,43 @@ namespace gui {
             return;
         }
 
-        m_mapState = SurfaceIrregularityMapState::FetchingSagPoints;
         m_currentRing = 0;
         m_currentAngle = 0;
         m_currentRingData = {};
         m_currentRingData.id = m_targetSurface;
         m_currentRingData.semiDiameter = m_semiDiameter;
         m_currentRingData.units = m_units;
+
+        int totalPoints = m_numRadii * m_numAngles;
+        if (m_uiOpMonitor) {
+            m_mapTaskId = m_uiOpMonitor->startTask(TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map", totalPoints);
+        }
         sendNextSagPoint();
     }
 
     void SurfaceIrregularityMapService::sendNextSagPoint() {
-        if (m_currentRing >= m_numRadii) {
-            m_mapState = SurfaceIrregularityMapState::Completed;
-            m_state.tolerancedSurfaceIndex = m_targetSurface;
-            m_state.tolerancedSampling = m_numRadii;
-            m_state.tolerancedAngleStep = m_angleStepDeg;
-
-            if (m_uiOpMonitor) {
-                m_uiOpMonitor->reportProgress(m_taskId, m_numRadii * m_numAngles,
-                    std::format("Completed ({} rings)", m_sections.size()));
-                m_uiOpMonitor->completeTask(m_taskId);
+        if (m_uiOpMonitor && m_mapTaskId > 0) {
+            if (m_uiOpMonitor->isCancelled(m_mapTaskId)) {
+                m_mapError = "Cancelled";
+                m_uiOpMonitor->failTask(m_mapTaskId, "Cancelled");
+                return;
             }
+            int step = m_currentRing * m_numAngles + m_currentAngle;
+            int total = m_numRadii * m_numAngles;
+            if (step < total) {
+                m_uiOpMonitor->reportProgress(m_mapTaskId, step, "");
+            }
+        }
+
+        if (m_currentRing >= m_numRadii) {
+            if (m_uiOpMonitor && m_mapTaskId > 0) {
+                m_uiOpMonitor->completeTask(m_mapTaskId);
+            }
+            m_windowState.tolerancedSurfaceIndex = m_targetSurface;
+            m_windowState.tolerancedSampling = m_numRadii;
+            m_windowState.tolerancedAngleStep = m_angleStepDeg;
 
             m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} rings", m_sections.size()));
-            if (onCalculationComplete) onCalculationComplete();
             return;
         }
 
@@ -145,23 +188,6 @@ namespace gui {
             m_currentRingData.units = m_units;
             sendNextSagPoint();
             return;
-        }
-
-        if (m_uiOpMonitor && m_uiOpMonitor->isCancelled(m_taskId)) {
-            m_mapState = SurfaceIrregularityMapState::Failed;
-            m_mapError = "Cancelled";
-            if (m_uiOpMonitor) {
-                m_uiOpMonitor->failTask(m_taskId, "Cancelled");
-            }
-            m_logger.addLog("[IrregularityMapService] Map calculation cancelled by user");
-            if (onCalculationComplete) onCalculationComplete();
-            return;
-        }
-
-        if (m_uiOpMonitor) {
-            int currentPoint = m_currentRing * m_numAngles + m_currentAngle;
-            m_uiOpMonitor->reportProgress(m_taskId, currentPoint,
-                std::format("Ring {}/{} angle {}/{}", m_currentRing + 1, m_numRadii, m_currentAngle, m_numAngles));
         }
 
         double radiusStep = m_semiDiameter / (m_numRadii - 1);
@@ -229,34 +255,20 @@ namespace gui {
     }
 
     void SurfaceIrregularityMapService::onMapError(const std::string& error) {
-        m_mapState = SurfaceIrregularityMapState::Failed;
         m_mapError = error;
-
-        if (m_uiOpMonitor) {
-            m_uiOpMonitor->failTask(m_taskId, error);
+        if (m_uiOpMonitor && m_mapTaskId > 0) {
+            m_uiOpMonitor->failTask(m_mapTaskId, error);
         }
-
         m_logger.addLog(std::format("[IrregularityMapService] {}", error));
-        if (onCalculationComplete) onCalculationComplete();
     }
 
-    void SurfaceIrregularityMapService::cancelCalculation() {
-        if (m_uiOpMonitor && m_taskId > 0) {
-            m_uiOpMonitor->requestCancel(m_taskId);
-        }
-    }
-
-    void SurfaceIrregularityMapService::setNominalData(const ZemaxDDE::SurfaceData& data) {
-        m_nominalData = data;
-    }
-
-    void SurfaceIrregularityMapService::renderTolerancedSurfaceMap(const ImVec2& size) {
+    void SurfaceIrregularityMapService::renderSurfaceMapPlot(const ImVec2& size) {
         if (m_sections.empty()) return;
 
         int numRadii = static_cast<int>(m_sections.size());
         int numAngles = static_cast<int>(m_sections[0].sagDataPoints.size());
         double semiDiameter = m_sections[0].semiDiameter;
-        double angleStepDeg = m_state.tolerancedAngleStep;
+        double angleStepDeg = m_windowState.tolerancedAngleStep;
         double radiusStep = semiDiameter / (numRadii - 1);
 
         std::vector<float> X(numRadii * numAngles);
