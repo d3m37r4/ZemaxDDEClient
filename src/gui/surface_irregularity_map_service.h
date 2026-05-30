@@ -8,6 +8,7 @@
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 #include "gui/ui_operation_monitor.h"
+#include "lib/imgui/imgui.h"
 
 class Logger;
 
@@ -50,13 +51,17 @@ namespace gui {
 
             void startAsyncMapCalculation(int surface, int numRadii, double angleStepDeg);
 
-            bool hasNominalReference() const;
-            const ZemaxDDE::SurfaceData& getNominalReference() const;
+            void setNominalData(const ZemaxDDE::SurfaceData& data);
+            const ZemaxDDE::SurfaceData& getNominalData() const { return m_nominalData; }
+            void clearNominalData() { m_nominalData.clear(); }
 
             bool hasData() const { return !m_sections.empty(); }
             void clearData() { m_sections.clear(); }
 
             const std::vector<ZemaxDDE::SurfaceData>& getSections() const { return m_sections; }
+
+            void renderTolerancedSurfaceMap(const ImVec2& size);
+            bool m_showTolerancedSurfaceMap{false};
 
             SurfaceIrregularityMapState getMapState() const { return m_mapState; }
             const std::string& getMapError() const { return m_mapError; }
@@ -86,6 +91,7 @@ namespace gui {
             UiOperationMonitor* m_uiOpMonitor{nullptr};
 
             std::vector<ZemaxDDE::SurfaceData> m_sections;
+            ZemaxDDE::SurfaceData m_nominalData;
 
             SurfaceIrregularityMapState m_mapState = SurfaceIrregularityMapState::Idle;
             std::string m_mapError;

@@ -65,28 +65,28 @@ namespace gui {
         );
 
         {
-            auto* nominal = m_zemaxDDEClient ? m_zemaxDDEClient->getNominalSurface() : nullptr;
+            const auto& nominal = m_irregularityMapService->getNominalData();
 
-            if (nominal && nominal->isValid() && nominal->id == state.nominalSurfaceIndex) {
+            if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
                 ImGuiUtils::BeginPropertyGrid("##NominalData", maxLabelWidth);
-                ImGuiUtils::PropertyGridRow("Optical system", nominal->fileName.c_str());
-                ImGuiUtils::PropertyGridRow("Surface", std::to_string(nominal->id).c_str());
-                ImGuiUtils::PropertyGridRow("Sampling", std::to_string(nominal->sampling).c_str());
-                ImGuiUtils::PropertyGridRow("Angle", std::format("{}°", nominal->angle).c_str());
-                ImGuiUtils::PropertyGridRow("Type", nominal->type.c_str());
-                ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", nominal->semiDiameter, getUnitString(nominal->units)).c_str());
-                ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", nominal->diameter(), getUnitString(nominal->units)).c_str());
+                ImGuiUtils::PropertyGridRow("Optical system", nominal.fileName.c_str());
+                ImGuiUtils::PropertyGridRow("Surface", std::to_string(nominal.id).c_str());
+                ImGuiUtils::PropertyGridRow("Sampling", std::to_string(nominal.sampling).c_str());
+                ImGuiUtils::PropertyGridRow("Angle", std::format("{}°", nominal.angle).c_str());
+                ImGuiUtils::PropertyGridRow("Type", nominal.type.c_str());
+                ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
+                ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
                 ImGuiUtils::EndPropertyGrid();
                 ImGuiUtils::SpacingY(0.25f);
 
                 if (ImGui::Button("Export txt")) {
-                    m_profileService->saveCrossSectionToFile(*nominal);
+                    m_profileService->saveCrossSectionToFile(nominal);
                 }
 
                 ImGui::SameLine();
 
                 if (ImGui::Button("Clear data")) {
-                    nominal->clear();
+                    m_irregularityMapService->clearNominalData();
                 }
             } else {
                 if (!isDDEInitialized()) {
@@ -134,7 +134,7 @@ namespace gui {
                     if (ImGui::Button("Cancel")) {
                         m_profileService->cancelCalculation();
                         m_profileService->onCalculationComplete = nullptr;
-                        m_zemaxDDEClient->getNominalSurface()->clear();
+                        m_irregularityMapService->clearNominalData();
                     }
                 } else if (m_uiOpMonitor.hasActiveTasks()) {
                     ImGui::BeginDisabled(true);
@@ -147,19 +147,15 @@ namespace gui {
                 } else {
                     if (ImGui::Button("Get nominal surface data")) {
                         if (isDDEInitialized()) {
-                            auto* nominal = m_zemaxDDEClient->getNominalSurface();
-                            nominal->units = m_zemaxDDEClient->getOpticalSystemData().units;
-                            nominal->fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
+                            auto units = m_zemaxDDEClient->getOpticalSystemData().units;
+                            auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                            m_profileService->onCalculationComplete = [this]() {
-                                if (!m_zemaxDDEClient) return;
-                                const auto& result = m_profileService->getResult();
-                                auto* nominal = m_zemaxDDEClient->getNominalSurface();
-                                nominal->semiDiameter = result.semiDiameter;
-                                nominal->sampling = result.sampling;
-                                nominal->angle = result.angle;
-                                nominal->sagDataPoints = result.sagDataPoints;
-                                m_logger.addLog("[IrregularityMapService] Nominal reference set for surface map analysis");
+                            m_profileService->onCalculationComplete = [this, units, fileName]() {
+                                auto result = m_profileService->getResult();
+                                result.units = units;
+                                result.fileName = fileName;
+                                m_irregularityMapService->setNominalData(result);
+                                m_logger.addLog("[IrregularityMapService] Nominal reference set");
                             };
                             m_profileService->startAsyncSagCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
@@ -305,12 +301,8 @@ namespace gui {
                     }
                 }
 
-                ImGui::Text("Toleranced Surface (absolute sag):");
-                if (ImPlot3D::BeginPlot("##Surface3D", ImVec2(-1, 400))) {
-                    ImPlot3D::SetupAxes("X (mm)", "Y (mm)", "Z (mm)");
-                    ImPlot3D::PlotSurface("Lens Surface", X.data(), Y.data(), Z.data(),
-                                          numRadii, numAngles, zMin, zMax);
-                    ImPlot3D::EndPlot();
+                if (ImGui::Button("Show 3D surface map")) {
+                    m_irregularityMapService->m_showTolerancedSurfaceMap = true;
                 }
 
                 // TODO: Re-enable deviation heatmap

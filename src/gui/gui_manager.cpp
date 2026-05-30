@@ -125,6 +125,20 @@ void GuiManager::render() {
         }
     }
 
+    {
+        if (m_irregularityMapService->m_showTolerancedSurfaceMap) {
+            if (m_irregularityMapService->hasData()) {
+                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+                if (ImGui::Begin("Surface Irregularity Map 3D", &m_irregularityMapService->m_showTolerancedSurfaceMap)) {
+                    m_irregularityMapService->renderTolerancedSurfaceMap(ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showTolerancedSurfaceMap = false;
+            }
+        }
+    }
+
     ImGuiUtils::SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();

@@ -6,6 +6,7 @@
 
 #include "surface_irregularity_map_service.h"
 #include "logger/logger.h"
+#include "lib/implot3d/implot3d.h"
 
 namespace {
     constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
@@ -245,12 +246,42 @@ namespace gui {
         }
     }
 
-    bool SurfaceIrregularityMapService::hasNominalReference() const {
-        auto* client = getClient();
-        return client && client->getNominalSurface()->isValid();
+    void SurfaceIrregularityMapService::setNominalData(const ZemaxDDE::SurfaceData& data) {
+        m_nominalData = data;
     }
 
-    const ZemaxDDE::SurfaceData& SurfaceIrregularityMapService::getNominalReference() const {
-        return *getClient()->getNominalSurface();
+    void SurfaceIrregularityMapService::renderTolerancedSurfaceMap(const ImVec2& size) {
+        if (m_sections.empty()) return;
+
+        int numRadii = static_cast<int>(m_sections.size());
+        int numAngles = static_cast<int>(m_sections[0].sagDataPoints.size());
+        double semiDiameter = m_sections[0].semiDiameter;
+        double angleStepDeg = m_state.tolerancedAngleStep;
+        double radiusStep = semiDiameter / (numRadii - 1);
+
+        std::vector<float> X(numRadii * numAngles);
+        std::vector<float> Y(numRadii * numAngles);
+        std::vector<float> Z(numRadii * numAngles);
+        float zMin = 0, zMax = 0;
+        bool first = true;
+
+        for (int i = 0; i < numRadii; ++i) {
+            double r = i * radiusStep;
+            for (int j = 0; j < numAngles; ++j) {
+                double angle = j * angleStepDeg * DEG_TO_RAD;
+                X[i * numAngles + j] = static_cast<float>(r * std::cos(angle));
+                Y[i * numAngles + j] = static_cast<float>(r * std::sin(angle));
+                const auto& pt = m_sections[i].sagDataPoints[j];
+                Z[i * numAngles + j] = static_cast<float>(pt.sag);
+                if (first) { zMin = pt.sag; zMax = pt.sag; first = false; }
+                else { zMin = std::min(zMin, static_cast<float>(pt.sag)); zMax = std::max(zMax, static_cast<float>(pt.sag)); }
+            }
+        }
+
+        if (ImPlot3D::BeginPlot("##Surface3D", size)) {
+            ImPlot3D::SetupAxes("X (mm)", "Y (mm)", "Z (mm)");
+            ImPlot3D::PlotSurface("Lens Surface", X.data(), Y.data(), Z.data(), numRadii, numAngles, zMin, zMax);
+            ImPlot3D::EndPlot();
+        }
     }
 }
