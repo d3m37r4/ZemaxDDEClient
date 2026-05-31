@@ -46,7 +46,9 @@ namespace ZemaxDDE {
             using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
             void setOnDDEConnectedCallback(OnDDEConnectedCallback callback);
 
-            uint64_t enqueueRequest(const std::string& command,
+            /// Submits a DDE request for processing and starts if the pipeline is idle.
+            /// @return Unique request ID for logging.
+            uint64_t submitRequest(const std::string& command,
                 std::function<void(const std::string&)> onSuccess,
                 std::function<void(const std::string&)> onError,
                 DWORD timeoutMs = 1000,
@@ -60,7 +62,13 @@ namespace ZemaxDDE {
             [[nodiscard]] OperationMonitor* getOperationMonitor() noexcept { return m_operationMonitor.get(); }
 
         private:
-            void dequeueAndSend();
+            /// Takes the next request from the queue and sends it to Zemax.
+            void dispatchNext();
+            /// Converts command to UTF-16, creates a Win32 atom,
+            /// and posts WM_DDE_REQUEST to the Zemax server window.
+            void sendRequest(DdeRequest& req);
+            /// Resets active request and advances to the next in queue.
+            void finishRequest();
             void checkDDEConnection();
 
             HWND m_hwndZemaxServer = nullptr;

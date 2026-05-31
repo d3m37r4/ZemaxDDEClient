@@ -3,6 +3,7 @@
 #include "connect_dde.h"
 #include "app/zemax_window_enumerator.h"
 #include "gui/utils.h"
+#include "gui/imgui_utils.h"
 #include "gui/constants.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
@@ -16,7 +17,7 @@ namespace gui {
         ImGui::OpenPopup(POPUP_TITLE);
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-        SetDpiScaledWindowConstraints(CONNECT_DDE_POPUP_WIDTH_MIN, CONNECT_DDE_POPUP_HEIGHT_MIN);
+        ImGuiUtils::SetDpiScaledWindowConstraints(CONNECT_DDE_POPUP_WIDTH_MIN, CONNECT_DDE_POPUP_HEIGHT_MIN);
         // ImGui::SetNextWindowSize(ImVec2(920, 400), ImGuiCond_FirstUseEver);
 
         if (ImGui::BeginPopupModal(POPUP_TITLE, &showFlag, ImGuiWindowFlags_None)) {

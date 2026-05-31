@@ -1,9 +1,10 @@
 #include "gui/gui.h"
 #include <imgui.h>
 #include <imgui_internal.h>
-#include "gui/sag_analysis_service.h"
-#include "gui/sag_map_analysis_service.h"
+#include "gui/surface_profile_service.h"
+#include "gui/surface_irregularity_map_service.h"
 #include "gui/menu_bar_controller.h"
+#include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
 #include "dde/dde_connection_manager.h"
 #include "windows_dockable/dde_status.h"
@@ -16,8 +17,11 @@ namespace gui {
 , m_zemaxDDEClient(ddeConnectionManager ? ddeConnectionManager->getActiveClient() : nullptr)
 , m_logger(logger)
 {
-    m_sagService = std::make_unique<SagAnalysisService>(m_ddeConnectionManager, logger);
-    m_sagMapService = std::make_unique<SagMapAnalysisService>(m_ddeConnectionManager, logger);
+    m_profileService = std::make_unique<SurfaceProfileService>(m_ddeConnectionManager, logger);
+    m_irregularityMapService = std::make_unique<SurfaceIrregularityMapService>(m_ddeConnectionManager, logger);
+    m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
+    m_profileService->setUiOperationMonitor(&m_uiOpMonitor);
+    m_irregularityMapService->setUiOperationMonitor(&m_uiOpMonitor);
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
     m_menuBarController->setExitCallback([this]() {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
@@ -43,6 +47,7 @@ void GuiManager::initialize(float dpiScale) {
 void GuiManager::render() {
     // Refresh active DDE client in case connection changed via DDE Status UI
     m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
+    m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
 
     m_graphics.beginFrame();
     if (m_menuBarController) {
@@ -50,10 +55,11 @@ void GuiManager::render() {
     }
 
     float navbarHeight = ImGui::GetFrameHeight();
+    float statusBarHeight = m_uiOpMonitor.hasActiveTasks() ? ImGui::GetFrameHeight() * 1.5f : 0.0f;
     ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
         ImGui::GetIO().DisplaySize.x,
-        ImGui::GetIO().DisplaySize.y - navbarHeight
+        ImGui::GetIO().DisplaySize.y - navbarHeight - statusBarHeight
     ));
     ImGui::Begin("MainDockSpace", nullptr,
         ImGuiWindowFlags_NoTitleBar |
@@ -71,43 +77,116 @@ void GuiManager::render() {
         m_pWndMgr->RenderAll();
     }
 
-    if (m_zemaxDDEClient) {
-        if (m_sagService->m_showTolerancedSagWindow) {
-            auto* surface = m_zemaxDDEClient->getTolerancedSurface();
-            if (surface->isValid()) {
-                std::string title = std::format("Toleranced Surface Cross Section ({}°, {} pts)", surface->angle, surface->sampling);
-                m_sagService->renderCrossSectionWindow(title.c_str(), "Toleranced", *surface, &m_sagService->m_showTolerancedSagWindow);
+    {
+        constexpr ImVec2 kDetachedWindowSize(600, 400);
+        auto& tolSurface = m_profileService->m_tolerancedSurfaceData;
+        auto& nomSurface = m_profileService->m_nominalSurfaceData;
+
+        if (m_profileService->m_showTolerancedProfileWindow) {
+            if (tolSurface.isValid()) {
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
+                std::string title = std::format("Toleranced Surface Profile ({}°, {} pts)", tolSurface.angle, tolSurface.sampling);
+                if (ImGui::Begin(title.c_str(), &m_profileService->m_showTolerancedProfileWindow)) {
+                    m_profileService->renderSurfaceProfilePlot("Toleranced", tolSurface, ImVec2(-1, -1));
+                }
+                ImGui::End();
             }
         }
 
-        if (m_sagService->m_showNominalSagWindow) {
-            auto* surface = m_zemaxDDEClient->getNominalSurface();
-            if (surface->isValid()) {
-                std::string title = std::format("Nominal Surface Cross Section ({}°, {} pts)", surface->angle, surface->sampling);
-                m_sagService->renderCrossSectionWindow(title.c_str(), "Nominal", *surface, &m_sagService->m_showNominalSagWindow);
+        if (m_profileService->m_showNominalProfileWindow) {
+            if (nomSurface.isValid()) {
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
+                std::string title = std::format("Nominal Surface Profile ({}°, {} pts)", nomSurface.angle, nomSurface.sampling);
+                if (ImGui::Begin(title.c_str(), &m_profileService->m_showNominalProfileWindow)) {
+                    m_profileService->renderSurfaceProfilePlot("Nominal", nomSurface, ImVec2(-1, -1));
+                }
+                ImGui::End();
             }
         }
 
-        if (m_sagService->m_showComparisonWindow) {
-            auto* nom = m_zemaxDDEClient->getNominalSurface();
-            auto* tol = m_zemaxDDEClient->getTolerancedSurface();
-            if (nom->isValid() && tol->isValid()) {
-                m_sagService->renderComparisonWindow(*nom, *tol, &m_sagService->m_showComparisonWindow);
+        if (m_profileService->m_showComparisonProfileWindow) {
+            if (nomSurface.isValid() && tolSurface.isValid()) {
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
+                if (ImGui::Begin("Surface Profile Comparison", &m_profileService->m_showComparisonProfileWindow)) {
+                    m_profileService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
+                }
+                ImGui::End();
             }
         }
 
-        if (m_sagService->m_showErrorWindow) {
-            auto* nom = m_zemaxDDEClient->getNominalSurface();
-            auto* tol = m_zemaxDDEClient->getTolerancedSurface();
-            if (nom->isValid() && tol->isValid() && nom->sagDataPoints.size() == tol->sagDataPoints.size()) {
-                m_sagService->renderErrorWindow(*nom, *tol, &m_sagService->m_showErrorWindow);
+        if (m_profileService->m_showDeviationProfileWindow) {
+            if (nomSurface.isValid() && tolSurface.isValid()) {
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
+                if (ImGui::Begin("Surface Profile Irregularity (PV)", &m_profileService->m_showDeviationProfileWindow)) {
+                    m_profileService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
+                }
+                ImGui::End();
             }
         }
     }
 
-    SetPopupWindowPosition();
+    {
+        if (m_irregularityMapService->m_showTolerancedSurfaceMap) {
+            if (m_irregularityMapService->hasData()) {
+                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+                if (ImGui::Begin("Surface Irregularity Map 3D", &m_irregularityMapService->m_showTolerancedSurfaceMap)) {
+                    m_irregularityMapService->renderSurfaceMapPlot(ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showTolerancedSurfaceMap = false;
+            }
+        }
+
+        if (m_irregularityMapService->m_showDeviationSurfaceMap) {
+            if (m_irregularityMapService->hasData() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+                if (ImGui::Begin("Surface Irregularity Map 3D Deviation", &m_irregularityMapService->m_showDeviationSurfaceMap)) {
+                    m_irregularityMapService->renderDeviationSurfaceMapPlot(ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showDeviationSurfaceMap = false;
+            }
+        }
+
+        if (m_irregularityMapService->m_showWorstSectionProfile) {
+            if (m_irregularityMapService->m_worstProfileData.isValid()) {
+                constexpr ImVec2 kDetachedWndSize(600, 400);
+                ImGui::SetNextWindowSize(kDetachedWndSize, ImGuiCond_Once);
+                if (ImGui::Begin("Worst Section Profile", &m_irregularityMapService->m_showWorstSectionProfile)) {
+                    auto& wp = m_irregularityMapService->m_worstProfileData;
+                    std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
+                    m_profileService->renderSurfaceProfilePlot(title.c_str(), wp, ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showWorstSectionProfile = false;
+            }
+        }
+
+        if (m_irregularityMapService->m_showWorstSectionDeviation) {
+            if (m_irregularityMapService->m_worstProfileData.isValid()
+                && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+                constexpr ImVec2 kDetachedWndSize(600, 400);
+                ImGui::SetNextWindowSize(kDetachedWndSize, ImGuiCond_Once);
+                if (ImGui::Begin("Worst Section Deviation", &m_irregularityMapService->m_showWorstSectionDeviation)) {
+                    m_profileService->renderProfileDeviationPlot("##WorstDeviation",
+                        m_irregularityMapService->m_nominalSurfaceData,
+                        m_irregularityMapService->m_worstProfileData, ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showWorstSectionDeviation = false;
+            }
+        }
+    }
+
+    ImGuiUtils::SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
+
+    m_uiOpMonitor.renderGlobalStatusBar();
 
     m_graphics.endFrame();
 }
@@ -135,3 +214,4 @@ void GuiManager::renderUpdatesPopup() {
 }
 
 }
+

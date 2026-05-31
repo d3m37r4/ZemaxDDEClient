@@ -11,8 +11,9 @@
 
 #include "gui/constants.h"
 #include "gui/utils.h"
-#include "gui/sag_analysis_service.h"
-#include "gui/sag_map_analysis_service.h"
+#include "gui/surface_profile_service.h"
+#include "gui/surface_irregularity_map_service.h"
+#include "gui/ui_operation_monitor.h"
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
@@ -48,8 +49,8 @@ namespace gui {
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
             void renderOpticalSystemInfo();
-            void renderSurfaceSagAnalysis();
-            void renderSurfaceMapAnalysis();
+            void renderSurfaceProfileInspector();
+            void renderSurfaceIrregularityMap();
             void renderDebugLog();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
@@ -62,14 +63,16 @@ namespace gui {
             Logger& m_logger;
 
             GraphicsBackend m_graphics;
-            std::unique_ptr<SagAnalysisService> m_sagService;
-            std::unique_ptr<SagMapAnalysisService> m_sagMapService;
+            std::unique_ptr<SurfaceProfileService> m_profileService;
+            std::unique_ptr<SurfaceIrregularityMapService> m_irregularityMapService;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<DebugLog> m_debugLogRenderer;
             std::unique_ptr<AboutDialog> m_aboutDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
             DockableWindowsManager* m_pWndMgr{nullptr};
+
+            UiOperationMonitor m_uiOpMonitor;
 
             // State
             bool m_showUpdatesPopup{false};

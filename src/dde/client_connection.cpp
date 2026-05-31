@@ -117,7 +117,7 @@ namespace ZemaxDDE {
         }
     }
 
-    uint64_t ZemaxDDEClient::enqueueRequest(const std::string& command,
+    uint64_t ZemaxDDEClient::submitRequest(const std::string& command,
         std::function<void(const std::string&)> onSuccess,
         std::function<void(const std::string&)> onError,
         DWORD timeoutMs,
@@ -136,57 +136,56 @@ namespace ZemaxDDE {
         req.startTime = GetTickCount();
         m_requestQueue.push_back(std::move(req));
 
-        m_logger.addLog(std::format("[DDE] Enqueued request #{}: '{}' (svc={}, timeout={}ms, retries={})",
+        m_logger.addLog(std::format("[DDE] Submitted request #{}: '{}' (svc={}, timeout={}ms, retries={})",
             id, command, serviceId, timeoutMs, retries));
 
         if (!m_activeRequest) {
-            dequeueAndSend();
+            dispatchNext();
         }
 
         return id;
     }
 
-    void ZemaxDDEClient::dequeueAndSend() {
+    void ZemaxDDEClient::dispatchNext() {
         if (m_requestQueue.empty()) return;
 
         DdeRequest req = std::move(m_requestQueue.front());
         m_requestQueue.pop_front();
 
+        if (!m_hwndZemaxServer) {
+            if (req.onError) req.onError("Zemax is not connected");
+            dispatchNext();
+            return;
+        }
+
+        m_activeRequest = std::move(req);
+        sendRequest(*m_activeRequest);
+    }
+
+    void ZemaxDDEClient::sendRequest(DdeRequest& req) {
         int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
             req.command.data(), static_cast<int>(req.command.size()),
             nullptr, 0);
-        if (wideCharCount == 0) {
-            if (req.onError) req.onError("Failed to convert request to wide string");
-            dequeueAndSend();
-            return;
-        }
 
         std::vector<wchar_t> wItem(wideCharCount + 1);
-        int converted = MultiByteToWideChar(CP_ACP, 0,
+        MultiByteToWideChar(CP_ACP, 0,
             req.command.data(), static_cast<int>(req.command.size()),
             wItem.data(), wideCharCount);
-        if (converted == 0 || converted != wideCharCount) {
-            if (req.onError) req.onError("Failed to convert request to wide string");
-            dequeueAndSend();
-            return;
-        }
-
         wItem[wideCharCount] = L'\0';
-        ATOM aItem = GlobalAddAtomW(wItem.data());
 
-        if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
-                reinterpret_cast<WPARAM>(m_hwndZemaxClient),
-                PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
-            GlobalDeleteAtom(aItem);
-            if (req.onError) req.onError("Cannot communicate with Zemax");
-            dequeueAndSend();
-            return;
-        }
+        ATOM aItem = GlobalAddAtomW(wItem.data());
+        PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
+            reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+            PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
 
         req.startTime = GetTickCount();
-        m_activeRequest = std::move(req);
 
-        m_logger.addLog(std::format("[DDE] Sent request #{}: '{}'", m_activeRequest->id, m_activeRequest->command));
+        m_logger.addLog(std::format("[DDE] Sent request #{}: '{}'", req.id, req.command));
+    }
+
+    void ZemaxDDEClient::finishRequest() {
+        m_activeRequest.reset();
+        dispatchNext();
     }
 
     void ZemaxDDEClient::processTimeouts() {
@@ -200,22 +199,7 @@ namespace ZemaxDDE {
         if (req.retriesLeft > 0) {
             req.retriesLeft--;
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
-            req.startTime = now;
-
-            int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
-                req.command.data(), static_cast<int>(req.command.size()),
-                nullptr, 0);
-            if (wideCharCount > 0) {
-                std::vector<wchar_t> wItem(wideCharCount + 1);
-                MultiByteToWideChar(CP_ACP, 0, req.command.data(),
-                    static_cast<int>(req.command.size()),
-                    wItem.data(), wideCharCount);
-                wItem[wideCharCount] = L'\0';
-                ATOM aItem = GlobalAddAtomW(wItem.data());
-                PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
-                    reinterpret_cast<WPARAM>(m_hwndZemaxClient),
-                    PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
-            }
+            sendRequest(req);
 
             m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
                 m_activeRequest->retriesLeft, req.id, req.command, req.timeoutMs));
@@ -224,8 +208,7 @@ namespace ZemaxDDE {
             if (req.onError) {
                 req.onError("Timeout");
             }
-            m_activeRequest.reset();
-            dequeueAndSend();
+            finishRequest();
         }
     }
 
@@ -309,13 +292,12 @@ namespace ZemaxDDE {
 
                     bool matched = false;
                     if (m_activeRequest && dde_item_str == m_activeRequest->command) {
+                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={})",
+                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId));
                         if (m_activeRequest->onSuccess) {
                             m_activeRequest->onSuccess(buffer);
                         }
-                        m_logger.addLog(std::format("[DDE] Routed to request #{} ('{}', svc={})",
-                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId));
-                        m_activeRequest.reset();
-                        dequeueAndSend();
+                        finishRequest();
                         DdeAck.fAck = true;
                         matched = true;
                     }

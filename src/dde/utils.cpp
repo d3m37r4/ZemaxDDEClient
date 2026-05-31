@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <format>
 #include <windows.h>
 
 namespace ZemaxDDE {
@@ -81,5 +82,18 @@ namespace ZemaxDDE {
         }
 
         return tokens;
+    }
+
+    std::string formatDuration(std::chrono::milliseconds dur) {
+        auto ms = dur.count();
+        auto hours = ms / 3'600'000; ms %= 3'600'000;
+        auto mins  = ms / 60'000;    ms %= 60'000;
+        auto secs  = ms / 1000.0;
+
+        if (hours > 0)
+            return std::format("{}h {}m {:.3f}s", hours, mins, secs);
+        if (mins > 0)
+            return std::format("{}m {:.3f}s", mins, secs);
+        return std::format("{:.3f}s", secs);
     }
 }
