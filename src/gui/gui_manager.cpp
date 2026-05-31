@@ -137,6 +137,49 @@ void GuiManager::render() {
                 m_irregularityMapService->m_showTolerancedSurfaceMap = false;
             }
         }
+
+        if (m_irregularityMapService->m_showDeviationSurfaceMap) {
+            if (m_irregularityMapService->hasData() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+                if (ImGui::Begin("Surface Irregularity Map 3D Deviation", &m_irregularityMapService->m_showDeviationSurfaceMap)) {
+                    m_irregularityMapService->renderDeviationSurfaceMapPlot(ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showDeviationSurfaceMap = false;
+            }
+        }
+
+        if (m_irregularityMapService->m_showWorstSectionProfile) {
+            if (m_irregularityMapService->m_worstProfileData.isValid()) {
+                constexpr ImVec2 kDetachedWndSize(600, 400);
+                ImGui::SetNextWindowSize(kDetachedWndSize, ImGuiCond_Once);
+                if (ImGui::Begin("Worst Section Profile", &m_irregularityMapService->m_showWorstSectionProfile)) {
+                    auto& wp = m_irregularityMapService->m_worstProfileData;
+                    std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
+                    m_profileService->renderSurfaceProfilePlot(title.c_str(), wp, ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showWorstSectionProfile = false;
+            }
+        }
+
+        if (m_irregularityMapService->m_showWorstSectionDeviation) {
+            if (m_irregularityMapService->m_worstProfileData.isValid()
+                && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+                constexpr ImVec2 kDetachedWndSize(600, 400);
+                ImGui::SetNextWindowSize(kDetachedWndSize, ImGuiCond_Once);
+                if (ImGui::Begin("Worst Section Deviation", &m_irregularityMapService->m_showWorstSectionDeviation)) {
+                    m_profileService->renderProfileDeviationPlot("##WorstDeviation",
+                        m_irregularityMapService->m_nominalSurfaceData,
+                        m_irregularityMapService->m_worstProfileData, ImVec2(-1, -1));
+                }
+                ImGui::End();
+            } else {
+                m_irregularityMapService->m_showWorstSectionDeviation = false;
+            }
+        }
     }
 
     ImGuiUtils::SetPopupWindowPosition();
