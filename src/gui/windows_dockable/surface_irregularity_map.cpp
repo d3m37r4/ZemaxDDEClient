@@ -25,9 +25,9 @@ namespace {
     }
 
     std::string getAngleStepTooltip() {
-        return "Angular step between points on each ring in degrees.\n"
-               "Full circle: 0° to 360°.\n"
-               "Smaller step = more detailed surface, slower calculation.";
+        return "Angular step between cross-section profiles in degrees.\n"
+               "Profiles span 180° (each profile gives two opposite radial lines).\n"
+               "Smaller step = more sections, smoother 3D surface, slower calculation.";
     }
 
     std::string getAngleTooltip() {
@@ -208,9 +208,14 @@ namespace gui {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
         ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
-        state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 360.0);
+        state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 180.0);
         ImGui::SameLine();
         ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
+
+        int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
+        ImGui::TextUnformatted("Number of sections:");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(std::to_string(numSections).c_str());
 
         ImGui::EndDisabled();
 
@@ -223,7 +228,6 @@ namespace gui {
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
                 m_irregularityMapService->cancelMapCalculation();
-                m_irregularityMapService->clearData();
             }
         } else if (m_uiOpMonitor.hasActiveTasks()) {
             ImGui::BeginDisabled(true);
@@ -241,28 +245,75 @@ namespace gui {
             ImGui::EndDisabled();
         }
 
-        // TODO: Re-enable Max-PV analysis
-        /*
-        ImGui::SameLine();
-
-        ImGui::BeginDisabled(!isDDEInitialized() || !hasData || !hasNominal);
-        if (ImGui::Button("Find Max-PV Section")) {
-            auto result = m_irregularityMapService->findMaxPVSection();
-            if (result.has_value()) {
-                m_logger.addLog(std::format("[IrregularityMapService] Max-PV: Angle={:.2f}°, Peak={:.6f}, Valley={:.6f}, PV={:.6f}",
-                    result->angle, result->peak, result->valley, result->pv));
-            }
-        }
-        ImGui::EndDisabled();
-        */
-
         if (m_irregularityMapService->hasData()) {
+            bool calculating = m_uiOpMonitor.isActive(TaskSource::SurfaceIrregularityMap);
+
             ImGui::SeparatorText("Results");
-            ImGui::Text(std::format("Rings calculated: {}", m_irregularityMapService->getSections().size()).c_str());
+
+            ImGui::BeginDisabled(calculating);
+
+            const auto& profiles = m_irregularityMapService->getProfiles();
+            ImGui::Text(std::format("Sections calculated: {} ({}° step, {} pts each)",
+                profiles.size(), state.tolerancedAngleStep, state.tolerancedSampling).c_str());
+
+            auto& maxPV = m_irregularityMapService->getMaxPVResult();
+            if (maxPV.has_value() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+                ImGui::Spacing();
+                ImGui::TextUnformatted("Maximum P-V section:");
+                ImGui::Text(std::format("  Angle: {:.2f}°", maxPV->angle).c_str());
+                ImGui::Text(std::format("  Peak (P):  {:.6f} mm", maxPV->peak).c_str());
+                ImGui::Text(std::format("  Valley (V): {:.6f} mm", maxPV->valley).c_str());
+                ImGui::Text(std::format("  P-V:       {:.6f} mm", maxPV->pv).c_str());
+
+                ImGui::Spacing();
+                if (ImGui::Button("Show worst section profile")) {
+                    for (const auto& p : profiles) {
+                        if (std::abs(p.angle - maxPV->angle) < 0.01) {
+                            m_irregularityMapService->m_worstProfileData = p;
+                            m_irregularityMapService->m_showWorstSectionProfile = true;
+                            break;
+                        }
+                    }
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Show deviation graphic")) {
+                    if (!m_irregularityMapService->m_worstProfileData.isValid()) {
+                        for (const auto& p : profiles) {
+                            if (std::abs(p.angle - maxPV->angle) < 0.01) {
+                                m_irregularityMapService->m_worstProfileData = p;
+                                break;
+                            }
+                        }
+                    }
+                    m_irregularityMapService->m_showWorstSectionDeviation = true;
+                }
+            }
 
             if (ImGui::Button("Show 3D surface map")) {
                 m_irregularityMapService->m_showTolerancedSurfaceMap = true;
             }
+
+            ImGui::SameLine();
+
+            ImGui::BeginDisabled(!m_irregularityMapService->m_nominalSurfaceData.isValid());
+            if (ImGui::Button("Show 3D deviation map")) {
+                m_irregularityMapService->m_showDeviationSurfaceMap = true;
+            }
+            ImGui::EndDisabled();
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Clear data")) {
+                m_irregularityMapService->clearData();
+                m_irregularityMapService->m_showTolerancedSurfaceMap = false;
+                m_irregularityMapService->m_showDeviationSurfaceMap = false;
+                m_irregularityMapService->m_showWorstSectionProfile = false;
+                m_irregularityMapService->m_showWorstSectionDeviation = false;
+            }
+
+            ImGui::EndDisabled();
         }
 
         ImGui::EndChild();
