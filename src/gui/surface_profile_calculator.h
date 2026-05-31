@@ -17,7 +17,7 @@ namespace gui {
 
             void setMonitor(UiOperationMonitor* monitor) { m_uiOpMonitor = monitor; }
 
-            void startCalculation(int surface, int sampling, double angle, TaskSource source);
+            void startCalculation(int surface, int sampling, double angle, TaskSource source, const std::string& label = "");
             void cancel();
             void reset() { m_state = State::Idle; m_error.clear(); m_result = {}; m_taskId = 0; m_skippedPoints = 0; }
 

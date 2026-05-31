@@ -26,7 +26,7 @@ namespace gui {
     }
 
     void SurfaceProfileCalculator::startCalculation(
-        int surface, int sampling, double angle, TaskSource source)
+        int surface, int sampling, double angle, TaskSource source, const std::string& label)
     {
         auto* client = getClient();
         if (!client) {
@@ -38,9 +38,10 @@ namespace gui {
 
         m_source = source;
         if (m_uiOpMonitor) {
-            std::string label = (source == TaskSource::NominalSurfaceProfile)
-                ? "Nominal Profile" : "Toleranced Profile";
-            m_taskId = m_uiOpMonitor->startTask(source, label, sampling);
+            std::string taskLabel = label.empty()
+                ? (source == TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
+                : label;
+            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling);
         }
 
         m_state = State::FetchingSurfaceData;
