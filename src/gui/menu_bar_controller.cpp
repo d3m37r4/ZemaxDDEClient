@@ -34,6 +34,10 @@ namespace gui {
         m_onSidebarToggle = std::move(cb);
     }
 
+    void MenuBarController::setThemeToggleCallback(std::function<void()> cb) {
+        m_onThemeToggle = std::move(cb);
+    }
+
     void MenuBarController::render() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
@@ -62,6 +66,12 @@ namespace gui {
                     if (ImGui::MenuItem(name, nullptr, &visible)) {
                         m_pWndMgr->SetVisible(id, visible);
                     }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("View")) {
+                if (ImGui::MenuItem("Switch Theme")) {
+                    if (m_onThemeToggle) m_onThemeToggle();
                 }
                 ImGui::EndMenu();
             }

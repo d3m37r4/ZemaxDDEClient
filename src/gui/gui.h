@@ -33,9 +33,10 @@ namespace gui {
             GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger);
             ~GuiManager();
 
-            void initialize(float dpiScale = 1.0f);
+            void initialize(bool isLightTheme, float dpiScale = 1.0f);
             void render();
             void updateDpiStyle(float dpiScale);
+            void toggleTheme();
 
             void renderAboutPopup();
             void renderUpdatesPopup();

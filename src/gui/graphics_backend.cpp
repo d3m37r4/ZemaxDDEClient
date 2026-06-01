@@ -29,13 +29,17 @@ namespace gui {
         }
     }
 
-    void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, float initialDpiScale) {
+    void GraphicsBackend::initialize(GLFWwindow* window, Logger& logger, bool isLightTheme, float initialDpiScale) {
         m_window = window;
         m_logger = &logger;
 
         if (!m_window) {
             throw std::runtime_error("Invalid GLFW window");
         }
+
+        // Register built-in themes
+        m_themeManager.registerTheme(ThemeData::CreateWin11Light());
+        m_themeManager.registerTheme(ThemeData::CreateWin11Dark());
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -54,33 +58,44 @@ namespace gui {
         io.ConfigDpiScaleFonts = true;
         io.ConfigDpiScaleViewports = true;
 
-        std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
-        const std::string fontPathStr = fontPath.string();
+        // Load Segoe UI with Cyrillic support
+        {
+            std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
+            const std::string fontPathStr = fontPath.string();
 
-        float baseFontSize = BASE_FONT_SIZE;
-        ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize);
+            float baseFontSize = BASE_FONT_SIZE;
+            ImFontConfig fontCfg;
+            fontCfg.OversampleH = 2;
+            fontCfg.OversampleV = 1;
+            fontCfg.PixelSnapH = true;
+            ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize, &fontCfg, io.Fonts->GetGlyphRangesCyrillic());
 
-        if (!font) {
-            logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
+            if (!font) {
+                font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize);
+            }
+
+            if (!font) {
+                logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
+            }
         }
 
         ImGuiStyle& style = ImGui::GetStyle();
         style.FontScaleDpi = dpiScale;
-        style.WindowPadding = ImVec2(8.0f, 8.0f);
-        style.FramePadding = ImVec2(4.0f, 4.0f);
-        style.ItemSpacing = ImVec2(8.0f, 4.0f);
-        style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
-        style.IndentSpacing = 25.0f;
-        style.ScrollbarSize = 15.0f;
-        style.GrabMinSize = 10.0f;
 
         ImGui_ImplGlfw_InitForOpenGL(m_window, true);
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 
+        // Apply initial theme
+        if (isLightTheme) {
+            m_themeManager.apply("Windows 11 Light");
+        } else {
+            m_themeManager.apply("Windows 11 Dark");
+        }
+
         updateDpiStyle(dpiScale);
 
-        logger.addLog("[GUI] GUI initialized");
+        logger.addLog(std::format("[GUI] GUI initialized (theme: {})", m_themeManager.currentThemeName()));
     }
 
     void GraphicsBackend::updateDpiStyle(float dpiScale) {
@@ -97,10 +112,23 @@ namespace gui {
     }
 
     void GraphicsBackend::endFrame() {
-        glClearColor(0.12f, 0.12f, 0.12f, 1.0f);
+        ImVec4 bg = m_themeManager.getClearColor();
+        glClearColor(bg.x, bg.y, bg.z, bg.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+
+    void GraphicsBackend::applyTheme(bool isLight) {
+        if (isLight) {
+            m_themeManager.apply("Windows 11 Light");
+        } else {
+            m_themeManager.apply("Windows 11 Dark");
+        }
+    }
+
+    void GraphicsBackend::toggleTheme() {
+        m_themeManager.toggle();
     }
 }

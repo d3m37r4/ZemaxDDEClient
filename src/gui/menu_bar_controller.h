@@ -19,11 +19,13 @@ namespace gui {
             void setDDEConnectionManager(DDEConnectionManager* ddeMgr);
             void setWindowManager(DockableWindowsManager* wndMgr);
             void setSidebarToggleCallback(std::function<void(bool)> cb);
+            void setThemeToggleCallback(std::function<void()> cb);
         private:
             Logger& m_logger;
             std::function<void()> m_onExit;
             std::function<void()> m_onAbout;
             std::function<void()> m_onUpdates;
+            std::function<void()> m_onThemeToggle;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             DockableWindowsManager* m_pWndMgr{nullptr};
             std::function<void(bool)> m_onSidebarToggle;

@@ -40,8 +40,16 @@ namespace gui {
 
 GuiManager::~GuiManager() = default;
 
-void GuiManager::initialize(float dpiScale) {
-    m_graphics.initialize(m_glfwWindow, m_logger, dpiScale);
+void GuiManager::initialize(bool isLightTheme, float dpiScale) {
+    m_graphics.initialize(m_glfwWindow, m_logger, isLightTheme, dpiScale);
+    m_menuBarController->setThemeToggleCallback([this]() {
+        toggleTheme();
+    });
+}
+
+void GuiManager::toggleTheme() {
+    m_graphics.toggleTheme();
+    m_logger.addLog(std::format("[GUI] Theme switched to: {}", m_graphics.getThemeManager().currentThemeName()));
 }
 
 void GuiManager::render() {
