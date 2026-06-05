@@ -147,19 +147,53 @@ namespace ZemaxDDE {
     }
 
     void ZemaxDDEClient::dispatchNext() {
-        if (m_requestQueue.empty()) return;
+        // Defensive: caller contract is that m_activeRequest is null here.
+        // If not, do nothing to avoid overwriting an in-flight request.
+        // Public callers (submitRequest) already check this, but the guard
+        // makes the function idempotent for any future internal callers.
+        if (m_activeRequest) return;
 
-        DdeRequest req = std::move(m_requestQueue.front());
-        m_requestQueue.pop_front();
+        // Track consecutive 'Zemax is not connected' errors in this call to
+        // emit a diagnostic warning when a server-side outage causes a batch
+        // of failures (avoids per-request log spam for normal cases).
+        size_t consecutiveErrors = 0;
 
-        if (!m_hwndZemaxServer) {
-            if (req.onError) req.onError("Zemax is not connected");
-            dispatchNext();
-            return;
+        // Iterative loop: avoid unbounded recursion if m_hwndZemaxServer is
+        // null and the queue holds many failed requests (audit C-5).
+        // Each iteration processes one request; the loop drains the queue
+        // until either an active request is dispatched (return) or the
+        // queue is empty.
+        while (!m_requestQueue.empty()) {
+            DdeRequest req = std::move(m_requestQueue.front());
+            m_requestQueue.pop_front();
+
+            if (!m_hwndZemaxServer) {
+                if (req.onError) req.onError("Zemax is not connected");
+                ++consecutiveErrors;
+                continue;
+            }
+
+            m_activeRequest = std::move(req);
+            sendRequest(*m_activeRequest);
+
+            if (consecutiveErrors >= kMassErrorWarnThreshold) {
+                m_logger.addLog(std::format(
+                    "[DDE] Warning: {} consecutive requests failed with "
+                    "'Zemax is not connected' before a successful dispatch. "
+                    "Server may have disconnected mid-batch.",
+                    consecutiveErrors));
+            }
+            return;  // active request set; wait for finishRequest()
         }
 
-        m_activeRequest = std::move(req);
-        sendRequest(*m_activeRequest);
+        // Queue drained without setting an active request (all errored).
+        if (consecutiveErrors >= kMassErrorWarnThreshold) {
+            m_logger.addLog(std::format(
+                "[DDE] Warning: {} consecutive requests failed with "
+                "'Zemax is not connected'. Queue is empty; server is likely "
+                "disconnected.",
+                consecutiveErrors));
+        }
     }
 
     void ZemaxDDEClient::sendRequest(DdeRequest& req) {

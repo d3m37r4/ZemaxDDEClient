@@ -29,6 +29,13 @@ namespace ZemaxDDE {
 
     class ZemaxDDEClient {
         public:
+            /// Threshold for emitting a mass-error diagnostic warning when
+            /// multiple consecutive DDE requests fail with 'Zemax is not connected'
+            /// in a single dispatchNext() invocation. 50 is large enough to
+            /// avoid log spam for normal single failures but small enough to
+            /// flag server-side outages in production.
+            static constexpr size_t kMassErrorWarnThreshold = 50;
+
             ZemaxDDEClient(HWND hwndClient, Logger& logger);
             ~ZemaxDDEClient();
 
