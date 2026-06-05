@@ -22,7 +22,8 @@ namespace App {
         if (user32) {
             using SetProcessDpiAwarenessContextFunc = BOOL (WINAPI*)(void*);
             auto fp = GetProcAddress(user32, "SetProcessDpiAwarenessContext");
-            auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(reinterpret_cast<void*>(fp));
+            auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(
+                reinterpret_cast<void(*)()>(fp));
             if (func) {
                 // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (DPI_AWARENESS_CONTEXT)-4
                 func((void*)-4);
