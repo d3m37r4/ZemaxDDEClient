@@ -38,10 +38,7 @@ public:
     size_t themeCount() const { return m_themes.size(); }
 
 private:
-    struct RegisteredTheme {
-        ThemeData data;
-    };
-    std::vector<RegisteredTheme> m_themes;
+    std::vector<ThemeData> m_themes;
     size_t m_current = 0;
 
     void applyThemeData(const ThemeData& data);

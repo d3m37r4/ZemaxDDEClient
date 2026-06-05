@@ -237,16 +237,14 @@ ThemeData ThemeData::CreateWin11Dark() {
 //  ThemeManager
 // ===============================================================
 void ThemeManager::registerTheme(const ThemeData& theme) {
-    RegisteredTheme rt;
-    rt.data = theme;
-    m_themes.push_back(std::move(rt));
+    m_themes.push_back(theme);
 }
 
 bool ThemeManager::apply(const std::string& name) {
     for (size_t i = 0; i < m_themes.size(); ++i) {
-        if (m_themes[i].data.name == name) {
+        if (m_themes[i].name == name) {
             m_current = i;
-            applyThemeData(m_themes[i].data);
+            applyThemeData(m_themes[i]);
             return true;
         }
     }
@@ -256,12 +254,12 @@ bool ThemeManager::apply(const std::string& name) {
 void ThemeManager::toggle() {
     // Toggle between light/dark: find first theme with opposite isLight
     if (m_themes.empty()) return;
-    bool currentLight = m_themes[m_current].data.isLight;
+    bool currentLight = m_themes[m_current].isLight;
     for (size_t i = 0; i < m_themes.size(); ++i) {
         size_t idx = (m_current + 1 + i) % m_themes.size();
-        if (m_themes[idx].data.isLight != currentLight) {
+        if (m_themes[idx].isLight != currentLight) {
             m_current = idx;
-            applyThemeData(m_themes[idx].data);
+            applyThemeData(m_themes[idx]);
             return;
         }
     }
@@ -272,23 +270,23 @@ void ThemeManager::toggle() {
 void ThemeManager::next() {
     if (m_themes.empty()) return;
     m_current = (m_current + 1) % m_themes.size();
-    applyThemeData(m_themes[m_current].data);
+    applyThemeData(m_themes[m_current]);
 }
 
 bool ThemeManager::isLight() const {
     if (m_themes.empty()) return true;
-    return m_themes[m_current].data.isLight;
+    return m_themes[m_current].isLight;
 }
 
 ImVec4 ThemeManager::getClearColor() const {
     if (m_themes.empty()) return ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
-    return m_themes[m_current].data.clearColor;
+    return m_themes[m_current].clearColor;
 }
 
 const std::string& ThemeManager::currentThemeName() const {
     static const std::string s_empty;
     if (m_themes.empty()) return s_empty;
-    return m_themes[m_current].data.name;
+    return m_themes[m_current].name;
 }
 
 static void applyGeometry() {
