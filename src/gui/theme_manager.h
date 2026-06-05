@@ -1,11 +1,15 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <imgui.h>
 #include <implot.h>
 #include <implot3d.h>
+
+inline constexpr std::string_view kThemeNameLight = "Windows 11 Light";
+inline constexpr std::string_view kThemeNameDark  = "Windows 11 Dark";
 
 struct ThemeData {
     std::string name;

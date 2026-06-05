@@ -89,6 +89,11 @@ namespace gui {
 
         bool connected = (activeIdx >= 0);
 
+        // Intentionally bypassing ImGui theme tokens (ImGuiCol_Button*) with hardcoded
+        // colors from gui/constants.h. This is a deliberate UX decision: DDE connect/disconnect
+        // status must remain visually unambiguous regardless of the active theme
+        // (green = connect, red = disconnect). If a future theme system exposes semantic
+        // status tokens, replace these constants with theme-aware values.
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
         ImGui::PushStyleColor(ImGuiCol_Button, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_NORMAL : gui::DDE_BUTTON_CONNECT_COLOR_NORMAL);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_HOVER : gui::DDE_BUTTON_CONNECT_COLOR_HOVER);

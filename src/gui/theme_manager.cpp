@@ -12,7 +12,7 @@ static ImVec4 col(int r, int g, int b, int a = 255) {
 // ===============================================================
 ThemeData ThemeData::CreateWin11Light() {
     ThemeData t;
-    t.name    = "Windows 11 Light";
+    t.name    = std::string{kThemeNameLight};
     t.isLight = true;
     t.clearColor = col(255, 255, 255);
 
@@ -125,7 +125,7 @@ ThemeData ThemeData::CreateWin11Light() {
 // ===============================================================
 ThemeData ThemeData::CreateWin11Dark() {
     ThemeData t;
-    t.name    = "Windows 11 Dark";
+    t.name    = std::string{kThemeNameDark};
     t.isLight = false;
     t.clearColor = col(22, 27, 34);  // #161b22
 

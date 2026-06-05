@@ -88,9 +88,9 @@ namespace gui {
 
         // Apply initial theme
         if (isLightTheme) {
-            m_themeManager.apply("Windows 11 Light");
+            m_themeManager.apply(std::string{kThemeNameLight});
         } else {
-            m_themeManager.apply("Windows 11 Dark");
+            m_themeManager.apply(std::string{kThemeNameDark});
         }
 
         updateDpiStyle(dpiScale);
