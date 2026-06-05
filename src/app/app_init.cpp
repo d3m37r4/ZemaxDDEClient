@@ -11,6 +11,14 @@ namespace App {
     constexpr int BASE_WIDTH = 800;
     constexpr int BASE_HEIGHT = 600;
 
+    // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 has no public symbol in
+    // MinGW <dde.h> / <winuser.h>, so it must be expressed as a literal pointer.
+    // The numeric value is fixed by Windows SDK and is guaranteed stable.
+    // Not constexpr: reinterpret_cast from integer to pointer is not allowed
+    // in constant expressions in C++23. The variable is initialized once at
+    // program startup and never changes, so the cost difference is negligible.
+    void* const kDpiAwarenessContextPerMonitorV2 = reinterpret_cast<void*>(-4);
+
     std::unique_ptr<AppContext> initialize(Logger& logger) {
         auto ctx = std::make_unique<AppContext>();
 
@@ -25,8 +33,7 @@ namespace App {
             auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(
                 reinterpret_cast<void(*)()>(fp));
             if (func) {
-                // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (DPI_AWARENESS_CONTEXT)-4
-                func((void*)-4);
+                func(kDpiAwarenessContextPerMonitorV2);
                 logger.addLog("[APP] DPI Awareness set to Per-Monitor V2 (runtime)");
             } else {
                 SetProcessDPIAware();
