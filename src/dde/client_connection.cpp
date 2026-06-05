@@ -235,7 +235,6 @@ namespace ZemaxDDE {
     };
 
     LRESULT ZemaxDDEClient::handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam) {
-        DDEACK DdeAck{};
         ATOM aItem;
         UINT_PTR lowWord, highWord;
         std::string buffer;
@@ -267,14 +266,47 @@ namespace ZemaxDDE {
                 return 0;
             }
             case WM_DDE_DATA: {
+                // ====== CLIENT-SIDE ACK STRUCTURE ======
+                // `clientAck` is what WE (the client) send back to the server in WM_DDE_ACK.
+                // It is NOT a server-side data structure.
+                // Field semantics (from client's perspective):
+                //   • clientAck.fAck       — "I successfully received and processed the data"
+                //   • clientAck.fBusy      — "I am NOT busy" (always 0; we don't defer)
+                //   • clientAck.fRelease   — "I do NOT request server to free anything" (always 0)
+                //   • clientAck.fAckReq    — "I do NOT request ACK for my own ACK" (always 0)
+                DDEACK clientAck{};
+
                 UnpackDDElParam(WM_DDE_DATA, lParam, &lowWord, &highWord);
                 FreeDDElParam(WM_DDE_DATA, lParam);
 
+                // ====== SERVER-SIDE DATA STRUCTURE ======
+                // `serverData` is the DDEDATA structure the SERVER (Zemax) sent us.
+                // We never modify it — we only read its flags and copy its Value[].
+                // Field semantics (from server's perspective):
+                //   • serverData->fAckReq  — "Server REQUESTS us to send WM_DDE_ACK"
+                //   • serverData->fRelease — "Server REQUESTS us to GlobalFree the handle after reading"
+                //   • serverData->fAck     — "Server is acknowledging a previous request"
+                //   • serverData->fBusy    — "Server is busy, will respond later"
                 GLOBALHANDLE ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
-                GlobalLockGuard ddeDataLock(ddeDataHandle);
+                GlobalLockGuard serverDataLock(ddeDataHandle);
                 aItem = static_cast<ATOM>(highWord);
 
-                if (ddeDataLock.isValid() && ddeDataLock.as<::DDEDATA>()->cfFormat == CF_TEXT) {
+                // ====== C-1 FIX: validate GlobalLock before dereferencing ======
+                // Pre-existing bug: previously, ddeDataLock was validated only at the
+                // start of the CF_TEXT block. If GlobalLock returned nullptr (invalid
+                // handle, race with server freeing the handle, memory pressure), code
+                // would dereference nullptr when reading fAckReq / fRelease below,
+                // causing a process crash. Now we validate ONCE up front and cache
+                // the pointer for safe subsequent access.
+                if (!serverDataLock.isValid()) {
+                    // Cannot read server's data — drop atom and exit.
+                    // No ACK sent (server will eventually timeout).
+                    GlobalDeleteAtom(aItem);
+                    return 0;
+                }
+                auto* serverData = serverDataLock.as<::DDEDATA>();
+
+                if (serverData->cfFormat == CF_TEXT) {
                     char item[512]; 
                     wchar_t wItem[512];
                     GlobalGetAtomNameW(aItem, wItem, sizeof(wItem));
@@ -284,7 +316,7 @@ namespace ZemaxDDE {
                     std::vector<std::string> item_tokens = ZemaxDDE::tokenize(dde_item_str);
                     std::string command_token = item_tokens.empty() ? "" : item_tokens[0];
 
-                    buffer = reinterpret_cast<char*>(ddeDataLock.as<::DDEDATA>()->Value);
+                    buffer = reinterpret_cast<char*>(serverData->Value);
 
                     #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
@@ -298,7 +330,7 @@ namespace ZemaxDDE {
                             m_activeRequest->onSuccess(buffer);
                         }
                         finishRequest();
-                        DdeAck.fAck = true;
+                        clientAck.fAck = true;
                         matched = true;
                     }
 
@@ -314,12 +346,12 @@ namespace ZemaxDDE {
                                 m_logger.addLog("[DDE] GetName: empty lens name, using default 'unknown'");
                             }
                             m_opticalSystem.lensName = name;
-                            DdeAck.fAck = true;
+                            clientAck.fAck = true;
                         }
                         if (command_token == "GetFile") {
                             std::string fileNameStr = extractStringFromDDE(ddeDataHandle);
                             m_opticalSystem.fileName = fileNameStr;
-                            DdeAck.fAck = true;
+                            clientAck.fAck = true;
                         }
                         if (command_token == "GetSystem") {
                             const int GET_SYSTEM_PARAMS_COUNT = 9;
@@ -355,7 +387,7 @@ namespace ZemaxDDE {
                                 m_opticalSystem.pressure      = std::stod(systemParams[PRESSURE]);
                                 m_opticalSystem.globalRefSurf = std::stoi(systemParams[GLOBAL_REF_SURF]);
 
-                                DdeAck.fAck = true;
+                                clientAck.fAck = true;
                             } catch (const std::invalid_argument& e) {
                                 m_logger.addLog(std::format("[DDE] GetSystem: Invalid number format in parameter: {}", e.what()));
                                 return 0;
@@ -452,7 +484,7 @@ namespace ZemaxDDE {
                                                         ZemaxDDE::MIN_FIELDS, ZemaxDDE::MAX_FIELDS, arg));
                                 return 0;
                             }
-                            DdeAck.fAck = true;
+                            clientAck.fAck = true;
                         }
                         if (command_token == "GetWave") {
                             const int EXPECTED_COMMAND_TOKENS = 2;
@@ -533,19 +565,34 @@ namespace ZemaxDDE {
                                                         ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_FIELDS, arg));
                                 return 0;
                             }
-                            DdeAck.fAck = true;
+                            clientAck.fAck = true;
                         }
                         if (command_token == "GetSurfaceData") {
-                            DdeAck.fAck = true;
+                            clientAck.fAck = true;
                         }
                         if (command_token == "GetSag") {
-                            DdeAck.fAck = true;
+                            clientAck.fAck = true;
                         }
                     }
                 }
-                if (ddeDataLock.as<::DDEDATA>()->fAckReq == true) {
-                    WORD wStatus;
-                    memcpy(&wStatus, &DdeAck, sizeof(wStatus));
+                if (serverData->fAckReq == true) {
+                    // Server wants our ACK. Build the status word per DDE protocol:
+                    //   bit 13: fAck      (clientAck.fAck  ? 1 : 0)
+                    //   bit 12: fBusy     (clientAck.fBusy ? 1 : 0 — always 0; client never busy)
+                    //   bits 0-11, 14-15: unused/reserved (0)
+                    //
+                    // NOTE: DDEACK in MinGW's <dde.h> only has fields {unused, fBusy, fAck}.
+                    // fRelease is a SERVER-side flag (in DDEDATA), not part of the client's
+                    // outgoing DDEACK, so it is correctly omitted here. Constructed
+                    // explicitly (not via memcpy of the DDEACK struct) so the bit
+                    // positions match the wire protocol regardless of how the compiler
+                    // arranges the bitfields in DDEACK (MSVC vs MinGW/GCC differ).
+                    static_assert(sizeof(::DDEACK) == sizeof(WORD),
+                        "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
+                    WORD wStatus = static_cast<WORD>(
+                        (clientAck.fAck  ? 0x2000 : 0) |
+                        (clientAck.fBusy ? 0x1000 : 0)
+                    );
                     if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
                         GlobalDeleteAtom(aItem);
                         GlobalFree(ddeDataHandle);
@@ -554,7 +601,15 @@ namespace ZemaxDDE {
                 } else {
                     GlobalDeleteAtom(aItem);
                 }
-                if (ddeDataLock.as<::DDEDATA>()->fRelease == true || DdeAck.fAck == false) {
+
+                // Free the handle per DDE protocol in two cases:
+                //   1) Server explicitly requested release (serverData->fRelease = true).
+                //      This is the standard happy path for large data.
+                //   2) We did NOT acknowledge success (clientAck.fAck = false).
+                //      Cleanup on error to prevent handle leak. Per DDE protocol,
+                //      if the client cannot process the data, it should still free
+                //      the handle to avoid memory leak in the server's process.
+                if (serverData->fRelease == true || clientAck.fAck == false) {
                     GlobalFree(ddeDataHandle);
                 }
                 return 0;
