@@ -274,7 +274,7 @@ void ThemeManager::next() {
 }
 
 bool ThemeManager::isLight() const {
-    if (m_themes.empty()) return true;
+    if (m_themes.empty()) return false;
     return m_themes[m_current].isLight;
 }
 
