@@ -11,6 +11,14 @@ namespace App {
     constexpr int BASE_WIDTH = 800;
     constexpr int BASE_HEIGHT = 600;
 
+    // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 has no public symbol in
+    // MinGW <dde.h> / <winuser.h>, so it must be expressed as a literal pointer.
+    // The numeric value is fixed by Windows SDK and is guaranteed stable.
+    // Not constexpr: reinterpret_cast from integer to pointer is not allowed
+    // in constant expressions in C++23. The variable is initialized once at
+    // program startup and never changes, so the cost difference is negligible.
+    void* const kDpiAwarenessContextPerMonitorV2 = reinterpret_cast<void*>(-4);
+
     std::unique_ptr<AppContext> initialize(Logger& logger) {
         auto ctx = std::make_unique<AppContext>();
 
@@ -22,10 +30,10 @@ namespace App {
         if (user32) {
             using SetProcessDpiAwarenessContextFunc = BOOL (WINAPI*)(void*);
             auto fp = GetProcAddress(user32, "SetProcessDpiAwarenessContext");
-            auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(reinterpret_cast<void*>(fp));
+            auto* func = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(
+                reinterpret_cast<void(*)()>(fp));
             if (func) {
-                // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = (DPI_AWARENESS_CONTEXT)-4
-                func((void*)-4);
+                func(kDpiAwarenessContextPerMonitorV2);
                 logger.addLog("[APP] DPI Awareness set to Per-Monitor V2 (runtime)");
             } else {
                 SetProcessDPIAware();
@@ -64,8 +72,23 @@ namespace App {
         glfwMakeContextCurrent(ctx->glfwWindow);
         glfwSwapInterval(1);
 
+        // Detect system theme via registry (Windows 10/11)
+        bool isDarkMode = false;
+        HKEY hKey = nullptr;
+        LONG regResult = RegOpenKeyExW(HKEY_CURRENT_USER,
+            L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            0, KEY_READ, &hKey);
+        if (regResult == ERROR_SUCCESS) {
+            DWORD lightTheme = 1;
+            DWORD dataSize = sizeof(DWORD);
+            if (RegQueryValueExW(hKey, L"AppsUseLightTheme", nullptr, nullptr,
+                    (LPBYTE)&lightTheme, &dataSize) == ERROR_SUCCESS) {
+                isDarkMode = (lightTheme == 0);
+            }
+            RegCloseKey(hKey);
+        }
+
         // Apply system theme to title bar (Windows 10/11)
-        // Define the attribute constant (MinGW headers may lack it)
         #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
         #define DWMWA_USE_IMMERSIVE_DARK_MODE 19
         #endif
@@ -75,31 +98,14 @@ namespace App {
             using DwmSetWindowAttributeFunc = HRESULT (WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
             auto* dwmFunc = reinterpret_cast<DwmSetWindowAttributeFunc>(
                 reinterpret_cast<void*>(GetProcAddress(dwmApi, "DwmSetWindowAttribute")));
-            
-            if (dwmFunc) {
-                // Detect system dark mode via registry (reliable for Windows 10/11)
-                bool isDarkMode = false;
-                HKEY hKey = nullptr;
-                LONG regResult = RegOpenKeyExW(HKEY_CURRENT_USER,
-                    L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-                    0, KEY_READ, &hKey);
-                if (regResult == ERROR_SUCCESS) {
-                    DWORD lightTheme = 1;
-                    DWORD dataSize = sizeof(DWORD);
-                    if (RegQueryValueExW(hKey, L"AppsUseLightTheme", nullptr, nullptr,
-                            (LPBYTE)&lightTheme, &dataSize) == ERROR_SUCCESS) {
-                        // lightTheme == 0 means dark mode is active
-                        isDarkMode = (lightTheme == 0);
-                    }
-                    RegCloseKey(hKey);
-                }
 
+            if (dwmFunc) {
                 BOOL useDarkMode = isDarkMode;
                 HWND hwnd = glfwGetWin32Window(ctx->glfwWindow);
                 if (hwnd) {
                     dwmFunc(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
                 }
-                
+
                 logger.addLog(std::format("[APP] Title bar theme applied (dark mode: {})", isDarkMode));
             }
             FreeLibrary(dwmApi);
@@ -110,9 +116,15 @@ namespace App {
         // Create DDE connection manager (manages multi-window connections)
         ctx->ddeConnectionManager = std::make_unique<DDEConnectionManager>(logger);
 
-        // Initialize GUI manager with DDE connection manager
+        // Initialize GUI manager with system theme
         ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->ddeConnectionManager.get(), logger);
-        ctx->gui->initialize(ctx->dpiScale);
+        ctx->gui->initialize(!isDarkMode, ctx->dpiScale);
+        ctx->gui->getSettingsManager().loadFromFile();
+
+        if (ctx->gui->getUpdateChecker() && ctx->gui->getUpdateChecker()->isAutoCheckEnabled()) {
+            logger.addLog("[APP] Auto-checking for updates on startup");
+            ctx->gui->getUpdateChecker()->checkForUpdates();
+        }
 
         // Store context pointer for callback access (must be before callback registration)
         glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());

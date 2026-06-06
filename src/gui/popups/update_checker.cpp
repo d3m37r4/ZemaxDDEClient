@@ -47,7 +47,11 @@ namespace gui {
             return false;
         }
 
-        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", L"/repos/d3m37r4/ZemaxDDEClient/releases/latest", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+        const wchar_t* path = (m_channel == app::UpdateChannel::Beta)
+            ? L"/repos/d3m37r4/ZemaxDDEClient/releases"
+            : L"/repos/d3m37r4/ZemaxDDEClient/releases/latest";
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
         if (!hRequest) {
             WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
@@ -79,9 +83,32 @@ namespace gui {
 
         try {
             auto json = nlohmann::json::parse(response);
-            m_updateInfo.version = json.value("tag_name", "");
-            m_updateInfo.releaseDate = json.value("published_at", "");
-            m_updateInfo.downloadUrl = json.value("html_url", "");
+
+            if (m_channel == app::UpdateChannel::Beta) {
+                // /releases returns an array; pick the first prerelease.
+                if (!json.is_array() || json.empty()) {
+                    m_errorMessage = "No releases found on Beta channel";
+                    return false;
+                }
+                const nlohmann::json* match = nullptr;
+                for (const auto& rel : json) {
+                    if (rel.is_object() && rel.value("prerelease", false)) {
+                        match = &rel;
+                        break;
+                    }
+                }
+                if (!match) {
+                    m_errorMessage = "No prerelease found on Beta channel";
+                    return false;
+                }
+                m_updateInfo.version     = match->value("tag_name", "");
+                m_updateInfo.releaseDate = match->value("published_at", "");
+                m_updateInfo.downloadUrl = match->value("html_url", "");
+            } else {
+                m_updateInfo.version     = json.value("tag_name", "");
+                m_updateInfo.releaseDate = json.value("published_at", "");
+                m_updateInfo.downloadUrl = json.value("html_url", "");
+            }
             return true;
         } catch (...) {
             m_errorMessage = "Failed to parse GitHub response";

@@ -89,10 +89,16 @@ namespace gui {
 
         bool connected = (activeIdx >= 0);
 
+        // Intentionally bypassing ImGui theme tokens (ImGuiCol_Button*) with hardcoded
+        // colors from gui/constants.h. This is a deliberate UX decision: DDE connect/disconnect
+        // status must remain visually unambiguous regardless of the active theme
+        // (green = connect, red = disconnect). If a future theme system exposes semantic
+        // status tokens, replace these constants with theme-aware values.
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
         ImGui::PushStyleColor(ImGuiCol_Button, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_NORMAL : gui::DDE_BUTTON_CONNECT_COLOR_NORMAL);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_HOVER : gui::DDE_BUTTON_CONNECT_COLOR_HOVER);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_ACTIVE : gui::DDE_BUTTON_CONNECT_COLOR_ACTIVE);
+        ImGui::PushStyleColor(ImGuiCol_Text, gui::DDE_BUTTON_TEXT_COLOR);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
         if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
@@ -105,7 +111,7 @@ namespace gui {
         }
 
         ImGui::PopStyleVar();
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(4);
         ImGui::PopStyleVar();
 
         ImGui::EndChild();

@@ -34,6 +34,14 @@ namespace gui {
         m_onSidebarToggle = std::move(cb);
     }
 
+    void MenuBarController::setPreferencesCallback(std::function<void()> cb) {
+        m_onPreferences = std::move(cb);
+    }
+
+    void MenuBarController::openPreferences() {
+        if (m_onPreferences) m_onPreferences();
+    }
+
     void MenuBarController::render() {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Menu")) {
@@ -62,6 +70,17 @@ namespace gui {
                     if (ImGui::MenuItem(name, nullptr, &visible)) {
                         m_pWndMgr->SetVisible(id, visible);
                     }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Settings")) {
+                if (ImGui::MenuItem("Preferences...", "Ctrl+,", false, true)) {
+                    if (m_onPreferences) m_onPreferences();
+                }
+                ImGui::Separator();
+                ImGui::MenuItem("Performance...", "Ctrl+Shift+P", false, false);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                    ImGui::SetTooltip("Configure DDE request timeouts. (Coming soon)");
                 }
                 ImGui::EndMenu();
             }
