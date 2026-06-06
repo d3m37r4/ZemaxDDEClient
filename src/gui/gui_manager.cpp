@@ -52,6 +52,10 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_settingsManager->bind(&m_graphics.getThemeManager(), m_ddeConnectionManager);
     m_profileService->setSettingsManager(m_settingsManager.get());
     m_irregularityMapService->setSettingsManager(m_settingsManager.get());
+
+    const auto& themeManager = m_graphics.getThemeManager();
+    m_ddeStatusRenderer->setThemeManager(&themeManager);
+    m_updateChecker->setThemeManager(&themeManager);
 }
 
 void GuiManager::render() {

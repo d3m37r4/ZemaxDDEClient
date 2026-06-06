@@ -6,6 +6,8 @@
 #include "app/settings.h"
 
 namespace gui {
+    class ThemeManager;
+
     struct UpdateInfo {
         std::string version;
         std::string releaseDate;
@@ -29,6 +31,9 @@ namespace gui {
             [[nodiscard]] bool isAutoCheckEnabled() const noexcept { return m_autoCheckOnStartup; }
             [[nodiscard]] bool hasChecked() const noexcept { return m_isCheckComplete; }
 
+            /// Non-owning; bound by GuiManager after graphics.initialize().
+            void setThemeManager(const ThemeManager* themeManager) noexcept { m_themeManager = themeManager; }
+
         private:
             UpdateInfo m_updateInfo;
             bool m_isChecking{false};
@@ -36,6 +41,7 @@ namespace gui {
             std::string m_errorMessage;
             app::UpdateChannel m_channel{app::UpdateChannel::Stable};
             bool m_autoCheckOnStartup{false};
+            const ThemeManager* m_themeManager = nullptr;
 
             bool fetchLatestVersion();
             int compareVersions(const std::string& v1, const std::string& v2);
