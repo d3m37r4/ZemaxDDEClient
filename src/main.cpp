@@ -20,7 +20,13 @@ int main() {
 
     DockableWindowsManager wndMgr;
     wndMgr.RegisterDockableWindows(ctx->gui.get());
-    wndMgr.LoadState();
+
+    const auto& general = ctx->gui->getSettingsManager().current().general;
+    if (general.restoreWindowLayout) {
+        wndMgr.LoadState();
+    }
+    wndMgr.SetVisible(WindowID::DebugLog, general.showDebugLogOnStartup);
+
     ctx->gui->setWindowManager(&wndMgr);
 
     auto* menuBar = ctx->gui->getMenuBarController();
