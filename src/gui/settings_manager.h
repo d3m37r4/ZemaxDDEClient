@@ -6,6 +6,7 @@
 class DDEConnectionManager;
 
 namespace gui {
+    class UpdateChecker;
 
     /// Centralized bridge between persistent AppSettings and runtime subsystems.
     /// apply() pushes a complete settings snapshot to all bound consumers;
@@ -24,6 +25,7 @@ namespace gui {
 
             // Non-owning bindings; called once during GuiManager wiring.
             void bind(ThemeManager* themeManager, DDEConnectionManager* ddeConnectionManager);
+            void setUpdateChecker(UpdateChecker* updateChecker) noexcept { m_updateChecker = updateChecker; }
 
             // Applies every section in @p settings. Requires bind() to have been called
             // for the consumers used by the settings being applied.
@@ -65,6 +67,7 @@ namespace gui {
             app::AppSettings m_current;
             ThemeManager* m_themeManager = nullptr;
             DDEConnectionManager* m_ddeConnectionManager = nullptr;
+            UpdateChecker* m_updateChecker = nullptr;
     };
 
 } // namespace gui

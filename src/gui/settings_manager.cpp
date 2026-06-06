@@ -4,6 +4,7 @@
 #include "lib/implot/implot.h"
 
 #include "dde/dde_connection_manager.h"
+#include "gui/popups/update_checker.h"
 #include "gui/theme_manager.h"
 
 namespace gui {
@@ -34,7 +35,7 @@ namespace gui {
         applyTheme(settings.appearance);
         applyDDE(settings.dde);
         applyPlot(settings.plot);
-        // Phase 7+:  applyUpdates(settings.updates);
+        applyUpdates(settings.updates);
 
         m_current = settings;
     }
@@ -61,8 +62,9 @@ namespace gui {
     }
 
     void SettingsManager::applyUpdates(const app::UpdateSettings& updates) {
-        (void)updates;
-        // Implemented in Phase 6/7
+        if (!m_updateChecker) return;
+        m_updateChecker->setChannel(updates.channel);
+        m_updateChecker->setAutoCheckOnStartup(updates.autoCheckOnStartup);
     }
 
     bool SettingsManager::loadFromFile() {

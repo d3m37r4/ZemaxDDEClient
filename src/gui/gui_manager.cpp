@@ -38,6 +38,7 @@ namespace gui {
     m_updateChecker      = std::make_unique<UpdateChecker>();
     m_settingsManager   = std::make_unique<SettingsManager>();
     m_preferencesDialog = std::make_unique<PreferencesDialog>(*m_settingsManager);
+    m_settingsManager->setUpdateChecker(m_updateChecker.get());
     m_menuBarController->setPreferencesCallback([this]() {
         m_preferencesDialog->open();
     });

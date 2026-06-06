@@ -44,6 +44,7 @@ namespace gui {
             void renderPreferencesDialog();
 
             SettingsManager& getSettingsManager() noexcept { return *m_settingsManager; }
+            UpdateChecker* getUpdateChecker() const noexcept { return m_updateChecker.get(); }
 
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }

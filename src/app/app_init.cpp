@@ -121,6 +121,11 @@ namespace App {
         ctx->gui->initialize(!isDarkMode, ctx->dpiScale);
         ctx->gui->getSettingsManager().loadFromFile();
 
+        if (ctx->gui->getUpdateChecker() && ctx->gui->getUpdateChecker()->isAutoCheckEnabled()) {
+            logger.addLog("[APP] Auto-checking for updates on startup");
+            ctx->gui->getUpdateChecker()->checkForUpdates();
+        }
+
         // Store context pointer for callback access (must be before callback registration)
         glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
 
