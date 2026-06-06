@@ -1,7 +1,6 @@
 #include "gui/settings_manager.h"
 
-#include <windows.h>
-
+#include "app/config_path.h"
 #include "lib/implot/implot.h"
 
 #include "dde/dde_connection_manager.h"
@@ -64,6 +63,29 @@ namespace gui {
     void SettingsManager::applyUpdates(const app::UpdateSettings& updates) {
         (void)updates;
         // Implemented in Phase 6/7
+    }
+
+    bool SettingsManager::loadFromFile() {
+        const char* path = app::getSettingsJsonPath();
+        if (!path || !*path) return false;
+
+        app::AppSettings loaded;
+        if (!loaded.loadFromFile(path)) {
+            // Missing file or parse error: keep defaults in m_current and apply them.
+            m_current = loaded;
+            apply(m_current);
+            return false;
+        }
+
+        m_current = loaded;
+        apply(m_current);
+        return true;
+    }
+
+    bool SettingsManager::saveToFile() const {
+        const char* path = app::getSettingsJsonPath();
+        if (!path || !*path) return false;
+        return m_current.saveToFile(path);
     }
 
 } // namespace gui

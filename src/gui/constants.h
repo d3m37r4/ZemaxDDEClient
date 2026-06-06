@@ -60,4 +60,12 @@ namespace gui {
     // Update checker window constraints
     inline constexpr float UPDATE_WINDOW_WIDTH_MIN  = 320.0f;
     inline constexpr float UPDATE_WINDOW_HEIGHT_MIN = 200.0f;
+
+    // Preferences dialog layout
+    inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(820.0f, 600.0f);
+    inline constexpr float  PREFERENCES_WINDOW_MIN_WIDTH    = 640.0f;
+    inline constexpr float  PREFERENCES_WINDOW_MIN_HEIGHT   = 420.0f;
+    inline constexpr float  PREFERENCES_SIDEBAR_WIDTH       = 180.0f;
+    inline constexpr float  PREFERENCES_FOOTER_HEIGHT      = 52.0f;
+    inline constexpr float  PREFERENCES_SECTION_SPACING     = 8.0f;
 }

@@ -29,6 +29,12 @@ namespace gui {
             // for the consumers used by the settings being applied.
             void apply(const app::AppSettings& settings);
 
+            // File I/O for persistence. loadFromFile() reads settings.json, replaces
+            // m_current and pushes the values to all bound subsystems. saveToFile()
+            // writes m_current to settings.json. Both return false on I/O errors.
+            bool loadFromFile();
+            bool saveToFile() const;
+
             // Per-section apply methods. Safe to call individually for live preview.
             // Each method uses detectSystemDarkMode() internally for theme decisions.
             void applyTheme(const app::AppearanceSettings& appearance);
