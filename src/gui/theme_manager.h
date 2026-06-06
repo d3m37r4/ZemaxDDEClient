@@ -42,6 +42,33 @@ struct ThemeGeometry {
     float tabBorderSize     = 0.0f;
 };
 
+/// Semantic, role-based color tokens used by widgets that need to communicate
+/// status (success/danger/info/warning/muted) or theme-aware button shades.
+/// Replaces the legacy hardcoded DDE_STATUS_COLOR_* and DDE_BUTTON_* constants
+/// from gui/constants.h so each theme can provide its own status palette.
+struct SemanticPalette {
+    ImVec4 success;          // Connected, "new version available", check marks.
+    ImVec4 warning;          // Validation warning, prerelease notice.
+    ImVec4 danger;           // Disconnected, errors, destructive actions.
+    ImVec4 info;             // Hints, links (usually matches theme accent).
+    ImVec4 muted;            // "Up to date", neutral captions.
+
+    ImVec4 successButton;
+    ImVec4 successButtonHover;
+    ImVec4 successButtonActive;
+
+    ImVec4 dangerButton;
+    ImVec4 dangerButtonHover;
+    ImVec4 dangerButtonActive;
+
+    ImVec4 onAccent;         // Text drawn on top of an accent-colored button.
+
+    /// Shared default values used by both built-in themes. The @p isLight
+    /// flag only affects the muted token (a single neutral grey is too dark
+    /// on a dark background and too light on a light background).
+    static SemanticPalette DefaultsFor(bool isLight);
+};
+
 struct ThemeData {
     std::string name;
     bool isLight;
@@ -53,6 +80,7 @@ struct ThemeData {
     ImVec4 implot3dColors[ImPlot3DCol_COUNT];
 
     ThemeGeometry geometry;
+    SemanticPalette semantic;
 
     static ThemeData CreateWin11Light();
     static ThemeData CreateWin11Dark();
@@ -73,6 +101,11 @@ public:
     ImVec4 getClearColor() const;
     const std::string& currentThemeName() const;
     size_t themeCount() const { return m_themes.size(); }
+
+    /// Returns the semantic palette of the currently active theme.
+    /// Widgets that draw status text or status-colored buttons should read
+    /// from here so colors stay consistent with the active palette.
+    const SemanticPalette& semantic() const;
 
 private:
     std::vector<ThemeData> m_themes;

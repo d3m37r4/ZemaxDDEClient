@@ -10,10 +10,34 @@ static ImVec4 col(int r, int g, int b, int a = 255) {
 // ===============================================================
 //  GitHub-Inspired Light
 // ===============================================================
+SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
+    SemanticPalette p;
+    p.success = ImVec4(0.18f, 0.64f, 0.31f, 1.0f);                                // #2da44e
+    p.warning = isLight ? ImVec4(0.75f, 0.55f, 0.05f, 1.0f)                       // #bf8700
+                          : ImVec4(0.82f, 0.60f, 0.13f, 1.0f);                    // #d29922
+    p.danger  = ImVec4(0.81f, 0.13f, 0.18f, 1.0f);                                // #cf222e
+    p.info    = isLight ? ImVec4(0.04f, 0.41f, 0.85f, 1.0f)                       // #0969da
+                          : ImVec4(0.35f, 0.65f, 1.00f, 1.0f);                    // #58a6ff
+    p.muted   = isLight ? ImVec4(0.40f, 0.45f, 0.50f, 1.0f)                       // #656d76
+                          : ImVec4(0.55f, 0.58f, 0.62f, 1.0f);                    // #8b949e
+
+    p.successButton       = ImVec4(0.04f, 0.40f, 0.08f, 1.0f);
+    p.successButtonHover  = ImVec4(0.06f, 0.50f, 0.12f, 1.0f);
+    p.successButtonActive = ImVec4(0.03f, 0.28f, 0.05f, 1.0f);
+
+    p.dangerButton       = ImVec4(0.55f, 0.10f, 0.08f, 1.0f);
+    p.dangerButtonHover  = ImVec4(0.65f, 0.14f, 0.10f, 1.0f);
+    p.dangerButtonActive = ImVec4(0.40f, 0.06f, 0.04f, 1.0f);
+
+    p.onAccent = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    return p;
+}
+
 ThemeData ThemeData::CreateWin11Light() {
     ThemeData t;
     t.name    = std::string{kThemeNameLight};
     t.isLight = true;
+    t.semantic = SemanticPalette::DefaultsFor(true);
     t.clearColor = col(255, 255, 255);
 
     ImVec4* c = t.imguiColors;
@@ -127,6 +151,7 @@ ThemeData ThemeData::CreateWin11Dark() {
     ThemeData t;
     t.name    = std::string{kThemeNameDark};
     t.isLight = false;
+    t.semantic = SemanticPalette::DefaultsFor(false);
     t.clearColor = col(22, 27, 34);  // #161b22
 
     ImVec4* c = t.imguiColors;
@@ -301,6 +326,12 @@ const std::string& ThemeManager::currentThemeName() const {
     static const std::string s_empty;
     if (m_themes.empty()) return s_empty;
     return m_themes[m_current].name;
+}
+
+const SemanticPalette& ThemeManager::semantic() const {
+    static const SemanticPalette s_empty;
+    if (m_themes.empty()) return s_empty;
+    return m_themes[m_current].semantic;
 }
 
 void ThemeManager::applyThemeData(const ThemeData& data) {
