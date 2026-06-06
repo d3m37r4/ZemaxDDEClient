@@ -124,6 +124,10 @@ namespace ZemaxDDE {
         int retries,
         const std::string& serviceId) {
 
+        // Sentinel: 0 / -1 → use client defaults driven by AppSettings.dde.
+        if (timeoutMs == 0) timeoutMs = m_defaultTimeoutMs;
+        if (retries   <  0) retries   = m_defaultRetries;
+
         uint64_t id = m_nextRequestId++;
         DdeRequest req;
         req.id = id;

@@ -53,7 +53,7 @@ DDEConnectionManager::DDEConnectionManager(Logger& logger)
 }
 
 int DDEConnectionManager::findFreeSlot() {
-    for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+    for (int i = 0; i < m_maxConnections && i < MAX_CONNECTIONS; ++i) {
         if (!m_connections[i].isConnected) {
             return i;
         }
@@ -212,4 +212,50 @@ void DDEConnectionManager::processAllTimeouts() {
 
 std::vector<app::ZemaxWindowInfo> DDEConnectionManager::enumerateAvailableTargets() {
     return app::ZemaxWindowEnumerator::enumerate();
+}
+
+DWORD DDEConnectionManager::getDefaultTimeoutMs() const {
+    for (const auto& conn : m_connections) {
+        if (conn.client) return conn.client->getDefaultTimeoutMs();
+    }
+    return 1000;
+}
+
+int DDEConnectionManager::getDefaultRetries() const {
+    for (const auto& conn : m_connections) {
+        if (conn.client) return conn.client->getDefaultRetries();
+    }
+    return 1;
+}
+
+void DDEConnectionManager::setDefaultTimeoutMs(DWORD ms) {
+    propagateDefaultTimeout(ms);
+}
+
+void DDEConnectionManager::setDefaultRetries(int n) {
+    propagateDefaultRetries(n);
+}
+
+void DDEConnectionManager::setMaxConnections(int n) {
+    if (n < 1) n = 1;
+    if (n > MAX_CONNECTIONS) n = MAX_CONNECTIONS;
+    m_maxConnections = n;
+    m_logger.addLog(std::format("[DDE] Max connections set to {}", n));
+}
+
+void DDEConnectionManager::setAutoReconnect(bool enabled) {
+    m_autoReconnect = enabled;
+    m_logger.addLog(std::format("[DDE] Auto-reconnect {}", enabled ? "enabled" : "disabled"));
+}
+
+void DDEConnectionManager::propagateDefaultTimeout(DWORD ms) {
+    for (auto& conn : m_connections) {
+        if (conn.client) conn.client->setDefaultTimeoutMs(ms);
+    }
+}
+
+void DDEConnectionManager::propagateDefaultRetries(int n) {
+    for (auto& conn : m_connections) {
+        if (conn.client) conn.client->setDefaultRetries(n);
+    }
 }

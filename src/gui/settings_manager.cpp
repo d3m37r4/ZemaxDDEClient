@@ -31,7 +31,7 @@ namespace gui {
 
     void SettingsManager::apply(const app::AppSettings& settings) {
         applyTheme(settings.appearance);
-        // Phase 3+: applyDDE(settings.dde);
+        applyDDE(settings.dde);
         // Phase 4+: applyPlot(settings.plot);
         // Phase 7+:  applyUpdates(settings.updates);
 
@@ -44,8 +44,11 @@ namespace gui {
     }
 
     void SettingsManager::applyDDE(const app::DDESettings& dde) {
-        (void)dde;
-        // Implemented in Phase 3
+        if (!m_ddeConnectionManager) return;
+        m_ddeConnectionManager->setDefaultTimeoutMs(static_cast<DWORD>(dde.connectionTimeoutMs));
+        m_ddeConnectionManager->setDefaultRetries(dde.maxRetryCount);
+        m_ddeConnectionManager->setMaxConnections(dde.maxConnections);
+        m_ddeConnectionManager->setAutoReconnect(dde.autoReconnect);
     }
 
     void SettingsManager::applyPlot(const app::PlotSettings& plot) {

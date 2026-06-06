@@ -48,18 +48,28 @@ namespace ZemaxDDE {
             void pumpMessages();
             void processTimeouts();
 
+            /// Default timeout/retries used by submitRequest when caller passes
+            /// the sentinel value (0 / -1). Updated by DDEConnectionManager from
+            /// AppSettings.dde at runtime.
+            void setDefaultTimeoutMs(DWORD ms) noexcept { m_defaultTimeoutMs = ms; }
+            void setDefaultRetries(int n) noexcept { m_defaultRetries = n; }
+            [[nodiscard]] DWORD getDefaultTimeoutMs() const noexcept { return m_defaultTimeoutMs; }
+            [[nodiscard]] int   getDefaultRetries()   const noexcept { return m_defaultRetries; }
+
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
             using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
             void setOnDDEConnectedCallback(OnDDEConnectedCallback callback);
 
             /// Submits a DDE request for processing and starts if the pipeline is idle.
+            /// @param timeoutMs 0 = use client's default (AppSettings.dde.connectionTimeoutMs).
+            /// @param retries   -1 = use client's default (AppSettings.dde.maxRetryCount).
             /// @return Unique request ID for logging.
             uint64_t submitRequest(const std::string& command,
                 std::function<void(const std::string&)> onSuccess,
                 std::function<void(const std::string&)> onError,
-                DWORD timeoutMs = 1000,
-                int retries = 1,
+                DWORD timeoutMs = 0,
+                int retries = -1,
                 const std::string& serviceId = "");
 
             // Getters
@@ -92,5 +102,8 @@ namespace ZemaxDDE {
             std::deque<DdeRequest> m_requestQueue;
             std::optional<DdeRequest> m_activeRequest;
             uint64_t m_nextRequestId = 1;
+
+            DWORD m_defaultTimeoutMs = 1000;
+            int   m_defaultRetries   = 1;
     };
 }
