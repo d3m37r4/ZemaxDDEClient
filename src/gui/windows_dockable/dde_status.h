@@ -4,11 +4,10 @@
 
 #include "gui/constants.h"
 #include "gui/popups/connect_dde.h"
+#include "gui/theme_manager.h"
 #include "dde/dde_connection_manager.h"
 
 namespace gui {
-    class ThemeManager;
-
     class DDEStatus {
     public:
         explicit DDEStatus(DDEConnectionManager* connectionManager)

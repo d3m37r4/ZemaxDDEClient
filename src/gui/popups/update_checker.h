@@ -4,10 +4,9 @@
 #include <optional>
 
 #include "app/settings.h"
+#include "gui/theme_manager.h"
 
 namespace gui {
-    class ThemeManager;
-
     struct UpdateInfo {
         std::string version;
         std::string releaseDate;
