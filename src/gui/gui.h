@@ -43,6 +43,8 @@ namespace gui {
             void renderUpdatesPopup();
             void renderPreferencesDialog();
 
+            SettingsManager& getSettingsManager() noexcept { return *m_settingsManager; }
+
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
             DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }

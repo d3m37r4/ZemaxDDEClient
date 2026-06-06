@@ -119,6 +119,7 @@ namespace App {
         // Initialize GUI manager with system theme
         ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->ddeConnectionManager.get(), logger);
         ctx->gui->initialize(!isDarkMode, ctx->dpiScale);
+        ctx->gui->getSettingsManager().loadFromFile();
 
         // Store context pointer for callback access (must be before callback registration)
         glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
