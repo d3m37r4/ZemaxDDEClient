@@ -34,8 +34,12 @@ namespace gui {
         m_onSidebarToggle = std::move(cb);
     }
 
-    void MenuBarController::setThemeToggleCallback(std::function<void()> cb) {
-        m_onThemeToggle = std::move(cb);
+    void MenuBarController::setPreferencesCallback(std::function<void()> cb) {
+        m_onPreferences = std::move(cb);
+    }
+
+    void MenuBarController::openPreferences() {
+        if (m_onPreferences) m_onPreferences();
     }
 
     void MenuBarController::render() {
@@ -69,9 +73,14 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("View")) {
-                if (ImGui::MenuItem("Switch Theme")) {
-                    if (m_onThemeToggle) m_onThemeToggle();
+            if (ImGui::BeginMenu("Settings")) {
+                if (ImGui::MenuItem("Preferences...", "Ctrl+,", false, true)) {
+                    if (m_onPreferences) m_onPreferences();
+                }
+                ImGui::Separator();
+                ImGui::MenuItem("Performance...", "Ctrl+Shift+P", false, false);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                    ImGui::SetTooltip("Configure DDE request timeouts. (Coming soon)");
                 }
                 ImGui::EndMenu();
             }

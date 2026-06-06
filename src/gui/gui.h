@@ -19,7 +19,9 @@
 #include "gui/graphics_backend.h"
 #include "windows_dockable/debug_log.h"
 #include "gui/popups/about_dialog.h"
+#include "gui/popups/preferences_dialog.h"
 #include "gui/popups/update_checker.h"
+#include "gui/settings_manager.h"
 #include "dde/client.h"
 #include "dde/dde_connection_manager.h"
 
@@ -36,10 +38,10 @@ namespace gui {
             void initialize(bool isLightTheme, float dpiScale = 1.0f);
             void render();
             void updateDpiStyle(float dpiScale);
-            void toggleTheme();
 
             void renderAboutPopup();
             void renderUpdatesPopup();
+            void renderPreferencesDialog();
 
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
@@ -71,6 +73,8 @@ namespace gui {
             std::unique_ptr<DebugLog> m_debugLogRenderer;
             std::unique_ptr<AboutDialog> m_aboutDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
+            std::unique_ptr<SettingsManager>   m_settingsManager;
+            std::unique_ptr<PreferencesDialog> m_preferencesDialog;
             DockableWindowsManager* m_pWndMgr{nullptr};
 
             UiOperationMonitor m_uiOpMonitor;

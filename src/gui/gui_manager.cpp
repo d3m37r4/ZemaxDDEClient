@@ -36,20 +36,18 @@ namespace gui {
     m_debugLogRenderer = std::make_unique<DebugLog>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
+    m_settingsManager   = std::make_unique<SettingsManager>();
+    m_preferencesDialog = std::make_unique<PreferencesDialog>(*m_settingsManager);
+    m_menuBarController->setPreferencesCallback([this]() {
+        m_preferencesDialog->open();
+    });
 }
 
 GuiManager::~GuiManager() = default;
 
 void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_graphics.initialize(m_glfwWindow, m_logger, isLightTheme, dpiScale);
-    m_menuBarController->setThemeToggleCallback([this]() {
-        toggleTheme();
-    });
-}
-
-void GuiManager::toggleTheme() {
-    m_graphics.toggleTheme();
-    m_logger.addLog(std::format("[GUI] Theme switched to: {}", m_graphics.getThemeManager().currentThemeName()));
+    m_settingsManager->bind(&m_graphics.getThemeManager(), m_ddeConnectionManager);
 }
 
 void GuiManager::render() {
@@ -193,6 +191,7 @@ void GuiManager::render() {
     ImGuiUtils::SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
+    renderPreferencesDialog();
 
     m_uiOpMonitor.renderGlobalStatusBar();
 
@@ -218,6 +217,12 @@ void GuiManager::renderAboutPopup() {
 void GuiManager::renderUpdatesPopup() {
     if (m_updateChecker) {
         m_updateChecker->renderPopup(m_showUpdatesPopup);
+    }
+}
+
+void GuiManager::renderPreferencesDialog() {
+    if (m_preferencesDialog) {
+        m_preferencesDialog->render();
     }
 }
 

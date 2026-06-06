@@ -33,11 +33,12 @@ int main() {
     while (!ctx->gui->shouldClose()) {
         glfwPollEvents();
 
-        // Hotkey Ctrl+O
-        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
-            if (ImGui::IsKeyPressed(ImGuiKey_O)) {
-                App::openZmxFileInZemax(logger);
-            }
+        // Hotkeys: Ctrl+O, Ctrl+,
+        const bool ctrlDown = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+        if (ctrlDown && ImGui::IsKeyPressed(ImGuiKey_O, false)) {
+            App::openZmxFileInZemax(logger);
+        } else if (ctrlDown && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
+            if (menuBar) menuBar->openPreferences();
         }
 
         ctx->gui->render();
