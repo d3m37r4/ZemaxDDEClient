@@ -303,34 +303,8 @@ const std::string& ThemeManager::currentThemeName() const {
     return m_themes[m_current].name;
 }
 
-static void applyGeometry() {
-    ImGuiStyle& style = ImGui::GetStyle();
-
-    style.WindowRounding    = 8.0f;
-    style.ChildRounding     = 8.0f;
-    style.FrameRounding     = 4.0f;
-    style.PopupRounding     = 8.0f;
-    style.ScrollbarRounding = 4.0f;
-    style.GrabRounding      = 4.0f;
-    style.TabRounding       = 4.0f;
-
-    style.WindowPadding     = ImVec2(12, 12);
-    style.FramePadding      = ImVec2(8,  4);
-    style.ItemSpacing       = ImVec2(8,  6);
-    style.ItemInnerSpacing  = ImVec2(8,  6);
-    style.CellPadding       = ImVec2(8,  4);
-    style.IndentSpacing     = 25.0f;
-    style.ScrollbarSize     = 14.0f;
-    style.GrabMinSize       = 12.0f;
-    style.WindowBorderSize  = 1.0f;
-    style.ChildBorderSize   = 1.0f;
-    style.PopupBorderSize   = 1.0f;
-    style.FrameBorderSize   = 0.0f;
-    style.TabBorderSize     = 0.0f;
-}
-
 void ThemeManager::applyThemeData(const ThemeData& data) {
-    applyGeometry();
+    applyGeometryData(data.geometry);
 
     // -- ImGui colors --
     ImGuiStyle& style = ImGui::GetStyle();
@@ -349,4 +323,30 @@ void ThemeManager::applyThemeData(const ThemeData& data) {
     for (int i = 0; i < ImPlot3DCol_COUNT; ++i) {
         plot3dStyle.Colors[i] = data.implot3dColors[i];
     }
+}
+
+void ThemeManager::applyGeometryData(const ThemeGeometry& g) {
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    style.WindowRounding    = g.windowRounding;
+    style.ChildRounding     = g.childRounding;
+    style.FrameRounding     = g.frameRounding;
+    style.PopupRounding     = g.popupRounding;
+    style.ScrollbarRounding = g.scrollbarRounding;
+    style.GrabRounding      = g.grabRounding;
+    style.TabRounding       = g.tabRounding;
+
+    style.WindowPadding     = g.windowPadding;
+    style.FramePadding      = g.framePadding;
+    style.ItemSpacing       = g.itemSpacing;
+    style.ItemInnerSpacing  = g.itemInnerSpacing;
+    style.CellPadding       = g.cellPadding;
+    style.IndentSpacing     = g.indentSpacing;
+    style.ScrollbarSize     = g.scrollbarSize;
+    style.GrabMinSize       = g.grabMinSize;
+    style.WindowBorderSize  = g.windowBorderSize;
+    style.ChildBorderSize   = g.childBorderSize;
+    style.PopupBorderSize   = g.popupBorderSize;
+    style.FrameBorderSize   = g.frameBorderSize;
+    style.TabBorderSize     = g.tabBorderSize;
 }
