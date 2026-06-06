@@ -56,9 +56,21 @@ namespace app {
         void reset();
         [[nodiscard]] static AppSettings defaults();
 
+        // Outcome of loadFromFileWithReason. FileMissing is NOT an error
+        // (first launch), all other non-Success values indicate a real
+        // problem that should be reported to the user.
+        enum class LoadResult {
+            Success,
+            FileMissing,
+            ParseError,
+            NotAnObject,
+            UnknownVersion,
+        };
+
         // Throws std::runtime_error if file missing and createIfMissing==false,
         // returns false on parse errors. Logs to logger; never throws from JSON layer.
         [[nodiscard]] bool loadFromFile(const std::string& path);
+        [[nodiscard]] LoadResult loadFromFileWithReason(const std::string& path, std::string& errorOut) noexcept;
         [[nodiscard]] bool saveToFile(const std::string& path) const;
     };
 

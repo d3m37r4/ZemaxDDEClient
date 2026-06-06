@@ -83,23 +83,35 @@ namespace app {
     }
 
     bool AppSettings::loadFromFile(const std::string& path) {
+        std::string dummy;
+        return loadFromFileWithReason(path, dummy) == LoadResult::Success;
+    }
+
+    AppSettings::LoadResult AppSettings::loadFromFileWithReason(const std::string& path, std::string& errorOut) noexcept {
+        errorOut.clear();
+
         std::ifstream in(path);
-        if (!in.is_open()) return false;
+        if (!in.is_open()) return LoadResult::FileMissing;
 
         nlohmann::json j;
         try {
             in >> j;
-        } catch (const nlohmann::json::parse_error&) {
-            return false;
+        } catch (const nlohmann::json::parse_error& e) {
+            errorOut = e.what();
+            return LoadResult::ParseError;
         }
-        if (!j.is_object()) return false;
+        if (!j.is_object()) {
+            errorOut = "root JSON value is not an object";
+            return LoadResult::NotAnObject;
+        }
 
         // Unknown version → fall back to defaults (forward-incompatible).
         if (j.contains("version") && j["version"].is_number_integer()) {
             int v = j["version"].get<int>();
             if (v != kCurrentVersion) {
+                errorOut = std::format("file version {} != supported version {}", v, kCurrentVersion);
                 reset();
-                return true;
+                return LoadResult::UnknownVersion;
             }
         }
 
@@ -162,7 +174,7 @@ namespace app {
                 updates.channel = updateChannelFromString(u["channel"].get<std::string_view>());
         }
 
-        return true;
+        return LoadResult::Success;
     }
 
     bool AppSettings::saveToFile(const std::string& path) const {

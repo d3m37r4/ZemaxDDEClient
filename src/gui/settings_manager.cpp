@@ -1,7 +1,10 @@
 #include "gui/settings_manager.h"
 
+#include <format>
+
 #include "app/config_path.h"
 #include "lib/implot/implot.h"
+#include "logger/logger.h"
 
 #include "dde/dde_connection_manager.h"
 #include "gui/popups/update_checker.h"
@@ -72,8 +75,20 @@ namespace gui {
         if (!path || !*path) return false;
 
         app::AppSettings loaded;
-        if (!loaded.loadFromFile(path)) {
-            // Missing file or parse error: keep defaults in m_current and apply them.
+        std::string err;
+        auto result = loaded.loadFromFileWithReason(path, err);
+        if (result != app::AppSettings::LoadResult::Success) {
+            if (m_logger && result != app::AppSettings::LoadResult::FileMissing) {
+                std::string_view kind = "unknown";
+                switch (result) {
+                    case app::AppSettings::LoadResult::ParseError:     kind = "JSON parse error"; break;
+                    case app::AppSettings::LoadResult::NotAnObject:    kind = "not a JSON object"; break;
+                    case app::AppSettings::LoadResult::UnknownVersion: kind = "unknown version"; break;
+                    default: break;
+                }
+                m_logger->addLog(std::format("[SETTINGS] Failed to load {} ({}): {}",
+                                             path, kind, err));
+            }
             m_current = loaded;
             apply(m_current);
             return false;

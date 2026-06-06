@@ -4,6 +4,7 @@
 #include "gui/theme_manager.h"
 
 class DDEConnectionManager;
+class Logger;
 
 namespace gui {
     class UpdateChecker;
@@ -26,6 +27,7 @@ namespace gui {
             // Non-owning bindings; called once during GuiManager wiring.
             void bind(ThemeManager* themeManager, DDEConnectionManager* ddeConnectionManager);
             void setUpdateChecker(UpdateChecker* updateChecker) noexcept { m_updateChecker = updateChecker; }
+            void setLogger(Logger* logger) noexcept { m_logger = logger; }
 
             // Applies every section in @p settings. Requires bind() to have been called
             // for the consumers used by the settings being applied.
@@ -68,6 +70,7 @@ namespace gui {
             ThemeManager* m_themeManager = nullptr;
             DDEConnectionManager* m_ddeConnectionManager = nullptr;
             UpdateChecker* m_updateChecker = nullptr;
+            Logger* m_logger = nullptr;
     };
 
 } // namespace gui
