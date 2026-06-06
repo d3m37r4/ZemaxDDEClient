@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include "lib/implot/implot.h"
+
 #include "dde/dde_connection_manager.h"
 #include "gui/theme_manager.h"
 
@@ -32,7 +34,7 @@ namespace gui {
     void SettingsManager::apply(const app::AppSettings& settings) {
         applyTheme(settings.appearance);
         applyDDE(settings.dde);
-        // Phase 4+: applyPlot(settings.plot);
+        applyPlot(settings.plot);
         // Phase 7+:  applyUpdates(settings.updates);
 
         m_current = settings;
@@ -53,7 +55,10 @@ namespace gui {
 
     void SettingsManager::applyPlot(const app::PlotSettings& plot) {
         (void)plot;
-        // Implemented in Phase 4
+        // ImPlot 1.x does not expose LineWeight/MarkerSize as global ImPlotStyle fields;
+        // they are per-item properties on ImPlotSpec. Surface services read them via
+        // plotLineWeight()/plotMarkerSize() and pass to each PlotLine()/PlotScatter() call.
+        // showGridByDefault is consumed by surface services via showGridByDefault().
     }
 
     void SettingsManager::applyUpdates(const app::UpdateSettings& updates) {

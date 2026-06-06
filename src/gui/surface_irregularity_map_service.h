@@ -12,6 +12,7 @@
 #include "lib/imgui/imgui.h"
 
 class Logger;
+namespace gui { class SettingsManager; }
 
 namespace ZemaxDDE {
     class OperationMonitor;
@@ -41,6 +42,8 @@ namespace gui {
             SurfaceIrregularityMapService(DDEConnectionManager* connectionManager, Logger& logger);
 
             void setUiOperationMonitor(UiOperationMonitor* monitor);
+
+            void setSettingsManager(SettingsManager* mgr) noexcept { m_settingsManager = mgr; }
 
             // Profile calculation (via SurfaceProfileCalculator)
             void startCalculation(int surface, int sampling, double angle, TaskSource source);
@@ -82,6 +85,7 @@ namespace gui {
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
             UiOperationMonitor* m_uiOpMonitor{nullptr};
+            SettingsManager* m_settingsManager = nullptr;
             SurfaceProfileCalculator m_calculator;
 
             std::vector<ZemaxDDE::SurfaceData> m_profiles;

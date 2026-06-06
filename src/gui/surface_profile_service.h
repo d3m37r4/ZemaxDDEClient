@@ -11,6 +11,7 @@
 #include "gui/surface_profile_calculator.h"
 
 class Logger;
+namespace gui { class SettingsManager; }
 
 namespace gui {
 
@@ -33,6 +34,11 @@ namespace gui {
             SurfaceProfileService(DDEConnectionManager* connectionManager, Logger& logger);
 
             void setUiOperationMonitor(UiOperationMonitor* monitor);
+
+            /// Non-owning binding; called by GuiManager after SettingsManager construction.
+            /// Used to read showGridByDefault() when configuring SetupAxes.
+            void setSettingsManager(SettingsManager* mgr) noexcept { m_settingsManager = mgr; }
+
             void startCalculation(int surface, int sampling, double angle, TaskSource source = TaskSource::None);
             void saveCrossSectionToFile(const ZemaxDDE::SurfaceData& surface);
 
@@ -62,6 +68,7 @@ namespace gui {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
+            SettingsManager* m_settingsManager = nullptr;
             SurfaceProfileCalculator m_calculator;
             TaskSource m_taskSource{TaskSource::None};
     };

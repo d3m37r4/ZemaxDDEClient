@@ -68,7 +68,6 @@ namespace app {
         general.restoreWindowLayout = true;
 
         appearance.themeMode = ThemeMode::System;
-        appearance.plotLineWeight = 1.0f;
 
         dde.connectionTimeoutMs = 5000;
         dde.maxRetryCount = 3;
@@ -76,6 +75,7 @@ namespace app {
         dde.maxConnections = 4;
 
         plot.showGridByDefault = true;
+        plot.lineWeight = 1.0f;
         plot.markerSize = 5.0f;
 
         updates.autoCheckOnStartup = false;
@@ -117,10 +117,6 @@ namespace app {
             const auto& a = j["appearance"];
             if (a.contains("themeMode") && a["themeMode"].is_string())
                 appearance.themeMode = themeModeFromString(a["themeMode"].get<std::string_view>());
-            if (a.contains("plotLineWeight") && a["plotLineWeight"].is_number()) {
-                appearance.plotLineWeight = clampValue(
-                    a["plotLineWeight"].get<float>(), kMinLineWeight, kMaxLineWeight, 1.0f);
-            }
         }
 
         // --- DDE ---
@@ -147,6 +143,10 @@ namespace app {
             const auto& p = j["plot"];
             if (p.contains("showGridByDefault") && p["showGridByDefault"].is_boolean())
                 plot.showGridByDefault = p["showGridByDefault"].get<bool>();
+            if (p.contains("lineWeight") && p["lineWeight"].is_number()) {
+                plot.lineWeight = clampValue(
+                    p["lineWeight"].get<float>(), kMinLineWeight, kMaxLineWeight, 1.0f);
+            }
             if (p.contains("markerSize") && p["markerSize"].is_number()) {
                 plot.markerSize = clampValue(
                     p["markerSize"].get<float>(), kMinMarkerSize, kMaxMarkerSize, 5.0f);
@@ -173,7 +173,6 @@ namespace app {
         j["general"]["restoreWindowLayout"]   = general.restoreWindowLayout;
 
         j["appearance"]["themeMode"]      = std::string{themeModeToString(appearance.themeMode)};
-        j["appearance"]["plotLineWeight"] = appearance.plotLineWeight;
 
         j["dde"]["connectionTimeoutMs"] = dde.connectionTimeoutMs;
         j["dde"]["maxRetryCount"]       = dde.maxRetryCount;
@@ -181,6 +180,7 @@ namespace app {
         j["dde"]["maxConnections"]      = dde.maxConnections;
 
         j["plot"]["showGridByDefault"] = plot.showGridByDefault;
+        j["plot"]["lineWeight"]        = plot.lineWeight;
         j["plot"]["markerSize"]        = plot.markerSize;
 
         j["updates"]["autoCheckOnStartup"] = updates.autoCheckOnStartup;

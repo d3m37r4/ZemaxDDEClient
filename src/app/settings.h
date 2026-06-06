@@ -23,7 +23,6 @@ namespace app {
 
     struct AppearanceSettings {
         ThemeMode themeMode = ThemeMode::System;
-        float plotLineWeight = 1.0f;
     };
 
     struct DDESettings {
@@ -35,6 +34,7 @@ namespace app {
 
     struct PlotSettings {
         bool showGridByDefault = true;
+        float lineWeight = 1.0f;
         float markerSize = 5.0f;
     };
 

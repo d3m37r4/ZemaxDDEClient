@@ -34,6 +34,23 @@ namespace gui {
             void applyTheme(const app::AppearanceSettings& appearance);
             void applyDDE(const app::DDESettings& dde);
             void applyPlot(const app::PlotSettings& plot);
+
+            /// Returns the cached 'show grid by default' flag set by applyPlot().
+            /// Surface profile and surface map services read this when configuring
+            /// ImPlot::SetupAxes to honor the user's preference on new plots.
+            [[nodiscard]] bool showGridByDefault() const noexcept { return m_current.plot.showGridByDefault; }
+
+            /// Returns the cached line weight (pixels) for ImPlot plot lines.
+            /// In ImPlot 1.x LineWeight is a per-item ImPlotSpec property, not a
+            /// global style field, so surface services must pass this via ImPlotSpec
+            /// to each PlotLine()/PlotScatter() call.
+            [[nodiscard]] float plotLineWeight() const noexcept { return m_current.plot.lineWeight; }
+
+            /// Returns the cached marker size (pixels) for ImPlot plot markers.
+            /// Same caveat as plotLineWeight(): only takes effect where the plot item
+            /// uses a marker (PlotScatter/PlotLine with Marker set in ImPlotSpec).
+            [[nodiscard]] float plotMarkerSize() const noexcept { return m_current.plot.markerSize; }
+
             void applyUpdates(const app::UpdateSettings& updates);
 
             [[nodiscard]] const app::AppSettings& current() const noexcept { return m_current; }
