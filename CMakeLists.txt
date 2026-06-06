@@ -106,6 +106,7 @@ set(SOURCES
     ${SRC_DIR}/gui/surface_profile_calculator.cpp
     ${SRC_DIR}/gui/surface_irregularity_map_service.cpp
     ${SRC_DIR}/gui/theme_manager.cpp
+    ${SRC_DIR}/gui/settings_manager.cpp
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp

@@ -8,6 +8,8 @@
 #include <implot.h>
 #include <implot3d.h>
 
+#include "app/settings.h"
+
 inline constexpr std::string_view kThemeNameLight = "Windows 11 Light";
 inline constexpr std::string_view kThemeNameDark  = "Windows 11 Dark";
 
@@ -31,6 +33,10 @@ public:
     bool apply(const std::string& name);
     void toggle();
     void next();
+
+    /// Resolves @p mode against @p isSystemDark and applies the resulting theme.
+    /// Used by SettingsManager for AppSettings.appearance.themeMode.
+    void applyByMode(app::ThemeMode mode, bool isSystemDark);
 
     bool isLight() const;
     ImVec4 getClearColor() const;

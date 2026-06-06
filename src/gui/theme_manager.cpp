@@ -273,6 +273,20 @@ void ThemeManager::next() {
     applyThemeData(m_themes[m_current]);
 }
 
+void ThemeManager::applyByMode(app::ThemeMode mode, bool isSystemDark) {
+    switch (mode) {
+        case app::ThemeMode::Light:
+            apply(std::string{kThemeNameLight});
+            break;
+        case app::ThemeMode::Dark:
+            apply(std::string{kThemeNameDark});
+            break;
+        case app::ThemeMode::System:
+            apply(std::string{isSystemDark ? kThemeNameDark : kThemeNameLight});
+            break;
+    }
+}
+
 bool ThemeManager::isLight() const {
     if (m_themes.empty()) return false;
     return m_themes[m_current].isLight;
