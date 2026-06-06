@@ -1,4 +1,5 @@
 #include "gui/popups/update_checker.h"
+#include "gui/theme_manager.h"
 #include "lib/imgui/imgui.h"
 #include "version.h"
 #include "app/app.h"
@@ -138,6 +139,11 @@ namespace gui {
         }
 
         if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if (!m_themeManager) {
+                ImGui::EndPopup();
+                return;
+            }
+
             ImGui::TextUnformatted(APP_NAME);
             ImGui::Separator();
             ImGui::Spacing();
@@ -150,13 +156,14 @@ namespace gui {
             if (!m_isCheckComplete) {
                 ImGui::TextUnformatted("Click the button below to check for updates.");
             } else {
+                const auto& sem = m_themeManager->semantic();
                 if (!m_errorMessage.empty()) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Error: %s", m_errorMessage.c_str());
+                    ImGui::TextColored(sem.danger, "Error: %s", m_errorMessage.c_str());
                 } else if (m_updateInfo.hasUpdate) {
-                    ImGui::TextColored(ImVec4(0.0f, 0.8f, 0.0f, 1.0f), "New version available: %s", m_updateInfo.version.c_str());
+                    ImGui::TextColored(sem.success, "New version available: %s", m_updateInfo.version.c_str());
                     ImGui::TextUnformatted(std::format("Released: {}", m_updateInfo.releaseDate).c_str());
                 } else {
-                    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Your software is up to date!");
+                    ImGui::TextColored(sem.muted, "Your software is up to date!");
                 }
             }
 
