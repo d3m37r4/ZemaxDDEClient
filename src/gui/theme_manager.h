@@ -10,8 +10,8 @@
 
 #include "app/settings.h"
 
-inline constexpr std::string_view kThemeNameLight = "Windows 11 Light";
-inline constexpr std::string_view kThemeNameDark  = "Windows 11 Dark";
+inline constexpr std::string_view kThemeNameLight = "Light Theme";
+inline constexpr std::string_view kThemeNameDark  = "Dark Theme";
 
 /// Non-color styling (rounding, padding, spacing, border sizes).
 /// Stored per-theme so future themes can override look-and-feel without

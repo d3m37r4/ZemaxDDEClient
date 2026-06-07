@@ -8,99 +8,128 @@ static ImVec4 col(int r, int g, int b, int a = 255) {
 }
 
 // ===============================================================
-//  GitHub-Inspired Light
+//  Win11 Fluent-Inspired Semantic Palette
+// ===============================================================
+//  Accent-aligned with Win11 system blue (#0078d4). Status colors
+//  follow Win11 / WinUI 3 Fluent guidance: greens are slightly
+//  desaturated for dark mode to avoid eye-strain, danger is
+//  brightened on dark to keep AA contrast on dark surfaces.
 // ===============================================================
 SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
     SemanticPalette p;
-    p.success = ImVec4(0.18f, 0.64f, 0.31f, 1.0f);                                // #2da44e
-    p.warning = isLight ? ImVec4(0.75f, 0.55f, 0.05f, 1.0f)                       // #bf8700
-                          : ImVec4(0.82f, 0.60f, 0.13f, 1.0f);                    // #d29922
-    p.danger  = ImVec4(0.81f, 0.13f, 0.18f, 1.0f);                                // #cf222e
-    p.info    = isLight ? ImVec4(0.04f, 0.41f, 0.85f, 1.0f)                       // #0969da
-                          : ImVec4(0.35f, 0.65f, 1.00f, 1.0f);                    // #58a6ff
-    p.muted   = isLight ? ImVec4(0.40f, 0.45f, 0.50f, 1.0f)                       // #656d76
-                          : ImVec4(0.55f, 0.58f, 0.62f, 1.0f);                    // #8b949e
 
-    p.successButton       = ImVec4(0.04f, 0.40f, 0.08f, 1.0f);
-    p.successButtonHover  = ImVec4(0.06f, 0.50f, 0.12f, 1.0f);
-    p.successButtonActive = ImVec4(0.03f, 0.28f, 0.05f, 1.0f);
+    if (isLight) {
+        p.success = ImVec4(0.063f, 0.486f, 0.063f, 1.0f);  // #107c10
+        p.warning = ImVec4(0.792f, 0.314f, 0.063f, 1.0f);  // #ca5010
+        p.danger  = ImVec4(0.820f, 0.204f, 0.220f, 1.0f);  // #d13438
+        p.info    = ImVec4(0.000f, 0.471f, 0.831f, 1.0f);  // #0078d4
+        p.muted   = ImVec4(0.420f, 0.420f, 0.420f, 1.0f);  // #6b6b6b
 
-    p.dangerButton       = ImVec4(0.55f, 0.10f, 0.08f, 1.0f);
-    p.dangerButtonHover  = ImVec4(0.65f, 0.14f, 0.10f, 1.0f);
-    p.dangerButtonActive = ImVec4(0.40f, 0.06f, 0.04f, 1.0f);
+        p.successButton       = ImVec4(0.063f, 0.486f, 0.063f, 1.0f);
+        p.successButtonHover  = ImVec4(0.094f, 0.612f, 0.094f, 1.0f);
+        p.successButtonActive = ImVec4(0.039f, 0.353f, 0.039f, 1.0f);
 
-    p.onAccent = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        p.dangerButton       = ImVec4(0.820f, 0.204f, 0.220f, 1.0f);
+        p.dangerButtonHover  = ImVec4(0.890f, 0.298f, 0.314f, 1.0f);
+        p.dangerButtonActive = ImVec4(0.671f, 0.149f, 0.165f, 1.0f);
+
+        p.onAccent = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    } else {
+        p.success = ImVec4(0.247f, 0.725f, 0.314f, 1.0f);  // #3fb950  (GitHub Dark Primer green)
+        p.warning = ImVec4(0.988f, 0.882f, 0.000f, 1.0f);  // #fce100
+        p.danger  = ImVec4(0.973f, 0.318f, 0.286f, 1.0f);  // #f85149  (GitHub Dark Primer red)
+        p.info    = ImVec4(0.376f, 0.647f, 0.980f, 1.0f);  // #60a5fa
+        p.muted   = ImVec4(0.541f, 0.541f, 0.541f, 1.0f);  // #8a8a8a
+
+        p.successButton       = ImVec4(0.137f, 0.525f, 0.212f, 1.0f);  // #238636
+        p.successButtonHover  = ImVec4(0.180f, 0.627f, 0.263f, 1.0f);  // #2ea043
+        p.successButtonActive = ImVec4(0.102f, 0.498f, 0.216f, 1.0f);  // #1a7f37
+
+        p.dangerButton       = ImVec4(0.675f, 0.180f, 0.157f, 1.0f);  // #ac2e28  (deep saturated red)
+        p.dangerButtonHover  = ImVec4(0.792f, 0.216f, 0.184f, 1.0f);  // #ca372f  (hover)
+        p.dangerButtonActive = ImVec4(0.518f, 0.141f, 0.122f, 1.0f);  // #84241f  (active)
+
+        p.onAccent = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
     return p;
 }
 
+// ===============================================================
+//  Win11 Light (Fluent-inspired)
+// ===============================================================
+//  Soft Mica-like backgrounds, thin 1px borders, single blue
+//  accent #0078d4, no shadows. Inspired by Win11 Light + VS Code
+//  "Light Modern" themes.
+// ===============================================================
 ThemeData ThemeData::CreateWin11Light() {
     ThemeData t;
     t.name    = std::string{kThemeNameLight};
     t.isLight = true;
     t.semantic = SemanticPalette::DefaultsFor(true);
-    t.clearColor = col(255, 255, 255);
+    t.clearColor = col(243, 243, 243);  // #f3f3f3
 
     ImVec4* c = t.imguiColors;
 
-    c[ImGuiCol_Text]                 = col(31,  35,  40);   // #1f2328
-    c[ImGuiCol_TextDisabled]         = col(101, 109, 118);  // #656d76
-    c[ImGuiCol_WindowBg]             = col(255, 255, 255);  // #ffffff
-    c[ImGuiCol_ChildBg]              = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_PopupBg]              = col(255, 255, 255);  // #ffffff
-    c[ImGuiCol_Border]               = col(208, 215, 222);  // #d0d7de
+    c[ImGuiCol_Text]                 = col(31,  31,  31);   // #1f1f1f
+    c[ImGuiCol_TextDisabled]         = col(107, 107, 107);  // #6b6b6b
+    c[ImGuiCol_WindowBg]             = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_ChildBg]              = col(243, 243, 243);  // #f3f3f3
+    c[ImGuiCol_PopupBg]              = col(252, 252, 252);  // #fcfcfc
+    c[ImGuiCol_Border]               = col(229, 229, 229);  // #e5e5e5
     c[ImGuiCol_BorderShadow]         = ImVec4(0, 0, 0, 0);
-    c[ImGuiCol_FrameBg]              = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_FrameBgHovered]       = col(232, 236, 240);  // #e8ecf0
-    c[ImGuiCol_FrameBgActive]        = col(208, 215, 222);  // #d0d7de
-    c[ImGuiCol_TitleBg]              = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_TitleBgActive]        = col(255, 255, 255);  // #ffffff
-    c[ImGuiCol_TitleBgCollapsed]     = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_MenuBarBg]            = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_ScrollbarBg]          = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_ScrollbarGrab]        = col(175, 184, 193);  // #afb8c1
-    c[ImGuiCol_ScrollbarGrabHovered] = col(143, 154, 165);  // #8f9aa5
-    c[ImGuiCol_ScrollbarGrabActive]  = col(118, 130, 142);  // #76828e
-    c[ImGuiCol_CheckMark]            = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_SliderGrab]           = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_SliderGrabActive]     = col(8,   82,  173);  // #0852ad
-    c[ImGuiCol_Button]               = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_ButtonHovered]        = col(221, 244, 255);  // #ddf4ff
-    c[ImGuiCol_ButtonActive]         = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_Header]               = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_HeaderHovered]        = col(221, 244, 255);  // #ddf4ff
-    c[ImGuiCol_HeaderActive]         = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_Separator]            = col(208, 215, 222);  // #d0d7de
-    c[ImGuiCol_SeparatorHovered]     = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_SeparatorActive]      = col(8,   82,  173);  // #0852ad
-    c[ImGuiCol_ResizeGrip]           = col(208, 215, 222);  // #d0d7de
-    c[ImGuiCol_ResizeGripHovered]    = col(143, 154, 165);  // #8f9aa5
-    c[ImGuiCol_ResizeGripActive]     = col(118, 130, 142);  // #76828e
-    c[ImGuiCol_InputTextCursor]      = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_TabHovered]           = col(232, 236, 240);  // #e8ecf0
-    c[ImGuiCol_Tab]                  = col(246, 248, 250);  // #f6f8fa
+    c[ImGuiCol_FrameBg]              = col(255, 255, 255);  // #ffffff
+    c[ImGuiCol_FrameBgHovered]       = col(240, 240, 240);  // #f0f0f0
+    c[ImGuiCol_FrameBgActive]        = col(224, 224, 224);  // #e0e0e0
+    c[ImGuiCol_TitleBg]              = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_TitleBgActive]        = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_TitleBgCollapsed]     = col(243, 243, 243);  // #f3f3f3
+    c[ImGuiCol_MenuBarBg]            = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_ScrollbarBg]          = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_ScrollbarGrab]        = col(200, 200, 200);  // #c8c8c8
+    c[ImGuiCol_ScrollbarGrabHovered] = col(170, 170, 170);  // #aaaaaa
+    c[ImGuiCol_ScrollbarGrabActive]  = col(140, 140, 140);  // #8c8c8c
+    c[ImGuiCol_CheckMark]            = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_SliderGrab]           = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_SliderGrabActive]     = col(0,   90,  158);  // #005a9e
+    c[ImGuiCol_Button]               = col(255, 255, 255);  // #ffffff
+    c[ImGuiCol_ButtonHovered]        = col(240, 240, 240);  // #f0f0f0
+    c[ImGuiCol_ButtonActive]         = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_Header]               = col(243, 243, 243);  // #f3f3f3
+    c[ImGuiCol_HeaderHovered]        = col(0,   120, 212, 26); // rgba(0,120,212,0.10)
+    c[ImGuiCol_HeaderActive]         = col(0,   120, 212, 51); // rgba(0,120,212,0.20)
+    c[ImGuiCol_Separator]            = col(229, 229, 229);  // #e5e5e5
+    c[ImGuiCol_SeparatorHovered]     = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_SeparatorActive]      = col(0,   90,  158);  // #005a9e
+    c[ImGuiCol_ResizeGrip]           = col(229, 229, 229);  // #e5e5e5
+    c[ImGuiCol_ResizeGripHovered]    = col(170, 170, 170);  // #aaaaaa
+    c[ImGuiCol_ResizeGripActive]     = col(140, 140, 140);  // #8c8c8c
+    c[ImGuiCol_InputTextCursor]      = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_TabHovered]           = col(240, 240, 240);  // #f0f0f0
+    c[ImGuiCol_Tab]                  = col(243, 243, 243);  // #f3f3f3
     c[ImGuiCol_TabSelected]          = col(255, 255, 255);  // #ffffff
-    c[ImGuiCol_TabSelectedOverline]  = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_TabDimmed]            = col(232, 236, 240);  // #e8ecf0
-    c[ImGuiCol_TabDimmedSelected]    = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_TabDimmedSelectedOverline] = col(101, 109, 118); // #656d76
-    c[ImGuiCol_DockingPreview]       = col(9,   105, 218, 90);
-    c[ImGuiCol_DockingEmptyBg]       = col(208, 215, 222);  // #d0d7de
-    c[ImGuiCol_PlotLines]            = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_PlotLinesHovered]     = col(8,   82,  173);  // #0852ad
-    c[ImGuiCol_PlotHistogram]        = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_PlotHistogramHovered] = col(8,   82,  173);  // #0852ad
-    c[ImGuiCol_TableHeaderBg]        = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_TableBorderStrong]    = col(208, 215, 222);  // #d0d7de
-    c[ImGuiCol_TableBorderLight]     = col(232, 236, 240);  // #e8ecf0
+    c[ImGuiCol_TabSelectedOverline]  = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_TabDimmed]            = col(243, 243, 243);  // #f3f3f3
+    c[ImGuiCol_TabDimmedSelected]    = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_TabDimmedSelectedOverline] = col(107, 107, 107); // #6b6b6b
+    c[ImGuiCol_DockingPreview]       = col(0,   120, 212, 90);
+    c[ImGuiCol_DockingEmptyBg]       = col(229, 229, 229);  // #e5e5e5
+    c[ImGuiCol_PlotLines]            = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_PlotLinesHovered]     = col(0,   90,  158);  // #005a9e
+    c[ImGuiCol_PlotHistogram]        = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_PlotHistogramHovered] = col(0,   90,  158);  // #005a9e
+    c[ImGuiCol_TableHeaderBg]        = col(243, 243, 243);  // #f3f3f3
+    c[ImGuiCol_TableBorderStrong]    = col(229, 229, 229);  // #e5e5e5
+    c[ImGuiCol_TableBorderLight]     = col(235, 235, 235);  // #ebebeb
     c[ImGuiCol_TableRowBg]           = col(255, 255, 255);  // #ffffff
-    c[ImGuiCol_TableRowBgAlt]        = col(246, 248, 250);  // #f6f8fa
-    c[ImGuiCol_TextLink]             = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_TextSelectedBg]       = col(9,   105, 218, 64);
-    c[ImGuiCol_TreeLines]            = col(208, 215, 222);  // #d0d7de
-    c[ImGuiCol_DragDropTarget]       = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_DragDropTargetBg]     = col(9,   105, 218, 32);
-    c[ImGuiCol_UnsavedMarker]        = col(9,   105, 218);  // #0969da
-    c[ImGuiCol_NavCursor]            = col(9,   105, 218);  // #0969da
+    c[ImGuiCol_TableRowBgAlt]        = col(250, 250, 250);  // #fafafa
+    c[ImGuiCol_TextLink]             = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_TextSelectedBg]       = col(0,   120, 212, 64);
+    c[ImGuiCol_TreeLines]            = col(229, 229, 229);  // #e5e5e5
+    c[ImGuiCol_DragDropTarget]       = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_DragDropTargetBg]     = col(0,   120, 212, 32);
+    c[ImGuiCol_UnsavedMarker]        = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_NavCursor]            = col(0,   120, 212);  // #0078d4
     c[ImGuiCol_NavWindowingHighlight]= col(255, 255, 255);  // #ffffff
     c[ImGuiCol_NavWindowingDimBg]    = col(0,   0,   0,   89);
     c[ImGuiCol_ModalWindowDimBg]     = col(0,   0,   0,   115);
@@ -108,7 +137,7 @@ ThemeData ThemeData::CreateWin11Light() {
     // -- ImPlot -------------------------------------------------
     ImVec4* pc = t.implotColors;
     pc[ImPlotCol_FrameBg]       = t.imguiColors[ImGuiCol_FrameBg];
-    pc[ImPlotCol_PlotBg]        = col(246, 248, 250);
+    pc[ImPlotCol_PlotBg]        = col(252, 252, 252);
     pc[ImPlotCol_PlotBorder]    = t.imguiColors[ImGuiCol_Border];
     pc[ImPlotCol_LegendBg]      = t.imguiColors[ImGuiCol_PopupBg];
     pc[ImPlotCol_LegendBorder]  = t.imguiColors[ImGuiCol_Border];
@@ -116,12 +145,12 @@ ThemeData ThemeData::CreateWin11Light() {
     pc[ImPlotCol_TitleText]     = t.imguiColors[ImGuiCol_Text];
     pc[ImPlotCol_InlayText]     = t.imguiColors[ImGuiCol_Text];
     pc[ImPlotCol_AxisText]      = t.imguiColors[ImGuiCol_Text];
-    pc[ImPlotCol_AxisGrid]      = col(31, 35, 40, 51);
+    pc[ImPlotCol_AxisGrid]      = col(31, 31, 31, 38);
     pc[ImPlotCol_AxisTick]      = pc[ImPlotCol_AxisGrid];
     pc[ImPlotCol_AxisBg]        = ImVec4(0, 0, 0, 0);
     pc[ImPlotCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
     pc[ImPlotCol_AxisBgActive]  = t.imguiColors[ImGuiCol_ButtonActive];
-    pc[ImPlotCol_Selection]     = col(255, 255, 0);
+    pc[ImPlotCol_Selection]     = col(0, 120, 212, 64);
     pc[ImPlotCol_Crosshairs]    = pc[ImPlotCol_PlotBorder];
 
     // -- ImPlot3D -----------------------------------------------
@@ -145,84 +174,95 @@ ThemeData ThemeData::CreateWin11Light() {
 }
 
 // ===============================================================
-//  GitHub Dark-Inspired
+//  Win11 Light (Fluent-inspired)
+// ===============================================================
+//  Soft Mica-like backgrounds, thin 1px borders, single blue
+//  accent #0078d4, no shadows. Inspired by Win11 Light + VS Code
+//  "Light Modern" themes.
+// ===============================================================
+//  Win11 Dark (Fluent-inspired)
+// ===============================================================
+//  Inspired by Win11 Dark + VS Code "Dark 2026" / "Dark Modern".
+//  Soft Mica-like charcoal backgrounds, lighter text (#f0f0f0),
+//  lighter semantic colors (success/danger) for AA contrast on
+//  dark surfaces. Accent #0078d4 stays consistent with light.
 // ===============================================================
 ThemeData ThemeData::CreateWin11Dark() {
     ThemeData t;
     t.name    = std::string{kThemeNameDark};
     t.isLight = false;
     t.semantic = SemanticPalette::DefaultsFor(false);
-    t.clearColor = col(22, 27, 34);  // #161b22
+    t.clearColor = col(24, 24, 24);  // #181818
 
     ImVec4* c = t.imguiColors;
 
-    c[ImGuiCol_Text]                 = col(230, 237, 243);  // #e6edf3
-    c[ImGuiCol_TextDisabled]         = col(139, 148, 158);  // #8b949e
-    c[ImGuiCol_WindowBg]             = col(22,  27,  34);   // #161b22
-    c[ImGuiCol_ChildBg]              = col(13,  17,  23);   // #0d1117
-    c[ImGuiCol_PopupBg]              = col(22,  27,  34);   // #161b22
-    c[ImGuiCol_Border]               = col(48,  54,  61);   // #30363d
+    c[ImGuiCol_Text]                 = col(240, 240, 240);  // #f0f0f0
+    c[ImGuiCol_TextDisabled]         = col(138, 138, 138);  // #8a8a8a
+    c[ImGuiCol_WindowBg]             = col(24,  24,  24);   // #181818
+    c[ImGuiCol_ChildBg]              = col(24,  24,  24);   // #181818
+    c[ImGuiCol_PopupBg]              = col(37,  37,  37);   // #252525
+    c[ImGuiCol_Border]               = col(45,  45,  45);   // #2d2d2d
     c[ImGuiCol_BorderShadow]         = ImVec4(0, 0, 0, 0);
-    c[ImGuiCol_FrameBg]              = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_FrameBgHovered]       = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_FrameBgActive]        = col(61,  68,  77);   // #3d444d
-    c[ImGuiCol_TitleBg]              = col(13,  17,  23);   // #0d1117
-    c[ImGuiCol_TitleBgActive]        = col(22,  27,  34);   // #161b22
-    c[ImGuiCol_TitleBgCollapsed]     = col(13,  17,  23);   // #0d1117
-    c[ImGuiCol_MenuBarBg]            = col(13,  17,  23);   // #0d1117
-    c[ImGuiCol_ScrollbarBg]          = col(22,  27,  34);   // #161b22
-    c[ImGuiCol_ScrollbarGrab]        = col(72,  79,  88);   // #484f58
-    c[ImGuiCol_ScrollbarGrabHovered] = col(89,  99,  110);  // #59636e
-    c[ImGuiCol_ScrollbarGrabActive]  = col(110, 118, 129);  // #6e7681
-    c[ImGuiCol_CheckMark]            = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_SliderGrab]           = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_SliderGrabActive]     = col(120, 184, 255);  // #78b8ff
-    c[ImGuiCol_Button]               = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_ButtonHovered]        = col(31,  42,  63);   // #1f2a3f
-    c[ImGuiCol_ButtonActive]         = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_Header]               = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_HeaderHovered]        = col(31,  42,  63);   // #1f2a3f
-    c[ImGuiCol_HeaderActive]         = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_Separator]            = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_SeparatorHovered]     = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_SeparatorActive]      = col(120, 184, 255);  // #78b8ff
-    c[ImGuiCol_ResizeGrip]           = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_ResizeGripHovered]    = col(89,  99,  110);  // #59636e
-    c[ImGuiCol_ResizeGripActive]     = col(110, 118, 129);  // #6e7681
-    c[ImGuiCol_InputTextCursor]      = col(230, 237, 243);  // #e6edf3
-    c[ImGuiCol_TabHovered]           = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_Tab]                  = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_TabSelected]          = col(22,  27,  34);   // #161b22
-    c[ImGuiCol_TabSelectedOverline]  = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_TabDimmed]            = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_TabDimmedSelected]    = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_TabDimmedSelectedOverline] = col(139, 148, 158); // #8b949e
-    c[ImGuiCol_DockingPreview]       = col(88,  166, 255, 90);
-    c[ImGuiCol_DockingEmptyBg]       = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_PlotLines]            = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_PlotLinesHovered]     = col(120, 184, 255);  // #78b8ff
-    c[ImGuiCol_PlotHistogram]        = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_PlotHistogramHovered] = col(120, 184, 255);  // #78b8ff
-    c[ImGuiCol_TableHeaderBg]        = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_TableBorderStrong]    = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_TableBorderLight]     = col(33,  38,  45);   // #21262d
-    c[ImGuiCol_TableRowBg]           = col(22,  27,  34);   // #161b22
-    c[ImGuiCol_TableRowBgAlt]        = col(13,  17,  23);   // #0d1117
-    c[ImGuiCol_TextLink]             = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_TextSelectedBg]       = col(88,  166, 255, 64);
-    c[ImGuiCol_TreeLines]            = col(48,  54,  61);   // #30363d
-    c[ImGuiCol_DragDropTarget]       = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_DragDropTargetBg]     = col(88,  166, 255, 32);
-    c[ImGuiCol_UnsavedMarker]        = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_NavCursor]            = col(88,  166, 255);  // #58a6ff
-    c[ImGuiCol_NavWindowingHighlight]= col(33,  38,  45);   // #21262d
+    c[ImGuiCol_FrameBg]              = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_FrameBgHovered]       = col(56,  56,  56);   // #383838
+    c[ImGuiCol_FrameBgActive]        = col(69,  69,  69);   // #454545
+    c[ImGuiCol_TitleBg]              = col(24,  24,  24);   // #181818
+    c[ImGuiCol_TitleBgActive]        = col(24,  24,  24);   // #181818
+    c[ImGuiCol_TitleBgCollapsed]     = col(18,  18,  18);   // #121212
+    c[ImGuiCol_MenuBarBg]            = col(24,  24,  24);   // #181818
+    c[ImGuiCol_ScrollbarBg]          = col(24,  24,  24);   // #181818
+    c[ImGuiCol_ScrollbarGrab]        = col(80,  80,  80);   // #505050
+    c[ImGuiCol_ScrollbarGrabHovered] = col(110, 110, 110);  // #6e6e6e
+    c[ImGuiCol_ScrollbarGrabActive]  = col(140, 140, 140);  // #8c8c8c
+    c[ImGuiCol_CheckMark]            = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_SliderGrab]           = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_SliderGrabActive]     = col(140, 188, 255);  // #8cbcff
+    c[ImGuiCol_Button]               = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_ButtonHovered]        = col(56,  56,  56);   // #383838
+    c[ImGuiCol_ButtonActive]         = col(0,   120, 212);  // #0078d4
+    c[ImGuiCol_Header]               = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_HeaderHovered]        = col(0,   120, 212, 51);  // rgba(0,120,212,0.20)
+    c[ImGuiCol_HeaderActive]         = col(0,   120, 212, 77);  // rgba(0,120,212,0.30)
+    c[ImGuiCol_Separator]            = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_SeparatorHovered]     = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_SeparatorActive]      = col(140, 188, 255);  // #8cbcff
+    c[ImGuiCol_ResizeGrip]           = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_ResizeGripHovered]    = col(110, 110, 110);  // #6e6e6e
+    c[ImGuiCol_ResizeGripActive]     = col(140, 140, 140);  // #8c8c8c
+    c[ImGuiCol_InputTextCursor]      = col(240, 240, 240);  // #f0f0f0
+    c[ImGuiCol_TabHovered]           = col(56,  56,  56);   // #383838
+    c[ImGuiCol_Tab]                  = col(32,  32,  32);   // #202020
+    c[ImGuiCol_TabSelected]          = col(24,  24,  24);   // #181818
+    c[ImGuiCol_TabSelectedOverline]  = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_TabDimmed]            = col(32,  32,  32);   // #202020
+    c[ImGuiCol_TabDimmedSelected]    = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_TabDimmedSelectedOverline] = col(138, 138, 138); // #8a8a8a
+    c[ImGuiCol_DockingPreview]       = col(96,  165, 250, 90);
+    c[ImGuiCol_DockingEmptyBg]       = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_PlotLines]            = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_PlotLinesHovered]     = col(140, 188, 255);  // #8cbcff
+    c[ImGuiCol_PlotHistogram]        = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_PlotHistogramHovered] = col(140, 188, 255);  // #8cbcff
+    c[ImGuiCol_TableHeaderBg]        = col(32,  32,  32);   // #202020
+    c[ImGuiCol_TableBorderStrong]    = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_TableBorderLight]     = col(38,  38,  38);   // #262626
+    c[ImGuiCol_TableRowBg]           = col(32,  32,  32);   // #202020
+    c[ImGuiCol_TableRowBgAlt]        = col(28,  28,  28);   // #1c1c1c
+    c[ImGuiCol_TextLink]             = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_TextSelectedBg]       = col(96,  165, 250, 64);
+    c[ImGuiCol_TreeLines]            = col(45,  45,  45);   // #2d2d2d
+    c[ImGuiCol_DragDropTarget]       = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_DragDropTargetBg]     = col(96,  165, 250, 32);
+    c[ImGuiCol_UnsavedMarker]        = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_NavCursor]            = col(96,  165, 250);  // #60a5fa
+    c[ImGuiCol_NavWindowingHighlight]= col(45,  45,  45);   // #2d2d2d
     c[ImGuiCol_NavWindowingDimBg]    = col(0,   0,   0,   115);
     c[ImGuiCol_ModalWindowDimBg]     = col(0,   0,   0,   153);
 
     // -- ImPlot -------------------------------------------------
     ImVec4* pc = t.implotColors;
     pc[ImPlotCol_FrameBg]       = t.imguiColors[ImGuiCol_FrameBg];
-    pc[ImPlotCol_PlotBg]        = col(13, 17, 23);
+    pc[ImPlotCol_PlotBg]        = col(24, 24, 24);
     pc[ImPlotCol_PlotBorder]    = t.imguiColors[ImGuiCol_Border];
     pc[ImPlotCol_LegendBg]      = t.imguiColors[ImGuiCol_PopupBg];
     pc[ImPlotCol_LegendBorder]  = t.imguiColors[ImGuiCol_Border];
@@ -230,12 +270,12 @@ ThemeData ThemeData::CreateWin11Dark() {
     pc[ImPlotCol_TitleText]     = t.imguiColors[ImGuiCol_Text];
     pc[ImPlotCol_InlayText]     = t.imguiColors[ImGuiCol_Text];
     pc[ImPlotCol_AxisText]      = t.imguiColors[ImGuiCol_Text];
-    pc[ImPlotCol_AxisGrid]      = col(230, 237, 243, 36);
+    pc[ImPlotCol_AxisGrid]      = col(240, 240, 240, 36);
     pc[ImPlotCol_AxisTick]      = pc[ImPlotCol_AxisGrid];
     pc[ImPlotCol_AxisBg]        = ImVec4(0, 0, 0, 0);
     pc[ImPlotCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
     pc[ImPlotCol_AxisBgActive]  = t.imguiColors[ImGuiCol_ButtonActive];
-    pc[ImPlotCol_Selection]     = col(255, 255, 0);
+    pc[ImPlotCol_Selection]     = col(96, 165, 250, 64);
     pc[ImPlotCol_Crosshairs]    = pc[ImPlotCol_PlotBorder];
 
     // -- ImPlot3D -----------------------------------------------
@@ -258,9 +298,6 @@ ThemeData ThemeData::CreateWin11Dark() {
     return t;
 }
 
-// ===============================================================
-//  ThemeManager
-// ===============================================================
 void ThemeManager::registerTheme(const ThemeData& theme) {
     m_themes.push_back(theme);
 }
