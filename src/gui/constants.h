@@ -49,6 +49,6 @@ namespace gui {
     inline constexpr float  PREFERENCES_WINDOW_MIN_WIDTH    = 640.0f;
     inline constexpr float  PREFERENCES_WINDOW_MIN_HEIGHT   = 420.0f;
     inline constexpr float  PREFERENCES_SIDEBAR_WIDTH       = 180.0f;
-    inline constexpr float  PREFERENCES_FOOTER_HEIGHT      = 52.0f;
+    inline constexpr float  PREFERENCES_FOOTER_HEIGHT      = 88.0f;
     inline constexpr float  PREFERENCES_SECTION_SPACING     = 8.0f;
 }

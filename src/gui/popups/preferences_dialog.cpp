@@ -24,17 +24,17 @@ namespace gui {
     }
 
     void PreferencesDialog::render() {
-        if (!m_open) return;
+        if (m_open && !ImGui::IsPopupOpen("Preferences")) {
+            ImGui::OpenPopup("Preferences");
+        }
 
         ImGui::SetNextWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE, ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSizeConstraints(
             ImVec2(PREFERENCES_WINDOW_MIN_WIDTH, PREFERENCES_WINDOW_MIN_HEIGHT),
             ImVec2(FLT_MAX, FLT_MAX));
 
-        if (!ImGui::Begin("Preferences", &m_open,
-                          ImGuiWindowFlags_NoDocking |
-                          ImGuiWindowFlags_NoCollapse)) {
-            ImGui::End();
+        if (!ImGui::BeginPopupModal("Preferences", &m_open,
+                                    ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 
@@ -55,7 +55,7 @@ namespace gui {
         ImGui::Separator();
         renderFooter();
 
-        ImGui::End();
+        ImGui::EndPopup();
 
         renderResetConfirm();
     }
@@ -190,6 +190,8 @@ namespace gui {
     }
 
     void PreferencesDialog::renderFooter() {
+        ImGui::Spacing();
+
         const float w = 110.0f;
         const float h = 32.0f;
 
@@ -217,6 +219,8 @@ namespace gui {
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json.");
         }
+
+        ImGui::Spacing();
     }
 
     void PreferencesDialog::renderResetConfirm() {
