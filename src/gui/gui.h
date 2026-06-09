@@ -81,9 +81,5 @@ namespace gui {
             DockableWindowsManager* m_pWndMgr{nullptr};
 
             UiOperationMonitor m_uiOpMonitor;
-
-            // State
-            bool m_showUpdatesPopup{false};
-            bool m_showAboutPopup{false};
     };
 }

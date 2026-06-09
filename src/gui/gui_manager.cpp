@@ -27,10 +27,10 @@ namespace gui {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
     });
     m_menuBarController->setAboutCallback([this]() {
-        m_showAboutPopup = true;
+        m_aboutDialog->open();
     });
     m_menuBarController->setUpdatesCallback([this]() {
-        m_showUpdatesPopup = true;
+        m_updateChecker->open();
     });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_debugLogRenderer = std::make_unique<DebugLog>();
@@ -218,13 +218,13 @@ void GuiManager::renderDebugLog() {
 
 void GuiManager::renderAboutPopup() {
     if (m_aboutDialog) {
-        m_aboutDialog->render(m_showAboutPopup);
+        m_aboutDialog->render();
     }
 }
 
 void GuiManager::renderUpdatesPopup() {
     if (m_updateChecker) {
-        m_updateChecker->renderPopup(m_showUpdatesPopup);
+        m_updateChecker->render();
     }
 }
 

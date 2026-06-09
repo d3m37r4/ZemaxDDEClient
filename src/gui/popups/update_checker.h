@@ -19,8 +19,12 @@ namespace gui {
             UpdateChecker();
             ~UpdateChecker();
 
+            void open() noexcept;
+            void close() noexcept;
+            [[nodiscard]] bool isOpen() const noexcept { return m_open; }
+
+            void render();
             void checkForUpdates();
-            void renderPopup(bool& showPopup);
             UpdateInfo getUpdateInfo() const { return m_updateInfo; }
             std::string getCurrentVersion() const;
             std::string getCurrentBuildDate() const;
@@ -34,6 +38,7 @@ namespace gui {
             void setThemeManager(const ThemeManager* themeManager) noexcept { m_themeManager = themeManager; }
 
         private:
+            bool m_open = false;
             UpdateInfo m_updateInfo;
             bool m_isChecking{false};
             bool m_isCheckComplete{false};
