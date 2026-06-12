@@ -161,13 +161,9 @@ namespace gui {
             return;
         }
 
-        const float footerH = 70.0f;
+        const float footerH = ImGui::GetFrameHeightWithSpacing();
 
-        ImGui::BeginChild("##update_body", ImVec2(0, -ImGuiUtils::DpiScale(footerH)), ImGuiChildFlags_Borders);
-
-        ImGui::TextUnformatted(APP_NAME);
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::BeginChild("##update_body", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
 
         std::string currentVer = std::format("Current version: {}", getCurrentVersion());
         ImGui::TextUnformatted(currentVer.c_str());
@@ -190,34 +186,31 @@ namespace gui {
 
         ImGui::EndChild();
 
-        ImGui::Separator();
-
         float windowWidth = ImGui::GetWindowSize().x;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float okBtnW = ImGuiUtils::DpiScale(120.0f);
 
-        if (m_isChecking) {
-            ImGui::TextUnformatted("Checking for updates...");
-        } else {
+        if (!m_isChecking) {
+            float actionBtnW = ImGuiUtils::DpiScale(180.0f);
+            float totalW = actionBtnW + spacing + okBtnW;
+            ImGui::SetCursorPosX((windowWidth - totalW) * 0.5f);
+
             if (!m_updateInfo.hasUpdate || !m_isCheckComplete) {
-                float checkBtnW = ImGuiUtils::DpiScale(180.0f);
-                ImGui::SetCursorPosX((windowWidth - checkBtnW) * 0.5f);
-                if (ImGui::Button(UPDATE_POPUP_NAME, ImVec2(checkBtnW, 0))) {
+                if (ImGuiUtils::SpinnerButton(UPDATE_POPUP_NAME, m_isChecking, ImVec2(actionBtnW, 0))) {
                     checkForUpdates();
                 }
-            }
-
-            if (m_updateInfo.hasUpdate && m_isCheckComplete) {
-                float dlBtnW = ImGuiUtils::DpiScale(180.0f);
-                ImGui::SetCursorPosX((windowWidth - dlBtnW) * 0.5f);
-                if (ImGui::Button("Download Update", ImVec2(dlBtnW, 0))) {
+            } else if (m_updateInfo.hasUpdate && m_isCheckComplete) {
+                if (ImGuiUtils::SpinnerButton("Download Update", false, ImVec2(actionBtnW, 0))) {
                     if (!m_updateInfo.downloadUrl.empty()) {
                         ShellExecuteA(nullptr, "open", m_updateInfo.downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
                     }
                 }
             }
+            ImGui::SameLine();
+        } else {
+            ImGui::SetCursorPosX((windowWidth - okBtnW) * 0.5f);
         }
 
-        float okBtnW = ImGuiUtils::DpiScale(120.0f);
-        ImGui::SetCursorPosX((windowWidth - okBtnW) * 0.5f);
         if (ImGui::Button("OK", ImVec2(okBtnW, 0))) {
             close();
             m_isCheckComplete = false;
