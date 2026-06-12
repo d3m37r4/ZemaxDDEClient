@@ -72,6 +72,17 @@ namespace ImGuiUtils {
         );
     }
 
+    /// Sets DPI-scaled window size for the next window.
+    inline void SetDpiScaledWindowSize(const ImVec2& size, ImGuiCond cond = ImGuiCond_Once) {
+        float dpi = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSize(ImVec2(size.x * dpi, size.y * dpi), cond);
+    }
+
+    /// Scales a value by the current window DPI factor.
+    inline float DpiScale(float value) {
+        return value * ImGui::GetWindowDpiScale();
+    }
+
     /// Disabled button with animated spinner arc (3/4 circle) inside.
     /// Shows a spinning indicator when @p isActive=true, otherwise a normal Button.
     /// @return true only when clicked in non-active state.
