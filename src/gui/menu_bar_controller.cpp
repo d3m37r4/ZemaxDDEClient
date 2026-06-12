@@ -44,8 +44,12 @@ namespace gui {
 
     void MenuBarController::render() {
         if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Menu")) {
+            if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax(m_logger);
+                ImGui::Separator();
+                if (ImGui::MenuItem(PREFERENCES_POPUP_NAME, "Ctrl+,", false, true)) {
+                    if (m_onPreferences) m_onPreferences();
+                }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
                     if (m_onExit) m_onExit();
@@ -73,17 +77,6 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Settings")) {
-                if (ImGui::MenuItem("Preferences...", "Ctrl+,", false, true)) {
-                    if (m_onPreferences) m_onPreferences();
-                }
-                ImGui::Separator();
-                ImGui::MenuItem("Performance...", "Ctrl+Shift+P", false, false);
-                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-                    ImGui::SetTooltip("Configure DDE request timeouts. (Coming soon)");
-                }
-                ImGui::EndMenu();
-            }
             if (ImGui::BeginMenu("Info")) {
                 if (m_pWndMgr) {
                     auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Info);
@@ -99,10 +92,10 @@ namespace gui {
                         ImGui::Separator();
                     }
                 }
-                if (ImGui::MenuItem("Check for Updates")) {
+                if (ImGui::MenuItem(UPDATE_POPUP_NAME)) {
                     if (m_onUpdates) m_onUpdates();
                 }
-                if (ImGui::MenuItem("About")) {
+                if (ImGui::MenuItem(ABOUT_POPUP_NAME)) {
                     if (m_onAbout) m_onAbout();
                 }
                 ImGui::EndMenu();
