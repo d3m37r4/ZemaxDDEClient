@@ -1,4 +1,6 @@
 #include "gui/popups/update_checker.h"
+#include "gui/constants.h"
+#include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
 #include "lib/imgui/imgui.h"
 #include "version.h"
@@ -141,13 +143,16 @@ namespace gui {
     }
 
     void UpdateChecker::render() {
-        if (m_open && !ImGui::IsPopupOpen("Check for Updates")) {
-            ImGui::OpenPopup("Check for Updates");
+        if (m_open && !ImGui::IsPopupOpen(UPDATE_POPUP_NAME)) {
+            ImGui::OpenPopup(UPDATE_POPUP_NAME);
         }
 
-        ImGui::SetNextWindowSize(ImVec2(440.0f, 280.0f), ImGuiCond_FirstUseEver);
+        ImGuiUtils::CenterNextWindow();
 
-        if (!ImGui::BeginPopupModal("Check for Updates", &m_open, ImGuiWindowFlags_NoCollapse)) {
+        ImGui::SetNextWindowSize(UPDATE_POPUP_DEFAULT_SIZE, ImGuiCond_Once);
+        ImGuiUtils::SetDpiScaledWindowConstraints(UPDATE_POPUP_MIN_SIZE.x, UPDATE_POPUP_MIN_SIZE.y);
+
+        if (!ImGui::BeginPopupModal(UPDATE_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 
@@ -194,7 +199,7 @@ namespace gui {
         } else {
             if (!m_updateInfo.hasUpdate || !m_isCheckComplete) {
                 ImGui::SetCursorPosX((windowWidth - 180.0f) * 0.5f);
-                if (ImGui::Button("Check for Updates", ImVec2(180, 0))) {
+                if (ImGui::Button(UPDATE_POPUP_NAME, ImVec2(180, 0))) {
                     checkForUpdates();
                 }
             }

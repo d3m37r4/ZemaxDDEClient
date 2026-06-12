@@ -38,8 +38,8 @@ namespace ImGuiUtils {
         }
     }
 
-    /// Centers the next popup/modal window in the viewport.
-    inline void SetPopupWindowPosition() {
+    /// Centers the next window in the viewport (call every frame; takes effect on appearing).
+    inline void CenterNextWindow() {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }

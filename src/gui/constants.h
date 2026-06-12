@@ -40,9 +40,18 @@ namespace gui {
     // Font settings
     inline constexpr float BASE_FONT_SIZE = 18.0f;
 
-    // Update checker window constraints
-    inline constexpr float UPDATE_WINDOW_WIDTH_MIN  = 320.0f;
-    inline constexpr float UPDATE_WINDOW_HEIGHT_MIN = 200.0f;
+    // Popup window names
+    inline constexpr const char* ABOUT_POPUP_NAME        = "About";
+    inline constexpr const char* UPDATE_POPUP_NAME       = "Check for Updates";
+    inline constexpr const char* PREFERENCES_POPUP_NAME  = "Preferences";
+
+    // About popup
+    inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(440.0f, 240.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(440.0f, 240.0f);
+
+    // Check for Updates popup
+    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(440.0f, 280.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(440.0f, 200.0f);
 
     // Preferences dialog layout
     inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(820.0f, 600.0f);

@@ -1,4 +1,6 @@
 #include "gui/popups/about_dialog.h"
+#include "gui/constants.h"
+#include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
 #include "app/app.h"
 #include "version.h"
@@ -15,13 +17,16 @@ namespace gui {
     }
 
     void AboutDialog::render() {
-        if (m_open && !ImGui::IsPopupOpen("About")) {
-            ImGui::OpenPopup("About");
+        if (m_open && !ImGui::IsPopupOpen(ABOUT_POPUP_NAME)) {
+            ImGui::OpenPopup(ABOUT_POPUP_NAME);
         }
 
-        ImGui::SetNextWindowSize(ImVec2(440.0f, 240.0f), ImGuiCond_FirstUseEver);
+        ImGuiUtils::CenterNextWindow();
 
-        if (!ImGui::BeginPopupModal("About", &m_open, ImGuiWindowFlags_NoCollapse)) {
+        ImGui::SetNextWindowSize(ABOUT_POPUP_DEFAULT_SIZE, ImGuiCond_Once);
+        ImGuiUtils::SetDpiScaledWindowConstraints(ABOUT_POPUP_MIN_SIZE.x, ABOUT_POPUP_MIN_SIZE.y);
+
+        if (!ImGui::BeginPopupModal(ABOUT_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 

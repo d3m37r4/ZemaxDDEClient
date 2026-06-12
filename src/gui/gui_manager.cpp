@@ -196,7 +196,6 @@ void GuiManager::render() {
         }
     }
 
-    ImGuiUtils::SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
     renderPreferencesDialog();

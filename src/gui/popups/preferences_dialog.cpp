@@ -2,6 +2,7 @@
 
 #include "app/config_path.h"
 #include "gui/constants.h"
+#include "gui/imgui_utils.h"
 #include "gui/settings_manager.h"
 #include "lib/imgui/imgui.h"
 
@@ -24,16 +25,16 @@ namespace gui {
     }
 
     void PreferencesDialog::render() {
-        if (m_open && !ImGui::IsPopupOpen("Preferences")) {
-            ImGui::OpenPopup("Preferences");
+        if (m_open && !ImGui::IsPopupOpen(PREFERENCES_POPUP_NAME)) {
+            ImGui::OpenPopup(PREFERENCES_POPUP_NAME);
         }
 
-        ImGui::SetNextWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE, ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2(PREFERENCES_WINDOW_MIN_WIDTH, PREFERENCES_WINDOW_MIN_HEIGHT),
-            ImVec2(FLT_MAX, FLT_MAX));
+        ImGuiUtils::CenterNextWindow();
 
-        if (!ImGui::BeginPopupModal("Preferences", &m_open,
+        ImGui::SetNextWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE, ImGuiCond_Once);
+        ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_WINDOW_MIN_WIDTH, PREFERENCES_WINDOW_MIN_HEIGHT);
+
+        if (!ImGui::BeginPopupModal(PREFERENCES_POPUP_NAME, &m_open,
                                     ImGuiWindowFlags_NoCollapse)) {
             return;
         }
