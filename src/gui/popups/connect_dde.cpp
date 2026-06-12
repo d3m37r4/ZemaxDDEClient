@@ -12,15 +12,13 @@ namespace gui {
     void ConnectDDEPopup::render(bool& showFlag, Logger& logger) {
         if (!showFlag) return;
 
-        constexpr const char* POPUP_TITLE = "Connect to Zemax – select a window";
+        ImGui::OpenPopup(CONNECT_DDE_POPUP_NAME);
 
-        ImGui::OpenPopup(POPUP_TITLE);
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-        ImGuiUtils::SetDpiScaledWindowConstraints(CONNECT_DDE_POPUP_WIDTH_MIN, CONNECT_DDE_POPUP_HEIGHT_MIN);
-        // ImGui::SetNextWindowSize(ImVec2(920, 400), ImGuiCond_FirstUseEver);
+        ImGuiUtils::CenterNextWindow();
+        ImGuiUtils::SetDpiScaledWindowConstraints(CONNECT_DDE_POPUP_MIN_SIZE.x, CONNECT_DDE_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(CONNECT_DDE_POPUP_DEFAULT_SIZE);
 
-        if (ImGui::BeginPopupModal(POPUP_TITLE, &showFlag, ImGuiWindowFlags_None)) {
+        if (ImGui::BeginPopupModal(CONNECT_DDE_POPUP_NAME, &showFlag, ImGuiWindowFlags_None)) {
             auto windows = app::ZemaxWindowEnumerator::enumerate();
 
             ImGui::BeginChild("ZemaxWindowList", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 10), ImGuiChildFlags_Borders);
@@ -43,11 +41,15 @@ namespace gui {
 
             bool canConnect = (m_selectedWindowIndex >= 0 && m_selectedWindowIndex < static_cast<int>(windows.size()));
 
+            float connectBtnW = ImGuiUtils::DpiScale(120.0f);
+            float cancelBtnW  = ImGuiUtils::DpiScale(120.0f);
+            float refreshBtnW = ImGuiUtils::DpiScale(120.0f);
+
             if (!canConnect) {
                 ImGui::BeginDisabled();
             }
 
-            if (ImGui::Button("Connect", ImVec2(120, 0))) {
+            if (ImGui::Button("Connect", ImVec2(connectBtnW, 0))) {
                 const auto& wnd = windows[m_selectedWindowIndex];
                 int slot = m_connectionManager->connectToZemax(wnd.hwnd, wnd.title);
                 if (slot >= 0) {
@@ -65,15 +67,15 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
                 showFlag = false;
                 m_selectedWindowIndex = -1;
             }
 
             ImGui::SameLine();
             float remainingWidth = ImGui::GetContentRegionAvail().x;
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + remainingWidth - 120.0f);
-            if (ImGui::Button("Refresh", ImVec2(120, 0))) {
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + remainingWidth - refreshBtnW);
+            if (ImGui::Button("Refresh", ImVec2(refreshBtnW, 0))) {
                 m_selectedWindowIndex = -1;
             }
 

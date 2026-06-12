@@ -22,15 +22,14 @@ namespace gui {
         }
 
         ImGuiUtils::CenterNextWindow();
-
-        ImGui::SetNextWindowSize(ABOUT_POPUP_DEFAULT_SIZE, ImGuiCond_Once);
         ImGuiUtils::SetDpiScaledWindowConstraints(ABOUT_POPUP_MIN_SIZE.x, ABOUT_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(ABOUT_POPUP_DEFAULT_SIZE);
 
         if (!ImGui::BeginPopupModal(ABOUT_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 
-        const float footerH = 40.0f;
+        const float footerH = ImGuiUtils::DpiScale(26.0f);
 
         ImGui::BeginChild("##about_body", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
 
@@ -46,6 +45,7 @@ namespace gui {
             "%s - Advanced analysis of optical systems using parameters "
             "retrieved from Zemax via DDE (Dynamic Data Exchange)",
             APP_NAME);
+        ImGui::Spacing();    
         ImGui::Separator();
 
         ImGui::TextUnformatted("GitHub Repository:");
@@ -70,10 +70,10 @@ namespace gui {
         ImGui::EndChild();
 
         float window_width = ImGui::GetWindowSize().x;
-        float button_width = 120.0f;
+        float button_width = ImGuiUtils::DpiScale(120.0f);
         ImGui::SetCursorPosX((window_width - button_width) * 0.5f);
         if (ImGui::Button("OK", ImVec2(button_width, 0))) {
-            ImGui::CloseCurrentPopup();
+            close();
         }
         ImGui::EndPopup();
     }

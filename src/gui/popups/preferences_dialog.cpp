@@ -31,8 +31,8 @@ namespace gui {
 
         ImGuiUtils::CenterNextWindow();
 
-        ImGui::SetNextWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE, ImGuiCond_Once);
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_WINDOW_MIN_WIDTH, PREFERENCES_WINDOW_MIN_HEIGHT);
+        ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE);
 
         if (!ImGui::BeginPopupModal(PREFERENCES_POPUP_NAME, &m_open,
                                     ImGuiWindowFlags_NoCollapse)) {
@@ -42,14 +42,14 @@ namespace gui {
         const float footerH = PREFERENCES_FOOTER_HEIGHT;
 
         ImGui::BeginChild("##prefs_sidebar",
-                          ImVec2(PREFERENCES_SIDEBAR_WIDTH, -footerH),
+                          ImVec2(PREFERENCES_SIDEBAR_WIDTH, -ImGuiUtils::DpiScale(footerH)),
                           ImGuiChildFlags_Borders);
         renderSidebar();
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        ImGui::BeginChild("##prefs_content", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("##prefs_content", ImVec2(0, -ImGuiUtils::DpiScale(footerH)), ImGuiChildFlags_Borders);
         renderContent();
         ImGui::EndChild();
 

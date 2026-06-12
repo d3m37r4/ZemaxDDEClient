@@ -149,8 +149,8 @@ namespace gui {
 
         ImGuiUtils::CenterNextWindow();
 
-        ImGui::SetNextWindowSize(UPDATE_POPUP_DEFAULT_SIZE, ImGuiCond_Once);
         ImGuiUtils::SetDpiScaledWindowConstraints(UPDATE_POPUP_MIN_SIZE.x, UPDATE_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(UPDATE_POPUP_DEFAULT_SIZE);
 
         if (!ImGui::BeginPopupModal(UPDATE_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
@@ -163,7 +163,7 @@ namespace gui {
 
         const float footerH = 70.0f;
 
-        ImGui::BeginChild("##update_body", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("##update_body", ImVec2(0, -ImGuiUtils::DpiScale(footerH)), ImGuiChildFlags_Borders);
 
         ImGui::TextUnformatted(APP_NAME);
         ImGui::Separator();
@@ -198,15 +198,17 @@ namespace gui {
             ImGui::TextUnformatted("Checking for updates...");
         } else {
             if (!m_updateInfo.hasUpdate || !m_isCheckComplete) {
-                ImGui::SetCursorPosX((windowWidth - 180.0f) * 0.5f);
-                if (ImGui::Button(UPDATE_POPUP_NAME, ImVec2(180, 0))) {
+                float checkBtnW = ImGuiUtils::DpiScale(180.0f);
+                ImGui::SetCursorPosX((windowWidth - checkBtnW) * 0.5f);
+                if (ImGui::Button(UPDATE_POPUP_NAME, ImVec2(checkBtnW, 0))) {
                     checkForUpdates();
                 }
             }
 
             if (m_updateInfo.hasUpdate && m_isCheckComplete) {
-                ImGui::SetCursorPosX((windowWidth - 180.0f) * 0.5f);
-                if (ImGui::Button("Download Update", ImVec2(180, 0))) {
+                float dlBtnW = ImGuiUtils::DpiScale(180.0f);
+                ImGui::SetCursorPosX((windowWidth - dlBtnW) * 0.5f);
+                if (ImGui::Button("Download Update", ImVec2(dlBtnW, 0))) {
                     if (!m_updateInfo.downloadUrl.empty()) {
                         ShellExecuteA(nullptr, "open", m_updateInfo.downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
                     }
@@ -214,9 +216,10 @@ namespace gui {
             }
         }
 
-        ImGui::SetCursorPosX((windowWidth - 120.0f) * 0.5f);
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
+        float okBtnW = ImGuiUtils::DpiScale(120.0f);
+        ImGui::SetCursorPosX((windowWidth - okBtnW) * 0.5f);
+        if (ImGui::Button("OK", ImVec2(okBtnW, 0))) {
+            close();
             m_isCheckComplete = false;
             m_updateInfo.hasUpdate = false;
             m_errorMessage.clear();
