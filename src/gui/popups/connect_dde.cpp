@@ -21,7 +21,7 @@ namespace gui {
         if (ImGui::BeginPopupModal(CONNECT_DDE_POPUP_NAME, &showFlag, ImGuiWindowFlags_None)) {
             auto windows = app::ZemaxWindowEnumerator::enumerate();
 
-            ImGui::BeginChild("ZemaxWindowList", ImVec2(0, -ImGui::GetFrameHeightWithSpacing() - 10), ImGuiChildFlags_Borders);
+            ImGui::BeginChild("ZemaxWindowList", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), ImGuiChildFlags_Borders);
 
             for (size_t i = 0; i < windows.size(); ++i) {
                 const auto& wnd = windows[i];

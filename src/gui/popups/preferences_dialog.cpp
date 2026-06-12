@@ -39,17 +39,17 @@ namespace gui {
             return;
         }
 
-        const float footerH = PREFERENCES_FOOTER_HEIGHT;
+        const float footerH = ImGui::GetFrameHeightWithSpacing();
 
         ImGui::BeginChild("##prefs_sidebar",
-                          ImVec2(PREFERENCES_SIDEBAR_WIDTH, -ImGuiUtils::DpiScale(footerH)),
+                          ImVec2(PREFERENCES_SIDEBAR_WIDTH, -footerH),
                           ImGuiChildFlags_Borders);
         renderSidebar();
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        ImGui::BeginChild("##prefs_content", ImVec2(0, -ImGuiUtils::DpiScale(footerH)), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("##prefs_content", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
         renderContent();
         ImGui::EndChild();
 

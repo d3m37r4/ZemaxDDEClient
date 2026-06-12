@@ -29,9 +29,7 @@ namespace gui {
             return;
         }
 
-        const float footerH = ImGuiUtils::DpiScale(26.0f);
-
-        ImGui::BeginChild("##about_body", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("##about_body", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), ImGuiChildFlags_Borders);
 
         std::string version = std::format("Version: {}", APP_FULL_VERSION);
         std::string built   = std::format("Built: {} {}", __DATE__, __TIME__);
