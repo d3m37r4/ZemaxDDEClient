@@ -42,13 +42,20 @@ namespace gui {
             APP_GIT_COMMIT
         );
 
-        ImGui::TextUnformatted(APP_NAME);
+        ImGui::TextWrapped(
+            "%s - Advanced analysis of optical systems using parameters "
+            "retrieved from Zemax via DDE (Dynamic Data Exchange)",
+            APP_NAME);
         ImGui::Separator();
 
         ImGui::TextUnformatted("GitHub Repository:");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("github.com/d3m37r4/ZemaxDDEClient",
                                "https://github.com/d3m37r4/ZemaxDDEClient");
+
+        ImGui::TextUnformatted("License:");
+        ImGui::SameLine();
+        ImGui::TextLinkOpenURL("MIT", "https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE");
 
         ImGui::TextUnformatted("Author:");
         ImGui::SameLine();
