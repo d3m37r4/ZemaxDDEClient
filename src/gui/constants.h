@@ -4,24 +4,17 @@
 
 namespace gui {
     // DDE status window constraints
-    inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 220.0f;
-    inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 130.0f;
-
-    // DDE status content constraints
-    inline constexpr float DDE_STATUS_CONTENT_WIDTH  = 0.0f;   // Automatic width
-    inline constexpr float DDE_STATUS_CONTENT_HEIGHT = 0.0f;   // Automatic height
+    inline constexpr ImVec2 DDE_STATUS_WINDOW_MIN_SIZE   = ImVec2(220.0f, 100.0f);
+    inline constexpr ImVec2 DDE_STATUS_CONTENT_SIZE      = ImVec2(0.0f, 0.0f);   // Automatic size
 
     // Debug log window constraints
-    inline constexpr float DEBUG_LOG_WINDOW_WIDTH_MIN  = 220.0f;
-    inline constexpr float DEBUG_LOG_WINDOW_HEIGHT_MIN = 160.0f;
+    inline constexpr ImVec2 DEBUG_LOG_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
 
     // System info window constraints
-    inline constexpr float SYSTEM_INFO_WINDOW_WIDTH_MIN  = 200.0f;
-    inline constexpr float SYSTEM_INFO_WINDOW_HEIGHT_MIN = 160.0f;
+    inline constexpr ImVec2 SYSTEM_INFO_WINDOW_MIN_SIZE  = ImVec2(200.0f, 160.0f);
 
     // Sag analysis window constraints
-    inline constexpr float SAG_ANALYSIS_WINDOW_WIDTH_MIN  = 200.0f;
-    inline constexpr float SAG_ANALYSIS_WINDOW_HEIGHT_MIN = 160.0f;
+    inline constexpr ImVec2 SAG_ANALYSIS_WINDOW_MIN_SIZE = ImVec2(200.0f, 160.0f);
 
     // Sag analysis sampling constraints
     // Maximum: Zemax tool "Surface Sag Cross Section" limit
@@ -31,7 +24,7 @@ namespace gui {
 
     // Connect DDE popup constraints
     inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(550.0f, 120.0f);
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(382.0f, 100.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(380.0f, 100.0f);
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;

@@ -12,7 +12,7 @@ namespace gui {
         if (!m_themeManager) return;
 
         ImGui::BeginChild("DDE Status Content",
-            ImVec2(gui::DDE_STATUS_CONTENT_WIDTH, gui::DDE_STATUS_CONTENT_HEIGHT),
+            ImVec2(gui::DDE_STATUS_CONTENT_SIZE.x, gui::DDE_STATUS_CONTENT_SIZE.y),
             ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
         );
