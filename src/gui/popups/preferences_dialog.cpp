@@ -63,20 +63,8 @@ namespace gui {
 
         ImGui::SameLine();
 
-        const ImVec2 sp = ImGui::GetCursorScreenPos();
-        ImGui::InvisibleButton("##prefs_splitter", ImVec2(splitterW, availH));
-        if (ImGui::IsItemActive()) {
-            m_sidebarWidth += ImGui::GetIO().MouseDelta.x;
-            m_sidebarWidth = std::clamp(m_sidebarWidth, 60.0f, availW - 100.0f - splitterW);
-        }
-        ImU32 col;
-        if (ImGui::IsItemActive())
-            col = ImGui::GetColorU32(ImGuiCol_SeparatorActive);
-        else if (ImGui::IsItemHovered())
-            col = ImGui::GetColorU32(ImGuiCol_Text, 0.4f);
-        else
-            col = ImGui::GetColorU32(ImGuiCol_Separator);
-        ImGui::GetWindowDrawList()->AddRectFilled(sp, ImVec2(sp.x + splitterW, sp.y + availH), col);
+        ImGuiUtils::SplitterH("##prefs_splitter", m_sidebarWidth, availH,
+                               splitterW, 60.0f, availW - 100.0f - splitterW);
 
         ImGui::SameLine();
 
