@@ -28,7 +28,8 @@ namespace gui {
                 DDE         = 2,
                 Plot        = 3,
                 Updates     = 4,
-                Count       = 5,
+                Files       = 5,
+                Count       = 6,
             };
 
             void renderSidebar();
@@ -41,6 +42,7 @@ namespace gui {
             void renderSectionDDE();
             void renderSectionPlot();
             void renderSectionUpdates();
+            void renderSectionFiles();
 
             void applyWorkingTheme() const;
             void applyWorkingDDE() const;

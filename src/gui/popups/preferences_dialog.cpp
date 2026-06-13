@@ -1,6 +1,7 @@
 #include "gui/popups/preferences_dialog.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "app/config_path.h"
 #include "gui/constants.h"
@@ -41,7 +42,7 @@ namespace gui {
         }
 
         static const char* sidebarLabels[] = {
-            "General", "Appearance", "DDE Connection", "Plot", "Updates"
+            "General", "Appearance", "DDE Connection", "Plot", "Updates", "Files"
         };
         if (m_sidebarWidth <= 0.0f) {
             float maxW = 0.0f;
@@ -86,6 +87,7 @@ namespace gui {
             "DDE Connection",
             "Plot",
             "Updates",
+            "Files",
         };
 
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
@@ -103,27 +105,20 @@ namespace gui {
             case Section::DDE:        renderSectionDDE();        break;
             case Section::Plot:       renderSectionPlot();       break;
             case Section::Updates:    renderSectionUpdates();    break;
+            case Section::Files:      renderSectionFiles();      break;
             default: break;
         }
     }
 
     void PreferencesDialog::renderSectionGeneral() {
-        ImGui::TextUnformatted("General");
-        ImGui::Separator();
-        ImGui::Spacing();
-        ImGui::TextDisabled("These options take effect on the next application start.");
-        ImGui::Spacing();
+        ImGuiUtils::SectionHeader("General", "These options take effect on the next application start.");
 
         ImGui::Checkbox("Show debug log window on startup", &m_working.general.showDebugLogOnStartup);
         ImGui::Checkbox("Restore window layout on startup", &m_working.general.restoreWindowLayout);
     }
 
     void PreferencesDialog::renderSectionAppearance() {
-        ImGui::TextUnformatted("Appearance");
-        ImGui::Separator();
-        ImGui::Spacing();
-        ImGui::TextDisabled("Theme changes are applied immediately.");
-        ImGui::Spacing();
+        ImGuiUtils::SectionHeader("Appearance", "Theme changes are applied immediately.");
 
         int mode = static_cast<int>(m_working.appearance.themeMode);
         if (ImGui::RadioButton("Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
@@ -132,11 +127,7 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionDDE() {
-        ImGui::TextUnformatted("DDE Connection");
-        ImGui::Separator();
-        ImGui::Spacing();
-        ImGui::TextDisabled("New values apply to subsequent requests only.");
-        ImGui::Spacing();
+        ImGuiUtils::SectionHeader("DDE Connection", "New values apply to subsequent requests only.");
 
         if (ImGui::SliderInt("Connection timeout (ms)", &m_working.dde.connectionTimeoutMs, 1000, 30000, "%d", ImGuiSliderFlags_AlwaysClamp)) {
             applyWorkingDDE();
@@ -165,11 +156,7 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionPlot() {
-        ImGui::TextUnformatted("Plot");
-        ImGui::Separator();
-        ImGui::Spacing();
-        ImGui::TextDisabled("Visual style for new plots.");
-        ImGui::Spacing();
+        ImGuiUtils::SectionHeader("Plot", "Visual style for new plots.");
 
         if (ImGui::Checkbox("Show grid by default", &m_working.plot.showGridByDefault)) {
             applyWorkingPlot();
@@ -185,11 +172,7 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionUpdates() {
-        ImGui::TextUnformatted("Updates");
-        ImGui::Separator();
-        ImGui::Spacing();
-        ImGui::TextDisabled("Update checker settings. Channel changes take effect on next check.");
-        ImGui::Spacing();
+        ImGuiUtils::SectionHeader("Updates", "Update checker settings. Channel changes take effect on next check.");
 
         ImGui::Checkbox("Check for updates on startup", &m_working.updates.autoCheckOnStartup);
 
@@ -202,6 +185,22 @@ namespace gui {
         if (ImGui::RadioButton("Beta",   &channel, static_cast<int>(app::UpdateChannel::Beta))) {
             m_working.updates.channel = app::UpdateChannel::Beta;
         }
+    }
+
+    void PreferencesDialog::renderSectionFiles() {
+        ImGuiUtils::SectionHeader("Files", "Configuration file locations (read-only).");
+
+        auto pathRow = [](const char* label, const char* id, const char* path) {
+            ImGui::TextUnformatted(label);
+            ImGui::SetNextItemWidth(-1.0f);
+            ImGui::InputText(id, const_cast<char*>(path),
+                             static_cast<int>(std::strlen(path)), ImGuiInputTextFlags_ReadOnly);
+            ImGui::Spacing();
+        };
+
+        pathRow("ImGui Layout",         "##path_imgui",    app::getImguiIniPath());
+        pathRow("Window Layout",        "##path_window",   app::getWindowStatePath());
+        pathRow("Application Settings", "##path_settings", app::getSettingsJsonPath());
     }
 
     void PreferencesDialog::renderFooter() {

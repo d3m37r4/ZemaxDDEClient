@@ -166,4 +166,15 @@ namespace ImGuiUtils {
 
         return changed;
     }
+    /// Renders a section header with title, separator, and optional description.
+    inline void SectionHeader(const char* title, const char* description = nullptr) {
+        ImGui::TextUnformatted(title);
+        ImGui::Separator();
+        ImGui::Spacing();
+        if (description) {
+            ImGui::TextDisabled(description);
+            ImGui::Spacing();
+        }
+    }
+
 } // namespace ImGuiUtils
