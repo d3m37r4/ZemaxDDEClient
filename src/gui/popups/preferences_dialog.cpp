@@ -205,9 +205,9 @@ namespace gui {
     }
 
     void PreferencesDialog::renderFooter() {
-        float resetBtnW   = ImGuiUtils::DpiScale(120.0f);
-        float cancelBtnW  = ImGuiUtils::DpiScale(120.0f);
-        float saveBtnW    = ImGuiUtils::DpiScale(120.0f);
+        float resetBtnW   = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+        float cancelBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+        float saveBtnW    = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
             m_confirmReset = true;
@@ -252,8 +252,8 @@ namespace gui {
             ImGui::TextUnformatted("Unsaved changes will be lost.");
             ImGui::EndChild();
 
-            float cancelBtnW = ImGuiUtils::DpiScale(120.0f);
-            float resetBtnW  = ImGuiUtils::DpiScale(120.0f);
+            float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            float resetBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
             const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
             ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
             if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {

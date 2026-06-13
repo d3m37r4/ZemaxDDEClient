@@ -33,6 +33,9 @@ namespace gui {
     // Font settings
     inline constexpr float BASE_FONT_SIZE = 18.0f;
 
+    // Popup button dimensions (DPI-scaled at call sites)
+    inline constexpr float BASE_POPUP_BUTTON_WIDTH = 120.0f;
+
     // Popup window names
     inline constexpr const char* ABOUT_POPUP_NAME        = "About";
     inline constexpr const char* UPDATE_POPUP_NAME       = "Check for Updates";

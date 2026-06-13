@@ -188,7 +188,7 @@ namespace gui {
 
         float windowWidth = ImGui::GetWindowSize().x;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
-        float okBtnW = ImGuiUtils::DpiScale(120.0f);
+        float okBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (!m_isChecking) {
             float actionBtnW = ImGuiUtils::DpiScale(180.0f);

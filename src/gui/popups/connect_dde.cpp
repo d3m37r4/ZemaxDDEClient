@@ -55,9 +55,9 @@ namespace gui {
 
         bool canConnect = (m_selectedWindowIndex >= 0 && m_selectedWindowIndex < static_cast<int>(windows.size()));
 
-        float connectBtnW = ImGuiUtils::DpiScale(120.0f);
-        float cancelBtnW  = ImGuiUtils::DpiScale(120.0f);
-        float refreshBtnW = ImGuiUtils::DpiScale(120.0f);
+        float connectBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+        float cancelBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+        float refreshBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (!canConnect) {
             ImGui::BeginDisabled();
