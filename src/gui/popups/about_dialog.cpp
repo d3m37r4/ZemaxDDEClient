@@ -67,10 +67,9 @@ namespace gui {
 
         ImGui::EndChild();
 
-        float window_width = ImGui::GetWindowSize().x;
-        float button_width = ImGuiUtils::DpiScale(120.0f);
-        ImGui::SetCursorPosX((window_width - button_width) * 0.5f);
-        if (ImGui::Button("OK", ImVec2(button_width, 0))) {
+        float okBtnW = ImGuiUtils::DpiScale(120.0f);
+        ImGui::SetCursorPosX((ImGui::GetWindowSize().x - okBtnW) * 0.5f);
+        if (ImGui::Button("OK", ImVec2(okBtnW, 0))) {
             close();
         }
         ImGui::EndPopup();

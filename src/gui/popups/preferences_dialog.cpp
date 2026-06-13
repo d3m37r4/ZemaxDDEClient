@@ -205,19 +205,21 @@ namespace gui {
     }
 
     void PreferencesDialog::renderFooter() {
-        const float w = ImGuiUtils::DpiScale(120.0f);
+        float resetBtnW   = ImGuiUtils::DpiScale(120.0f);
+        float cancelBtnW  = ImGuiUtils::DpiScale(120.0f);
+        float saveBtnW    = ImGuiUtils::DpiScale(120.0f);
 
-        if (ImGui::Button("Reset", ImVec2(w, 0))) {
+        if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
             m_confirmReset = true;
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
         }
 
-        const float groupWidth = 2.0f * w + ImGui::GetStyle().ItemSpacing.x;
+        const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
 
-        if (ImGui::Button("Cancel", ImVec2(w, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
             onCancel();
         }
         if (ImGui::IsItemHovered()) {
@@ -226,7 +228,7 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Save", ImVec2(w, 0))) {
+        if (ImGui::Button("Save", ImVec2(saveBtnW, 0))) {
             onSave();
         }
         if (ImGui::IsItemHovered()) {
@@ -250,14 +252,15 @@ namespace gui {
             ImGui::TextUnformatted("Unsaved changes will be lost.");
             ImGui::EndChild();
 
-            const float w = ImGuiUtils::DpiScale(120.0f);
-            const float totalW = w * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+            float cancelBtnW = ImGuiUtils::DpiScale(120.0f);
+            float resetBtnW  = ImGuiUtils::DpiScale(120.0f);
+            const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
             ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
-            if (ImGui::Button("Cancel", ImVec2(w, 0))) {
+            if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
                 m_confirmReset = false;
             }
             ImGui::SameLine();
-            if (ImGui::Button("Reset", ImVec2(w, 0))) {
+            if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
                 onReset();
                 m_confirmReset = false;
             }
