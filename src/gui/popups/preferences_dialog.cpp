@@ -1,5 +1,7 @@
 #include "gui/popups/preferences_dialog.h"
 
+#include <algorithm>
+
 #include "app/config_path.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
@@ -31,29 +33,57 @@ namespace gui {
 
         ImGuiUtils::CenterNextWindow();
 
-        ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_WINDOW_MIN_WIDTH, PREFERENCES_WINDOW_MIN_HEIGHT);
+        ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_WINDOW_MIN_SIZE.x, PREFERENCES_WINDOW_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE);
 
-        if (!ImGui::BeginPopupModal(PREFERENCES_POPUP_NAME, &m_open,
-                                    ImGuiWindowFlags_NoCollapse)) {
+        if (!ImGui::BeginPopupModal(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 
-        const float footerH = ImGui::GetFrameHeightWithSpacing();
+        static const char* sidebarLabels[] = {
+            "General", "Appearance", "DDE Connection", "Plot", "Updates"
+        };
+        if (m_sidebarWidth <= 0.0f) {
+            float maxW = 0.0f;
+            for (auto* l : sidebarLabels)
+                maxW = std::max(maxW, ImGui::CalcTextSize(l).x);
+            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f + 20.0f;
+        }
+
+        const float footerH    = ImGui::GetFrameHeightWithSpacing();
+        const float availH     = ImGui::GetContentRegionAvail().y - footerH;
+        const float availW     = ImGui::GetContentRegionAvail().x;
+        const float splitterW  = 4.0f;
 
         ImGui::BeginChild("##prefs_sidebar",
-                          ImVec2(PREFERENCES_SIDEBAR_WIDTH, -footerH),
+                          ImVec2(m_sidebarWidth, availH),
                           ImGuiChildFlags_Borders);
         renderSidebar();
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        ImGui::BeginChild("##prefs_content", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
+        const ImVec2 sp = ImGui::GetCursorScreenPos();
+        ImGui::InvisibleButton("##prefs_splitter", ImVec2(splitterW, availH));
+        if (ImGui::IsItemActive()) {
+            m_sidebarWidth += ImGui::GetIO().MouseDelta.x;
+            m_sidebarWidth = std::clamp(m_sidebarWidth, 60.0f, availW - 100.0f - splitterW);
+        }
+        ImU32 col;
+        if (ImGui::IsItemActive())
+            col = ImGui::GetColorU32(ImGuiCol_SeparatorActive);
+        else if (ImGui::IsItemHovered())
+            col = ImGui::GetColorU32(ImGuiCol_Text, 0.4f);
+        else
+            col = ImGui::GetColorU32(ImGuiCol_Separator);
+        ImGui::GetWindowDrawList()->AddRectFilled(sp, ImVec2(sp.x + splitterW, sp.y + availH), col);
+
+        ImGui::SameLine();
+
+        ImGui::BeginChild("##prefs_content", ImVec2(0, availH), ImGuiChildFlags_Borders);
         renderContent();
         ImGui::EndChild();
 
-        ImGui::Separator();
         renderFooter();
 
         ImGui::EndPopup();
@@ -69,10 +99,6 @@ namespace gui {
             "Plot",
             "Updates",
         };
-
-        ImGui::TextDisabled("Sections");
-        ImGui::Separator();
-        ImGui::Spacing();
 
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
             const bool selected = (static_cast<int>(m_section) == i);
@@ -191,7 +217,7 @@ namespace gui {
     }
 
     void PreferencesDialog::renderFooter() {
-        ImGui::Spacing();
+        // ImGui::Spacing();
 
         const float w = 110.0f;
         const float h = 32.0f;
@@ -221,7 +247,7 @@ namespace gui {
             ImGui::SetTooltip("Persist the current values to settings.json.");
         }
 
-        ImGui::Spacing();
+        // ImGui::Spacing();
     }
 
     void PreferencesDialog::renderResetConfirm() {

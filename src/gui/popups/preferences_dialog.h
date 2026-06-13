@@ -54,6 +54,7 @@ namespace gui {
             app::AppSettings m_working;
             app::AppSettings m_loaded;
             Section m_section = Section::General;
+            float m_sidebarWidth = 0.0f;
             bool m_open = false;
             bool m_confirmReset = false;
     };
