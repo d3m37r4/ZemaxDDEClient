@@ -24,7 +24,7 @@ namespace gui {
 
     // Connect DDE popup constraints
     inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(550.0f, 120.0f);
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(380.0f, 100.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(550.0f, 120.0f);
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;
@@ -41,17 +41,15 @@ namespace gui {
 
     // About popup
     inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(428.0f, 242.0f);
-    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(200.0f, 120.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(428.0f, 242.0f);
 
     // Check for Updates popup
-    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(440.0f, 280.0f);
-    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(440.0f, 200.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(340.0f, 120.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);
 
     // Preferences dialog layout
-    inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(820.0f, 600.0f);
-    inline constexpr float  PREFERENCES_WINDOW_MIN_WIDTH    = 640.0f;
-    inline constexpr float  PREFERENCES_WINDOW_MIN_HEIGHT   = 420.0f;
-    inline constexpr float  PREFERENCES_SIDEBAR_WIDTH       = 180.0f;
+    inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(500.0f, 280.0f);
+    inline constexpr ImVec2 PREFERENCES_WINDOW_MIN_SIZE     = ImVec2(500.0f, 280.0f);
     inline constexpr float  PREFERENCES_FOOTER_HEIGHT      = 88.0f;
     inline constexpr float  PREFERENCES_SECTION_SPACING     = 8.0f;
 }
