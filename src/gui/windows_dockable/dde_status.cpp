@@ -80,7 +80,7 @@ namespace gui {
                 if (connectionCount < DDEConnectionManager::MAX_CONNECTIONS) {
                     ImGui::Separator();
                     if (ImGui::Selectable("+ Connect to another Zemax...")) {
-                        m_showConnectPopup = true;
+                        m_connectPopup->open();
                     }
                 }
 
@@ -107,7 +107,7 @@ namespace gui {
                 m_connectionManager->disconnect(activeIdx);
                 logger.addLog("[DDE] Disconnected from Zemax");
             } else {
-                m_showConnectPopup = true;
+                m_connectPopup->open();
             }
         }
 
@@ -117,8 +117,6 @@ namespace gui {
 
         ImGui::EndChild();
 
-        if (m_showConnectPopup && m_connectPopup) {
-            m_connectPopup->render(m_showConnectPopup, logger);
-        }
+        m_connectPopup->render();
     }
 }

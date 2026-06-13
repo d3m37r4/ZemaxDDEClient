@@ -55,6 +55,7 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
 
     const auto& themeManager = m_graphics.getThemeManager();
     m_ddeStatusRenderer->setThemeManager(&themeManager);
+    m_ddeStatusRenderer->setLogger(&m_logger);
     m_updateChecker->setThemeManager(&themeManager);
 }
 
