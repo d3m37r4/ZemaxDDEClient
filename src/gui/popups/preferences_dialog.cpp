@@ -74,9 +74,9 @@ namespace gui {
 
         renderFooter();
 
-        ImGui::EndPopup();
-
         renderResetConfirm();
+
+        ImGui::EndPopup();
     }
 
     void PreferencesDialog::renderSidebar() {
@@ -243,13 +243,16 @@ namespace gui {
 
         if (ImGui::BeginPopupModal("Reset Preferences?", &m_confirmReset,
                                    ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::BeginChild("##reset_confirm_body",
+                              ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
+                              ImGuiChildFlags_Borders);
             ImGui::TextUnformatted("This will reset all preferences to their factory defaults.");
             ImGui::TextUnformatted("Unsaved changes will be lost.");
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
+            ImGui::EndChild();
 
             const float w = ImGuiUtils::DpiScale(120.0f);
+            const float totalW = w * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
             if (ImGui::Button("Cancel", ImVec2(w, 0))) {
                 m_confirmReset = false;
             }
