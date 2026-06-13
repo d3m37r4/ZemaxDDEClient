@@ -205,12 +205,9 @@ namespace gui {
     }
 
     void PreferencesDialog::renderFooter() {
-        // ImGui::Spacing();
+        const float w = ImGuiUtils::DpiScale(120.0f);
 
-        const float w = 110.0f;
-        const float h = 32.0f;
-
-        if (ImGui::Button("Reset...", ImVec2(w, h))) {
+        if (ImGui::Button("Reset", ImVec2(w, 0))) {
             m_confirmReset = true;
         }
         if (ImGui::IsItemHovered()) {
@@ -219,7 +216,7 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Cancel", ImVec2(w, h))) {
+        if (ImGui::Button("Cancel", ImVec2(w, 0))) {
             onCancel();
         }
         if (ImGui::IsItemHovered()) {
@@ -228,14 +225,12 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Save", ImVec2(w, h))) {
+        if (ImGui::Button("Save", ImVec2(w, 0))) {
             onSave();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json.");
         }
-
-        // ImGui::Spacing();
     }
 
     void PreferencesDialog::renderResetConfirm() {
@@ -253,7 +248,7 @@ namespace gui {
             ImGui::Separator();
             ImGui::Spacing();
 
-            const float w = 110.0f;
+            const float w = ImGuiUtils::DpiScale(120.0f);
             if (ImGui::Button("Cancel", ImVec2(w, 0))) {
                 m_confirmReset = false;
             }

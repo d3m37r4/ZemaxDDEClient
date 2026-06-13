@@ -48,8 +48,6 @@ namespace gui {
     inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);
 
     // Preferences dialog layout
-    inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(500.0f, 280.0f);
-    inline constexpr ImVec2 PREFERENCES_WINDOW_MIN_SIZE     = ImVec2(500.0f, 280.0f);
-    inline constexpr float  PREFERENCES_FOOTER_HEIGHT      = 88.0f;
-    inline constexpr float  PREFERENCES_SECTION_SPACING     = 8.0f;
+    inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
+    inline constexpr ImVec2 PREFERENCES_WINDOW_MIN_SIZE     = ImVec2(660.0f, 280.0f);
 }
