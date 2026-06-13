@@ -214,7 +214,8 @@ namespace gui {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
         }
 
-        ImGui::SameLine();
+        const float groupWidth = 2.0f * w + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
 
         if (ImGui::Button("Cancel", ImVec2(w, 0))) {
             onCancel();
