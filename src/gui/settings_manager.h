@@ -7,6 +7,7 @@ class DDEConnectionManager;
 class Logger;
 
 namespace gui {
+    class GraphicsBackend;
     class UpdateChecker;
 
     /// Centralized bridge between persistent AppSettings and runtime subsystems.
@@ -26,6 +27,7 @@ namespace gui {
 
             // Non-owning bindings; called once during GuiManager wiring.
             void bind(ThemeManager* themeManager, DDEConnectionManager* ddeConnectionManager);
+            void setGraphicsBackend(GraphicsBackend* gb) noexcept { m_graphicsBackend = gb; }
             void setUpdateChecker(UpdateChecker* updateChecker) noexcept { m_updateChecker = updateChecker; }
             void setLogger(Logger* logger) noexcept { m_logger = logger; }
 
@@ -68,6 +70,7 @@ namespace gui {
         private:
             app::AppSettings m_current;
             ThemeManager* m_themeManager = nullptr;
+            GraphicsBackend* m_graphicsBackend = nullptr;
             DDEConnectionManager* m_ddeConnectionManager = nullptr;
             UpdateChecker* m_updateChecker = nullptr;
             Logger* m_logger = nullptr;

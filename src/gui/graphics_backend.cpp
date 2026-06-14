@@ -11,6 +11,10 @@
 #include "lib/imgui/backends/imgui_impl_glfw.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
 
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+
 #include "gui/graphics_backend.h"
 #include "gui/constants.h"
 #include "app/config_path.h"
@@ -120,15 +124,27 @@ namespace gui {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
-    void GraphicsBackend::applyTheme(bool isLight) {
-        if (isLight) {
-            m_themeManager.apply("Windows 11 Light");
-        } else {
-            m_themeManager.apply("Windows 11 Dark");
-        }
-    }
+    void GraphicsBackend::updateTitleBarDarkMode(bool isDark) {
+        if (!m_window) return;
 
-    void GraphicsBackend::toggleTheme() {
-        m_themeManager.toggle();
+        #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+        #define DWMWA_USE_IMMERSIVE_DARK_MODE 19
+        #endif
+
+        HMODULE dwmApi = LoadLibraryW(L"dwmapi.dll");
+        if (dwmApi) {
+            using DwmSetWindowAttributeFunc = HRESULT (WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+            auto* dwmFunc = reinterpret_cast<DwmSetWindowAttributeFunc>(
+                reinterpret_cast<void*>(GetProcAddress(dwmApi, "DwmSetWindowAttribute")));
+
+            if (dwmFunc) {
+                BOOL useDarkMode = isDark;
+                HWND hwnd = glfwGetWin32Window(m_window);
+                if (hwnd) {
+                    dwmFunc(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
+                }
+            }
+            FreeLibrary(dwmApi);
+        }
     }
 }

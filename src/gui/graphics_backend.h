@@ -21,8 +21,10 @@ namespace gui {
             void beginFrame();
             void endFrame();
 
-            void applyTheme(bool isLight);
-            void toggleTheme();
+            /// Updates the native Win11 title bar to match the current theme.
+            /// Must be called whenever the theme changes at runtime.
+            void updateTitleBarDarkMode(bool isDark);
+
             ThemeManager& getThemeManager() { return m_themeManager; }
             bool isLightTheme() const { return m_themeManager.isLight(); }
             ImVec4 getClearColor() const { return m_themeManager.getClearColor(); }

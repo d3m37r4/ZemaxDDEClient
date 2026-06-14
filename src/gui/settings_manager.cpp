@@ -7,6 +7,7 @@
 #include "logger/logger.h"
 
 #include "dde/dde_connection_manager.h"
+#include "gui/graphics_backend.h"
 #include "gui/popups/update_checker.h"
 #include "gui/theme_manager.h"
 
@@ -46,6 +47,11 @@ namespace gui {
     void SettingsManager::applyTheme(const app::AppearanceSettings& appearance) {
         if (!m_themeManager) return;
         m_themeManager->applyByMode(appearance.themeMode, detectSystemDarkMode());
+
+        // Sync native Win11 title bar with the applied theme.
+        if (m_graphicsBackend) {
+            m_graphicsBackend->updateTitleBarDarkMode(!m_themeManager->isLight());
+        }
     }
 
     void SettingsManager::applyDDE(const app::DDESettings& dde) {

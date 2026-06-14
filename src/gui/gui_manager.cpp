@@ -50,6 +50,7 @@ GuiManager::~GuiManager() = default;
 void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_graphics.initialize(m_glfwWindow, m_logger, isLightTheme, dpiScale);
     m_settingsManager->bind(&m_graphics.getThemeManager(), m_ddeConnectionManager);
+    m_settingsManager->setGraphicsBackend(&m_graphics);
     m_profileService->setSettingsManager(m_settingsManager.get());
     m_irregularityMapService->setSettingsManager(m_settingsManager.get());
 
