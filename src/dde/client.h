@@ -56,6 +56,27 @@ namespace ZemaxDDE {
             [[nodiscard]] DWORD getDefaultTimeoutMs() const noexcept { return m_defaultTimeoutMs; }
             [[nodiscard]] int   getDefaultRetries()   const noexcept { return m_defaultRetries; }
 
+            // Per-request timeout overrides. Updated by DDEConnectionManager.
+            void setGetNameTimeoutMs(DWORD ms) noexcept        { m_getNameTimeoutMs = ms; }
+            void setGetFileTimeoutMs(DWORD ms) noexcept        { m_getFileTimeoutMs = ms; }
+            void setGetSystemTimeoutMs(DWORD ms) noexcept      { m_getSystemTimeoutMs = ms; }
+            void setGetFieldTimeoutMs(DWORD ms) noexcept       { m_getFieldTimeoutMs = ms; }
+            void setGetWaveTimeoutMs(DWORD ms) noexcept        { m_getWaveTimeoutMs = ms; }
+            void setGetSurfaceDataProfileTimeoutMs(DWORD ms) noexcept { m_getSurfaceDataProfileTimeoutMs = ms; }
+            void setGetSagProfileTimeoutMs(DWORD ms) noexcept         { m_getSagProfileTimeoutMs = ms; }
+            void setGetSurfaceDataMapTimeoutMs(DWORD ms) noexcept     { m_getSurfaceDataMapTimeoutMs = ms; }
+            void setGetSagMapTimeoutMs(DWORD ms) noexcept             { m_getSagMapTimeoutMs = ms; }
+
+            [[nodiscard]] DWORD getGetNameTimeoutMs() const noexcept        { return m_getNameTimeoutMs; }
+            [[nodiscard]] DWORD getGetFileTimeoutMs() const noexcept        { return m_getFileTimeoutMs; }
+            [[nodiscard]] DWORD getGetSystemTimeoutMs() const noexcept      { return m_getSystemTimeoutMs; }
+            [[nodiscard]] DWORD getGetFieldTimeoutMs() const noexcept       { return m_getFieldTimeoutMs; }
+            [[nodiscard]] DWORD getGetWaveTimeoutMs() const noexcept        { return m_getWaveTimeoutMs; }
+            [[nodiscard]] DWORD getGetSurfaceDataProfileTimeoutMs() const noexcept { return m_getSurfaceDataProfileTimeoutMs; }
+            [[nodiscard]] DWORD getGetSagProfileTimeoutMs() const noexcept         { return m_getSagProfileTimeoutMs; }
+            [[nodiscard]] DWORD getGetSurfaceDataMapTimeoutMs() const noexcept     { return m_getSurfaceDataMapTimeoutMs; }
+            [[nodiscard]] DWORD getGetSagMapTimeoutMs() const noexcept             { return m_getSagMapTimeoutMs; }
+
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
             using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
@@ -105,5 +126,15 @@ namespace ZemaxDDE {
 
             DWORD m_defaultTimeoutMs = 1000;
             int   m_defaultRetries   = 1;
+
+            DWORD m_getNameTimeoutMs = 2000;
+            DWORD m_getFileTimeoutMs = 2000;
+            DWORD m_getSystemTimeoutMs = 2000;
+            DWORD m_getFieldTimeoutMs = 2000;
+            DWORD m_getWaveTimeoutMs = 2000;
+            DWORD m_getSurfaceDataProfileTimeoutMs = 2000;
+            DWORD m_getSagProfileTimeoutMs = 1000;
+            DWORD m_getSurfaceDataMapTimeoutMs = 2000;
+            DWORD m_getSagMapTimeoutMs = 1000;
     };
 }

@@ -53,6 +53,12 @@ namespace gui {
     void SurfaceProfileService::startCalculation(int surface, int sampling, double angle, TaskSource source) {
         m_taskSource = source;
 
+        // Set per-profile timeout overrides from DDEConnectionManager.
+        if (m_connectionManager) {
+            m_calculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataProfileTimeoutMs());
+            m_calculator.setSagTimeoutMs(m_connectionManager->getGetSagProfileTimeoutMs());
+        }
+
         m_calculator.onComplete = [this]() { onCalculatorComplete(); };
         m_calculator.onFailed = [this]() { onCalculatorFailed(); };
 

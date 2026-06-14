@@ -11,6 +11,8 @@ namespace app {
     namespace {
         constexpr int kMinTimeoutMs = 1000;
         constexpr int kMaxTimeoutMs = 30000;
+        constexpr int kMinRequestTimeoutMs = 100;
+        constexpr int kMaxRequestTimeoutMs = 30000;
         constexpr int kMinRetries = 1;
         constexpr int kMaxRetries = 10;
         constexpr int kMinConnections = 1;
@@ -73,6 +75,16 @@ namespace app {
         dde.maxRetryCount = 3;
         dde.autoReconnect = true;
         dde.maxConnections = 4;
+
+        dde.getNameTimeoutMs = 2000;
+        dde.getFileTimeoutMs = 2000;
+        dde.getSystemTimeoutMs = 2000;
+        dde.getFieldTimeoutMs = 2000;
+        dde.getWaveTimeoutMs = 2000;
+        dde.getSurfaceDataProfileTimeoutMs = 2000;
+        dde.getSagProfileTimeoutMs = 1000;
+        dde.getSurfaceDataMapTimeoutMs = 2000;
+        dde.getSagMapTimeoutMs = 1000;
 
         plot.showGridByDefault = true;
         plot.lineWeight = 1.0f;
@@ -148,6 +160,53 @@ namespace app {
                 dde.maxConnections = clampValue(
                     d["maxConnections"].get<int>(), kMinConnections, kMaxConnections, 4);
             }
+            if (d.contains("getNameTimeoutMs") && d["getNameTimeoutMs"].is_number_integer()) {
+                dde.getNameTimeoutMs = clampValue(
+                    d["getNameTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 2000);
+            }
+            if (d.contains("getFileTimeoutMs") && d["getFileTimeoutMs"].is_number_integer()) {
+                dde.getFileTimeoutMs = clampValue(
+                    d["getFileTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 2000);
+            }
+            if (d.contains("getSystemTimeoutMs") && d["getSystemTimeoutMs"].is_number_integer()) {
+                dde.getSystemTimeoutMs = clampValue(
+                    d["getSystemTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 2000);
+            }
+            if (d.contains("getFieldTimeoutMs") && d["getFieldTimeoutMs"].is_number_integer()) {
+                dde.getFieldTimeoutMs = clampValue(
+                    d["getFieldTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 2000);
+            }
+            if (d.contains("getWaveTimeoutMs") && d["getWaveTimeoutMs"].is_number_integer()) {
+                dde.getWaveTimeoutMs = clampValue(
+                    d["getWaveTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 2000);
+            }
+            // Per-window GetSurfaceData/GetSag with backward compat.
+            // Legacy: single getSurfaceDataTimeoutMs / getSagTimeoutMs shared by all windows.
+            auto loadPerWindow = [&](const char* newKey, int& target, int fallback) {
+                if (d.contains(newKey) && d[newKey].is_number_integer()) {
+                    target = clampValue(d[newKey].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, fallback);
+                }
+            };
+            loadPerWindow("getSurfaceDataProfileTimeoutMs", dde.getSurfaceDataProfileTimeoutMs, 2000);
+            loadPerWindow("getSagProfileTimeoutMs",        dde.getSagProfileTimeoutMs,        1000);
+            loadPerWindow("getSurfaceDataMapTimeoutMs",     dde.getSurfaceDataMapTimeoutMs,     2000);
+            loadPerWindow("getSagMapTimeoutMs",             dde.getSagMapTimeoutMs,             1000);
+
+            // Backward compat: if legacy fields exist but new ones don't, use legacy values.
+            if (d.contains("getSurfaceDataTimeoutMs") && d["getSurfaceDataTimeoutMs"].is_number_integer()) {
+                int legacy = clampValue(d["getSurfaceDataTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 2000);
+                if (!d.contains("getSurfaceDataProfileTimeoutMs"))
+                    dde.getSurfaceDataProfileTimeoutMs = legacy;
+                if (!d.contains("getSurfaceDataMapTimeoutMs"))
+                    dde.getSurfaceDataMapTimeoutMs = legacy;
+            }
+            if (d.contains("getSagTimeoutMs") && d["getSagTimeoutMs"].is_number_integer()) {
+                int legacy = clampValue(d["getSagTimeoutMs"].get<int>(), kMinRequestTimeoutMs, kMaxRequestTimeoutMs, 1000);
+                if (!d.contains("getSagProfileTimeoutMs"))
+                    dde.getSagProfileTimeoutMs = legacy;
+                if (!d.contains("getSagMapTimeoutMs"))
+                    dde.getSagMapTimeoutMs = legacy;
+            }
         }
 
         // --- Plot ---
@@ -190,6 +249,16 @@ namespace app {
         j["dde"]["maxRetryCount"]       = dde.maxRetryCount;
         j["dde"]["autoReconnect"]       = dde.autoReconnect;
         j["dde"]["maxConnections"]      = dde.maxConnections;
+
+        j["dde"]["getNameTimeoutMs"]              = dde.getNameTimeoutMs;
+        j["dde"]["getFileTimeoutMs"]              = dde.getFileTimeoutMs;
+        j["dde"]["getSystemTimeoutMs"]            = dde.getSystemTimeoutMs;
+        j["dde"]["getFieldTimeoutMs"]             = dde.getFieldTimeoutMs;
+        j["dde"]["getWaveTimeoutMs"]              = dde.getWaveTimeoutMs;
+        j["dde"]["getSurfaceDataProfileTimeoutMs"] = dde.getSurfaceDataProfileTimeoutMs;
+        j["dde"]["getSagProfileTimeoutMs"]         = dde.getSagProfileTimeoutMs;
+        j["dde"]["getSurfaceDataMapTimeoutMs"]     = dde.getSurfaceDataMapTimeoutMs;
+        j["dde"]["getSagMapTimeoutMs"]             = dde.getSagMapTimeoutMs;
 
         j["plot"]["showGridByDefault"] = plot.showGridByDefault;
         j["plot"]["lineWeight"]        = plot.lineWeight;

@@ -42,7 +42,7 @@ namespace gui {
         }
 
         static const char* sidebarLabels[] = {
-            "General", "Appearance", "DDE Connection", "Plot", "Updates", "Files"
+            "General", "Appearance", "DDE Connection", "DDE Performance", "Plot", "Updates", "Files"
         };
         if (m_sidebarWidth <= 0.0f) {
             float maxW = 0.0f;
@@ -85,6 +85,7 @@ namespace gui {
             "General",
             "Appearance",
             "DDE Connection",
+            "DDE Performance",
             "Plot",
             "Updates",
             "Files",
@@ -100,12 +101,13 @@ namespace gui {
 
     void PreferencesDialog::renderContent() {
         switch (m_section) {
-            case Section::General:    renderSectionGeneral();    break;
-            case Section::Appearance: renderSectionAppearance(); break;
-            case Section::DDE:        renderSectionDDE();        break;
-            case Section::Plot:       renderSectionPlot();       break;
-            case Section::Updates:    renderSectionUpdates();    break;
-            case Section::Files:      renderSectionFiles();      break;
+            case Section::General:       renderSectionGeneral();       break;
+            case Section::Appearance:    renderSectionAppearance();    break;
+            case Section::DDE:           renderSectionDDE();           break;
+            case Section::DDEPerformance: renderSectionDDEPerformance(); break;
+            case Section::Plot:          renderSectionPlot();          break;
+            case Section::Updates:       renderSectionUpdates();       break;
+            case Section::Files:         renderSectionFiles();         break;
             default: break;
         }
     }
@@ -153,6 +155,55 @@ namespace gui {
         if (ImGui::Checkbox("Auto-reconnect on drop", &m_working.dde.autoReconnect)) {
             applyWorkingDDE();
         }
+    }
+
+    void PreferencesDialog::renderSectionDDEPerformance() {
+        ImGuiUtils::SectionHeader("DDE Performance", "Per-request timeout overrides (ms).");
+
+        auto inputMs = [](const char* label, const char* id, int* value) {
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(200);
+            ImGui::SetNextItemWidth(120);
+            ImGui::InputInt(id, value, 0, 0);
+            ImGui::SameLine();
+            ImGui::TextUnformatted("ms");
+        };
+
+        // --- Optical System Info ---
+        if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7), ImGuiChildFlags_Borders)) {
+            ImGui::TextUnformatted("Optical System Info");
+            ImGui::Spacing();
+            inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
+            inputMs("GetFile",        "##t GetFile",        &m_working.dde.getFileTimeoutMs);
+            inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
+            inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
+            inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
+        }
+        ImGui::EndChild();
+
+        ImGui::Spacing();
+
+        // --- Surface Profile Inspector ---
+        if (ImGui::BeginChild("##perf_profile", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
+            ImGui::TextUnformatted("Surface Profile Inspector");
+            ImGui::Spacing();
+            inputMs("GetSurfaceData", "##t P GetSurf", &m_working.dde.getSurfaceDataProfileTimeoutMs);
+            inputMs("GetSag",         "##t P GetSag",  &m_working.dde.getSagProfileTimeoutMs);
+        }
+        ImGui::EndChild();
+
+        ImGui::Spacing();
+
+        // --- Surface Irregularity Map ---
+        if (ImGui::BeginChild("##perf_map", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
+            ImGui::TextUnformatted("Surface Irregularity Map");
+            ImGui::Spacing();
+            inputMs("GetSurfaceData", "##t M GetSurf", &m_working.dde.getSurfaceDataMapTimeoutMs);
+            inputMs("GetSag",         "##t M GetSag",  &m_working.dde.getSagMapTimeoutMs);
+        }
+        ImGui::EndChild();
+
+        applyWorkingDDE();
     }
 
     void PreferencesDialog::renderSectionPlot() {

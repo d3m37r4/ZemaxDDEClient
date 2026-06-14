@@ -6,7 +6,7 @@ namespace gui {
 
     class SettingsManager;
 
-    /// Resizable modal dialog with 5 sections (General, Appearance, DDE, Plot, Updates)
+    /// Resizable modal dialog with 7 sections (General, Appearance, DDE, DDE Performance, Plot, Updates, Files)
     /// plus Save/Cancel/Reset actions. Uses a "working copy" of AppSettings for live preview:
     /// per-section apply methods on SettingsManager are called as soon as the user mutates
     /// a value, and the cancel button restores the last-saved snapshot.
@@ -23,13 +23,14 @@ namespace gui {
 
         private:
             enum class Section : int {
-                General     = 0,
-                Appearance  = 1,
-                DDE         = 2,
-                Plot        = 3,
-                Updates     = 4,
-                Files       = 5,
-                Count       = 6,
+                General       = 0,
+                Appearance    = 1,
+                DDE           = 2,
+                DDEPerformance = 3,
+                Plot          = 4,
+                Updates       = 5,
+                Files         = 6,
+                Count         = 7,
             };
 
             void renderSidebar();
@@ -40,6 +41,7 @@ namespace gui {
             void renderSectionGeneral();
             void renderSectionAppearance();
             void renderSectionDDE();
+            void renderSectionDDEPerformance();
             void renderSectionPlot();
             void renderSectionUpdates();
             void renderSectionFiles();

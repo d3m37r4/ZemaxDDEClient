@@ -30,6 +30,21 @@ namespace app {
         int maxRetryCount = 3;
         bool autoReconnect = true;
         int maxConnections = 4;
+
+        // Per-request timeout overrides — Initial Data Load (startup).
+        int getNameTimeoutMs = 2000;
+        int getFileTimeoutMs = 2000;
+        int getSystemTimeoutMs = 2000;
+        int getFieldTimeoutMs = 2000;
+        int getWaveTimeoutMs = 2000;
+
+        // Per-request timeout overrides — Surface Profile Inspector.
+        int getSurfaceDataProfileTimeoutMs = 2000;
+        int getSagProfileTimeoutMs = 1000;
+
+        // Per-request timeout overrides — Surface Irregularity Map.
+        int getSurfaceDataMapTimeoutMs = 2000;
+        int getSagMapTimeoutMs = 1000;
     };
 
     struct PlotSettings {

@@ -54,6 +54,16 @@ namespace gui {
         m_ddeConnectionManager->setDefaultRetries(dde.maxRetryCount);
         m_ddeConnectionManager->setMaxConnections(dde.maxConnections);
         m_ddeConnectionManager->setAutoReconnect(dde.autoReconnect);
+
+        m_ddeConnectionManager->setGetNameTimeoutMs(static_cast<DWORD>(dde.getNameTimeoutMs));
+        m_ddeConnectionManager->setGetFileTimeoutMs(static_cast<DWORD>(dde.getFileTimeoutMs));
+        m_ddeConnectionManager->setGetSystemTimeoutMs(static_cast<DWORD>(dde.getSystemTimeoutMs));
+        m_ddeConnectionManager->setGetFieldTimeoutMs(static_cast<DWORD>(dde.getFieldTimeoutMs));
+        m_ddeConnectionManager->setGetWaveTimeoutMs(static_cast<DWORD>(dde.getWaveTimeoutMs));
+        m_ddeConnectionManager->setGetSurfaceDataProfileTimeoutMs(static_cast<DWORD>(dde.getSurfaceDataProfileTimeoutMs));
+        m_ddeConnectionManager->setGetSagProfileTimeoutMs(static_cast<DWORD>(dde.getSagProfileTimeoutMs));
+        m_ddeConnectionManager->setGetSurfaceDataMapTimeoutMs(static_cast<DWORD>(dde.getSurfaceDataMapTimeoutMs));
+        m_ddeConnectionManager->setGetSagMapTimeoutMs(static_cast<DWORD>(dde.getSagMapTimeoutMs));
     }
 
     void SettingsManager::applyPlot(const app::PlotSettings& plot) {

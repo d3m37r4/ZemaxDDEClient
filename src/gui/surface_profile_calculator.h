@@ -17,6 +17,11 @@ namespace gui {
 
             void setMonitor(UiOperationMonitor* monitor) { m_uiOpMonitor = monitor; }
 
+            /// Per-calculator timeout overrides. When set (>0), used instead of
+            /// the global per-request timeout from ZemaxDDEClient.
+            void setSurfaceDataTimeoutMs(DWORD ms) { m_surfaceDataTimeoutMsOverride = ms; }
+            void setSagTimeoutMs(DWORD ms) { m_sagTimeoutMsOverride = ms; }
+
             void startCalculation(int surface, int sampling, double angle, TaskSource source, const std::string& label = "");
             void cancel();
             void reset() { m_state = State::Idle; m_error.clear(); m_result = {}; m_taskId = 0; m_skippedPoints = 0; }
@@ -58,5 +63,8 @@ namespace gui {
             std::chrono::steady_clock::time_point m_calcStartTime;
 
             ZemaxDDE::SurfaceData m_result;
+
+            DWORD m_surfaceDataTimeoutMsOverride = 0;
+            DWORD m_sagTimeoutMsOverride = 0;
     };
 }
