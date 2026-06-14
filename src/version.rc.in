@@ -1,0 +1,28 @@
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     @APP_VERSION_MAJOR@,@APP_VERSION_MINOR@,@APP_VERSION_PATCH@,@APP_BUILD_NUMBER@
+PRODUCTVERSION  @APP_VERSION_MAJOR@,@APP_VERSION_MINOR@,@APP_VERSION_PATCH@,@APP_BUILD_NUMBER@
+FILEFLAGSMASK   0x0000003FL
+FILEFLAGS       @APP_RC_PRERELEASE_FLAG@
+FILEOS          0x00040004L
+FILETYPE        0x00000001L
+FILESUBTYPE     0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041904B0"
+        BEGIN
+            VALUE "CompanyName",      "d3m37r4"
+            VALUE "FileDescription",  "Advanced analysis of optical systems via DDE with Zemax"
+            VALUE "FileVersion",      "@APP_VERSION_STRING@.@APP_BUILD_NUMBER@"
+            VALUE "InternalName",     "@PROJECT_NAME@"
+            VALUE "LegalCopyright",   "Copyright (C) 2025 d3m37r4"
+            VALUE "OriginalFilename", "@PROJECT_NAME@_@APP_VERSION_STRING@_@APP_BUILD_NUMBER@.exe"
+            VALUE "ProductName",      "Zemax DDE Client"
+            VALUE "ProductVersion",   "@APP_VERSION_STRING@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x419, 1200
+    END
+END

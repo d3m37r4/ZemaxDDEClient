@@ -2,15 +2,17 @@
 
 #include "windows_dockable/dde_status.h"
 #include "gui/constants.h"
+#include "gui/theme_manager.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
 namespace gui {
     void DDEStatus::render(Logger& logger) {
         if (!m_connectionManager) return;
+        if (!m_themeManager) return;
 
         ImGui::BeginChild("DDE Status Content",
-            ImVec2(gui::DDE_STATUS_CONTENT_WIDTH, gui::DDE_STATUS_CONTENT_HEIGHT),
+            ImVec2(gui::DDE_STATUS_CONTENT_SIZE.x, gui::DDE_STATUS_CONTENT_SIZE.y),
             ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
         );
@@ -37,7 +39,8 @@ namespace gui {
             ImGui::TextUnformatted(label);
             ImGui::SameLine(0.0f, 4.0f);
 
-            ImGui::PushStyleColor(ImGuiCol_Text, connected ? gui::DDE_STATUS_COLOR_CONNECTED : gui::DDE_STATUS_COLOR_DISCONNECTED);
+            const auto& sem = m_themeManager->semantic();
+            ImGui::PushStyleColor(ImGuiCol_Text, connected ? sem.success : sem.danger);
             ImGui::TextUnformatted(value);
             ImGui::PopStyleColor();
         }
@@ -77,7 +80,7 @@ namespace gui {
                 if (connectionCount < DDEConnectionManager::MAX_CONNECTIONS) {
                     ImGui::Separator();
                     if (ImGui::Selectable("+ Connect to another Zemax...")) {
-                        m_showConnectPopup = true;
+                        m_connectPopup->open();
                     }
                 }
 
@@ -89,10 +92,14 @@ namespace gui {
 
         bool connected = (activeIdx >= 0);
 
+        // Connect/disconnect button uses semantic danger/success tokens (not ImGuiCol_Button*)
+        // so the action remains visually unambiguous regardless of the active theme.
+        const auto& sem = m_themeManager->semantic();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
-        ImGui::PushStyleColor(ImGuiCol_Button, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_NORMAL : gui::DDE_BUTTON_CONNECT_COLOR_NORMAL);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_HOVER : gui::DDE_BUTTON_CONNECT_COLOR_HOVER);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, connected ? gui::DDE_BUTTON_DISCONNECT_COLOR_ACTIVE : gui::DDE_BUTTON_CONNECT_COLOR_ACTIVE);
+        ImGui::PushStyleColor(ImGuiCol_Button,        connected ? sem.dangerButton        : sem.successButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? sem.dangerButtonHover   : sem.successButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  connected ? sem.dangerButtonActive  : sem.successButtonActive);
+        ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
         if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
@@ -100,18 +107,16 @@ namespace gui {
                 m_connectionManager->disconnect(activeIdx);
                 logger.addLog("[DDE] Disconnected from Zemax");
             } else {
-                m_showConnectPopup = true;
+                m_connectPopup->open();
             }
         }
 
         ImGui::PopStyleVar();
-        ImGui::PopStyleColor(3);
+        ImGui::PopStyleColor(4);
         ImGui::PopStyleVar();
 
         ImGui::EndChild();
 
-        if (m_showConnectPopup && m_connectPopup) {
-            m_connectPopup->render(m_showConnectPopup, logger);
-        }
+        m_connectPopup->render();
     }
 }

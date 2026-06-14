@@ -38,8 +38,8 @@ namespace ImGuiUtils {
         }
     }
 
-    /// Centers the next popup/modal window in the viewport.
-    inline void SetPopupWindowPosition() {
+    /// Centers the next window in the viewport (call every frame; takes effect on appearing).
+    inline void CenterNextWindow() {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }
@@ -70,6 +70,17 @@ namespace ImGuiUtils {
             ImVec2(minWidth * dpiScale, minHeight * dpiScale),
             ImVec2(FLT_MAX, FLT_MAX)
         );
+    }
+
+    /// Sets DPI-scaled window size for the next window.
+    inline void SetDpiScaledWindowSize(const ImVec2& size, ImGuiCond cond = ImGuiCond_Once) {
+        float dpi = ImGui::GetWindowDpiScale();
+        ImGui::SetNextWindowSize(ImVec2(size.x * dpi, size.y * dpi), cond);
+    }
+
+    /// Scales a value by the current window DPI factor.
+    inline float DpiScale(float value) {
+        return value * ImGui::GetWindowDpiScale();
     }
 
     /// Disabled button with animated spinner arc (3/4 circle) inside.
@@ -118,4 +129,52 @@ namespace ImGuiUtils {
 
         return false;
     }
+
+    /// Horizontal splitter that resizes left/right panels.
+    /// Call between two SameLine() pairs.
+    /// @param id       Unique ID (e.g. "##splitter_1")
+    /// @param value    Current left-panel width (modified by drag)
+    /// @param height   Splitter height
+    /// @param width    Splitter bar thickness (default 4.0f)
+    /// @param minVal   Minimum value clamp
+    /// @param maxVal   Maximum value clamp
+    /// @return true if value changed
+    inline bool SplitterH(const char* id, float& value, float height,
+                           float width = 4.0f, float minVal = 0.0f, float maxVal = FLT_MAX) {
+        const ImVec2 sp = ImGui::GetCursorScreenPos();
+        ImGui::InvisibleButton(id, ImVec2(width, height));
+
+        if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+
+        bool changed = false;
+        if (ImGui::IsItemActive()) {
+            value += ImGui::GetIO().MouseDelta.x;
+            value = std::clamp(value, minVal, maxVal);
+            changed = true;
+        }
+
+        ImU32 col;
+        if (ImGui::IsItemActive())
+            col = ImGui::GetColorU32(ImGuiCol_SeparatorActive);
+        else if (ImGui::IsItemHovered())
+            col = ImGui::GetColorU32(ImGuiCol_Text, 0.4f);
+        else
+            col = ImGui::GetColorU32(ImGuiCol_Separator);
+
+        ImGui::GetWindowDrawList()->AddRectFilled(sp, ImVec2(sp.x + width, sp.y + height), col);
+
+        return changed;
+    }
+    /// Renders a section header with title, separator, and optional description.
+    inline void SectionHeader(const char* title, const char* description = nullptr) {
+        ImGui::TextUnformatted(title);
+        ImGui::Separator();
+        ImGui::Spacing();
+        if (description) {
+            ImGui::TextDisabled(description);
+            ImGui::Spacing();
+        }
+    }
+
 } // namespace ImGuiUtils

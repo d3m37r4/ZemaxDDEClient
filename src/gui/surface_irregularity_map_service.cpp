@@ -31,6 +31,12 @@ namespace gui {
     // --- Profile calculation (via SurfaceProfileCalculator) ---
 
     void SurfaceIrregularityMapService::startCalculation(int surface, int sampling, double angle, TaskSource source) {
+        // Set per-map timeout overrides from DDEConnectionManager.
+        if (m_connectionManager) {
+            m_calculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
+            m_calculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
+        }
+
         m_calculator.onComplete = [this]() {
             m_nominalSurfaceData = m_calculator.getResult();
             if (m_nominalSurfaceData.isValid()) {
@@ -56,6 +62,12 @@ namespace gui {
         if (!client) {
             m_logger.addLog("[IrregularityMapService] No active DDE connection");
             return;
+        }
+
+        // Set per-map timeout overrides from DDEConnectionManager.
+        if (m_connectionManager) {
+            m_calculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
+            m_calculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
         }
 
         if (angleStepDeg <= 0.0 || angleStepDeg >= 180.0) {

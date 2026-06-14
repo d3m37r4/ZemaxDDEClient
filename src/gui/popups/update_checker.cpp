@@ -1,4 +1,7 @@
 #include "gui/popups/update_checker.h"
+#include "gui/constants.h"
+#include "gui/imgui_utils.h"
+#include "gui/theme_manager.h"
 #include "lib/imgui/imgui.h"
 #include "version.h"
 #include "app/app.h"
@@ -12,6 +15,14 @@
 namespace gui {
     UpdateChecker::UpdateChecker() = default;
     UpdateChecker::~UpdateChecker() = default;
+
+    void UpdateChecker::open() noexcept {
+        m_open = true;
+    }
+
+    void UpdateChecker::close() noexcept {
+        m_open = false;
+    }
 
     std::string UpdateChecker::getCurrentVersion() const {
         return APP_FULL_VERSION;
@@ -47,7 +58,11 @@ namespace gui {
             return false;
         }
 
-        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", L"/repos/d3m37r4/ZemaxDDEClient/releases/latest", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+        const wchar_t* path = (m_channel == app::UpdateChannel::Beta)
+            ? L"/repos/d3m37r4/ZemaxDDEClient/releases"
+            : L"/repos/d3m37r4/ZemaxDDEClient/releases/latest";
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
         if (!hRequest) {
             WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
@@ -79,9 +94,32 @@ namespace gui {
 
         try {
             auto json = nlohmann::json::parse(response);
-            m_updateInfo.version = json.value("tag_name", "");
-            m_updateInfo.releaseDate = json.value("published_at", "");
-            m_updateInfo.downloadUrl = json.value("html_url", "");
+
+            if (m_channel == app::UpdateChannel::Beta) {
+                // /releases returns an array; pick the first prerelease.
+                if (!json.is_array() || json.empty()) {
+                    m_errorMessage = "No releases found on Beta channel";
+                    return false;
+                }
+                const nlohmann::json* match = nullptr;
+                for (const auto& rel : json) {
+                    if (rel.is_object() && rel.value("prerelease", false)) {
+                        match = &rel;
+                        break;
+                    }
+                }
+                if (!match) {
+                    m_errorMessage = "No prerelease found on Beta channel";
+                    return false;
+                }
+                m_updateInfo.version     = match->value("tag_name", "");
+                m_updateInfo.releaseDate = match->value("published_at", "");
+                m_updateInfo.downloadUrl = match->value("html_url", "");
+            } else {
+                m_updateInfo.version     = json.value("tag_name", "");
+                m_updateInfo.releaseDate = json.value("published_at", "");
+                m_updateInfo.downloadUrl = json.value("html_url", "");
+            }
             return true;
         } catch (...) {
             m_errorMessage = "Failed to parse GitHub response";
@@ -104,72 +142,82 @@ namespace gui {
         m_isCheckComplete = true;
     }
 
-    void UpdateChecker::renderPopup(bool& showPopup) {
-        if (showPopup) {
-            ImGui::OpenPopup("Check for Updates");
-            showPopup = false;
+    void UpdateChecker::render() {
+        if (m_open && !ImGui::IsPopupOpen(UPDATE_POPUP_NAME)) {
+            ImGui::OpenPopup(UPDATE_POPUP_NAME);
         }
 
-        if (ImGui::BeginPopupModal("Check for Updates", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::TextUnformatted(APP_NAME);
-            ImGui::Separator();
-            ImGui::Spacing();
+        ImGuiUtils::CenterNextWindow();
 
-            std::string currentVer = std::format("Current version: {}", getCurrentVersion());
-            ImGui::TextUnformatted(currentVer.c_str());
+        ImGuiUtils::SetDpiScaledWindowConstraints(UPDATE_POPUP_MIN_SIZE.x, UPDATE_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(UPDATE_POPUP_DEFAULT_SIZE);
 
-            ImGui::Spacing();
+        if (!ImGui::BeginPopupModal(UPDATE_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
+            return;
+        }
 
-            if (!m_isCheckComplete) {
-                ImGui::TextUnformatted("Click the button below to check for updates.");
-            } else {
-                if (!m_errorMessage.empty()) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Error: %s", m_errorMessage.c_str());
-                } else if (m_updateInfo.hasUpdate) {
-                    ImGui::TextColored(ImVec4(0.0f, 0.8f, 0.0f, 1.0f), "New version available: %s", m_updateInfo.version.c_str());
-                    ImGui::TextUnformatted(std::format("Released: {}", m_updateInfo.releaseDate).c_str());
-                } else {
-                    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Your software is up to date!");
-                }
-            }
-
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            float windowWidth = ImGui::GetWindowSize().x;
-
-            if (m_isChecking) {
-                ImGui::TextUnformatted("Checking for updates...");
-            } else {
-                if (!m_updateInfo.hasUpdate || !m_isCheckComplete) {
-                    ImGui::SetCursorPosX((windowWidth - 180.0f) * 0.5f);
-                    if (ImGui::Button("Check for Updates", ImVec2(180, 0))) {
-                        checkForUpdates();
-                    }
-                }
-
-                if (m_updateInfo.hasUpdate && m_isCheckComplete) {
-                    ImGui::SetCursorPosX((windowWidth - 180.0f) * 0.5f);
-                    if (ImGui::Button("Download Update", ImVec2(180, 0))) {
-                        if (!m_updateInfo.downloadUrl.empty()) {
-                            ShellExecuteA(nullptr, "open", m_updateInfo.downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-                        }
-                    }
-                }
-            }
-
-            ImGui::Spacing();
-
-            ImGui::SetCursorPosX((windowWidth - 120.0f) * 0.5f);
-            if (ImGui::Button("OK", ImVec2(120, 0))) {
-                ImGui::CloseCurrentPopup();
-                m_isCheckComplete = false;
-                m_updateInfo.hasUpdate = false;
-                m_errorMessage.clear();
-            }
-
+        if (!m_themeManager) {
             ImGui::EndPopup();
+            return;
         }
+
+        const float footerH = ImGui::GetFrameHeightWithSpacing();
+
+        ImGui::BeginChild("##update_body", ImVec2(0, -footerH), ImGuiChildFlags_Borders);
+
+        std::string currentVer = std::format("Current version: {}", getCurrentVersion());
+        ImGui::TextUnformatted(currentVer.c_str());
+
+        ImGui::Spacing();
+
+        if (!m_isCheckComplete) {
+            ImGui::TextUnformatted("Click the button below to check for updates.");
+        } else {
+            const auto& sem = m_themeManager->semantic();
+            if (!m_errorMessage.empty()) {
+                ImGui::TextColored(sem.danger, "Error: %s", m_errorMessage.c_str());
+            } else if (m_updateInfo.hasUpdate) {
+                ImGui::TextColored(sem.success, "New version available: %s", m_updateInfo.version.c_str());
+                ImGui::TextUnformatted(std::format("Released: {}", m_updateInfo.releaseDate).c_str());
+            } else {
+                ImGui::TextColored(sem.muted, "Your software is up to date!");
+            }
+        }
+
+        ImGui::EndChild();
+
+        float windowWidth = ImGui::GetWindowSize().x;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float okBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+
+        if (!m_isChecking) {
+            float actionBtnW = ImGuiUtils::DpiScale(180.0f);
+            float totalW = actionBtnW + spacing + okBtnW;
+            ImGui::SetCursorPosX((windowWidth - totalW) * 0.5f);
+
+            if (!m_updateInfo.hasUpdate || !m_isCheckComplete) {
+                if (ImGuiUtils::SpinnerButton(UPDATE_POPUP_NAME, m_isChecking, ImVec2(actionBtnW, 0))) {
+                    checkForUpdates();
+                }
+            } else if (m_updateInfo.hasUpdate && m_isCheckComplete) {
+                if (ImGuiUtils::SpinnerButton("Download Update", false, ImVec2(actionBtnW, 0))) {
+                    if (!m_updateInfo.downloadUrl.empty()) {
+                        ShellExecuteA(nullptr, "open", m_updateInfo.downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+                    }
+                }
+            }
+            ImGui::SameLine();
+        } else {
+            ImGui::SetCursorPosX((windowWidth - okBtnW) * 0.5f);
+        }
+
+        if (ImGui::Button("OK", ImVec2(okBtnW, 0))) {
+            close();
+            m_isCheckComplete = false;
+            m_updateInfo.hasUpdate = false;
+            m_errorMessage.clear();
+        }
+
+        ImGui::EndPopup();
     }
 }

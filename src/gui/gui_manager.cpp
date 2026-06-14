@@ -27,21 +27,37 @@ namespace gui {
         if (m_glfwWindow) glfwSetWindowShouldClose(m_glfwWindow, true);
     });
     m_menuBarController->setAboutCallback([this]() {
-        m_showAboutPopup = true;
+        m_aboutDialog->open();
     });
     m_menuBarController->setUpdatesCallback([this]() {
-        m_showUpdatesPopup = true;
+        m_updateChecker->open();
     });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_debugLogRenderer = std::make_unique<DebugLog>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
+    m_settingsManager   = std::make_unique<SettingsManager>();
+    m_preferencesDialog = std::make_unique<PreferencesDialog>(*m_settingsManager);
+    m_settingsManager->setUpdateChecker(m_updateChecker.get());
+    m_settingsManager->setLogger(&m_logger);
+    m_menuBarController->setPreferencesCallback([this]() {
+        m_preferencesDialog->open();
+    });
 }
 
 GuiManager::~GuiManager() = default;
 
-void GuiManager::initialize(float dpiScale) {
-    m_graphics.initialize(m_glfwWindow, m_logger, dpiScale);
+void GuiManager::initialize(bool isLightTheme, float dpiScale) {
+    m_graphics.initialize(m_glfwWindow, m_logger, isLightTheme, dpiScale);
+    m_settingsManager->bind(&m_graphics.getThemeManager(), m_ddeConnectionManager);
+    m_settingsManager->setGraphicsBackend(&m_graphics);
+    m_profileService->setSettingsManager(m_settingsManager.get());
+    m_irregularityMapService->setSettingsManager(m_settingsManager.get());
+
+    const auto& themeManager = m_graphics.getThemeManager();
+    m_ddeStatusRenderer->setThemeManager(&themeManager);
+    m_ddeStatusRenderer->setLogger(&m_logger);
+    m_updateChecker->setThemeManager(&themeManager);
 }
 
 void GuiManager::render() {
@@ -182,9 +198,9 @@ void GuiManager::render() {
         }
     }
 
-    ImGuiUtils::SetPopupWindowPosition();
     renderUpdatesPopup();
     renderAboutPopup();
+    renderPreferencesDialog();
 
     m_uiOpMonitor.renderGlobalStatusBar();
 
@@ -203,13 +219,19 @@ void GuiManager::renderDebugLog() {
 
 void GuiManager::renderAboutPopup() {
     if (m_aboutDialog) {
-        m_aboutDialog->render(m_showAboutPopup);
+        m_aboutDialog->render();
     }
 }
 
 void GuiManager::renderUpdatesPopup() {
     if (m_updateChecker) {
-        m_updateChecker->renderPopup(m_showUpdatesPopup);
+        m_updateChecker->render();
+    }
+}
+
+void GuiManager::renderPreferencesDialog() {
+    if (m_preferencesDialog) {
+        m_preferencesDialog->render();
     }
 }
 

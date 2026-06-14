@@ -9,9 +9,11 @@
 namespace {
     inline constexpr const char* IMGUI_INI_FILENAME = "imgui.ini";
     inline constexpr const char* WINDOW_STATE_FILENAME = "windows.json";
+    inline constexpr const char* SETTINGS_JSON_FILENAME = "settings.json";
 
     std::string imguiIniPath;
     std::string windowStatePath;
+    std::string settingsJsonPath;
 
     const char* getLocalAppDataPath() {
         static std::string path;
@@ -33,38 +35,39 @@ namespace {
         }
         return path.c_str();
     }
+
+    std::string resolvePath(const char* filename) {
+        #ifdef APP_PRODUCTION_BUILD
+        std::string basePath = getLocalAppDataPath();
+        if (!basePath.empty()) {
+            return basePath + "\\" + std::string(filename);
+        }
+        return std::string(filename);
+        #else
+        return std::string(filename);
+        #endif
+    }
 }
 
 namespace app {
     const char* getImguiIniPath() {
         if (imguiIniPath.empty()) {
-            #ifdef APP_PRODUCTION_BUILD
-            std::string basePath = getLocalAppDataPath();
-            if (!basePath.empty()) {
-                imguiIniPath = basePath + "\\" + std::string(IMGUI_INI_FILENAME);
-            } else {
-                imguiIniPath = IMGUI_INI_FILENAME;
-            }
-            #else
-            imguiIniPath = IMGUI_INI_FILENAME;
-            #endif
+            imguiIniPath = resolvePath(IMGUI_INI_FILENAME);
         }
         return imguiIniPath.c_str();
     }
 
     const char* getWindowStatePath() {
         if (windowStatePath.empty()) {
-            #ifdef APP_PRODUCTION_BUILD
-            std::string basePath = getLocalAppDataPath();
-            if (!basePath.empty()) {
-                windowStatePath = basePath + "\\" + std::string(WINDOW_STATE_FILENAME);
-            } else {
-                windowStatePath = WINDOW_STATE_FILENAME;
-            }
-            #else
-            windowStatePath = WINDOW_STATE_FILENAME;
-            #endif
+            windowStatePath = resolvePath(WINDOW_STATE_FILENAME);
         }
         return windowStatePath.c_str();
+    }
+
+    const char* getSettingsJsonPath() {
+        if (settingsJsonPath.empty()) {
+            settingsJsonPath = resolvePath(SETTINGS_JSON_FILENAME);
+        }
+        return settingsJsonPath.c_str();
     }
 }
