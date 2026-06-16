@@ -2,6 +2,7 @@
 
 #include "connect_dde.h"
 #include "app/zemax_window_enumerator.h"
+#include "dde/utils.h"
 #include "gui/utils.h"
 #include "gui/imgui_utils.h"
 #include "gui/constants.h"
@@ -39,7 +40,7 @@ namespace gui {
 
         for (size_t i = 0; i < windows.size(); ++i) {
             const auto& wnd = windows[i];
-            std::string title(wnd.title.begin(), wnd.title.end());
+            std::string title = ZemaxDDE::wstring_to_utf8(wnd.title);
             std::string label = std::format("[PID: {}] {}", wnd.pid, title);
 
             if (ImGui::Selectable(label.c_str(), m_selectedWindowIndex == static_cast<int>(i))) {
@@ -70,7 +71,7 @@ namespace gui {
                 m_open = false;
                 m_selectedWindowIndex = -1;
             } else {
-                std::string title(wnd.title.begin(), wnd.title.end());
+                std::string title = ZemaxDDE::wstring_to_utf8(wnd.title);
                 m_logger->addLog(std::format("[DDE] Failed to connect to: {}", title));
             }
         }
