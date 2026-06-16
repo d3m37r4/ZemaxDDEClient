@@ -60,6 +60,9 @@ namespace gui {
         m_logger.addLog(std::format("[ProfileCalculator] Starting: surface {} ({} pts, {}°)",
             surface, sampling, angle));
 
+        DWORD surfaceDataTimeout = m_surfaceDataTimeoutMsOverride > 0
+            ? m_surfaceDataTimeoutMsOverride : client->getDefaultTimeoutMs();
+
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
             [this](const std::string& result) {
@@ -68,7 +71,7 @@ namespace gui {
             [this](const std::string& error) {
                 onError(std::format("GetSurfaceData(TYPE_NAME): {}", error));
             },
-            2000, 1, "ProfileCalculator");
+            surfaceDataTimeout, 1, "ProfileCalculator");
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
@@ -78,7 +81,7 @@ namespace gui {
             [this](const std::string& error) {
                 onError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error));
             },
-            2000, 1, "ProfileCalculator");
+            surfaceDataTimeout, 1, "ProfileCalculator");
     }
 
     void SurfaceProfileCalculator::cancel() {
@@ -168,6 +171,9 @@ namespace gui {
             return;
         }
 
+        DWORD sagTimeout = m_sagTimeoutMsOverride > 0
+            ? m_sagTimeoutMsOverride : client->getDefaultTimeoutMs();
+
         client->submitRequest(
             std::format("GetSag,{},{},{}", m_targetSurface, x, y),
             [this](const std::string& result) {
@@ -180,7 +186,7 @@ namespace gui {
                     onError(std::format("GetSag failed: {}", error));
                 }
             },
-            1000, 1, "ProfileCalculator");
+            sagTimeout, 1, "ProfileCalculator");
     }
 
     void SurfaceProfileCalculator::onSagDataReceived(const std::string& buffer) {

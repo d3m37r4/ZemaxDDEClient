@@ -34,10 +34,22 @@ namespace gui {
         m_onSidebarToggle = std::move(cb);
     }
 
+    void MenuBarController::setPreferencesCallback(std::function<void()> cb) {
+        m_onPreferences = std::move(cb);
+    }
+
+    void MenuBarController::openPreferences() {
+        if (m_onPreferences) m_onPreferences();
+    }
+
     void MenuBarController::render() {
         if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Menu")) {
+            if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax(m_logger);
+                ImGui::Separator();
+                if (ImGui::MenuItem(PREFERENCES_POPUP_NAME, "Ctrl+,", false, true)) {
+                    if (m_onPreferences) m_onPreferences();
+                }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
                     if (m_onExit) m_onExit();
@@ -80,10 +92,10 @@ namespace gui {
                         ImGui::Separator();
                     }
                 }
-                if (ImGui::MenuItem("Check for Updates")) {
+                if (ImGui::MenuItem(UPDATE_POPUP_NAME)) {
                     if (m_onUpdates) m_onUpdates();
                 }
-                if (ImGui::MenuItem("About")) {
+                if (ImGui::MenuItem(ABOUT_POPUP_NAME)) {
                     if (m_onAbout) m_onAbout();
                 }
                 ImGui::EndMenu();

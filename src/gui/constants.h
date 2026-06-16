@@ -4,38 +4,17 @@
 
 namespace gui {
     // DDE status window constraints
-    inline constexpr float DDE_STATUS_WINDOW_WIDTH_MIN  = 220.0f;
-    inline constexpr float DDE_STATUS_WINDOW_HEIGHT_MIN = 130.0f;
-
-    // DDE status content constraints
-    inline constexpr float DDE_STATUS_CONTENT_WIDTH  = 0.0f;   // Automatic width
-    inline constexpr float DDE_STATUS_CONTENT_HEIGHT = 0.0f;   // Automatic height
-
-    // DDE status colors
-    inline constexpr ImVec4 DDE_STATUS_COLOR_CONNECTED     = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);  // Green
-    inline constexpr ImVec4 DDE_STATUS_COLOR_DISCONNECTED = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);  // Red
-
-    // DDE button colors - Connect
-    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_NORMAL = ImVec4(0.0f, 0.5f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_HOVER   = ImVec4(0.0f, 0.7f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_CONNECT_COLOR_ACTIVE  = ImVec4(0.0f, 0.3f, 0.0f, 1.0f);
-
-    // DDE button colors - Disconnect
-    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_NORMAL = ImVec4(0.5f, 0.0f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_HOVER  = ImVec4(0.7f, 0.0f, 0.0f, 1.0f);
-    inline constexpr ImVec4 DDE_BUTTON_DISCONNECT_COLOR_ACTIVE = ImVec4(0.3f, 0.0f, 0.0f, 1.0f);
+    inline constexpr ImVec2 DDE_STATUS_WINDOW_MIN_SIZE   = ImVec2(220.0f, 100.0f);
+    inline constexpr ImVec2 DDE_STATUS_CONTENT_SIZE      = ImVec2(0.0f, 0.0f);   // Automatic size
 
     // Debug log window constraints
-    inline constexpr float DEBUG_LOG_WINDOW_WIDTH_MIN  = 220.0f;
-    inline constexpr float DEBUG_LOG_WINDOW_HEIGHT_MIN = 160.0f;
+    inline constexpr ImVec2 DEBUG_LOG_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
 
     // System info window constraints
-    inline constexpr float SYSTEM_INFO_WINDOW_WIDTH_MIN  = 200.0f;
-    inline constexpr float SYSTEM_INFO_WINDOW_HEIGHT_MIN = 160.0f;
+    inline constexpr ImVec2 SYSTEM_INFO_WINDOW_MIN_SIZE  = ImVec2(200.0f, 160.0f);
 
     // Sag analysis window constraints
-    inline constexpr float SAG_ANALYSIS_WINDOW_WIDTH_MIN  = 200.0f;
-    inline constexpr float SAG_ANALYSIS_WINDOW_HEIGHT_MIN = 160.0f;
+    inline constexpr ImVec2 SAG_ANALYSIS_WINDOW_MIN_SIZE = ImVec2(200.0f, 160.0f);
 
     // Sag analysis sampling constraints
     // Maximum: Zemax tool "Surface Sag Cross Section" limit
@@ -44,8 +23,8 @@ namespace gui {
     inline constexpr int MIN_SAMPLING = 33;
 
     // Connect DDE popup constraints
-    inline constexpr float CONNECT_DDE_POPUP_WIDTH_MIN  = 260.0f;
-    inline constexpr float CONNECT_DDE_POPUP_HEIGHT_MIN = 100.0f;
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(550.0f, 120.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(550.0f, 120.0f);
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;
@@ -54,7 +33,24 @@ namespace gui {
     // Font settings
     inline constexpr float BASE_FONT_SIZE = 18.0f;
 
-    // Update checker window constraints
-    inline constexpr float UPDATE_WINDOW_WIDTH_MIN  = 320.0f;
-    inline constexpr float UPDATE_WINDOW_HEIGHT_MIN = 200.0f;
+    // Popup button dimensions (DPI-scaled at call sites)
+    inline constexpr float BASE_POPUP_BUTTON_WIDTH = 120.0f;
+
+    // Popup window names
+    inline constexpr const char* ABOUT_POPUP_NAME        = "About";
+    inline constexpr const char* UPDATE_POPUP_NAME       = "Check for Updates";
+    inline constexpr const char* PREFERENCES_POPUP_NAME  = "Preferences";
+    inline constexpr const char* CONNECT_DDE_POPUP_NAME  = "Connect to Zemax \xe2\x80\x93 select a window";
+
+    // About popup
+    inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(428.0f, 242.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(428.0f, 242.0f);
+
+    // Check for Updates popup
+    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(340.0f, 120.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);
+
+    // Preferences dialog layout
+    inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
+    inline constexpr ImVec2 PREFERENCES_WINDOW_MIN_SIZE     = ImVec2(660.0f, 280.0f);
 }

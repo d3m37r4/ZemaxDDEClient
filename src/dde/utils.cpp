@@ -47,6 +47,18 @@ namespace ZemaxDDE {
         return u8str;
     }
 
+    // Convert UTF‑16 (wchar_t) string to UTF‑8
+    std::string wstring_to_utf8(const std::wstring& wstr) {
+        if (wstr.empty()) return {};
+        int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(),
+            static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
+        if (len <= 0) return {};
+        std::string result(static_cast<size_t>(len), '\0');
+        WideCharToMultiByte(CP_UTF8, 0, wstr.data(),
+            static_cast<int>(wstr.size()), result.data(), len, nullptr, nullptr);
+        return result;
+    }
+
     /*
     * Splits the input string into individual "tokens" (meaningful parts).
     * Tokens are delimited by commas, spaces, newlines, or carriage returns, unless they are enclosed within double quotes.

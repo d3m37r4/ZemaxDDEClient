@@ -102,22 +102,22 @@ namespace ZemaxDDE {
                                     [this](const std::string& err) {
                                         onError(std::format("GetField,0: {}", err));
                                     },
-                                    2000, 1, "InitialDataLoad");
+                                    m_client.getGetFieldTimeoutMs(), 1, "InitialDataLoad");
                             },
                             [this](const std::string& err) {
                                 onError(std::format("GetSystem: {}", err));
                             },
-                            2000, 1, "InitialDataLoad");
+                            m_client.getGetSystemTimeoutMs(), 1, "InitialDataLoad");
                     },
                     [this](const std::string& err) {
                         onError(std::format("GetFile: {}", err));
                     },
-                    2000, 1, "InitialDataLoad");
+                    m_client.getGetFileTimeoutMs(), 1, "InitialDataLoad");
             },
             [this](const std::string& err) {
                 onError(std::format("GetName: {}", err));
             },
-            2000, 1, "InitialDataLoad");
+            m_client.getGetNameTimeoutMs(), 1, "InitialDataLoad");
     }
 
     void InitialDataLoadService::loadNextField() {
@@ -154,7 +154,7 @@ namespace ZemaxDDE {
                 [this](const std::string& err) {
                     onError(std::format("GetWave,0: {}", err));
                 },
-                2000, 1, "InitialDataLoad");
+                m_client.getGetWaveTimeoutMs(), 1, "InitialDataLoad");
             return;
         }
 
@@ -176,7 +176,7 @@ namespace ZemaxDDE {
             [this](const std::string& err) {
                 onError(std::format("GetField,{}: {}", m_currentField, err));
             },
-            2000, 1, "InitialDataLoad");
+            m_client.getGetFieldTimeoutMs(), 1, "InitialDataLoad");
     }
 
     void InitialDataLoadService::loadNextWave() {
@@ -208,7 +208,7 @@ namespace ZemaxDDE {
             [this](const std::string& err) {
                 onError(std::format("GetWave,{}: {}", m_currentWave, err));
             },
-            2000, 1, "InitialDataLoad");
+            m_client.getGetWaveTimeoutMs(), 1, "InitialDataLoad");
     }
 
     void InitialDataLoadService::onError(const std::string& msg) {

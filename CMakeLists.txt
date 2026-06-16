@@ -65,10 +65,24 @@ if(APP_VERSION_PRERELEASE)
     set(APP_VERSION_STRING "${APP_VERSION_STRING}-${APP_VERSION_PRERELEASE}")
 endif()
 
+# VERSIONINFO flag for .rc file (VS_FF_PRERELEASE = 0x01, or 0 for stable)
+if(APP_VERSION_PRERELEASE)
+    set(APP_RC_PRERELEASE_FLAG "0x01L")
+else()
+    set(APP_RC_PRERELEASE_FLAG "0x00L")
+endif()
+
 # Generate version.h from template
 configure_file(
     ${CMAKE_SOURCE_DIR}/src/version.h.in
     ${CMAKE_BINARY_DIR}/version.h
+    @ONLY
+)
+
+# Generate version.rc from template
+configure_file(
+    ${CMAKE_SOURCE_DIR}/src/version.rc.in
+    ${CMAKE_BINARY_DIR}/version.rc
     @ONLY
 )
 
@@ -77,6 +91,7 @@ set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
     ${SRC_DIR}/app/config_path.cpp
+    ${SRC_DIR}/app/settings.cpp
     ${SRC_DIR}/app/zemax_window_enumerator.cpp
     ${SRC_DIR}/logger/logger.cpp
     ${SRC_DIR}/dde/client_connection.cpp
@@ -90,9 +105,12 @@ set(SOURCES
     ${SRC_DIR}/gui/surface_profile_service.cpp
     ${SRC_DIR}/gui/surface_profile_calculator.cpp
     ${SRC_DIR}/gui/surface_irregularity_map_service.cpp
+    ${SRC_DIR}/gui/theme_manager.cpp
+    ${SRC_DIR}/gui/settings_manager.cpp
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
+    ${SRC_DIR}/gui/popups/preferences_dialog.cpp
     ${SRC_DIR}/gui/popups/update_checker.cpp
     ${SRC_DIR}/gui/popups/connect_dde.cpp
     ${SRC_DIR}/gui/dockable_windows_manager.cpp
@@ -129,6 +147,7 @@ list(APPEND SOURCES
 list(APPEND SOURCES
     ${NFD_DIR}/src/nfd_common.c
     ${NFD_DIR}/src/nfd_win.cpp
+    ${CMAKE_BINARY_DIR}/version.rc
 )
 
 # Compile 'nfd_common.c' as C-code
@@ -198,6 +217,12 @@ if(BUILD_TYPE_LOWER STREQUAL "debug")
 else()
     message(STATUS "Release mode: hiding console with -mwindows")
     target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+endif()
+
+# Strip symbols in release builds
+if(BUILD_TYPE_LOWER STREQUAL "release")
+    message(STATUS "Release: stripping debug symbols (-s)")
+    target_link_options(${PROJECT_NAME} PRIVATE -s)
 endif()
 
 # Optimization flags

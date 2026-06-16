@@ -7,6 +7,7 @@
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
+#include "gui/settings_manager.h"
 #include "gui/surface_profile_service.h"
 #include "gui/gui.h"
 #include "logger/logger.h"
@@ -21,6 +22,17 @@ namespace gui {
 
     void SurfaceProfileService::setUiOperationMonitor(UiOperationMonitor* monitor) {
         m_calculator.setMonitor(monitor);
+    }
+
+    namespace {
+        ImPlotAxisFlags axisFlagsForGrid(bool showGrid) {
+            return showGrid ? ImPlotAxisFlags_None : ImPlotAxisFlags_NoGridLines;
+        }
+
+        ImPlotSpec buildLineSpec(float lineWeight, float markerSize) {
+            return ImPlotSpec(ImPlotProp_LineWeight, lineWeight,
+                              ImPlotProp_MarkerSize, markerSize);
+        }
     }
 
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const ZemaxDDE::SurfaceData& surface) {
@@ -40,6 +52,12 @@ namespace gui {
 
     void SurfaceProfileService::startCalculation(int surface, int sampling, double angle, TaskSource source) {
         m_taskSource = source;
+
+        // Set per-profile timeout overrides from DDEConnectionManager.
+        if (m_connectionManager) {
+            m_calculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataProfileTimeoutMs());
+            m_calculator.setSagTimeoutMs(m_connectionManager->getGetSagProfileTimeoutMs());
+        }
 
         m_calculator.onComplete = [this]() { onCalculatorComplete(); };
         m_calculator.onFailed = [this]() { onCalculatorFailed(); };
@@ -105,13 +123,18 @@ namespace gui {
         if (surface.sagDataPoints.empty()) return;
 
         auto [x_vals, y_vals] = extractSagCoordinates(surface);
+        const bool showGrid = m_settingsManager ? m_settingsManager->showGridByDefault() : true;
+        const float lineWeight = m_settingsManager ? m_settingsManager->plotLineWeight() : 1.0f;
+        const float markerSize = m_settingsManager ? m_settingsManager->plotMarkerSize() : 4.0f;
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
             std::string unitName = getUnitString(surface.units);
             ImPlot::SetupAxes(std::format("X ({})", unitName).c_str(),
-                              std::format("Sag ({})", unitName).c_str());
+                              std::format("Sag ({})", unitName).c_str(),
+                              axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine("Surface", x_vals.data(), y_vals.data(), x_vals.size());
+            ImPlot::PlotLine("Surface", x_vals.data(), y_vals.data(), x_vals.size(),
+                             buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
         }
     }
@@ -119,12 +142,18 @@ namespace gui {
     void SurfaceProfileService::renderProfileComparisonPlot(const char* plotLabel, const ZemaxDDE::SurfaceData& nominal, const ZemaxDDE::SurfaceData& toleranced, const ImVec2& size) {
         auto [x_nom, y_nom] = extractSagCoordinates(nominal);
         auto [x_tol, y_tol] = extractSagCoordinates(toleranced);
+        const bool showGrid = m_settingsManager ? m_settingsManager->showGridByDefault() : true;
+        const float lineWeight = m_settingsManager ? m_settingsManager->plotLineWeight() : 1.0f;
+        const float markerSize = m_settingsManager ? m_settingsManager->plotMarkerSize() : 4.0f;
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
-            ImPlot::SetupAxes("X (mm)", "Sag (mm)");
+            ImPlot::SetupAxes("X (mm)", "Sag (mm)",
+                              axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size());
-            ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size());
+            ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size(),
+                             buildLineSpec(lineWeight, markerSize));
+            ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size(),
+                             buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
         }
     }
@@ -140,10 +169,16 @@ namespace gui {
         for (size_t i = 0; i < x_nom.size(); ++i)
             y_dev.push_back(y_tol[i] - y_nom[i]);
 
+        const bool showGrid = m_settingsManager ? m_settingsManager->showGridByDefault() : true;
+        const float lineWeight = m_settingsManager ? m_settingsManager->plotLineWeight() : 1.0f;
+        const float markerSize = m_settingsManager ? m_settingsManager->plotMarkerSize() : 4.0f;
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
-            ImPlot::SetupAxes("X (mm)", "ΔSag (mm)");
+            ImPlot::SetupAxes("X (mm)", "ΔSag (mm)",
+                              axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine("Deviation", x_nom.data(), y_dev.data(), x_nom.size());
+            ImPlot::PlotLine("Deviation", x_nom.data(), y_dev.data(), x_nom.size(),
+                             buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
         }
     }

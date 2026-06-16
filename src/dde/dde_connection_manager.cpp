@@ -53,7 +53,7 @@ DDEConnectionManager::DDEConnectionManager(Logger& logger)
 }
 
 int DDEConnectionManager::findFreeSlot() {
-    for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+    for (int i = 0; i < m_maxConnections && i < MAX_CONNECTIONS; ++i) {
         if (!m_connections[i].isConnected) {
             return i;
         }
@@ -84,6 +84,17 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     conn.client = std::make_unique<ZemaxDDE::ZemaxDDEClient>(conn.hwndClient, m_logger);
     SetWindowLongPtrW(conn.hwndClient, GWLP_USERDATA,
         reinterpret_cast<LONG_PTR>(conn.client.get()));
+
+    // Propagate per-request timeouts to new client.
+    conn.client->setGetNameTimeoutMs(m_getNameTimeoutMs);
+    conn.client->setGetFileTimeoutMs(m_getFileTimeoutMs);
+    conn.client->setGetSystemTimeoutMs(m_getSystemTimeoutMs);
+    conn.client->setGetFieldTimeoutMs(m_getFieldTimeoutMs);
+    conn.client->setGetWaveTimeoutMs(m_getWaveTimeoutMs);
+    conn.client->setGetSurfaceDataProfileTimeoutMs(m_getSurfaceDataProfileTimeoutMs);
+    conn.client->setGetSagProfileTimeoutMs(m_getSagProfileTimeoutMs);
+    conn.client->setGetSurfaceDataMapTimeoutMs(m_getSurfaceDataMapTimeoutMs);
+    conn.client->setGetSagMapTimeoutMs(m_getSagMapTimeoutMs);
 
     try {
         conn.client->initiateDDE(targetHwnd);
@@ -212,4 +223,110 @@ void DDEConnectionManager::processAllTimeouts() {
 
 std::vector<app::ZemaxWindowInfo> DDEConnectionManager::enumerateAvailableTargets() {
     return app::ZemaxWindowEnumerator::enumerate();
+}
+
+DWORD DDEConnectionManager::getDefaultTimeoutMs() const {
+    for (const auto& conn : m_connections) {
+        if (conn.client) return conn.client->getDefaultTimeoutMs();
+    }
+    return 1000;
+}
+
+int DDEConnectionManager::getDefaultRetries() const {
+    for (const auto& conn : m_connections) {
+        if (conn.client) return conn.client->getDefaultRetries();
+    }
+    return 1;
+}
+
+void DDEConnectionManager::setDefaultTimeoutMs(DWORD ms) {
+    propagateDefaultTimeout(ms);
+}
+
+void DDEConnectionManager::setDefaultRetries(int n) {
+    propagateDefaultRetries(n);
+}
+
+void DDEConnectionManager::setMaxConnections(int n) {
+    if (n < 1) n = 1;
+    if (n > MAX_CONNECTIONS) n = MAX_CONNECTIONS;
+    m_maxConnections = n;
+    m_logger.addLog(std::format("[DDE] Max connections set to {}", n));
+}
+
+void DDEConnectionManager::setAutoReconnect(bool enabled) {
+    m_autoReconnect = enabled;
+    m_logger.addLog(std::format("[DDE] Auto-reconnect {}", enabled ? "enabled" : "disabled"));
+}
+
+void DDEConnectionManager::setGetNameTimeoutMs(DWORD ms) {
+    m_getNameTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetFileTimeoutMs(DWORD ms) {
+    m_getFileTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetSystemTimeoutMs(DWORD ms) {
+    m_getSystemTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetFieldTimeoutMs(DWORD ms) {
+    m_getFieldTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetWaveTimeoutMs(DWORD ms) {
+    m_getWaveTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetSurfaceDataProfileTimeoutMs(DWORD ms) {
+    m_getSurfaceDataProfileTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetSagProfileTimeoutMs(DWORD ms) {
+    m_getSagProfileTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetSurfaceDataMapTimeoutMs(DWORD ms) {
+    m_getSurfaceDataMapTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::setGetSagMapTimeoutMs(DWORD ms) {
+    m_getSagMapTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
+void DDEConnectionManager::propagateDefaultTimeout(DWORD ms) {
+    for (auto& conn : m_connections) {
+        if (conn.client) conn.client->setDefaultTimeoutMs(ms);
+    }
+}
+
+void DDEConnectionManager::propagateDefaultRetries(int n) {
+    for (auto& conn : m_connections) {
+        if (conn.client) conn.client->setDefaultRetries(n);
+    }
+}
+
+void DDEConnectionManager::propagatePerRequestTimeouts() {
+    for (auto& conn : m_connections) {
+        if (!conn.client) continue;
+        conn.client->setGetNameTimeoutMs(m_getNameTimeoutMs);
+        conn.client->setGetFileTimeoutMs(m_getFileTimeoutMs);
+        conn.client->setGetSystemTimeoutMs(m_getSystemTimeoutMs);
+        conn.client->setGetFieldTimeoutMs(m_getFieldTimeoutMs);
+        conn.client->setGetWaveTimeoutMs(m_getWaveTimeoutMs);
+        conn.client->setGetSurfaceDataProfileTimeoutMs(m_getSurfaceDataProfileTimeoutMs);
+        conn.client->setGetSagProfileTimeoutMs(m_getSagProfileTimeoutMs);
+        conn.client->setGetSurfaceDataMapTimeoutMs(m_getSurfaceDataMapTimeoutMs);
+        conn.client->setGetSagMapTimeoutMs(m_getSagMapTimeoutMs);
+    }
 }

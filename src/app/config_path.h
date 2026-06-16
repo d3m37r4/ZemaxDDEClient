@@ -5,4 +5,5 @@
 namespace app {
     const char* getImguiIniPath();
     const char* getWindowStatePath();
+    const char* getSettingsJsonPath();
 }

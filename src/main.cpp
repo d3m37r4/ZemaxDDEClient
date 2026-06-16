@@ -20,7 +20,13 @@ int main() {
 
     DockableWindowsManager wndMgr;
     wndMgr.RegisterDockableWindows(ctx->gui.get());
-    wndMgr.LoadState();
+
+    const auto& general = ctx->gui->getSettingsManager().current().general;
+    if (general.restoreWindowLayout) {
+        wndMgr.LoadState();
+    }
+    wndMgr.SetVisible(WindowID::DebugLog, general.showDebugLogOnStartup);
+
     ctx->gui->setWindowManager(&wndMgr);
 
     auto* menuBar = ctx->gui->getMenuBarController();
@@ -33,11 +39,12 @@ int main() {
     while (!ctx->gui->shouldClose()) {
         glfwPollEvents();
 
-        // Hotkey Ctrl+O
-        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)) {
-            if (ImGui::IsKeyPressed(ImGuiKey_O)) {
-                App::openZmxFileInZemax(logger);
-            }
+        // Hotkeys: Ctrl+O, Ctrl+,
+        const bool ctrlDown = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+        if (ctrlDown && ImGui::IsKeyPressed(ImGuiKey_O, false)) {
+            App::openZmxFileInZemax(logger);
+        } else if (ctrlDown && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
+            if (menuBar) menuBar->openPreferences();
         }
 
         ctx->gui->render();
