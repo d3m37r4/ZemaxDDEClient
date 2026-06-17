@@ -96,16 +96,36 @@ jobs:
           $localSha256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
           Write-Host "  Local EXE SHA256 (before upload): $localSha256"
           
-          $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
-            -Headers @{ "x-apikey" = $apiKey }
-          $uploadUrl = $uploadUrlResponse.data
-          Write-Host "  Upload URL obtained"
+          $uploadUrl = $null
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
+                -Headers @{ "x-apikey" = $apiKey }
+              $uploadUrl = $uploadUrlResponse.data
+              Write-Host "  Upload URL obtained (attempt $attempt)"
+              break
+            } catch {
+              Write-Host "  Upload URL attempt $attempt/3 failed: $($_.Exception.Message)"
+              if ($attempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
           
-          $jsonResponse = curl -s -X POST "$uploadUrl" `
-            -H "x-apikey: $apiKey" `
-            -F "file=@$($file.FullName)"
-          
-          $uploadResponse = $jsonResponse | ConvertFrom-Json
+          $uploadResponse = $null
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              $jsonResponse = curl -s -X POST "$uploadUrl" `
+                -H "x-apikey: $apiKey" `
+                -F "file=@$($file.FullName)"
+              $uploadResponse = $jsonResponse | ConvertFrom-Json
+              Write-Host "  File uploaded (attempt $attempt)"
+              break
+            } catch {
+              Write-Host "  File upload attempt $attempt/3 failed: $($_.Exception.Message)"
+              if ($attempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
           
           $analysisId = $uploadResponse.data.id
           Write-Host "  Analysis ID: $analysisId"
@@ -234,15 +254,36 @@ jobs:
           $localSha256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
           Write-Host "  Local EXE SHA256 (before upload): $localSha256"
           
-          $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
-            -Headers @{ "x-apikey" = $apiKey }
-          $uploadUrl = $uploadUrlResponse.data
+          $uploadUrl = $null
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
+                -Headers @{ "x-apikey" = $apiKey }
+              $uploadUrl = $uploadUrlResponse.data
+              Write-Host "  Upload URL obtained (attempt $attempt)"
+              break
+            } catch {
+              Write-Host "  Upload URL attempt $attempt/3 failed: $($_.Exception.Message)"
+              if ($attempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
           
-          $jsonResponse = curl -s -X POST "$uploadUrl" `
-            -H "x-apikey: $apiKey" `
-            -F "file=@$($file.FullName)"
-          
-          $uploadResponse = $jsonResponse | ConvertFrom-Json
+          $uploadResponse = $null
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              $jsonResponse = curl -s -X POST "$uploadUrl" `
+                -H "x-apikey: $apiKey" `
+                -F "file=@$($file.FullName)"
+              $uploadResponse = $jsonResponse | ConvertFrom-Json
+              Write-Host "  File uploaded (attempt $attempt)"
+              break
+            } catch {
+              Write-Host "  File upload attempt $attempt/3 failed: $($_.Exception.Message)"
+              if ($attempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
           
           $analysisId = $uploadResponse.data.id
           Write-Host "  Analysis ID: $analysisId"
@@ -322,40 +363,58 @@ jobs:
         shell: msys2 {0}
 
       # ==========================================
-      # RELEASE NOTES & UPLOAD
+      # UPLOAD & RELEASE NOTES
       # ==========================================
-      - name: Generate release notes
-        run: |
-          $releaseJson = Get-Content -Path "release_vt.json" -Raw | ConvertFrom-Json
-          $releaseZipSha = (Get-Content -Path "release_sha.txt" -Raw).Trim()
-          $releaseExeSha = (Get-Content -Path "release_exe_sha.txt" -Raw).Trim()
-          
-          $debugJson = Get-Content -Path "debug_vt.json" -Raw | ConvertFrom-Json
-          $debugZipSha = (Get-Content -Path "debug_sha.txt" -Raw).Trim()
-          $debugExeSha = (Get-Content -Path "debug_exe_sha.txt" -Raw).Trim()
-          
-          $releaseLink = $releaseJson.vt_link
-          $releaseMal = $releaseJson.malicious
-          $releaseTotal = $releaseJson.total
-          
-          $debugLink = $debugJson.vt_link
-          $debugMal = $debugJson.malicious
-          $debugTotal = $debugJson.total
-          
-          $originalBody = "${{ github.event.release.body }}"
-          if (-not $originalBody) { $originalBody = "" }
-          
-          $vtSection = "`n`n## VirusTotal Scan Results`n`n> **Release build scan result**: [$releaseMal/$releaseTotal detections]($releaseLink)`n> **EXE SHA256**: $releaseExeSha`n> **ZIP SHA256**: $releaseZipSha`n`n> **Debug build scan result**: [$debugMal/$debugTotal detections]($debugLink)`n> **EXE SHA256**: $debugExeSha`n> **ZIP SHA256**: $debugZipSha"
-          
-          $body = $originalBody + $vtSection
-          $body | Out-File -FilePath "release_body.txt" -Encoding UTF8
-          Write-Host "Generated release notes"
-        shell: pwsh
-
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Release-build${{ env.RELEASE_BUILD_NUMBER }}.zip
             build/bin/${{ env.PROJECT_NAME }}-v${{ env.APP_VERSION }}-Debug-build${{ env.DEBUG_BUILD_NUMBER }}.zip
-          body_path: release_body.txt
+
+      - name: Append VT scan results to release body
+        run: |
+          $token = "${{ secrets.GITHUB_TOKEN }}"
+          $releaseId = "${{ github.event.release.id }}"
+          $repo = "${{ github.repository }}"
+          $headers = @{
+            "Authorization" = "token $token"
+            "Accept" = "application/vnd.github.v3+json"
+          }
+
+          $releaseJson = Get-Content -Path "release_vt.json" -Raw | ConvertFrom-Json
+          $releaseZipSha = (Get-Content -Path "release_sha.txt" -Raw).Trim()
+          $releaseExeSha = (Get-Content -Path "release_exe_sha.txt" -Raw).Trim()
+
+          $debugJson = Get-Content -Path "debug_vt.json" -Raw | ConvertFrom-Json
+          $debugZipSha = (Get-Content -Path "debug_sha.txt" -Raw).Trim()
+          $debugExeSha = (Get-Content -Path "debug_exe_sha.txt" -Raw).Trim()
+
+          $releaseLink = $releaseJson.vt_link
+          $releaseMal = $releaseJson.malicious
+          $releaseTotal = $releaseJson.total
+
+          $debugLink = $debugJson.vt_link
+          $debugMal = $debugJson.malicious
+          $debugTotal = $debugJson.total
+
+          $current = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$releaseId" `
+            -Headers $headers
+          $currentBody = if ($current.body) { $current.body } else { "" }
+
+          $vtSection = "`n`n## VirusTotal Scan Results`n`n" +
+            "> **Release build scan result**: [$releaseMal/$releaseTotal detections]($releaseLink)`n" +
+            "> **EXE SHA256**: $releaseExeSha`n> **ZIP SHA256**: $releaseZipSha`n`n" +
+            "> **Debug build scan result**: [$debugMal/$debugTotal detections]($debugLink)`n" +
+            "> **EXE SHA256**: $debugExeSha`n> **ZIP SHA256**: $debugZipSha"
+
+          $newBody = $currentBody + $vtSection
+
+          Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$releaseId" `
+            -Method Patch `
+            -Headers $headers `
+            -Body (@{ body = $newBody } | ConvertTo-Json) `
+            -ContentType "application/json"
+
+          Write-Host "Release body updated with VT scan results"
+        shell: pwsh
