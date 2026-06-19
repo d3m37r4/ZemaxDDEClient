@@ -151,10 +151,6 @@ namespace gui {
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Upper bound on parallel DDE clients kept open by the manager.");
         }
-
-        if (ImGui::Checkbox("Auto-reconnect on drop", &m_working.dde.autoReconnect)) {
-            applyWorkingDDE();
-        }
     }
 
     void PreferencesDialog::renderSectionDDEPerformance() {
