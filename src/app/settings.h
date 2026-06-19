@@ -28,7 +28,6 @@ namespace app {
     struct DDESettings {
         int connectionTimeoutMs = 5000;
         int maxRetryCount = 3;
-        bool autoReconnect = true;
         int maxConnections = 4;
 
         // Per-request timeout overrides — Initial Data Load (startup).

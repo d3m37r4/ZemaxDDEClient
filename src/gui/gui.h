@@ -19,6 +19,7 @@
 #include "gui/graphics_backend.h"
 #include "windows_dockable/debug_log.h"
 #include "gui/popups/about_dialog.h"
+#include "gui/popups/connection_lost_dialog.h"
 #include "gui/popups/preferences_dialog.h"
 #include "gui/popups/update_checker.h"
 #include "gui/settings_manager.h"
@@ -42,6 +43,7 @@ namespace gui {
             void renderAboutPopup();
             void renderUpdatesPopup();
             void renderPreferencesDialog();
+            void renderConnectionLostPopup();
 
             SettingsManager& getSettingsManager() noexcept { return *m_settingsManager; }
             UpdateChecker* getUpdateChecker() const noexcept { return m_updateChecker.get(); }
@@ -75,6 +77,7 @@ namespace gui {
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<DebugLog> m_debugLogRenderer;
             std::unique_ptr<AboutDialog> m_aboutDialog;
+            std::unique_ptr<ConnectionLostDialog> m_connectionLostDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
             std::unique_ptr<SettingsManager>   m_settingsManager;
             std::unique_ptr<PreferencesDialog> m_preferencesDialog;

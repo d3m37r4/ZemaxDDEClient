@@ -34,6 +34,18 @@ public:
     void pumpAllMessages();
     void processAllTimeouts();
 
+    /// Checks health of all active connections and disconnects any that are lost.
+    void checkAllConnectionHealth();
+
+    /// Returns true if a connection was lost and needs user attention.
+    [[nodiscard]] bool hasConnectionLost() const noexcept { return m_connectionLostIndex >= 0; }
+    /// Returns the index of the lost connection (-1 if none).
+    [[nodiscard]] int getConnectionLostIndex() const noexcept { return m_connectionLostIndex; }
+    /// Returns the reason for the connection loss.
+    [[nodiscard]] const std::string& getConnectionLostReason() const noexcept { return m_connectionLostReason; }
+    /// Clears the connection lost state (called after user handles it in popup).
+    void clearConnectionLost() noexcept { m_connectionLostIndex = -1; m_connectionLostReason.clear(); }
+
     std::vector<app::ZemaxWindowInfo> enumerateAvailableTargets();
 
     // Runtime-configurable DDE settings. Forwarded to active clients by
@@ -41,7 +53,6 @@ public:
     void setDefaultTimeoutMs(DWORD ms);
     void setDefaultRetries(int n);
     void setMaxConnections(int n);
-    void setAutoReconnect(bool enabled);
 
     void setGetNameTimeoutMs(DWORD ms);
     void setGetFileTimeoutMs(DWORD ms);
@@ -56,7 +67,6 @@ public:
     [[nodiscard]] DWORD getDefaultTimeoutMs() const;
     [[nodiscard]] int   getDefaultRetries()   const;
     [[nodiscard]] int   getMaxConnections()   const { return m_maxConnections; }
-    [[nodiscard]] bool  getAutoReconnect()    const { return m_autoReconnect; }
 
     [[nodiscard]] DWORD getGetNameTimeoutMs() const { return m_getNameTimeoutMs; }
     [[nodiscard]] DWORD getGetFileTimeoutMs() const { return m_getFileTimeoutMs; }
@@ -73,7 +83,6 @@ private:
     Logger& m_logger;
     int m_activeIndex = -1;
     int m_maxConnections = MAX_CONNECTIONS;
-    bool m_autoReconnect = true;
 
     DWORD m_getNameTimeoutMs = 2000;
     DWORD m_getFileTimeoutMs = 2000;
@@ -91,4 +100,7 @@ private:
     void propagateDefaultTimeout(DWORD ms);
     void propagateDefaultRetries(int n);
     void propagatePerRequestTimeouts();
+
+    int m_connectionLostIndex = -1;
+    std::string m_connectionLostReason;
 };

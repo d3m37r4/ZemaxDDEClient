@@ -59,7 +59,6 @@ namespace gui {
         m_ddeConnectionManager->setDefaultTimeoutMs(static_cast<DWORD>(dde.connectionTimeoutMs));
         m_ddeConnectionManager->setDefaultRetries(dde.maxRetryCount);
         m_ddeConnectionManager->setMaxConnections(dde.maxConnections);
-        m_ddeConnectionManager->setAutoReconnect(dde.autoReconnect);
 
         m_ddeConnectionManager->setGetNameTimeoutMs(static_cast<DWORD>(dde.getNameTimeoutMs));
         m_ddeConnectionManager->setGetFileTimeoutMs(static_cast<DWORD>(dde.getFileTimeoutMs));

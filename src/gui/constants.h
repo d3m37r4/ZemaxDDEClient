@@ -50,6 +50,10 @@ namespace gui {
     inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(340.0f, 120.0f);
     inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);
 
+    // Connection Lost popup
+    inline constexpr ImVec2 CONNECTION_LOST_POPUP_DEFAULT_SIZE = ImVec2(380.0f, 140.0f);
+    inline constexpr ImVec2 CONNECTION_LOST_POPUP_MIN_SIZE     = ImVec2(380.0f, 140.0f);
+
     // Preferences dialog layout
     inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
     inline constexpr ImVec2 PREFERENCES_WINDOW_MIN_SIZE     = ImVec2(660.0f, 280.0f);

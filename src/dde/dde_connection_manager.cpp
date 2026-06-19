@@ -12,10 +12,10 @@ namespace {
 
     std::string ws2s(const std::wstring& wstr) {
         if (wstr.empty()) return {};
-        int len = WideCharToMultiByte(CP_ACP, 0, wstr.data(), static_cast<int>(wstr.size()),
+        int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
             nullptr, 0, nullptr, nullptr);
         std::string result(static_cast<size_t>(len), '\0');
-        WideCharToMultiByte(CP_ACP, 0, wstr.data(), static_cast<int>(wstr.size()),
+        WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
             result.data(), len, nullptr, nullptr);
         return result;
     }
@@ -113,6 +113,16 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     DWORD pid = 0;
     GetWindowThreadProcessId(targetHwnd, &pid);
     conn.serverPid = pid;
+    conn.client->setServerPid(pid);
+
+    // Set up connection lost callback to flag for GUI popup
+    conn.client->setOnConnectionLostCallback([this, idx](const std::string& reason) {
+        if (idx >= 0 && idx < MAX_CONNECTIONS && m_connections[idx].isConnected) {
+            m_connectionLostIndex = idx;
+            m_connectionLostReason = reason;
+            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", idx, reason));
+        }
+    });
 
     m_activeIndex = idx;
 
@@ -221,6 +231,47 @@ void DDEConnectionManager::processAllTimeouts() {
     }
 }
 
+void DDEConnectionManager::checkAllConnectionHealth() {
+    // If already flagged and not yet handled by GUI, skip re-checking
+    if (m_connectionLostIndex >= 0) return;
+
+    for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+        auto& conn = m_connections[i];
+        if (!conn.isConnected || !conn.client) continue;
+
+        if (!IsWindow(conn.hwndServer)) {
+            m_connectionLostIndex = i;
+            m_connectionLostReason = "Zemax window handle is no longer valid";
+            m_logger.addLog(std::format("[DDE] Connection lost: slot {} — {}", i, m_connectionLostReason));
+            return;
+        }
+
+        DWORD currentPid = 0;
+        GetWindowThreadProcessId(conn.hwndServer, &currentPid);
+        if (conn.serverPid != 0 && currentPid != conn.serverPid) {
+            m_connectionLostIndex = i;
+            m_connectionLostReason = "Zemax process ID changed (process restarted?)";
+            m_logger.addLog(std::format("[DDE] Connection lost: slot {} — {}", i, m_connectionLostReason));
+            return;
+        }
+
+        if (currentPid != 0) {
+            HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, currentPid);
+            if (hProcess) {
+                DWORD exitCode;
+                if (GetExitCodeProcess(hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
+                    m_connectionLostIndex = i;
+                    m_connectionLostReason = "Zemax process has exited";
+                    m_logger.addLog(std::format("[DDE] Connection lost: slot {} — {}", i, m_connectionLostReason));
+                    CloseHandle(hProcess);
+                    return;
+                }
+                CloseHandle(hProcess);
+            }
+        }
+    }
+}
+
 std::vector<app::ZemaxWindowInfo> DDEConnectionManager::enumerateAvailableTargets() {
     return app::ZemaxWindowEnumerator::enumerate();
 }
@@ -252,11 +303,6 @@ void DDEConnectionManager::setMaxConnections(int n) {
     if (n > MAX_CONNECTIONS) n = MAX_CONNECTIONS;
     m_maxConnections = n;
     m_logger.addLog(std::format("[DDE] Max connections set to {}", n));
-}
-
-void DDEConnectionManager::setAutoReconnect(bool enabled) {
-    m_autoReconnect = enabled;
-    m_logger.addLog(std::format("[DDE] Auto-reconnect {}", enabled ? "enabled" : "disabled"));
 }
 
 void DDEConnectionManager::setGetNameTimeoutMs(DWORD ms) {

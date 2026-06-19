@@ -25,6 +25,10 @@ namespace ZemaxDDE {
         m_onDDEConnected = callback;
     }
 
+    void ZemaxDDEClient::setOnConnectionLostCallback(OnConnectionLostCallback callback) {
+        m_onConnectionLost = callback;
+    }
+
     void ZemaxDDEClient::initiateDDE() {
         if (m_hwndZemaxServer != nullptr) {
             m_logger.addLog("[DDE] DDE already connected. Skipping initiate.");
@@ -250,6 +254,59 @@ namespace ZemaxDDE {
         }
     }
 
+    void ZemaxDDEClient::checkConnectionHealth() {
+        if (!m_hwndZemaxServer) return;
+
+        if (!IsWindow(m_hwndZemaxServer)) {
+            handleConnectionLost("Zemax window handle is no longer valid");
+            return;
+        }
+
+        DWORD currentPid = 0;
+        GetWindowThreadProcessId(m_hwndZemaxServer, &currentPid);
+        if (m_serverPid != 0 && currentPid != m_serverPid) {
+            handleConnectionLost("Zemax process ID changed (process restarted?)");
+            return;
+        }
+
+        if (currentPid != 0) {
+            HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, currentPid);
+            if (hProcess) {
+                DWORD exitCode;
+                if (GetExitCodeProcess(hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
+                    handleConnectionLost("Zemax process has exited");
+                    CloseHandle(hProcess);
+                    return;
+                }
+                CloseHandle(hProcess);
+            }
+        }
+    }
+
+    void ZemaxDDEClient::handleConnectionLost(const std::string& reason) {
+        m_logger.addLog(std::format("[DDE] ERROR: Connection lost — {}", reason));
+        m_hwndZemaxServer = nullptr;
+
+        if (m_activeRequest) {
+            if (m_activeRequest->onError) {
+                m_activeRequest->onError("Connection lost: " + reason);
+            }
+            m_activeRequest.reset();
+        }
+
+        while (!m_requestQueue.empty()) {
+            auto& req = m_requestQueue.front();
+            if (req.onError) {
+                req.onError("Connection lost: " + reason);
+            }
+            m_requestQueue.pop_front();
+        }
+
+        if (m_onConnectionLost) {
+            m_onConnectionLost(reason);
+        }
+    }
+
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);
@@ -289,6 +346,10 @@ namespace ZemaxDDE {
 
                     m_hwndZemaxServer = reinterpret_cast<HWND>(wParam);
 
+                    DWORD pid = 0;
+                    GetWindowThreadProcessId(m_hwndZemaxServer, &pid);
+                    m_serverPid = pid;
+
                     if (m_initialDataLoad) {
                         m_initialDataLoad->start();
                     }
@@ -301,6 +362,12 @@ namespace ZemaxDDE {
                     #endif
                 }
 
+                return 0;
+            }
+            case WM_DDE_TERMINATE: {
+                // Server initiated connection termination
+                m_logger.addLog("[DDE] Received WM_DDE_TERMINATE from server");
+                handleConnectionLost("Server sent WM_DDE_TERMINATE");
                 return 0;
             }
             case WM_DDE_DATA: {

@@ -73,7 +73,6 @@ namespace app {
 
         dde.connectionTimeoutMs = 5000;
         dde.maxRetryCount = 3;
-        dde.autoReconnect = true;
         dde.maxConnections = 4;
 
         dde.getNameTimeoutMs = 2000;
@@ -154,8 +153,6 @@ namespace app {
                 dde.maxRetryCount = clampValue(
                     d["maxRetryCount"].get<int>(), kMinRetries, kMaxRetries, 3);
             }
-            if (d.contains("autoReconnect") && d["autoReconnect"].is_boolean())
-                dde.autoReconnect = d["autoReconnect"].get<bool>();
             if (d.contains("maxConnections") && d["maxConnections"].is_number_integer()) {
                 dde.maxConnections = clampValue(
                     d["maxConnections"].get<int>(), kMinConnections, kMaxConnections, 4);
@@ -247,7 +244,6 @@ namespace app {
 
         j["dde"]["connectionTimeoutMs"] = dde.connectionTimeoutMs;
         j["dde"]["maxRetryCount"]       = dde.maxRetryCount;
-        j["dde"]["autoReconnect"]       = dde.autoReconnect;
         j["dde"]["maxConnections"]      = dde.maxConnections;
 
         j["dde"]["getNameTimeoutMs"]              = dde.getNameTimeoutMs;

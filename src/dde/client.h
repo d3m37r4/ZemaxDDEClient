@@ -48,6 +48,17 @@ namespace ZemaxDDE {
             void pumpMessages();
             void processTimeouts();
 
+            /// Checks if the Zemax server window is still alive.
+            /// Call once per frame to detect connection loss.
+            void checkConnectionHealth();
+
+            using OnConnectionLostCallback = std::function<void(const std::string& reason)>;
+            void setOnConnectionLostCallback(OnConnectionLostCallback callback);
+
+            /// Sets the server PID for connection health checks.
+            void setServerPid(DWORD pid) noexcept { m_serverPid = pid; }
+            [[nodiscard]] DWORD getServerPid() const noexcept { return m_serverPid; }
+
             /// Default timeout/retries used by submitRequest when caller passes
             /// the sentinel value (0 / -1). Updated by DDEConnectionManager from
             /// AppSettings.dde at runtime.
@@ -108,11 +119,15 @@ namespace ZemaxDDE {
             /// Resets active request and advances to the next in queue.
             void finishRequest();
             void checkDDEConnection();
+            /// Handles connection loss by notifying callbacks and cleaning up.
+            void handleConnectionLost(const std::string& reason);
 
             HWND m_hwndZemaxServer = nullptr;
             HWND m_hwndZemaxClient = nullptr;
+            DWORD m_serverPid = 0;
             Logger& m_logger;
             OnDDEConnectedCallback m_onDDEConnected;
+            OnConnectionLostCallback m_onConnectionLost;
             OpticalSystemData m_opticalSystem;
             SurfaceData m_tolerancedSurface;
             SurfaceData m_nominalSurface;
