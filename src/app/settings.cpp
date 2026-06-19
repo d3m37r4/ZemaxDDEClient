@@ -13,10 +13,10 @@ namespace app {
         constexpr int kMaxTimeoutMs = 30000;
         constexpr int kMinRequestTimeoutMs = 100;
         constexpr int kMaxRequestTimeoutMs = 30000;
-        constexpr int kMinRetries = 1;
+        constexpr int kMinRetries = 0;
         constexpr int kMaxRetries = 10;
         constexpr int kMinConnections = 1;
-        constexpr int kMaxConnections = 4;
+        constexpr int kMaxConnections = 16;
         constexpr float kMinLineWeight = 1.0f;
         constexpr float kMaxLineWeight = 3.0f;
         constexpr float kMinMarkerSize = 0.0f;

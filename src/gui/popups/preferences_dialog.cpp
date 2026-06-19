@@ -131,26 +131,32 @@ namespace gui {
     void PreferencesDialog::renderSectionDDE() {
         ImGuiUtils::SectionHeader("DDE Connection", "New values apply to subsequent requests only.");
 
-        if (ImGui::SliderInt("Connection timeout (ms)", &m_working.dde.connectionTimeoutMs, 1000, 30000, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            applyWorkingDDE();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Maximum time to wait for a single DDE round-trip.");
-        }
+        auto inputMs = [](const char* label, const char* id, int* value) {
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::InputInt(id, value, 0, 0);
+            ImGui::SameLine();
+            ImGui::TextUnformatted("ms");
+        };
 
-        if (ImGui::SliderInt("Max retry count", &m_working.dde.maxRetryCount, 0, 10, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            applyWorkingDDE();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("How many times to retry a failed DDE exchange.");
-        }
+        auto inputInt = [](const char* label, const char* id, int* value) {
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::InputInt(id, value, 0, 0);
+        };
 
-        if (ImGui::SliderInt("Max concurrent connections", &m_working.dde.maxConnections, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            applyWorkingDDE();
+        if (ImGui::BeginChild("##dde_conn", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY)) {
+            ImGui::TextUnformatted("Connection");
+            ImGui::Spacing();
+            inputMs("Connection timeout", "##d timeout", &m_working.dde.connectionTimeoutMs);
+            inputInt("Max retry count", "##d retry", &m_working.dde.maxRetryCount);
+            inputInt("Max concurrent connections", "##d conns", &m_working.dde.maxConnections);
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Upper bound on parallel DDE clients kept open by the manager.");
-        }
+        ImGui::EndChild();
+
+        applyWorkingDDE();
     }
 
     void PreferencesDialog::renderSectionDDEPerformance() {
@@ -158,8 +164,8 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(200);
-            ImGui::SetNextItemWidth(120);
+            ImGui::SameLine(ImGuiUtils::DpiScale(200.0f));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
             ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
