@@ -14,7 +14,16 @@
 
 namespace gui {
     UpdateChecker::UpdateChecker() = default;
-    UpdateChecker::~UpdateChecker() = default;
+
+    UpdateChecker::~UpdateChecker() {
+        joinThread();
+    }
+
+    void UpdateChecker::joinThread() {
+        if (m_workerThread.joinable()) {
+            m_workerThread.join();
+        }
+    }
 
     void UpdateChecker::open() noexcept {
         m_open = true;
@@ -51,6 +60,11 @@ namespace gui {
     bool UpdateChecker::fetchLatestVersion() {
         HINTERNET hSession = WinHttpOpen(L"ZemaxDDEClient/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
         if (!hSession) return false;
+
+        DWORD timeout = 10000;
+        WinHttpSetOption(hSession, WINHTTP_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+        WinHttpSetOption(hSession, WINHTTP_OPTION_SEND_TIMEOUT, &timeout, sizeof(timeout));
+        WinHttpSetOption(hSession, WINHTTP_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
 
         HINTERNET hConnect = WinHttpConnect(hSession, L"api.github.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
         if (!hConnect) {
@@ -128,18 +142,28 @@ namespace gui {
     }
 
     void UpdateChecker::checkForUpdates() {
+        joinThread();
+
         m_isChecking = true;
         m_isCheckComplete = false;
+        m_errorMessage.clear();
+        m_updateInfo = {};
 
+        m_workerThread = std::thread([this]() {
+            workerThread();
+        });
+    }
+
+    void UpdateChecker::workerThread() {
         if (fetchLatestVersion()) {
             int cmp = compareVersions(getCurrentVersion(), m_updateInfo.version);
-            m_updateInfo.hasUpdate = cmp < 0;
+            m_updateInfo.hasUpdate = (cmp < 0);
         } else {
             m_updateInfo.hasUpdate = false;
         }
 
-        m_isChecking = false;
         m_isCheckComplete = true;
+        m_isChecking = false;
     }
 
     void UpdateChecker::render() {
