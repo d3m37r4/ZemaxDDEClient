@@ -6,25 +6,29 @@
 #include "app/config_path.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "lib/imgui/imgui.h"
 
 namespace gui {
 
     PreferencesDialog::PreferencesDialog(SettingsManager& settings) noexcept
-        : m_settings(settings) {}
+        : m_settings(settings) {
+        m_resetConfirmDialog = std::make_unique<ResetConfirmDialog>();
+        m_resetConfirmDialog->setOnReset([this]() { onReset(); });
+    }
 
     void PreferencesDialog::open() noexcept {
         m_working = m_settings.current();
         m_loaded  = m_settings.current();
         m_section = Section::General;
-        m_confirmReset = false;
+        m_resetConfirmDialog->close();
         m_open = true;
     }
 
     void PreferencesDialog::close() noexcept {
         m_open = false;
-        m_confirmReset = false;
+        m_resetConfirmDialog->close();
     }
 
     void PreferencesDialog::render() {
@@ -33,7 +37,6 @@ namespace gui {
         }
 
         ImGuiUtils::CenterNextWindow();
-
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_WINDOW_MIN_SIZE.x, PREFERENCES_WINDOW_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE);
 
@@ -75,7 +78,7 @@ namespace gui {
 
         renderFooter();
 
-        renderResetConfirm();
+        m_resetConfirmDialog->render();
 
         ImGui::EndPopup();
     }
@@ -131,49 +134,59 @@ namespace gui {
     void PreferencesDialog::renderSectionDDE() {
         ImGuiUtils::SectionHeader("DDE Connection", "New values apply to subsequent requests only.");
 
-        if (ImGui::SliderInt("Connection timeout (ms)", &m_working.dde.connectionTimeoutMs, 1000, 30000, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            applyWorkingDDE();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Maximum time to wait for a single DDE round-trip.");
-        }
+        auto inputMs = [](const char* label, const char* id, int* value) -> bool {
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            bool changed = ImGui::InputInt(id, value, 0, 0);
+            ImGui::SameLine();
+            ImGui::TextUnformatted("ms");
+            return changed;
+        };
 
-        if (ImGui::SliderInt("Max retry count", &m_working.dde.maxRetryCount, 0, 10, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            applyWorkingDDE();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("How many times to retry a failed DDE exchange.");
-        }
+        auto inputInt = [](const char* label, const char* id, int* value) -> bool {
+            ImGui::TextUnformatted(label);
+            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            return ImGui::InputInt(id, value, 0, 0);
+        };
 
-        if (ImGui::SliderInt("Max concurrent connections", &m_working.dde.maxConnections, 1, 16, "%d", ImGuiSliderFlags_AlwaysClamp)) {
-            applyWorkingDDE();
+        if (ImGui::BeginChild("##dde_conn", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY)) {
+            ImGui::TextUnformatted("Connection");
+            ImGui::Spacing();
+            bool changed = false;
+            changed |= inputMs("Connection timeout", "##d timeout", &m_working.dde.connectionTimeoutMs);
+            changed |= inputInt("Max retry count", "##d retry", &m_working.dde.maxRetryCount);
+            changed |= inputInt("Max concurrent connections", "##d conns", &m_working.dde.maxConnections);
+            if (changed) applyWorkingDDE();
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Upper bound on parallel DDE clients kept open by the manager.");
-        }
+        ImGui::EndChild();
     }
 
     void PreferencesDialog::renderSectionDDEPerformance() {
         ImGuiUtils::SectionHeader("DDE Performance", "Per-request timeout overrides (ms).");
 
-        auto inputMs = [](const char* label, const char* id, int* value) {
+        auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(200);
-            ImGui::SetNextItemWidth(120);
-            ImGui::InputInt(id, value, 0, 0);
+            ImGui::SameLine(ImGuiUtils::DpiScale(200.0f));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
+            return changed;
         };
+
+        bool changed = false;
 
         // --- Optical System Info ---
         if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Optical System Info");
             ImGui::Spacing();
-            inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
-            inputMs("GetFile",        "##t GetFile",        &m_working.dde.getFileTimeoutMs);
-            inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
-            inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
-            inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
+            changed |= inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
+            changed |= inputMs("GetFile",        "##t GetFile",        &m_working.dde.getFileTimeoutMs);
+            changed |= inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
+            changed |= inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
+            changed |= inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
         }
         ImGui::EndChild();
 
@@ -183,8 +196,8 @@ namespace gui {
         if (ImGui::BeginChild("##perf_profile", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Profile Inspector");
             ImGui::Spacing();
-            inputMs("GetSurfaceData", "##t P GetSurf", &m_working.dde.getSurfaceDataProfileTimeoutMs);
-            inputMs("GetSag",         "##t P GetSag",  &m_working.dde.getSagProfileTimeoutMs);
+            changed |= inputMs("GetSurfaceData", "##t P GetSurf", &m_working.dde.getSurfaceDataProfileTimeoutMs);
+            changed |= inputMs("GetSag",         "##t P GetSag",  &m_working.dde.getSagProfileTimeoutMs);
         }
         ImGui::EndChild();
 
@@ -194,12 +207,12 @@ namespace gui {
         if (ImGui::BeginChild("##perf_map", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Irregularity Map");
             ImGui::Spacing();
-            inputMs("GetSurfaceData", "##t M GetSurf", &m_working.dde.getSurfaceDataMapTimeoutMs);
-            inputMs("GetSag",         "##t M GetSag",  &m_working.dde.getSagMapTimeoutMs);
+            changed |= inputMs("GetSurfaceData", "##t M GetSurf", &m_working.dde.getSurfaceDataMapTimeoutMs);
+            changed |= inputMs("GetSag",         "##t M GetSag",  &m_working.dde.getSagMapTimeoutMs);
         }
         ImGui::EndChild();
 
-        applyWorkingDDE();
+        if (changed) applyWorkingDDE();
     }
 
     void PreferencesDialog::renderSectionPlot() {
@@ -256,7 +269,7 @@ namespace gui {
         float saveBtnW    = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
-            m_confirmReset = true;
+            m_resetConfirmDialog->open();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
@@ -279,38 +292,6 @@ namespace gui {
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json.");
-        }
-    }
-
-    void PreferencesDialog::renderResetConfirm() {
-        if (!m_confirmReset) return;
-
-        ImGui::OpenPopup("Reset Preferences?");
-        const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
-        if (ImGui::BeginPopupModal("Reset Preferences?", &m_confirmReset,
-                                   ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::BeginChild("##reset_confirm_body",
-                              ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
-                              ImGuiChildFlags_Borders);
-            ImGui::TextUnformatted("This will reset all preferences to their factory defaults.");
-            ImGui::TextUnformatted("Unsaved changes will be lost.");
-            ImGui::EndChild();
-
-            float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
-            float resetBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
-            const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
-            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
-            if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
-                m_confirmReset = false;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
-                onReset();
-                m_confirmReset = false;
-            }
-            ImGui::EndPopup();
         }
     }
 

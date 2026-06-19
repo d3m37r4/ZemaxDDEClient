@@ -1,6 +1,9 @@
 #pragma once
 
+#include <memory>
+
 #include "app/settings.h"
+#include "gui/popups/reset_confirm_dialog.h"
 
 namespace gui {
 
@@ -36,7 +39,6 @@ namespace gui {
             void renderSidebar();
             void renderContent();
             void renderFooter();
-            void renderResetConfirm();
 
             void renderSectionGeneral();
             void renderSectionAppearance();
@@ -55,12 +57,12 @@ namespace gui {
             void onReset();
 
             SettingsManager& m_settings;
+            std::unique_ptr<ResetConfirmDialog> m_resetConfirmDialog;
             app::AppSettings m_working;
             app::AppSettings m_loaded;
             Section m_section = Section::General;
             float m_sidebarWidth = 0.0f;
             bool m_open = false;
-            bool m_confirmReset = false;
     };
 
 } // namespace gui

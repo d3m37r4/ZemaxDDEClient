@@ -40,6 +40,7 @@ namespace gui {
     inline constexpr const char* ABOUT_POPUP_NAME        = "About";
     inline constexpr const char* UPDATE_POPUP_NAME       = "Check for Updates";
     inline constexpr const char* PREFERENCES_POPUP_NAME  = "Preferences";
+    inline constexpr const char* RESET_CONFIRM_POPUP_NAME = "Reset Preferences?";
     inline constexpr const char* CONNECT_DDE_POPUP_NAME  = "Connect to Zemax \xe2\x80\x93 select a window";
 
     // About popup
@@ -53,6 +54,10 @@ namespace gui {
     // Connection Lost popup
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_DEFAULT_SIZE = ImVec2(380.0f, 140.0f);
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_MIN_SIZE     = ImVec2(380.0f, 140.0f);
+
+    // Reset Preferences confirm popup
+    inline constexpr ImVec2 RESET_CONFIRM_DEFAULT_SIZE = ImVec2(360.0f, 120.0f);
+    inline constexpr ImVec2 RESET_CONFIRM_MIN_SIZE     = ImVec2(360.0f, 120.0f);
 
     // Preferences dialog layout
     inline constexpr ImVec2 PREFERENCES_WINDOW_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
