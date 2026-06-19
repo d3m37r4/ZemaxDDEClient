@@ -291,61 +291,75 @@ int DDEConnectionManager::getDefaultRetries() const {
 }
 
 void DDEConnectionManager::setDefaultTimeoutMs(DWORD ms) {
+    if (ms == m_defaultTimeoutMs) return;
+    m_defaultTimeoutMs = ms;
     propagateDefaultTimeout(ms);
 }
 
 void DDEConnectionManager::setDefaultRetries(int n) {
+    if (n == m_defaultRetries) return;
+    m_defaultRetries = n;
     propagateDefaultRetries(n);
 }
 
 void DDEConnectionManager::setMaxConnections(int n) {
     if (n < 1) n = 1;
     if (n > MAX_CONNECTIONS) n = MAX_CONNECTIONS;
+    if (n == m_maxConnections) return;
     m_maxConnections = n;
     m_logger.addLog(std::format("[DDE] Max connections set to {}", n));
 }
 
 void DDEConnectionManager::setGetNameTimeoutMs(DWORD ms) {
+    if (ms == m_getNameTimeoutMs) return;
     m_getNameTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetFileTimeoutMs(DWORD ms) {
+    if (ms == m_getFileTimeoutMs) return;
     m_getFileTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetSystemTimeoutMs(DWORD ms) {
+    if (ms == m_getSystemTimeoutMs) return;
     m_getSystemTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetFieldTimeoutMs(DWORD ms) {
+    if (ms == m_getFieldTimeoutMs) return;
     m_getFieldTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetWaveTimeoutMs(DWORD ms) {
+    if (ms == m_getWaveTimeoutMs) return;
     m_getWaveTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetSurfaceDataProfileTimeoutMs(DWORD ms) {
+    if (ms == m_getSurfaceDataProfileTimeoutMs) return;
     m_getSurfaceDataProfileTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetSagProfileTimeoutMs(DWORD ms) {
+    if (ms == m_getSagProfileTimeoutMs) return;
     m_getSagProfileTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetSurfaceDataMapTimeoutMs(DWORD ms) {
+    if (ms == m_getSurfaceDataMapTimeoutMs) return;
     m_getSurfaceDataMapTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }
 
 void DDEConnectionManager::setGetSagMapTimeoutMs(DWORD ms) {
+    if (ms == m_getSagMapTimeoutMs) return;
     m_getSagMapTimeoutMs = ms;
     propagatePerRequestTimeouts();
 }

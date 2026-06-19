@@ -83,6 +83,8 @@ private:
     Logger& m_logger;
     int m_activeIndex = -1;
     int m_maxConnections = MAX_CONNECTIONS;
+    DWORD m_defaultTimeoutMs = 5000;
+    int m_defaultRetries = 3;
 
     DWORD m_getNameTimeoutMs = 2000;
     DWORD m_getFileTimeoutMs = 2000;

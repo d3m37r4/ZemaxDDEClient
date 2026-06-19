@@ -131,55 +131,59 @@ namespace gui {
     void PreferencesDialog::renderSectionDDE() {
         ImGuiUtils::SectionHeader("DDE Connection", "New values apply to subsequent requests only.");
 
-        auto inputMs = [](const char* label, const char* id, int* value) {
+        auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
             ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
             ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
-            ImGui::InputInt(id, value, 0, 0);
+            bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
+            return changed;
         };
 
-        auto inputInt = [](const char* label, const char* id, int* value) {
+        auto inputInt = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
             ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
             ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
-            ImGui::InputInt(id, value, 0, 0);
+            return ImGui::InputInt(id, value, 0, 0);
         };
 
         if (ImGui::BeginChild("##dde_conn", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY)) {
             ImGui::TextUnformatted("Connection");
             ImGui::Spacing();
-            inputMs("Connection timeout", "##d timeout", &m_working.dde.connectionTimeoutMs);
-            inputInt("Max retry count", "##d retry", &m_working.dde.maxRetryCount);
-            inputInt("Max concurrent connections", "##d conns", &m_working.dde.maxConnections);
+            bool changed = false;
+            changed |= inputMs("Connection timeout", "##d timeout", &m_working.dde.connectionTimeoutMs);
+            changed |= inputInt("Max retry count", "##d retry", &m_working.dde.maxRetryCount);
+            changed |= inputInt("Max concurrent connections", "##d conns", &m_working.dde.maxConnections);
+            if (changed) applyWorkingDDE();
         }
         ImGui::EndChild();
-
-        applyWorkingDDE();
     }
 
     void PreferencesDialog::renderSectionDDEPerformance() {
         ImGuiUtils::SectionHeader("DDE Performance", "Per-request timeout overrides (ms).");
 
-        auto inputMs = [](const char* label, const char* id, int* value) {
+        auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
             ImGui::SameLine(ImGuiUtils::DpiScale(200.0f));
             ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
-            ImGui::InputInt(id, value, 0, 0);
+            bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
+            return changed;
         };
+
+        bool changed = false;
 
         // --- Optical System Info ---
         if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Optical System Info");
             ImGui::Spacing();
-            inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
-            inputMs("GetFile",        "##t GetFile",        &m_working.dde.getFileTimeoutMs);
-            inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
-            inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
-            inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
+            changed |= inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
+            changed |= inputMs("GetFile",        "##t GetFile",        &m_working.dde.getFileTimeoutMs);
+            changed |= inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
+            changed |= inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
+            changed |= inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
         }
         ImGui::EndChild();
 
@@ -189,8 +193,8 @@ namespace gui {
         if (ImGui::BeginChild("##perf_profile", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Profile Inspector");
             ImGui::Spacing();
-            inputMs("GetSurfaceData", "##t P GetSurf", &m_working.dde.getSurfaceDataProfileTimeoutMs);
-            inputMs("GetSag",         "##t P GetSag",  &m_working.dde.getSagProfileTimeoutMs);
+            changed |= inputMs("GetSurfaceData", "##t P GetSurf", &m_working.dde.getSurfaceDataProfileTimeoutMs);
+            changed |= inputMs("GetSag",         "##t P GetSag",  &m_working.dde.getSagProfileTimeoutMs);
         }
         ImGui::EndChild();
 
@@ -200,12 +204,12 @@ namespace gui {
         if (ImGui::BeginChild("##perf_map", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Irregularity Map");
             ImGui::Spacing();
-            inputMs("GetSurfaceData", "##t M GetSurf", &m_working.dde.getSurfaceDataMapTimeoutMs);
-            inputMs("GetSag",         "##t M GetSag",  &m_working.dde.getSagMapTimeoutMs);
+            changed |= inputMs("GetSurfaceData", "##t M GetSurf", &m_working.dde.getSurfaceDataMapTimeoutMs);
+            changed |= inputMs("GetSag",         "##t M GetSag",  &m_working.dde.getSagMapTimeoutMs);
         }
         ImGui::EndChild();
 
-        applyWorkingDDE();
+        if (changed) applyWorkingDDE();
     }
 
     void PreferencesDialog::renderSectionPlot() {
