@@ -6,25 +6,29 @@
 #include "app/config_path.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "lib/imgui/imgui.h"
 
 namespace gui {
 
     PreferencesDialog::PreferencesDialog(SettingsManager& settings) noexcept
-        : m_settings(settings) {}
+        : m_settings(settings) {
+        m_resetConfirmDialog = std::make_unique<ResetConfirmDialog>();
+        m_resetConfirmDialog->setOnReset([this]() { onReset(); });
+    }
 
     void PreferencesDialog::open() noexcept {
         m_working = m_settings.current();
         m_loaded  = m_settings.current();
         m_section = Section::General;
-        m_confirmReset = false;
+        m_resetConfirmDialog->close();
         m_open = true;
     }
 
     void PreferencesDialog::close() noexcept {
         m_open = false;
-        m_confirmReset = false;
+        m_resetConfirmDialog->close();
     }
 
     void PreferencesDialog::render() {
@@ -33,7 +37,6 @@ namespace gui {
         }
 
         ImGuiUtils::CenterNextWindow();
-
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_WINDOW_MIN_SIZE.x, PREFERENCES_WINDOW_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_WINDOW_DEFAULT_SIZE);
 
@@ -75,7 +78,7 @@ namespace gui {
 
         renderFooter();
 
-        renderResetConfirm();
+        m_resetConfirmDialog->render();
 
         ImGui::EndPopup();
     }
@@ -266,7 +269,7 @@ namespace gui {
         float saveBtnW    = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
-            m_confirmReset = true;
+            m_resetConfirmDialog->open();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
@@ -289,38 +292,6 @@ namespace gui {
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json.");
-        }
-    }
-
-    void PreferencesDialog::renderResetConfirm() {
-        if (!m_confirmReset) return;
-
-        ImGui::OpenPopup("Reset Preferences?");
-        const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
-        if (ImGui::BeginPopupModal("Reset Preferences?", &m_confirmReset,
-                                   ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::BeginChild("##reset_confirm_body",
-                              ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
-                              ImGuiChildFlags_Borders);
-            ImGui::TextUnformatted("This will reset all preferences to their factory defaults.");
-            ImGui::TextUnformatted("Unsaved changes will be lost.");
-            ImGui::EndChild();
-
-            float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
-            float resetBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
-            const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
-            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
-            if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
-                m_confirmReset = false;
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
-                onReset();
-                m_confirmReset = false;
-            }
-            ImGui::EndPopup();
         }
     }
 
