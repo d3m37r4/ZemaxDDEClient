@@ -52,6 +52,7 @@ int main() {
     }
 
     logger.addLog("[APP] Main loop ended");
+    ctx->gui->getSettingsManager().saveToFile();
     wndMgr.SaveState();
     App::shutdown(*ctx);
 
