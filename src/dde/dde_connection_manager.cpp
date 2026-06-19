@@ -6,19 +6,10 @@
 
 #include "app/zemax_window_enumerator.h"
 #include "dde/client.h"
+#include "dde/utils.h"
 #include "logger/logger.h"
 
 namespace {
-
-    std::string ws2s(const std::wstring& wstr) {
-        if (wstr.empty()) return {};
-        int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
-            nullptr, 0, nullptr, nullptr);
-        std::string result(static_cast<size_t>(len), '\0');
-        WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
-            result.data(), len, nullptr, nullptr);
-        return result;
-    }
 
     extern "C" LRESULT CALLBACK DDEClientWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
         if (iMsg >= WM_DDE_FIRST && iMsg <= WM_DDE_LAST) {
@@ -127,11 +118,11 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     m_activeIndex = idx;
 
     m_logger.addLog(std::format("[DDE] Connected slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
-        idx, ws2s(title), pid,
+        idx, ZemaxDDE::wstring_to_utf8(title), pid,
         reinterpret_cast<uintptr_t>(conn.hwndClient),
         reinterpret_cast<uintptr_t>(conn.hwndServer)));
     m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
-        idx, ws2s(conn.serverTitle), conn.serverPid,
+        idx, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
         reinterpret_cast<uintptr_t>(conn.hwndClient),
         reinterpret_cast<uintptr_t>(conn.hwndServer)));
 
@@ -145,7 +136,7 @@ void DDEConnectionManager::disconnect(int index) {
     if (!conn.isConnected) return;
 
     m_logger.addLog(std::format("[DDE] Disconnected slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
-        index, ws2s(conn.serverTitle), conn.serverPid,
+        index, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
         reinterpret_cast<uintptr_t>(conn.hwndClient),
         reinterpret_cast<uintptr_t>(conn.hwndServer)));
 
@@ -188,7 +179,7 @@ void DDEConnectionManager::setActiveConnection(int index) {
         m_activeIndex = index;
         auto& conn = m_connections[index];
         m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
-            index, ws2s(conn.serverTitle), conn.serverPid,
+            index, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
             reinterpret_cast<uintptr_t>(conn.hwndClient),
             reinterpret_cast<uintptr_t>(conn.hwndServer)));
     }
