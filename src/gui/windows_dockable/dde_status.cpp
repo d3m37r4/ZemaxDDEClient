@@ -3,6 +3,7 @@
 #include "windows_dockable/dde_status.h"
 #include "gui/constants.h"
 #include "gui/theme_manager.h"
+#include "dde/utils.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -53,7 +54,7 @@ namespace gui {
             for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
                 auto* conn = m_connectionManager->getConnection(i);
                 if (!conn || !conn->isConnected) continue;
-                std::string title(conn->serverTitle.begin(), conn->serverTitle.end());
+                std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
                 std::string itemLabel = std::format("[{}] {}", i, title);
                 if (i == activeIdx) {
                     preview = itemLabel;
@@ -65,7 +66,7 @@ namespace gui {
                 for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
                     auto* conn = m_connectionManager->getConnection(i);
                     if (!conn || !conn->isConnected) continue;
-                    std::string title(conn->serverTitle.begin(), conn->serverTitle.end());
+                    std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
                     std::string itemLabel = std::format("[{}] {}", i, title);
 
                     bool isSelected = (i == activeIdx);

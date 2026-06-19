@@ -12,10 +12,10 @@ namespace {
 
     std::string ws2s(const std::wstring& wstr) {
         if (wstr.empty()) return {};
-        int len = WideCharToMultiByte(CP_ACP, 0, wstr.data(), static_cast<int>(wstr.size()),
+        int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
             nullptr, 0, nullptr, nullptr);
         std::string result(static_cast<size_t>(len), '\0');
-        WideCharToMultiByte(CP_ACP, 0, wstr.data(), static_cast<int>(wstr.size()),
+        WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
             result.data(), len, nullptr, nullptr);
         return result;
     }
