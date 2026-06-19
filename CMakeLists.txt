@@ -110,6 +110,7 @@ set(SOURCES
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
+    ${SRC_DIR}/gui/popups/connection_lost_dialog.cpp
     ${SRC_DIR}/gui/popups/preferences_dialog.cpp
     ${SRC_DIR}/gui/popups/update_checker.cpp
     ${SRC_DIR}/gui/popups/connect_dde.cpp

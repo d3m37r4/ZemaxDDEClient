@@ -24,11 +24,25 @@ namespace gui {
             if (conn && conn->isConnected) ++connectionCount;
         }
         int activeIdx = m_connectionManager->getActiveIndex();
+        bool connectionLost = m_connectionManager->hasConnectionLost();
 
         {
             const bool connected = (activeIdx >= 0);
             const char* label = "Zemax DDE Status:";
-            const char* value = connected ? "Connected" : "Disconnected";
+            const char* value;
+            ImVec4 valueColor;
+
+            const auto& sem = m_themeManager->semantic();
+            if (connectionLost) {
+                value = "Connection Lost";
+                valueColor = ImVec4(1.0f, 0.6f, 0.0f, 1.0f); // warning/orange
+            } else if (connected) {
+                value = "Connected";
+                valueColor = sem.success;
+            } else {
+                value = "Disconnected";
+                valueColor = sem.danger;
+            }
 
             float availableWidth = ImGui::GetContentRegionAvail().x;
             float labelWidth = ImGui::CalcTextSize(label).x;
@@ -40,8 +54,7 @@ namespace gui {
             ImGui::TextUnformatted(label);
             ImGui::SameLine(0.0f, 4.0f);
 
-            const auto& sem = m_themeManager->semantic();
-            ImGui::PushStyleColor(ImGuiCol_Text, connected ? sem.success : sem.danger);
+            ImGui::PushStyleColor(ImGuiCol_Text, valueColor);
             ImGui::TextUnformatted(value);
             ImGui::PopStyleColor();
         }
@@ -91,7 +104,7 @@ namespace gui {
 
         ImGui::Separator();
 
-        bool connected = (activeIdx >= 0);
+        bool connected = (activeIdx >= 0) || connectionLost;
 
         // Connect/disconnect button uses semantic danger/success tokens (not ImGuiCol_Button*)
         // so the action remains visually unambiguous regardless of the active theme.
@@ -105,7 +118,12 @@ namespace gui {
 
         if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             if (connected) {
-                m_connectionManager->disconnect(activeIdx);
+                if (connectionLost) {
+                    m_connectionManager->clearConnectionLost();
+                }
+                if (activeIdx >= 0) {
+                    m_connectionManager->disconnect(activeIdx);
+                }
                 logger.addLog("[DDE] Disconnected from Zemax");
             } else {
                 m_connectPopup->open();

@@ -35,6 +35,7 @@ namespace gui {
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_debugLogRenderer = std::make_unique<DebugLog>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
+    m_connectionLostDialog = std::make_unique<ConnectionLostDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
     m_settingsManager   = std::make_unique<SettingsManager>();
     m_preferencesDialog = std::make_unique<PreferencesDialog>(*m_settingsManager);
@@ -64,6 +65,12 @@ void GuiManager::render() {
     // Refresh active DDE client in case connection changed via DDE Status UI
     m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
     m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
+
+    // Process DDE timeouts and check connection health
+    if (m_ddeConnectionManager) {
+        m_ddeConnectionManager->processAllTimeouts();
+        m_ddeConnectionManager->checkAllConnectionHealth();
+    }
 
     m_graphics.beginFrame();
     if (m_menuBarController) {
@@ -201,6 +208,7 @@ void GuiManager::render() {
     renderUpdatesPopup();
     renderAboutPopup();
     renderPreferencesDialog();
+    renderConnectionLostPopup();
 
     m_uiOpMonitor.renderGlobalStatusBar();
 
@@ -232,6 +240,29 @@ void GuiManager::renderUpdatesPopup() {
 void GuiManager::renderPreferencesDialog() {
     if (m_preferencesDialog) {
         m_preferencesDialog->render();
+    }
+}
+
+void GuiManager::renderConnectionLostPopup() {
+    if (!m_ddeConnectionManager) return;
+
+    // Check if a connection was lost and the popup isn't already open
+    if (m_ddeConnectionManager->hasConnectionLost() && !m_connectionLostDialog->isOpen()) {
+        int lostIdx = m_ddeConnectionManager->getConnectionLostIndex();
+        std::string reason = m_ddeConnectionManager->getConnectionLostReason();
+
+        // Auto-disconnect the lost connection
+        if (lostIdx >= 0) {
+            m_ddeConnectionManager->disconnect(lostIdx);
+        }
+        m_ddeConnectionManager->clearConnectionLost();
+        m_logger.addLog(std::format("[DDE] Connection lost, auto-disconnected: {}", reason));
+
+        m_connectionLostDialog->open(reason);
+    }
+
+    if (m_connectionLostDialog) {
+        m_connectionLostDialog->render();
     }
 }
 
