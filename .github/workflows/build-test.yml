@@ -8,9 +8,19 @@ on:
       - 'release/**'
       - 'hotfix/**'
       - 'fix/**'
+    paths:
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'build.sh'
+      - '.github/workflows/build-test.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'build.sh'
+      - '.github/workflows/build-test.yml'
 
 # Prevent duplicate workflow runs for the same branch/PR
 concurrency:
