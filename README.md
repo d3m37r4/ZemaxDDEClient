@@ -37,13 +37,13 @@ For complete DDE command reference, see "Chapter 28: ZEMAX EXTENSIONS" in offici
 ## 🔽 Downloads
 Pre-built binaries for Windows are available on the [Releases](https://github.com/d3m37r4/ZemaxDDEClient/releases) page.
 
-- [**Release builds**](https://github.com/d3m37r4/ZemaxDDEClient/releases) — stable, tested versions.  
+- [**Release builds**](https://github.com/d3m37r4/ZemaxDDEClient/releases) — stable, tested versions for production use.<br>
 - [**Dev builds**](https://github.com/d3m37r4/ZemaxDDEClient/actions) — test builds with new or experimental features not yet included in a release (may be unstable).
 
-> 💡 Each build includes two versions:<br>
-> – **Release** — optimized, console hidden, symbols stripped,<br>
-> – **Debug** — visible console window with real-time log output (`-DDEBUG_LOG`) and extended DDE message tracing.<br>
-> Both share the same build number for easy comparison.
+> 💡 Each build type includes two variants:<br>
+> – **Release** — fully optimized (LTO), console hidden, symbols stripped. Ready for production use,<br>
+> – **Debug** — optimized for debugging (`-Og`), visible console with real-time log output (`-DDEBUG_LOG`) and extended DDE message tracing.<br>
+> Both variants share the same build number for easy comparison.
 
 ## 🏁 Run
 You can launch the application in two ways: via Zemax’s **Extensions** menu or by running the executable directly.
@@ -62,7 +62,7 @@ You can run the executable directly without adding it to Zemax.
 3. Click the **Connect to Zemax** button in the **Sidebar** window
 
 ## 📦 Prerequisites
-- **MSYS2** with MinGW-w64 toolchain
+- **MSYS2** with MinGW-w64 toolchain (including **Ninja**)
 - **CMake** (≥ 3.16)
 - **GLFW**: `pacman -S mingw-w64-x86_64-glfw`
 - **Zemax** (acts as a DDE server once running)
@@ -84,7 +84,7 @@ This project uses the following third-party libraries:
 2. Install MSYS2 and dependencies:
    ```bash
    pacman -Syu
-   pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-glfw mingw-w64-x86_64-pkg-config git zip
+   pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-glfw mingw-w64-x86_64-pkg-config git zip
    ```
 3. Fetch the submodules (if not cloned with --recurse-submodules):
    ```bash
