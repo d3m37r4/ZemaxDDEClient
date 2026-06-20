@@ -41,6 +41,11 @@ namespace gui {
             bool loadFromFile();
             bool saveToFile() const;
 
+            // Reads settings.json into m_current WITHOUT calling apply().
+            // Used during startup to resolve the correct theme before
+            // GraphicsBackend::initialize() applies it.
+            [[nodiscard]] bool loadFromDisk();
+
             // Per-section apply methods. Safe to call individually for live preview.
             // Each method uses detectSystemDarkMode() internally for theme decisions.
             void applyTheme(const app::AppearanceSettings& appearance);

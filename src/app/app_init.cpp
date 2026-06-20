@@ -2,6 +2,7 @@
 
 #include "logger/logger.h"
 #include "app/app.h"
+#include "app/settings.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
@@ -88,7 +89,26 @@ namespace App {
             RegCloseKey(hKey);
         }
 
-        // Apply system theme to title bar (Windows 10/11)
+        logger.addLog("[APP] Application starting");
+
+        // Create DDE connection manager (manages multi-window connections)
+        ctx->ddeConnectionManager = std::make_unique<DDEConnectionManager>(logger);
+
+        // Initialize GUI manager
+        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->ddeConnectionManager.get(), logger);
+
+        // Load saved settings (JSON only, no apply) to resolve the correct theme
+        (void)ctx->gui->getSettingsManager().loadFromDisk();
+
+        auto themeMode = ctx->gui->getSettingsManager().current().appearance.themeMode;
+        bool useDark;
+        switch (themeMode) {
+            case app::ThemeMode::Light:  useDark = false; break;
+            case app::ThemeMode::Dark:   useDark = true;  break;
+            case app::ThemeMode::System: default: useDark = isDarkMode; break;
+        }
+
+        // Apply resolved theme to title bar (Windows 10/11)
         #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
         #define DWMWA_USE_IMMERSIVE_DARK_MODE 19
         #endif
@@ -100,26 +120,19 @@ namespace App {
                 reinterpret_cast<void*>(GetProcAddress(dwmApi, "DwmSetWindowAttribute")));
 
             if (dwmFunc) {
-                BOOL useDarkMode = isDarkMode;
+                BOOL useDarkMode = useDark;
                 HWND hwnd = glfwGetWin32Window(ctx->glfwWindow);
                 if (hwnd) {
                     dwmFunc(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDarkMode, sizeof(useDarkMode));
                 }
 
-                logger.addLog(std::format("[APP] Title bar theme applied (dark mode: {})", isDarkMode));
+                logger.addLog(std::format("[APP] Title bar theme applied (dark mode: {})", useDark));
             }
             FreeLibrary(dwmApi);
         }
 
-        logger.addLog("[APP] Application starting");
-
-        // Create DDE connection manager (manages multi-window connections)
-        ctx->ddeConnectionManager = std::make_unique<DDEConnectionManager>(logger);
-
-        // Initialize GUI manager with system theme
-        ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->ddeConnectionManager.get(), logger);
-        ctx->gui->initialize(!isDarkMode, ctx->dpiScale);
-        ctx->gui->getSettingsManager().loadFromFile();
+        // Initialize graphics with the correct theme (no re-apply needed)
+        ctx->gui->initialize(!useDark, ctx->dpiScale);
 
         if (ctx->gui->getUpdateChecker() && ctx->gui->getUpdateChecker()->isAutoCheckEnabled()) {
             logger.addLog("[APP] Auto-checking for updates on startup");

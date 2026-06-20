@@ -114,6 +114,17 @@ namespace gui {
         return true;
     }
 
+    bool SettingsManager::loadFromDisk() {
+        const char* path = app::getSettingsJsonPath();
+        if (!path || !*path) return false;
+
+        app::AppSettings loaded;
+        std::string err;
+        auto result = loaded.loadFromFileWithReason(path, err);
+        m_current = loaded;
+        return result == app::AppSettings::LoadResult::Success;
+    }
+
     bool SettingsManager::saveToFile() const {
         const char* path = app::getSettingsJsonPath();
         if (!path || !*path) return false;
