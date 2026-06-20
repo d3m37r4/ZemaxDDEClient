@@ -247,3 +247,10 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME "${PROJECT_NAME}_${APP_VERSION_STRING}_${APP_BUILD_NUMBER}"
 )
+
+# Tests (opt-in)
+option(BUILD_TESTING "Build unit tests (GoogleTest)" OFF)
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

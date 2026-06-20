@@ -10,6 +10,7 @@ on:
       - 'fix/**'
     paths:
       - 'src/**'
+      - 'tests/**'
       - 'CMakeLists.txt'
       - 'build.sh'
       - '.github/workflows/build-test.yml'
@@ -18,6 +19,7 @@ on:
       - main
     paths:
       - 'src/**'
+      - 'tests/**'
       - 'CMakeLists.txt'
       - 'build.sh'
       - '.github/workflows/build-test.yml'
@@ -61,13 +63,13 @@ jobs:
         run: git update-index --chmod=+x build.sh
         shell: msys2 {0}
 
-      - name: Build Test
+      - name: Build Release
         run: |
           export MSYS_NO_PATHCONV=1
           BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }} ./build.sh
         shell: msys2 {0}
 
-      - name: Save test binary
+      - name: Save release binary
         run: |
           mkdir -p artifacts
           cp build/bin/*.exe artifacts/${{ env.PROJECT_NAME }}-dev.exe
@@ -83,6 +85,20 @@ jobs:
         run: |
           mkdir -p artifacts
           cp build/bin/*.exe artifacts/${{ env.PROJECT_NAME }}-dev-debug.exe
+        shell: msys2 {0}
+
+      - name: Build Unit Tests
+        run: |
+          cmake -B build -DBUILD_TESTING=ON -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            --fresh
+          cmake --build build --target tests
+        shell: msys2 {0}
+
+      - name: Run Unit Tests
+        run: |
+          cd build && ctest --output-on-failure
         shell: msys2 {0}
 
       - name: Upload dev build artifact
