@@ -41,8 +41,8 @@ Pre-built binaries for Windows are available on the [Releases](https://github.co
 - [**Dev builds**](https://github.com/d3m37r4/ZemaxDDEClient/actions) — test builds with new or experimental features not yet included in a release (may be unstable).
 
 > 💡 Each build includes two versions:<br>
-> – **Release** — for regular use,<br>
-> – **Debug** — with console output and extended logging for debugging.<br>
+> – **Release** — optimized, console hidden, symbols stripped,<br>
+> – **Debug** — visible console window with real-time log output (`-DDEBUG_LOG`) and extended DDE message tracing.<br>
 > Both share the same build number for easy comparison.
 
 ## 🏁 Run
