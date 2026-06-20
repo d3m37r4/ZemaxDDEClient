@@ -46,11 +46,24 @@ namespace gui {
 
     void SettingsManager::applyTheme(const app::AppearanceSettings& appearance) {
         if (!m_themeManager) return;
-        m_themeManager->applyByMode(appearance.themeMode, detectSystemDarkMode());
+
+        bool isDark = detectSystemDarkMode();
+        std::string_view targetName = (appearance.themeMode == app::ThemeMode::Dark ||
+            (appearance.themeMode == app::ThemeMode::System && isDark))
+            ? kThemeNameDark : kThemeNameLight;
+
+        if (m_themeManager->currentThemeName() == targetName) return;
+
+        m_themeManager->applyByMode(appearance.themeMode, isDark);
 
         // Sync native Win11 title bar with the applied theme.
         if (m_graphicsBackend) {
             m_graphicsBackend->updateTitleBarDarkMode(!m_themeManager->isLight());
+        }
+
+        if (m_logger) {
+            m_logger->addLog(std::format("[SETTINGS] Theme changed → {} (mode: {})",
+                m_themeManager->currentThemeName(), themeModeToString(appearance.themeMode)));
         }
     }
 
@@ -123,6 +136,33 @@ namespace gui {
         auto result = loaded.loadFromFileWithReason(path, err);
         m_current = loaded;
         return result == app::AppSettings::LoadResult::Success;
+    }
+
+    void SettingsManager::checkAndApplySystemTheme() {
+        if (m_current.appearance.themeMode != app::ThemeMode::System) return;
+        if (!m_themeManager) return;
+
+        bool isDark = detectSystemDarkMode();
+
+        if (!m_systemThemeCached) {
+            m_lastSystemDarkMode = isDark;
+            m_systemThemeCached = true;
+            return;
+        }
+
+        if (isDark == m_lastSystemDarkMode) return;
+
+        m_lastSystemDarkMode = isDark;
+
+        m_themeManager->applyByMode(app::ThemeMode::System, isDark);
+        if (m_graphicsBackend) {
+            m_graphicsBackend->updateTitleBarDarkMode(!m_themeManager->isLight());
+        }
+
+        if (m_logger) {
+            m_logger->addLog(std::format("[SETTINGS] System theme changed → {} (applied: {})",
+                isDark ? "Dark" : "Light", m_themeManager->currentThemeName()));
+        }
     }
 
     bool SettingsManager::saveToFile() const {

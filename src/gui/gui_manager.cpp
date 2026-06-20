@@ -72,6 +72,11 @@ void GuiManager::render() {
         m_ddeConnectionManager->checkAllConnectionHealth();
     }
 
+    // Check system theme change every 60 frames (once per second at 60 FPS)
+    if (++m_frameCount % 60 == 0) {
+        m_settingsManager->checkAndApplySystemTheme();
+    }
+
     m_graphics.beginFrame();
     if (m_menuBarController) {
         m_menuBarController->render();

@@ -87,5 +87,6 @@ namespace gui {
             DockableWindowsManager* m_pWndMgr{nullptr};
 
             UiOperationMonitor m_uiOpMonitor;
+            unsigned int m_frameCount = 0;
     };
 }

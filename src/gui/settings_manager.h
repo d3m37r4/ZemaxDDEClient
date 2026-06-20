@@ -72,6 +72,10 @@ namespace gui {
 
             [[nodiscard]] const app::AppSettings& current() const noexcept { return m_current; }
 
+            // Checks if the system theme has changed (ThemeMode::System only).
+            // If changed, re-applies theme + title bar. Call from render loop.
+            void checkAndApplySystemTheme();
+
         private:
             app::AppSettings m_current;
             ThemeManager* m_themeManager = nullptr;
@@ -79,6 +83,10 @@ namespace gui {
             DDEConnectionManager* m_ddeConnectionManager = nullptr;
             UpdateChecker* m_updateChecker = nullptr;
             Logger* m_logger = nullptr;
+
+            // Cached system dark mode for change detection.
+            bool m_lastSystemDarkMode = false;
+            bool m_systemThemeCached = false;
     };
 
 } // namespace gui
