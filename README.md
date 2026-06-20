@@ -59,7 +59,8 @@ This method integrates the application into Zemax’s Extensions menu for conven
 You can run the executable directly without adding it to Zemax.
 1. Launch **Zemax**
 2. Run the `ZemaxDDEClient_*.exe` file
-3. Click the **Connect to Zemax** button in the **Sidebar** window
+3. In the **DDE Status** window, click the **Connect to Zemax** button
+4. Select a Zemax window from the list and click **Connect**
 
 ## 📦 Prerequisites
 - **MSYS2** with MinGW-w64 toolchain (including **Ninja**)
