@@ -65,8 +65,10 @@ namespace gui {
             [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
+            // Non-owning. Lifetime guaranteed by AppContext (outlives GuiManager).
             GLFWwindow* m_glfwWindow;
             DDEConnectionManager* m_ddeConnectionManager;
+            // Non-owning. Nullable — refreshed each frame in render().
             ZemaxDDE::ZemaxDDEClient* m_zemaxDDEClient;
             Logger& m_logger;
 
@@ -81,6 +83,7 @@ namespace gui {
             std::unique_ptr<UpdateChecker> m_updateChecker;
             std::unique_ptr<SettingsManager>   m_settingsManager;
             std::unique_ptr<PreferencesDialog> m_preferencesDialog;
+            // Non-owning. Optional — set via setWindowManager(), lifetime from main().
             DockableWindowsManager* m_pWndMgr{nullptr};
 
             UiOperationMonitor m_uiOpMonitor;
