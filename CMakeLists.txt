@@ -189,7 +189,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Compiler flags
 target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall -Wextra
+    -Wall -Wextra -fdiagnostics-color=always
     -DUNICODE -D_UNICODE
 )
 
@@ -210,7 +210,7 @@ endif()
 # Add '-v' and '-DDEBUG_LOG' in debug mode
 if(BUILD_TYPE_LOWER STREQUAL "debug")
     message(STATUS "Debug mode: enabling DEBUG_LOG and verbose compiler output (-v)")
-    target_compile_options(${PROJECT_NAME} PRIVATE -DDEBUG_LOG -v)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Og -DDEBUG_LOG -v)
 endif()
 
 # Window mode: hide console in release, show in debug mode
@@ -225,6 +225,9 @@ endif()
 if(BUILD_TYPE_LOWER STREQUAL "release")
     message(STATUS "Release: stripping debug symbols (-s)")
     target_link_options(${PROJECT_NAME} PRIVATE -s)
+    message(STATUS "Release: enabling LTO (-flto)")
+    target_compile_options(${PROJECT_NAME} PRIVATE -flto)
+    target_link_options(${PROJECT_NAME} PRIVATE -flto)
 endif()
 
 # Optimization flags
