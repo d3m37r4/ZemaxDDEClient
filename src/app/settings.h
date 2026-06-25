@@ -52,6 +52,15 @@ namespace app {
         float markerSize = 5.0f;
     };
 
+    struct MapSettings {
+        int defaultColormapSurface = 0;
+        int defaultColormapDeviation = 0;
+        bool highlightWorstSurface = true;
+        bool highlightWorstDeviation = true;
+        float worstColorSurface[3] = {1.0f, 0.0f, 0.0f};
+        float worstColorDeviation[3] = {1.0f, 0.0f, 0.0f};
+    };
+
     struct UpdateSettings {
         bool autoCheckOnStartup = false;
         UpdateChannel channel = UpdateChannel::Stable;
@@ -65,6 +74,7 @@ namespace app {
         AppearanceSettings appearance;
         DDESettings dde;
         PlotSettings plot;
+        MapSettings map;
         UpdateSettings updates;
 
         void reset();

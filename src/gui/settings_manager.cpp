@@ -39,6 +39,7 @@ namespace gui {
         applyTheme(settings.appearance);
         applyDDE(settings.dde);
         applyPlot(settings.plot);
+        applyMap(settings.map);
         applyUpdates(settings.updates);
 
         m_current = settings;
@@ -90,6 +91,12 @@ namespace gui {
         // they are per-item properties on ImPlotSpec. Surface services read them via
         // plotLineWeight()/plotMarkerSize() and pass to each PlotLine()/PlotScatter() call.
         // showGridByDefault is consumed by surface services via showGridByDefault().
+    }
+
+    void SettingsManager::applyMap(const app::MapSettings& map) {
+        // Map colormap settings are read directly by the service via current().map.
+        // No runtime action needed — just store for retrieval.
+        (void)map;
     }
 
     void SettingsManager::applyUpdates(const app::UpdateSettings& updates) {

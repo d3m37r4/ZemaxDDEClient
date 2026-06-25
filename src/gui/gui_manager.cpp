@@ -55,6 +55,15 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_profileService->setSettingsManager(m_settingsManager.get());
     m_irregularityMapService->setSettingsManager(m_settingsManager.get());
 
+    // Initialize 3D map colormaps from saved settings
+    const auto& mapSettings = m_settingsManager->current().map;
+    m_irregularityMapService->m_windowState.selectedColormapSurface = mapSettings.defaultColormapSurface;
+    m_irregularityMapService->m_windowState.selectedColormapDeviation = mapSettings.defaultColormapDeviation;
+    m_irregularityMapService->m_windowState.highlightWorstSurface = mapSettings.highlightWorstSurface;
+    m_irregularityMapService->m_windowState.highlightWorstDeviation = mapSettings.highlightWorstDeviation;
+    m_irregularityMapService->m_windowState.worstColorSurface = ImVec4(mapSettings.worstColorSurface[0], mapSettings.worstColorSurface[1], mapSettings.worstColorSurface[2], 1.0f);
+    m_irregularityMapService->m_windowState.worstColorDeviation = ImVec4(mapSettings.worstColorDeviation[0], mapSettings.worstColorDeviation[1], mapSettings.worstColorDeviation[2], 1.0f);
+
     const auto& themeManager = m_graphics.getThemeManager();
     m_ddeStatusRenderer->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setLogger(&m_logger);
@@ -158,7 +167,19 @@ void GuiManager::render() {
             if (m_irregularityMapService->hasData()) {
                 ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
                 if (ImGui::Begin("Surface Irregularity Map 3D", &m_irregularityMapService->m_showTolerancedSurfaceMap)) {
-                    m_irregularityMapService->renderSurfaceMapPlot(ImVec2(-1, -1));
+                    {
+                        const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
+                        int cmap = m_irregularityMapService->m_windowState.selectedColormapSurface;
+                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+                        if (ImGui::Combo("Colormap", &cmap, cmapNames, IM_ARRAYSIZE(cmapNames)))
+                            m_irregularityMapService->m_windowState.selectedColormapSurface = cmap;
+                        ImGui::SameLine();
+                        ImGui::Checkbox("Highlight worst", &m_irregularityMapService->m_windowState.highlightWorstSurface);
+                        ImGui::SameLine();
+                        ImGui::ColorEdit3("##worstColorS", &m_irregularityMapService->m_windowState.worstColorSurface.x,
+                            ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                    }
+                    m_irregularityMapService->renderSurfacePlotLines(ImVec2(-1, -1));
                 }
                 ImGui::End();
             } else {
@@ -170,7 +191,19 @@ void GuiManager::render() {
             if (m_irregularityMapService->hasData() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
                 ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
                 if (ImGui::Begin("Surface Irregularity Map 3D Deviation", &m_irregularityMapService->m_showDeviationSurfaceMap)) {
-                    m_irregularityMapService->renderDeviationSurfaceMapPlot(ImVec2(-1, -1));
+                    {
+                        const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
+                        int cmap = m_irregularityMapService->m_windowState.selectedColormapDeviation;
+                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+                        if (ImGui::Combo("Colormap", &cmap, cmapNames, IM_ARRAYSIZE(cmapNames)))
+                            m_irregularityMapService->m_windowState.selectedColormapDeviation = cmap;
+                        ImGui::SameLine();
+                        ImGui::Checkbox("Highlight worst", &m_irregularityMapService->m_windowState.highlightWorstDeviation);
+                        ImGui::SameLine();
+                        ImGui::ColorEdit3("##worstColorD", &m_irregularityMapService->m_windowState.worstColorDeviation.x,
+                            ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                    }
+                    m_irregularityMapService->renderDeviationSurfacePlotLines(ImVec2(-1, -1));
                 }
                 ImGui::End();
             } else {
