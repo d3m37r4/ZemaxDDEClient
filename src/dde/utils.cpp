@@ -31,12 +31,12 @@ namespace ZemaxDDE {
     // Convert CP1251 (Windows-1251) encoded data to UTF‑8
     std::string cp1251_to_utf8(const char* data, size_t len) {
         if (!data || len == 0) return {};
-        int wlen = MultiByteToWideChar(1251, 0, data, (int)len, nullptr, 0);
+        int wlen = MultiByteToWideChar(1251, 0, data, static_cast<int>(len), nullptr, 0);
         
         if (wlen <= 0) return {};
 
         std::wstring wstr(wlen, L'\0');
-        MultiByteToWideChar(1251, 0, data, (int)len, &wstr[0], wlen);
+        MultiByteToWideChar(1251, 0, data, static_cast<int>(len), &wstr[0], wlen);
 
         int u8len = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wlen, nullptr, 0, nullptr, nullptr);
         if (u8len <= 0) return {};

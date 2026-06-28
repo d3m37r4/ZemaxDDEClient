@@ -35,7 +35,7 @@ namespace gui {
             const auto& sem = m_themeManager->semantic();
             if (connectionLost) {
                 value = "Connection Lost";
-                valueColor = ImVec4(1.0f, 0.6f, 0.0f, 1.0f); // warning/orange
+                valueColor = sem.warning;
             } else if (connected) {
                 value = "Connected";
                 valueColor = sem.success;

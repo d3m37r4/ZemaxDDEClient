@@ -13,6 +13,12 @@
 #include <cstdio>
 
 namespace gui {
+    namespace {
+        constexpr const wchar_t* kGitHubRepoPath = L"d3m37r4/ZemaxDDEClient";
+        constexpr DWORD kHttpTimeoutMs = 10000;
+        constexpr size_t kReadBufferSize = 4096;
+    }
+
     UpdateChecker::UpdateChecker() = default;
 
     UpdateChecker::~UpdateChecker() {
@@ -61,7 +67,7 @@ namespace gui {
         HINTERNET hSession = WinHttpOpen(L"ZemaxDDEClient/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
         if (!hSession) return false;
 
-        DWORD timeout = 10000;
+        DWORD timeout = kHttpTimeoutMs;
         WinHttpSetOption(hSession, WINHTTP_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
         WinHttpSetOption(hSession, WINHTTP_OPTION_SEND_TIMEOUT, &timeout, sizeof(timeout));
         WinHttpSetOption(hSession, WINHTTP_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
@@ -88,7 +94,7 @@ namespace gui {
 
         std::string response;
         if (success) {
-            char buffer[4096];
+            char buffer[kReadBufferSize];
             DWORD dwSize = sizeof(buffer);
             while (WinHttpReadData(hRequest, buffer, sizeof(buffer) - 1, &dwSize) && dwSize > 0) {
                 buffer[dwSize] = '\0';

@@ -1,10 +1,6 @@
 #pragma once
 
-#include <filesystem>
 #include <memory>
-#include <optional>
-#include <utility>
-#include <vector>
 
 #include <windows.h>
 #include <GLFW/glfw3.h>
