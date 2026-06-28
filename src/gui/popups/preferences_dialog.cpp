@@ -89,7 +89,7 @@ namespace gui {
             "Appearance",
             "DDE Connection",
             "DDE Performance",
-            "Plot",
+            "Plot Settings",
             "Updates",
             "Files",
         };
@@ -108,7 +108,7 @@ namespace gui {
             case Section::Appearance:    renderSectionAppearance();    break;
             case Section::DDE:           renderSectionDDE();           break;
             case Section::DDEPerformance: renderSectionDDEPerformance(); break;
-            case Section::Plot:          renderSectionPlot();          break;
+            case Section::PlotSettings:  renderSectionPlotSettings();  break;
             case Section::Updates:       renderSectionUpdates();       break;
             case Section::Files:         renderSectionFiles();         break;
             default: break;
@@ -215,8 +215,8 @@ namespace gui {
         if (changed) applyWorkingDDE();
     }
 
-    void PreferencesDialog::renderSectionPlot() {
-        ImGuiUtils::SectionHeader("Plot", "Visual style for new plots.");
+    void PreferencesDialog::renderSectionPlotSettings() {
+        ImGuiUtils::SectionHeader("Plot Settings", "Visual style for new plots.");
 
         if (ImGui::Checkbox("Show grid by default", &m_working.plot.showGridByDefault)) {
             applyWorkingPlot();
@@ -228,6 +228,42 @@ namespace gui {
 
         if (ImGui::SliderFloat("Marker size (px)", &m_working.plot.markerSize, 1.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
             applyWorkingPlot();
+        }
+
+        ImGui::Spacing();
+
+        ImGuiUtils::SectionHeader("3D Map", "Default color palettes for surface irregularity maps.");
+
+        constexpr const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
+
+        ImGui::TextUnformatted("Surface Irregularity Map");
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        if (ImGui::Combo("##cmap_surface", &m_working.map.defaultColormapSurface, cmapNames, IM_ARRAYSIZE(cmapNames))) {
+            applyWorkingMap();
+        }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Highlight worst##s", &m_working.map.highlightWorstSurface)) {
+            applyWorkingMap();
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorEdit3("##wcSurface", m_working.map.worstColorSurface, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel)) {
+            applyWorkingMap();
+        }
+
+        ImGui::Spacing();
+
+        ImGui::TextUnformatted("Deviation Map");
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        if (ImGui::Combo("##cmap_deviation", &m_working.map.defaultColormapDeviation, cmapNames, IM_ARRAYSIZE(cmapNames))) {
+            applyWorkingMap();
+        }
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Highlight worst##d", &m_working.map.highlightWorstDeviation)) {
+            applyWorkingMap();
+        }
+        ImGui::SameLine();
+        if (ImGui::ColorEdit3("##wcDeviation", m_working.map.worstColorDeviation, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel)) {
+            applyWorkingMap();
         }
     }
 
@@ -305,6 +341,10 @@ namespace gui {
 
     void PreferencesDialog::applyWorkingPlot() const {
         m_settings.applyPlot(m_working.plot);
+    }
+
+    void PreferencesDialog::applyWorkingMap() const {
+        m_settings.applyMap(m_working.map);
     }
 
     void PreferencesDialog::onSave() {

@@ -30,7 +30,7 @@ namespace gui {
                 Appearance    = 1,
                 DDE           = 2,
                 DDEPerformance = 3,
-                Plot          = 4,
+                PlotSettings  = 4,
                 Updates       = 5,
                 Files         = 6,
                 Count         = 7,
@@ -44,13 +44,14 @@ namespace gui {
             void renderSectionAppearance();
             void renderSectionDDE();
             void renderSectionDDEPerformance();
-            void renderSectionPlot();
+            void renderSectionPlotSettings();
             void renderSectionUpdates();
             void renderSectionFiles();
 
             void applyWorkingTheme() const;
             void applyWorkingDDE() const;
             void applyWorkingPlot() const;
+            void applyWorkingMap() const;
 
             void onSave();
             void onCancel();

@@ -291,6 +291,8 @@ namespace gui {
                 }
             }
 
+            ImGui::Spacing();
+
             if (ImGui::Button("Show 3D surface map")) {
                 m_irregularityMapService->m_showTolerancedSurfaceMap = true;
             }

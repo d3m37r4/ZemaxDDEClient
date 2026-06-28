@@ -28,6 +28,14 @@ namespace gui {
         int tolerancedSurfaceIndex = 0;
         int tolerancedSampling = 65;
         double tolerancedAngleStep = 1.0;
+
+        int selectedColormapSurface = 0;
+        int selectedColormapDeviation = 0;
+
+        bool highlightWorstSurface = true;
+        bool highlightWorstDeviation = true;
+        ImVec4 worstColorSurface{1.0f, 0.0f, 0.0f, 1.0f};
+        ImVec4 worstColorDeviation{1.0f, 0.0f, 0.0f, 1.0f};
     };
 
     struct MaxPVResult {
@@ -62,6 +70,8 @@ namespace gui {
 
             void renderSurfaceMapPlot(const ImVec2& size);
             void renderDeviationSurfaceMapPlot(const ImVec2& size);
+            void renderSurfacePlotLines(const ImVec2& size);
+            void renderDeviationSurfacePlotLines(const ImVec2& size);
             bool m_showTolerancedSurfaceMap{false};
             bool m_showDeviationSurfaceMap{false};
             bool m_showWorstSectionProfile{false};

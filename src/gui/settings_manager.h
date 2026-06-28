@@ -51,6 +51,7 @@ namespace gui {
             void applyTheme(const app::AppearanceSettings& appearance);
             void applyDDE(const app::DDESettings& dde);
             void applyPlot(const app::PlotSettings& plot);
+            void applyMap(const app::MapSettings& map);
 
             /// Returns the cached 'show grid by default' flag set by applyPlot().
             /// Surface profile and surface map services read this when configuring

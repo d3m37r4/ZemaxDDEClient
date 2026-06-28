@@ -89,6 +89,13 @@ namespace app {
         plot.lineWeight = 1.0f;
         plot.markerSize = 5.0f;
 
+        map.defaultColormapSurface = 0;
+        map.defaultColormapDeviation = 0;
+        map.highlightWorstSurface = true;
+        map.highlightWorstDeviation = true;
+        map.worstColorSurface[0] = 1.0f; map.worstColorSurface[1] = 0.0f; map.worstColorSurface[2] = 0.0f;
+        map.worstColorDeviation[0] = 1.0f; map.worstColorDeviation[1] = 0.0f; map.worstColorDeviation[2] = 0.0f;
+
         updates.autoCheckOnStartup = false;
         updates.channel = UpdateChannel::Stable;
     }
@@ -221,6 +228,35 @@ namespace app {
             }
         }
 
+        // --- Map ---
+        if (j.contains("map") && j["map"].is_object()) {
+            const auto& m = j["map"];
+            constexpr int kMinCmap = 0;
+            constexpr int kMaxCmap = 3;
+            if (m.contains("defaultColormapSurface") && m["defaultColormapSurface"].is_number_integer()) {
+                map.defaultColormapSurface = clampValue(
+                    m["defaultColormapSurface"].get<int>(), kMinCmap, kMaxCmap, 0);
+            }
+            if (m.contains("defaultColormapDeviation") && m["defaultColormapDeviation"].is_number_integer()) {
+                map.defaultColormapDeviation = clampValue(
+                    m["defaultColormapDeviation"].get<int>(), kMinCmap, kMaxCmap, 0);
+            }
+            if (m.contains("highlightWorstSurface") && m["highlightWorstSurface"].is_boolean()) {
+                map.highlightWorstSurface = m["highlightWorstSurface"].get<bool>();
+            }
+            if (m.contains("highlightWorstDeviation") && m["highlightWorstDeviation"].is_boolean()) {
+                map.highlightWorstDeviation = m["highlightWorstDeviation"].get<bool>();
+            }
+            auto loadColor = [&](const char* key, float out[3]) {
+                if (m.contains(key) && m[key].is_array() && m[key].size() == 3) {
+                    for (int i = 0; i < 3; ++i)
+                        out[i] = clampValue(m[key][i].get<float>(), 0.0f, 1.0f, (i == 0) ? 1.0f : 0.0f);
+                }
+            };
+            loadColor("worstColorSurface", map.worstColorSurface);
+            loadColor("worstColorDeviation", map.worstColorDeviation);
+        }
+
         // --- Updates ---
         if (j.contains("updates") && j["updates"].is_object()) {
             const auto& u = j["updates"];
@@ -259,6 +295,13 @@ namespace app {
         j["plot"]["showGridByDefault"] = plot.showGridByDefault;
         j["plot"]["lineWeight"]        = plot.lineWeight;
         j["plot"]["markerSize"]        = plot.markerSize;
+
+        j["map"]["defaultColormapSurface"]   = map.defaultColormapSurface;
+        j["map"]["defaultColormapDeviation"] = map.defaultColormapDeviation;
+        j["map"]["highlightWorstSurface"]    = map.highlightWorstSurface;
+        j["map"]["highlightWorstDeviation"]  = map.highlightWorstDeviation;
+        j["map"]["worstColorSurface"]        = {map.worstColorSurface[0], map.worstColorSurface[1], map.worstColorSurface[2]};
+        j["map"]["worstColorDeviation"]      = {map.worstColorDeviation[0], map.worstColorDeviation[1], map.worstColorDeviation[2]};
 
         j["updates"]["autoCheckOnStartup"] = updates.autoCheckOnStartup;
         j["updates"]["channel"]            = std::string{updateChannelToString(updates.channel)};
