@@ -121,7 +121,7 @@ namespace ImGuiUtils {
                              pos.y + btnSize.y * 0.5f);
         dl->PathArcTo(spinnerCenter, spinnerRadius, angle,
                       angle + static_cast<float>(std::numbers::pi) * 1.5f, 32);
-        dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, 2.0f);
+        dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, DpiScale(2.0f));
 
         ImVec2 textPos(pos.x + style.FramePadding.x + spinnerDiameter + spacing,
                        pos.y + (btnSize.y - textSize.y) * 0.5f);
