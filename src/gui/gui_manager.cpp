@@ -82,7 +82,8 @@ void GuiManager::render() {
     }
 
     // Check system theme change every 60 frames (once per second at 60 FPS)
-    if (++m_frameCount % 60 == 0) {
+    constexpr unsigned int kThemeCheckInterval = 60;
+    if (++m_frameCount % kThemeCheckInterval == 0) {
         m_settingsManager->checkAndApplySystemTheme();
     }
 
@@ -92,7 +93,8 @@ void GuiManager::render() {
     }
 
     float navbarHeight = ImGui::GetFrameHeight();
-    float statusBarHeight = m_uiOpMonitor.hasActiveTasks() ? ImGui::GetFrameHeight() * 1.5f : 0.0f;
+    constexpr float kStatusBarHeightMultiplier = 1.5f;
+    float statusBarHeight = m_uiOpMonitor.hasActiveTasks() ? ImGui::GetFrameHeight() * kStatusBarHeightMultiplier : 0.0f;
     ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
         ImGui::GetIO().DisplaySize.x,
@@ -114,8 +116,9 @@ void GuiManager::render() {
         m_pWndMgr->RenderAll();
     }
 
+    constexpr ImVec2 kDetachedWindowSize(600, 400);
+    constexpr float kComboWidthMultiplier = 10.0f;
     {
-        constexpr ImVec2 kDetachedWindowSize(600, 400);
         auto& tolSurface = m_profileService->m_tolerancedSurfaceData;
         auto& nomSurface = m_profileService->m_nominalSurfaceData;
 
@@ -165,12 +168,12 @@ void GuiManager::render() {
     {
         if (m_irregularityMapService->m_showTolerancedSurfaceMap) {
             if (m_irregularityMapService->hasData()) {
-                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 if (ImGui::Begin("Surface Irregularity Map 3D", &m_irregularityMapService->m_showTolerancedSurfaceMap)) {
                     {
                         const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
                         int cmap = m_irregularityMapService->m_windowState.selectedColormapSurface;
-                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * kComboWidthMultiplier);
                         if (ImGui::Combo("Colormap", &cmap, cmapNames, IM_ARRAYSIZE(cmapNames)))
                             m_irregularityMapService->m_windowState.selectedColormapSurface = cmap;
                         ImGui::SameLine();
@@ -189,12 +192,12 @@ void GuiManager::render() {
 
         if (m_irregularityMapService->m_showDeviationSurfaceMap) {
             if (m_irregularityMapService->hasData() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
-                ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 if (ImGui::Begin("Surface Irregularity Map 3D Deviation", &m_irregularityMapService->m_showDeviationSurfaceMap)) {
                     {
                         const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
                         int cmap = m_irregularityMapService->m_windowState.selectedColormapDeviation;
-                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * kComboWidthMultiplier);
                         if (ImGui::Combo("Colormap", &cmap, cmapNames, IM_ARRAYSIZE(cmapNames)))
                             m_irregularityMapService->m_windowState.selectedColormapDeviation = cmap;
                         ImGui::SameLine();
@@ -213,8 +216,7 @@ void GuiManager::render() {
 
         if (m_irregularityMapService->m_showWorstSectionProfile) {
             if (m_irregularityMapService->m_worstProfileData.isValid()) {
-                constexpr ImVec2 kDetachedWndSize(600, 400);
-                ImGui::SetNextWindowSize(kDetachedWndSize, ImGuiCond_Once);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 if (ImGui::Begin("Worst Section Profile", &m_irregularityMapService->m_showWorstSectionProfile)) {
                     auto& wp = m_irregularityMapService->m_worstProfileData;
                     std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
@@ -229,8 +231,7 @@ void GuiManager::render() {
         if (m_irregularityMapService->m_showWorstSectionDeviation) {
             if (m_irregularityMapService->m_worstProfileData.isValid()
                 && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
-                constexpr ImVec2 kDetachedWndSize(600, 400);
-                ImGui::SetNextWindowSize(kDetachedWndSize, ImGuiCond_Once);
+                ImGui::SetNextWindowSize(kDetachedWindowSize, ImGuiCond_Once);
                 if (ImGui::Begin("Worst Section Deviation", &m_irregularityMapService->m_showWorstSectionDeviation)) {
                     m_profileService->renderProfileDeviationPlot("##WorstDeviation",
                         m_irregularityMapService->m_nominalSurfaceData,

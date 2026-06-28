@@ -2,10 +2,10 @@
 #include <cmath>
 #include <format>
 #include <vector>
-#include <numbers>
 
 #include "gui/gui.h"
 #include "gui/constants.h"
+#include "dde/constants.h"
 #include "gui/imgui_utils.h"
 #include "logger/logger.h"
 #include "lib/imgui/imgui.h"
@@ -13,8 +13,6 @@
 #include "lib/implot3d/implot3d.h"
 
 namespace {
-    constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
-
     std::string getSamplingTooltip() {
         return std::format(
             "Total number of sample points across the full surface diameter (min={}, max={}).\n"

@@ -1,6 +1,9 @@
 #pragma once
 
+#include <numbers>
+
 namespace ZemaxDDE {
+    inline constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
     inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";     // Appname DDE
     inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";   // Topic DDE
     static constexpr int DDE_TIMEOUT_MS             = 300;          // Timeout in ms (300 ms)

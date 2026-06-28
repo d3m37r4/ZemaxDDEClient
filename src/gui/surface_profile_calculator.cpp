@@ -1,6 +1,5 @@
 #include <format>
 #include <cmath>
-#include <numbers>
 
 #include "surface_profile_calculator.h"
 #include "dde/constants.h"
@@ -157,8 +156,7 @@ namespace gui {
                 std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
         }
 
-        constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
-        const double rad = m_targetAngle * DEG_TO_RAD;
+        const double rad = m_targetAngle * ZemaxDDE::DEG_TO_RAD;
         double semiDiameter = m_result.semiDiameter;
         double step = 2.0 * semiDiameter / (m_targetSampling - 1);
         double r = -semiDiameter + m_sagPointIndex * step;
@@ -196,8 +194,7 @@ namespace gui {
             return;
         }
 
-        constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
-        const double rad = m_targetAngle * DEG_TO_RAD;
+        const double rad = m_targetAngle * ZemaxDDE::DEG_TO_RAD;
         double semiDiameter = m_result.semiDiameter;
         double step = 2.0 * semiDiameter / (m_targetSampling - 1);
         double r = -semiDiameter + m_sagPointIndex * step;
