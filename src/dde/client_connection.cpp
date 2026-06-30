@@ -28,12 +28,21 @@ namespace ZemaxDDE {
         m_onConnectionLost = callback;
     }
 
+    void ZemaxDDEClient::setConnectionState(ConnectionState newState) {
+        if (m_connectionState != newState) {
+            m_logger.addLog(std::format("[DDE] State: {} -> {}",
+                toString(m_connectionState), toString(newState)));
+            m_connectionState = newState;
+        }
+    }
+
     void ZemaxDDEClient::initiateDDE() {
         if (m_hwndZemaxServer != nullptr) {
             m_logger.addLog("[DDE] DDE already connected. Skipping initiate.");
             return;
         }
 
+        setConnectionState(ConnectionState::Connecting);
         m_hwndZemaxServer = nullptr;
 
         ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
@@ -56,6 +65,7 @@ namespace ZemaxDDE {
         checkDDEConnection();
 
         if (m_hwndZemaxServer) {
+            setConnectionState(ConnectionState::Connected);
             m_logger.addLog("[DDE] Connection established successfully");
         } else {
             m_logger.addLog("[DDE] Connection not established yet (waiting for 'WM_DDE_ACK')");
@@ -77,6 +87,7 @@ namespace ZemaxDDE {
             return;
         }
 
+        setConnectionState(ConnectionState::Connecting);
         m_hwndZemaxServer = nullptr;
 
         ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
@@ -98,6 +109,7 @@ namespace ZemaxDDE {
         checkDDEConnection();
 
         if (m_hwndZemaxServer) {
+            setConnectionState(ConnectionState::Connected);
             m_logger.addLog("[DDE] Connection established successfully");
         } else {
             m_logger.addLog("[DDE] Connection not established yet (waiting for 'WM_DDE_ACK')");
@@ -174,7 +186,7 @@ namespace ZemaxDDE {
             DdeRequest req = std::move(m_requestQueue.front());
             m_requestQueue.pop_front();
 
-            if (!m_hwndZemaxServer) {
+            if (m_connectionState != ConnectionState::Connected) {
                 if (req.onError) req.onError("Zemax is not connected");
                 ++consecutiveErrors;
                 continue;
@@ -254,7 +266,7 @@ namespace ZemaxDDE {
     }
 
     void ZemaxDDEClient::checkConnectionHealth() {
-        if (!m_hwndZemaxServer) return;
+        if (m_connectionState != ConnectionState::Connected) return;
 
         if (!IsWindow(m_hwndZemaxServer)) {
             handleConnectionLost("Zemax window handle is no longer valid");
@@ -284,6 +296,7 @@ namespace ZemaxDDE {
 
     void ZemaxDDEClient::handleConnectionLost(const std::string& reason) {
         m_logger.addLog(std::format("[DDE] ERROR: Connection lost — {}", reason));
+        setConnectionState(ConnectionState::Disconnected);
         m_hwndZemaxServer = nullptr;
 
         if (m_activeRequest) {
@@ -309,6 +322,7 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);
+            setConnectionState(ConnectionState::Disconnected);
             m_hwndZemaxServer = nullptr;
             m_logger.addLog("[DDE] Connection terminated");
         }
@@ -344,6 +358,7 @@ namespace ZemaxDDE {
                     FreeDDElParam(WM_DDE_ACK, lParam);
 
                     m_hwndZemaxServer = reinterpret_cast<HWND>(wParam);
+                    setConnectionState(ConnectionState::Connected);
 
                     DWORD pid = 0;
                     GetWindowThreadProcessId(m_hwndZemaxServer, &pid);
@@ -724,7 +739,7 @@ namespace ZemaxDDE {
 
     void ZemaxDDEClient::checkDDEConnection() {
         const char* const DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED = "No ZemaxDDEServer received, DDE connection to Zemax not established";
-        if (!m_hwndZemaxServer) {
+        if (m_connectionState != ConnectionState::Connected) {
             #ifdef DEBUG_LOG
             m_logger.addLog(std::format("[DDE] {}", DDE_ERROR_MSG_CONNECTION_NOT_ESTABLISHED));
             #endif

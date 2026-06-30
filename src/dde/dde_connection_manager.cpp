@@ -45,7 +45,7 @@ DDEConnectionManager::DDEConnectionManager(Logger& logger)
 
 int DDEConnectionManager::findFreeSlot() {
     for (int i = 0; i < m_maxConnections && i < MAX_CONNECTIONS; ++i) {
-        if (!m_connections[i].isConnected) {
+        if (m_connections[i].isDisconnected()) {
             return i;
         }
     }
@@ -99,7 +99,7 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
 
     conn.hwndServer = targetHwnd;
     conn.serverTitle = title;
-    conn.isConnected = true;
+    conn.connectionState = ZemaxDDE::ConnectionState::Connected;
 
     DWORD pid = 0;
     GetWindowThreadProcessId(targetHwnd, &pid);
@@ -108,7 +108,7 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
 
     // Set up connection lost callback to flag for GUI popup
     conn.client->setOnConnectionLostCallback([this, idx](const std::string& reason) {
-        if (idx >= 0 && idx < MAX_CONNECTIONS && m_connections[idx].isConnected) {
+        if (idx >= 0 && idx < MAX_CONNECTIONS && m_connections[idx].isConnected()) {
             m_connectionLostIndex = idx;
             m_connectionLostReason = reason;
             m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", idx, reason));
@@ -133,7 +133,7 @@ void DDEConnectionManager::disconnect(int index) {
     if (index < 0 || index >= MAX_CONNECTIONS) return;
 
     auto& conn = m_connections[index];
-    if (!conn.isConnected) return;
+    if (conn.isDisconnected()) return;
 
     m_logger.addLog(std::format("[DDE] Disconnected slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
         index, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
@@ -153,12 +153,12 @@ void DDEConnectionManager::disconnect(int index) {
     conn.hwndServer = nullptr;
     conn.serverTitle.clear();
     conn.serverPid = 0;
-    conn.isConnected = false;
+    conn.connectionState = ZemaxDDE::ConnectionState::Disconnected;
 
     if (m_activeIndex == index) {
         m_activeIndex = -1;
         for (int i = 0; i < MAX_CONNECTIONS; ++i) {
-            if (m_connections[i].isConnected) {
+            if (m_connections[i].isConnected()) {
                 m_activeIndex = i;
                 break;
             }
@@ -168,14 +168,14 @@ void DDEConnectionManager::disconnect(int index) {
 
 void DDEConnectionManager::disconnectAll() {
     for (int i = 0; i < MAX_CONNECTIONS; ++i) {
-        if (m_connections[i].isConnected) {
+        if (m_connections[i].isConnected()) {
             disconnect(i);
         }
     }
 }
 
 void DDEConnectionManager::setActiveConnection(int index) {
-    if (index >= 0 && index < MAX_CONNECTIONS && m_connections[index].isConnected) {
+    if (index >= 0 && index < MAX_CONNECTIONS && m_connections[index].isConnected()) {
         m_activeIndex = index;
         auto& conn = m_connections[index];
         m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
@@ -201,7 +201,7 @@ DDEConnection* DDEConnectionManager::getConnection(int index) {
 
 bool DDEConnectionManager::isAnyConnected() const {
     for (const auto& conn : m_connections) {
-        if (conn.isConnected) return true;
+        if (conn.isConnected()) return true;
     }
     return false;
 }
@@ -228,38 +228,15 @@ void DDEConnectionManager::checkAllConnectionHealth() {
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i) {
         auto& conn = m_connections[i];
-        if (!conn.isConnected || !conn.client) continue;
+        if (conn.isDisconnected() || !conn.client) continue;
 
-        if (!IsWindow(conn.hwndServer)) {
-            m_connectionLostIndex = i;
-            m_connectionLostReason = "Zemax window handle is no longer valid";
-            m_logger.addLog(std::format("[DDE] Connection lost: slot {} — {}", i, m_connectionLostReason));
-            return;
-        }
-
-        DWORD currentPid = 0;
-        GetWindowThreadProcessId(conn.hwndServer, &currentPid);
-        if (conn.serverPid != 0 && currentPid != conn.serverPid) {
-            m_connectionLostIndex = i;
-            m_connectionLostReason = "Zemax process ID changed (process restarted?)";
-            m_logger.addLog(std::format("[DDE] Connection lost: slot {} — {}", i, m_connectionLostReason));
-            return;
-        }
-
-        if (currentPid != 0) {
-            HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, currentPid);
-            if (hProcess) {
-                DWORD exitCode;
-                if (GetExitCodeProcess(hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
-                    m_connectionLostIndex = i;
-                    m_connectionLostReason = "Zemax process has exited";
-                    m_logger.addLog(std::format("[DDE] Connection lost: slot {} — {}", i, m_connectionLostReason));
-                    CloseHandle(hProcess);
-                    return;
-                }
-                CloseHandle(hProcess);
-            }
-        }
+        // Delegate health check to the client — it knows its own HWND and PID.
+        // If client detects loss, it calls handleConnectionLost() which:
+        //   1. Sets m_connectionState = Disconnected (on client)
+        //   2. Drains the request queue
+        //   3. Fires the callback → sets m_connectionLostIndex
+        // We do NOT set conn.connectionState here — disconnect() will handle it.
+        conn.client->checkConnectionHealth();
     }
 }
 

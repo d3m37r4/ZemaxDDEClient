@@ -22,13 +22,13 @@ namespace gui {
         int connectionCount = 0;
         for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
             auto* conn = m_connectionManager->getConnection(i);
-            if (conn && conn->isConnected) ++connectionCount;
+            if (conn && conn->isConnected()) ++connectionCount;
         }
         int activeIdx = m_connectionManager->getActiveIndex();
         bool connectionLost = m_connectionManager->hasConnectionLost();
 
         {
-            const bool connected = (activeIdx >= 0);
+            const bool connected = (activeIdx >= 0) && !connectionLost;
             const char* label = "Zemax DDE Status:";
             const char* value;
             ImVec4 valueColor;
@@ -67,7 +67,7 @@ namespace gui {
             std::string preview;
             for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
                 auto* conn = m_connectionManager->getConnection(i);
-                if (!conn || !conn->isConnected) continue;
+                if (!conn || !conn->isConnected()) continue;
                 std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
                 std::string itemLabel = std::format("[{}] {}", i, title);
                 if (i == activeIdx) {
@@ -79,7 +79,7 @@ namespace gui {
             if (ImGui::BeginCombo("##TargetCombo", preview.c_str())) {
                 for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
                     auto* conn = m_connectionManager->getConnection(i);
-                    if (!conn || !conn->isConnected) continue;
+                    if (!conn || !conn->isConnected()) continue;
                     std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
                     std::string itemLabel = std::format("[{}] {}", i, title);
 
