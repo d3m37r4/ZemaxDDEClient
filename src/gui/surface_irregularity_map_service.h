@@ -9,6 +9,7 @@
 #include "dde/client.h"
 #include "gui/ui_operation_monitor.h"
 #include "gui/surface_profile_calculator.h"
+#include "gui/constants.h"
 #include "lib/imgui/imgui.h"
 
 class Logger;
@@ -34,8 +35,8 @@ namespace gui {
 
         bool highlightWorstSurface = true;
         bool highlightWorstDeviation = true;
-        ImVec4 worstColorSurface{1.0f, 0.0f, 0.0f, 1.0f};
-        ImVec4 worstColorDeviation{1.0f, 0.0f, 0.0f, 1.0f};
+        ImVec4 worstColorSurface = DEFAULT_WORST_HIGHLIGHT_COLOR;
+        ImVec4 worstColorDeviation = DEFAULT_WORST_HIGHLIGHT_COLOR;
     };
 
     struct MaxPVResult {
