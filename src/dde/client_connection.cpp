@@ -681,7 +681,7 @@ namespace ZemaxDDE {
                                 }
                             } else {
                                 m_logger.addLog(std::format("[DDE] GetWave: Wave index must be 0 (metadata) or in range [{}, {}]. Got: {}",
-                                                        ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_FIELDS, arg));
+                                                        ZemaxDDE::MIN_WAVES, ZemaxDDE::MAX_WAVES, arg));
                                 return 0;
                             }
                             clientAck.fAck = true;
