@@ -734,7 +734,7 @@ namespace ZemaxDDE {
                 return 0;
             }
         }
-        return 0;
+        return DefWindowProcW(m_hwndZemaxClient, iMsg, wParam, lParam);
     }
 
     void ZemaxDDEClient::checkDDEConnection() {
