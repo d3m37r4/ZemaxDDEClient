@@ -152,7 +152,6 @@ namespace ZemaxDDE {
         req.timeoutMs = timeoutMs;
         req.retriesLeft = retries;
         req.serviceId = serviceId;
-        req.startTime = GetTickCount();
         m_requestQueue.push_back(std::move(req));
 
         m_logger.addLog(std::format("[DDE] Submitted request #{}: '{}' (svc={}, timeout={}ms, retries={})",
@@ -254,10 +253,12 @@ namespace ZemaxDDE {
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
             sendRequest(req);
 
-            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
-                m_activeRequest->retriesLeft, req.id, req.command, req.timeoutMs));
+            auto elapsed = now - req.startTime;
+            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (elapsed={}ms, timeout={}ms)",
+                m_activeRequest->retriesLeft, req.id, req.command, elapsed, req.timeoutMs));
         } else {
-            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}'", req.id, req.command));
+            auto elapsed = now - req.startTime;
+            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}' ({}ms)", req.id, req.command, elapsed));
             if (req.onError) {
                 req.onError("Timeout");
             }
@@ -441,8 +442,9 @@ namespace ZemaxDDE {
 
                     bool matched = false;
                     if (m_activeRequest && dde_item_str == m_activeRequest->command) {
-                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={})",
-                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId));
+                        auto elapsed = GetTickCount() - m_activeRequest->startTime;
+                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={}, {}ms)",
+                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId, elapsed));
                         if (m_activeRequest->onSuccess) {
                             m_activeRequest->onSuccess(buffer);
                         }

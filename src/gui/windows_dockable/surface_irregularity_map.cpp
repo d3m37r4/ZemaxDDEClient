@@ -151,7 +151,6 @@ namespace gui {
                             m_irregularityMapService->onCalculationComplete = [this, units, fileName]() {
                                 m_irregularityMapService->m_nominalSurfaceData.units = units;
                                 m_irregularityMapService->m_nominalSurfaceData.fileName = fileName;
-                                m_logger.addLog("[IrregularityMapService] Nominal reference set");
                             };
                             m_irregularityMapService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
