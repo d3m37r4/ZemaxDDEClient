@@ -254,10 +254,10 @@ namespace ZemaxDDE {
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
             sendRequest(req);
 
-            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (elapsed={}ms, timeout={}ms)",
+            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (in {}ms, timeout={}ms)",
                 m_activeRequest->retriesLeft, req.id, req.command, elapsed.count(), req.timeoutMs));
         } else {
-            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}' ({}ms)", req.id, req.command, elapsed.count()));
+            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}' (in {}ms)", req.id, req.command, elapsed.count()));
             if (req.onError) {
                 req.onError("Timeout");
             }
@@ -443,7 +443,7 @@ namespace ZemaxDDE {
                     if (m_activeRequest && dde_item_str == m_activeRequest->command) {
                         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - m_activeRequest->startTime);
-                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={}, {}ms)",
+                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={}, in {}ms)",
                             m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId, elapsed.count()));
                         if (m_activeRequest->onSuccess) {
                             m_activeRequest->onSuccess(buffer);
