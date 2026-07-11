@@ -19,8 +19,13 @@ namespace gui {
         m_resetConfirmDialog = std::make_unique<ResetConfirmDialog>();
         m_resetConfirmDialog->setOnReset([this]() { onReset(); });
 
-        m_cleanLogsConfirmDialog = std::make_unique<ResetConfirmDialog>();
-        m_cleanLogsConfirmDialog->setOnReset([this]() { onCleanLogs(); });
+        m_cleanLogsConfirmDialog = std::make_unique<CleanLogsConfirmDialog>();
+        m_cleanLogsConfirmDialog->setOnConfirm([this]() { onCleanLogs(); });
+    }
+
+    void PreferencesDialog::setThemeManager(ThemeManager* tm) noexcept {
+        m_themeManager = tm;
+        m_cleanLogsConfirmDialog->setThemeManager(tm);
     }
 
     void PreferencesDialog::open() noexcept {

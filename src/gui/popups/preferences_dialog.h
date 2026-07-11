@@ -4,6 +4,7 @@
 #include <string>
 
 #include "app/settings.h"
+#include "gui/popups/clean_logs_confirm_dialog.h"
 #include "gui/popups/reset_confirm_dialog.h"
 
 class Logger;
@@ -30,7 +31,7 @@ namespace gui {
 
             void setActiveLogPath(const std::string& path) { m_activeLogPath = path; }
             void setLogger(Logger* logger) noexcept { m_logger = logger; }
-            void setThemeManager(ThemeManager* tm) noexcept { m_themeManager = tm; }
+            void setThemeManager(ThemeManager* tm) noexcept;
 
         private:
             enum class Section : int {
@@ -70,7 +71,7 @@ namespace gui {
 
             SettingsManager& m_settings;
             std::unique_ptr<ResetConfirmDialog> m_resetConfirmDialog;
-            std::unique_ptr<ResetConfirmDialog> m_cleanLogsConfirmDialog;
+            std::unique_ptr<CleanLogsConfirmDialog> m_cleanLogsConfirmDialog;
             app::AppSettings m_working;
             app::AppSettings m_loaded;
             Section m_section = Section::General;
