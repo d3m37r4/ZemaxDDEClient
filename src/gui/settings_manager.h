@@ -70,6 +70,7 @@ namespace gui {
             [[nodiscard]] float plotMarkerSize() const noexcept { return m_current.plot.markerSize; }
 
             void applyUpdates(const app::UpdateSettings& updates);
+            void applyLogging(const app::LoggingSettings& logging);
 
             [[nodiscard]] const app::AppSettings& current() const noexcept { return m_current; }
 
