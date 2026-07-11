@@ -46,7 +46,7 @@ namespace gui {
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
         maxLabelWidth += cp * 2.0f;
 
-        ImGui::SeparatorText("Nominal surface parameters");
+        ImGuiUtils::SectionHeader("Nominal surface parameters");
         ImGui::BeginChild(
             "NominalSurfaceContent",
             ImVec2(0.0f, 0.0f),
@@ -168,7 +168,7 @@ namespace gui {
         }
         ImGui::EndChild();
 
-        ImGui::SeparatorText("Toleranced surface parameters");
+        ImGuiUtils::SectionHeader("Toleranced surface parameters");
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
             ImVec2(0.0f, 0.0f),
@@ -292,7 +292,7 @@ namespace gui {
         ImGui::EndChild();
 
         if (nominal.isValid() && toleranced.isValid()) {
-            ImGui::SeparatorText("Surface profile analysis results");
+            ImGuiUtils::SectionHeader("Surface profile analysis results");
 
             if (ImGui::Button("Show comparison graphic")) {
                 m_profileService->m_showComparisonProfileWindow = true;

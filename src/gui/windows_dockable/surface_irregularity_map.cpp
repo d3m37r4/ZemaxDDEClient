@@ -53,7 +53,7 @@ namespace gui {
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
         maxLabelWidth += cp * 2.0f;
 
-        ImGui::SeparatorText("Nominal surface parameters");
+        ImGuiUtils::SectionHeader("Nominal surface parameters");
 
         ImGui::BeginChild(
             "NominalSurfaceContent",
@@ -164,7 +164,7 @@ namespace gui {
 
         ImGui::EndChild();
 
-        ImGui::SeparatorText("Toleranced surface parameters");
+        ImGuiUtils::SectionHeader("Toleranced surface parameters");
 
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
@@ -219,7 +219,7 @@ namespace gui {
 
         ImGui::EndChild();
 
-        ImGui::SeparatorText("Analysis");
+        ImGuiUtils::SectionHeader("Analysis");
 
         if (m_uiOpMonitor.isActive(TaskSource::SurfaceIrregularityMap)) {
             ImGuiUtils::SpinnerButton("Processing...", true);
@@ -246,7 +246,7 @@ namespace gui {
         if (m_irregularityMapService->hasData()) {
             bool calculating = m_uiOpMonitor.isActive(TaskSource::SurfaceIrregularityMap);
 
-            ImGui::SeparatorText("Results");
+            ImGuiUtils::SectionHeader("Results");
 
             ImGui::BeginDisabled(calculating);
 

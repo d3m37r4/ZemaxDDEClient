@@ -2,6 +2,7 @@
 
 #include "windows_dockable/dde_status.h"
 #include "gui/constants.h"
+#include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
 #include "dde/utils.h"
 #include "lib/imgui/imgui.h"
@@ -47,12 +48,12 @@ namespace gui {
             float availableWidth = ImGui::GetContentRegionAvail().x;
             float labelWidth = ImGui::CalcTextSize(label).x;
             float valueWidth = ImGui::CalcTextSize(value).x;
-            float totalWidth = labelWidth + valueWidth + 4.0f;
+            float totalWidth = labelWidth + valueWidth + ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP);
             float offsetX = (availableWidth - totalWidth) * 0.5f;
             if (offsetX > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
 
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(0.0f, 4.0f);
+            ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
 
             ImGui::PushStyleColor(ImGuiCol_Text, valueColor);
             ImGui::TextUnformatted(value);
@@ -109,7 +110,7 @@ namespace gui {
         // Connect/disconnect button uses semantic danger/success tokens (not ImGuiCol_Button*)
         // so the action remains visually unambiguous regardless of the active theme.
         const auto& sem = m_themeManager->semantic();
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, 4.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, ImGuiUtils::DpiScale(DDE_STATUS_BTN_VPAD)));
         ImGui::PushStyleColor(ImGuiCol_Button,        connected ? sem.dangerButton        : sem.successButton);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? sem.dangerButtonHover   : sem.successButtonHover);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  connected ? sem.dangerButtonActive  : sem.successButtonActive);

@@ -62,4 +62,17 @@ namespace gui {
     // Preferences popup
     inline constexpr ImVec2 PREFERENCES_POPUP_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
     inline constexpr ImVec2 PREFERENCES_POPUP_MIN_SIZE     = ImVec2(660.0f, 280.0f);
+
+    // Preferences dialog layout
+    inline constexpr float PREFS_SPLITTER_WIDTH     = 4.0f;
+    inline constexpr float PREFS_SIDEBAR_MIN_WIDTH  = 60.0f;
+    inline constexpr float PREFS_SIDEBAR_EXTRA_PAD  = 20.0f;
+    inline constexpr float PREFS_RIGHT_MARGIN       = 100.0f;
+
+    // DDE status panel
+    inline constexpr float DDE_STATUS_ELEMENT_GAP   = 4.0f;
+    inline constexpr float DDE_STATUS_BTN_VPAD      = 4.0f;
+
+    // Default highlight color for worst-section markers
+    inline constexpr ImVec4 DEFAULT_WORST_HIGHLIGHT_COLOR{1.0f, 0.0f, 0.0f, 1.0f};
 }

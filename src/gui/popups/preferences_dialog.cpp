@@ -51,13 +51,13 @@ namespace gui {
             float maxW = 0.0f;
             for (auto* l : sidebarLabels)
                 maxW = std::max(maxW, ImGui::CalcTextSize(l).x);
-            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f + 20.0f;
+            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f + ImGuiUtils::DpiScale(PREFS_SIDEBAR_EXTRA_PAD);
         }
 
         const float footerH    = ImGui::GetFrameHeightWithSpacing();
         const float availH     = ImGui::GetContentRegionAvail().y - footerH;
         const float availW     = ImGui::GetContentRegionAvail().x;
-        const float splitterW  = 4.0f;
+        const float splitterW  = ImGuiUtils::DpiScale(PREFS_SPLITTER_WIDTH);
 
         ImGui::BeginChild("##prefs_sidebar",
                           ImVec2(m_sidebarWidth, availH),
@@ -68,7 +68,7 @@ namespace gui {
         ImGui::SameLine();
 
         ImGuiUtils::SplitterH("##prefs_splitter", m_sidebarWidth, availH,
-                               splitterW, 60.0f, availW - 100.0f - splitterW);
+                               splitterW, ImGuiUtils::DpiScale(PREFS_SIDEBAR_MIN_WIDTH), availW - ImGuiUtils::DpiScale(PREFS_RIGHT_MARGIN) - splitterW);
 
         ImGui::SameLine();
 
