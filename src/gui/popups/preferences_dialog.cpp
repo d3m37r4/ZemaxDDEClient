@@ -8,7 +8,9 @@
 #include "gui/imgui_utils.h"
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
+#include "gui/theme_manager.h"
 #include "lib/imgui/imgui.h"
+#include "logger/logger.h"
 
 namespace gui {
 
@@ -16,6 +18,14 @@ namespace gui {
         : m_settings(settings) {
         m_resetConfirmDialog = std::make_unique<ResetConfirmDialog>();
         m_resetConfirmDialog->setOnReset([this]() { onReset(); });
+
+        m_cleanLogsConfirmDialog = std::make_unique<CleanLogsConfirmDialog>();
+        m_cleanLogsConfirmDialog->setOnConfirm([this]() { onCleanLogs(); });
+    }
+
+    void PreferencesDialog::setThemeManager(ThemeManager* tm) noexcept {
+        m_themeManager = tm;
+        m_cleanLogsConfirmDialog->setThemeManager(tm);
     }
 
     void PreferencesDialog::open() noexcept {
@@ -23,12 +33,14 @@ namespace gui {
         m_loaded  = m_settings.current();
         m_section = Section::General;
         m_resetConfirmDialog->close();
+        m_cleanLogsConfirmDialog->close();
         m_open = true;
     }
 
     void PreferencesDialog::close() noexcept {
         m_open = false;
         m_resetConfirmDialog->close();
+        m_cleanLogsConfirmDialog->close();
     }
 
     void PreferencesDialog::render() {
@@ -79,6 +91,7 @@ namespace gui {
         renderFooter();
 
         m_resetConfirmDialog->render();
+        m_cleanLogsConfirmDialog->render();
 
         ImGui::EndPopup();
     }
@@ -91,6 +104,7 @@ namespace gui {
             "DDE Performance",
             "Plot Settings",
             "Updates",
+            "Logging",
             "Files",
         };
 
@@ -110,6 +124,7 @@ namespace gui {
             case Section::DDEPerformance: renderSectionDDEPerformance(); break;
             case Section::PlotSettings:  renderSectionPlotSettings();  break;
             case Section::Updates:       renderSectionUpdates();       break;
+            case Section::Logging:       renderSectionLogging();       break;
             case Section::Files:         renderSectionFiles();         break;
             default: break;
         }
@@ -118,7 +133,6 @@ namespace gui {
     void PreferencesDialog::renderSectionGeneral() {
         ImGuiUtils::SectionHeader("General", "These options take effect on the next application start.");
 
-        ImGui::Checkbox("Show debug log window on startup", &m_working.general.showDebugLogOnStartup);
         ImGui::Checkbox("Restore window layout on startup", &m_working.general.restoreWindowLayout);
     }
 
@@ -283,6 +297,40 @@ namespace gui {
         }
     }
 
+    void PreferencesDialog::renderSectionLogging() {
+        ImGuiUtils::SectionHeader("Logging", "Logging and debug log settings.");
+
+        ImGui::Checkbox("Show debug log window on startup", &m_working.logging.showDebugLogOnStartup);
+        ImGui::Checkbox("Enable file logging", &m_working.logging.enableFileLogging);
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Max log file size (MB)");
+        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::InputInt("##logFileSizeMB", &m_working.logging.logFileSizeMB, 0, 0);
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Log folder size warning threshold (MB)");
+        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::InputInt("##logFolderThresholdMB", &m_working.logging.logFolderSizeThresholdMB, 0, 0);
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Current log folder size");
+        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+        ImGui::TextUnformatted(app::getLogFolderSize().c_str());
+        ImGui::SameLine();
+        const auto& sem = m_themeManager->semantic();
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
+        ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
+        if (ImGui::Button("Clean logs")) {
+            m_cleanLogsConfirmDialog->open();
+        }
+        ImGui::PopStyleColor(4);
+    }
+
     void PreferencesDialog::renderSectionFiles() {
         ImGuiUtils::SectionHeader("Files", "Configuration file locations (read-only).");
 
@@ -297,6 +345,7 @@ namespace gui {
         pathRow("ImGui Layout",         "##path_imgui",    app::getImguiIniPath());
         pathRow("Window Layout",        "##path_window",   app::getWindowStatePath());
         pathRow("Application Settings", "##path_settings", app::getSettingsJsonPath());
+        pathRow("Log Folder",           "##path_log",      app::getLogFolderPath());
     }
 
     void PreferencesDialog::renderFooter() {
@@ -361,6 +410,13 @@ namespace gui {
     void PreferencesDialog::onReset() {
         m_working = app::AppSettings::defaults();
         m_settings.apply(m_working);
+    }
+
+    void PreferencesDialog::onCleanLogs() {
+        size_t deleted = app::cleanLogFolder(m_activeLogPath);
+        if (m_logger) {
+            m_logger->addLog("[APP] Cleaned log folder: " + std::to_string(deleted) + " file(s) deleted");
+        }
     }
 
 } // namespace gui

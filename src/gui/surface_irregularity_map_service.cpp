@@ -65,7 +65,7 @@ namespace gui {
         m_calculator.onComplete = [this]() {
             m_nominalSurfaceData = m_calculator.getResult();
             if (m_nominalSurfaceData.isValid()) {
-                m_logger.addLog("[IrregularityMapService] Nominal reference set");
+                m_logger.addLog("[IrregularityMapService] Nominal surface profile calculated and stored as reference");
             }
             if (onCalculationComplete) onCalculationComplete();
         };
@@ -114,6 +114,7 @@ namespace gui {
         m_currentAngleIndex = 0;
         m_centerSagRef = 0.0;
         m_mapTaskId = 0;
+        m_calcStartTime = std::chrono::steady_clock::now();
 
         m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, {} sections ({}° step, {} pts each)",
             surface, m_totalAngles, angleStepDeg, sampling));
@@ -145,7 +146,9 @@ namespace gui {
             m_windowState.tolerancedSampling = m_targetSampling;
             m_windowState.tolerancedAngleStep = m_angleStepDeg;
 
-            m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections", m_profiles.size()));
+            m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections in {}",
+                m_profiles.size(), ZemaxDDE::formatDuration(std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - m_calcStartTime))));
 
             if (m_nominalSurfaceData.isValid()) {
                 m_maxPVResult = findMaxPVSection();
@@ -185,10 +188,14 @@ namespace gui {
         };
 
         m_calculator.onFailed = [this]() {
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - m_calcStartTime);
             if (m_calculator.isCancelled()) {
-                m_logger.addLog("[IrregularityMapService] Surface map cancelled");
+                m_logger.addLog(std::format("[IrregularityMapService] Surface map cancelled in {}",
+                    ZemaxDDE::formatDuration(elapsed)));
             } else {
-                m_logger.addLog(std::format("[IrregularityMapService] Profile calculation failed: {}", m_calculator.getError()));
+                m_logger.addLog(std::format("[IrregularityMapService] Profile calculation failed after {}: {}",
+                    ZemaxDDE::formatDuration(elapsed), m_calculator.getError()));
             }
             if (m_uiOpMonitor && m_mapTaskId > 0) {
                 m_uiOpMonitor->failTask(m_mapTaskId, m_calculator.getError().empty() ? "Cancelled" : m_calculator.getError());

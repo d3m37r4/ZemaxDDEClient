@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <functional>
 #include <optional>
 #include <string>
@@ -109,5 +110,6 @@ namespace gui {
             int m_currentAngleIndex = 0;
             double m_centerSagRef = 0.0;
             uint64_t m_mapTaskId{0};
+            std::chrono::steady_clock::time_point m_calcStartTime;
     };
 }

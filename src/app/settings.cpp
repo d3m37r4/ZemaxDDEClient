@@ -21,6 +21,10 @@ namespace app {
         constexpr float kMaxLineWeight = 3.0f;
         constexpr float kMinMarkerSize = 0.0f;
         constexpr float kMaxMarkerSize = 10.0f;
+        constexpr int kMinFileSizeMB = 1;
+        constexpr int kMaxFileSizeMB = 100;
+        constexpr int kMinFolderThresholdMB = 10;
+        constexpr int kMaxFolderThresholdMB = 500;
 
         template <typename T>
         T clampValue(T value, T min, T max, T fallback) {
@@ -66,7 +70,6 @@ namespace app {
     void AppSettings::reset() {
         version = kCurrentVersion;
 
-        general.showDebugLogOnStartup = true;
         general.restoreWindowLayout = true;
 
         appearance.themeMode = ThemeMode::System;
@@ -98,6 +101,11 @@ namespace app {
 
         updates.autoCheckOnStartup = false;
         updates.channel = UpdateChannel::Stable;
+
+        logging.showDebugLogOnStartup = true;
+        logging.enableFileLogging = true;
+        logging.logFileSizeMB = 5;
+        logging.logFolderSizeThresholdMB = 50;
     }
 
     bool AppSettings::loadFromFile(const std::string& path) {
@@ -136,8 +144,6 @@ namespace app {
         // --- General ---
         if (j.contains("general") && j["general"].is_object()) {
             const auto& g = j["general"];
-            if (g.contains("showDebugLogOnStartup") && g["showDebugLogOnStartup"].is_boolean())
-                general.showDebugLogOnStartup = g["showDebugLogOnStartup"].get<bool>();
             if (g.contains("restoreWindowLayout") && g["restoreWindowLayout"].is_boolean())
                 general.restoreWindowLayout = g["restoreWindowLayout"].get<bool>();
         }
@@ -266,6 +272,19 @@ namespace app {
                 updates.channel = updateChannelFromString(u["channel"].get<std::string_view>());
         }
 
+        // --- Logging ---
+        if (j.contains("logging") && j["logging"].is_object()) {
+            const auto& l = j["logging"];
+            if (l.contains("showDebugLogOnStartup") && l["showDebugLogOnStartup"].is_boolean())
+                logging.showDebugLogOnStartup = l["showDebugLogOnStartup"].get<bool>();
+            if (l.contains("enableFileLogging") && l["enableFileLogging"].is_boolean())
+                logging.enableFileLogging = l["enableFileLogging"].get<bool>();
+            if (l.contains("logFileSizeMB") && l["logFileSizeMB"].is_number_integer())
+                logging.logFileSizeMB = clampValue(l["logFileSizeMB"].get<int>(), kMinFileSizeMB, kMaxFileSizeMB, 5);
+            if (l.contains("logFolderSizeThresholdMB") && l["logFolderSizeThresholdMB"].is_number_integer())
+                logging.logFolderSizeThresholdMB = clampValue(l["logFolderSizeThresholdMB"].get<int>(), kMinFolderThresholdMB, kMaxFolderThresholdMB, 50);
+        }
+
         return LoadResult::Success;
     }
 
@@ -273,7 +292,6 @@ namespace app {
         nlohmann::json j;
         j["version"] = version;
 
-        j["general"]["showDebugLogOnStartup"] = general.showDebugLogOnStartup;
         j["general"]["restoreWindowLayout"]   = general.restoreWindowLayout;
 
         j["appearance"]["themeMode"]      = std::string{themeModeToString(appearance.themeMode)};
@@ -305,6 +323,11 @@ namespace app {
 
         j["updates"]["autoCheckOnStartup"] = updates.autoCheckOnStartup;
         j["updates"]["channel"]            = std::string{updateChannelToString(updates.channel)};
+
+        j["logging"]["showDebugLogOnStartup"] = logging.showDebugLogOnStartup;
+        j["logging"]["enableFileLogging"] = logging.enableFileLogging;
+        j["logging"]["logFileSizeMB"] = logging.logFileSizeMB;
+        j["logging"]["logFolderSizeThresholdMB"] = logging.logFolderSizeThresholdMB;
 
         std::ofstream out(path, std::ios::trunc);
         if (!out.is_open()) return false;

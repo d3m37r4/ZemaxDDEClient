@@ -1,9 +1,14 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "app/settings.h"
+#include "gui/popups/clean_logs_confirm_dialog.h"
 #include "gui/popups/reset_confirm_dialog.h"
+
+class Logger;
+class ThemeManager;
 
 namespace gui {
 
@@ -24,6 +29,10 @@ namespace gui {
             // Must be called every frame from the main GUI loop while the dialog is open.
             void render();
 
+            void setActiveLogPath(const std::string& path) { m_activeLogPath = path; }
+            void setLogger(Logger* logger) noexcept { m_logger = logger; }
+            void setThemeManager(ThemeManager* tm) noexcept;
+
         private:
             enum class Section : int {
                 General       = 0,
@@ -32,8 +41,9 @@ namespace gui {
                 DDEPerformance = 3,
                 PlotSettings  = 4,
                 Updates       = 5,
-                Files         = 6,
-                Count         = 7,
+                Logging       = 6,
+                Files         = 7,
+                Count         = 8,
             };
 
             void renderSidebar();
@@ -46,6 +56,7 @@ namespace gui {
             void renderSectionDDEPerformance();
             void renderSectionPlotSettings();
             void renderSectionUpdates();
+            void renderSectionLogging();
             void renderSectionFiles();
 
             void applyWorkingTheme() const;
@@ -56,14 +67,19 @@ namespace gui {
             void onSave();
             void onCancel();
             void onReset();
+            void onCleanLogs();
 
             SettingsManager& m_settings;
             std::unique_ptr<ResetConfirmDialog> m_resetConfirmDialog;
+            std::unique_ptr<CleanLogsConfirmDialog> m_cleanLogsConfirmDialog;
             app::AppSettings m_working;
             app::AppSettings m_loaded;
             Section m_section = Section::General;
             float m_sidebarWidth = 0.0f;
             bool m_open = false;
+            std::string m_activeLogPath;
+            Logger* m_logger = nullptr;
+            ThemeManager* m_themeManager = nullptr;
     };
 
 } // namespace gui

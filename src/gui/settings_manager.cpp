@@ -41,6 +41,7 @@ namespace gui {
         applyPlot(settings.plot);
         applyMap(settings.map);
         applyUpdates(settings.updates);
+        applyLogging(settings.logging);
 
         m_current = settings;
     }
@@ -103,6 +104,12 @@ namespace gui {
         if (!m_updateChecker) return;
         m_updateChecker->setChannel(updates.channel);
         m_updateChecker->setAutoCheckOnStartup(updates.autoCheckOnStartup);
+    }
+
+    void SettingsManager::applyLogging(const app::LoggingSettings& logging) {
+        if (!m_logger) return;
+        m_logger->setEnabled(logging.enableFileLogging);
+        m_logger->setMaxFileSize(static_cast<size_t>(logging.logFileSizeMB) * 1024 * 1024);
     }
 
     bool SettingsManager::loadFromFile() {

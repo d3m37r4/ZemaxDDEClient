@@ -7,6 +7,22 @@
 #include "constants.h"
 
 namespace ZemaxDDE {
+
+    enum class ConnectionState {
+        Disconnected,
+        Connecting,
+        Connected
+    };
+
+    constexpr const char* toString(ConnectionState s) noexcept {
+        switch (s) {
+            case ConnectionState::Disconnected: return "Disconnected";
+            case ConnectionState::Connecting:   return "Connecting";
+            case ConnectionState::Connected:    return "Connected";
+        }
+        return "Unknown";
+    }
+
     struct Wavelength {
         double value = 0.0;
         double weight = 1.0;

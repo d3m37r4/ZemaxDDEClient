@@ -43,7 +43,8 @@ namespace ZemaxDDE {
             void initiateDDE(HWND targetHwnd);
             void terminateDDE();
 
-            bool isConnected() const noexcept { return m_hwndZemaxServer != nullptr; }
+            [[nodiscard]] ConnectionState connectionState() const noexcept { return m_connectionState; }
+            [[nodiscard]] bool isConnected() const noexcept { return m_connectionState == ConnectionState::Connected; }
 
             void pumpMessages();
             void processTimeouts();
@@ -121,9 +122,11 @@ namespace ZemaxDDE {
             void checkDDEConnection();
             /// Handles connection loss by notifying callbacks and cleaning up.
             void handleConnectionLost(const std::string& reason);
+            void setConnectionState(ConnectionState newState);
 
             HWND m_hwndZemaxServer = nullptr;
             HWND m_hwndZemaxClient = nullptr;
+            ConnectionState m_connectionState = ConnectionState::Disconnected;
             DWORD m_serverPid = 0;
             Logger& m_logger;
             OnDDEConnectedCallback m_onDDEConnected;

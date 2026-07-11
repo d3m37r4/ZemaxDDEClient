@@ -59,6 +59,10 @@ namespace gui {
     inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 120.0f);
     inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 120.0f);
 
+    inline constexpr const char* CLEAN_LOGS_CONFIRM_POPUP_NAME = "Clean Logs";
+    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(364.0f, 100.0f);
+    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE     = ImVec2(364.0f, 100.0f);
+
     // Preferences popup
     inline constexpr ImVec2 PREFERENCES_POPUP_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
     inline constexpr ImVec2 PREFERENCES_POPUP_MIN_SIZE     = ImVec2(660.0f, 280.0f);
