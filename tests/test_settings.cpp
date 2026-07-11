@@ -29,8 +29,8 @@ TEST(SettingsDefaults, AllFieldsMatchExpected) {
     auto s = AppSettings::defaults();
 
     EXPECT_EQ(s.version, AppSettings::kCurrentVersion);
-    EXPECT_TRUE(s.general.showDebugLogOnStartup);
     EXPECT_TRUE(s.general.restoreWindowLayout);
+    EXPECT_TRUE(s.logging.showDebugLogOnStartup);
     EXPECT_EQ(s.appearance.themeMode, ThemeMode::System);
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
     EXPECT_EQ(s.dde.maxRetryCount, 3);

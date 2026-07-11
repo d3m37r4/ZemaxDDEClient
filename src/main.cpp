@@ -22,10 +22,11 @@ int main() {
     wndMgr.RegisterDockableWindows(ctx->gui.get());
 
     const auto& general = ctx->gui->getSettingsManager().current().general;
+    const auto& logging = ctx->gui->getSettingsManager().current().logging;
     if (general.restoreWindowLayout) {
         wndMgr.LoadState();
     }
-    wndMgr.SetVisible(WindowID::DebugLog, general.showDebugLogOnStartup);
+    wndMgr.SetVisible(WindowID::DebugLog, logging.showDebugLogOnStartup);
 
     ctx->gui->setWindowManager(&wndMgr);
 

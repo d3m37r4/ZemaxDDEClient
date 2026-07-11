@@ -17,7 +17,6 @@ namespace app {
     };
 
     struct GeneralSettings {
-        bool showDebugLogOnStartup = true;
         bool restoreWindowLayout = true;
     };
 
@@ -66,6 +65,13 @@ namespace app {
         UpdateChannel channel = UpdateChannel::Stable;
     };
 
+    struct LoggingSettings {
+        bool showDebugLogOnStartup = true;
+        bool enableFileLogging = true;
+        int logFileSizeMB = 5;
+        int logFolderSizeThresholdMB = 50;
+    };
+
     struct AppSettings {
         static constexpr int kCurrentVersion = 1;
 
@@ -76,6 +82,7 @@ namespace app {
         PlotSettings plot;
         MapSettings map;
         UpdateSettings updates;
+        LoggingSettings logging;
 
         void reset();
         [[nodiscard]] static AppSettings defaults();
