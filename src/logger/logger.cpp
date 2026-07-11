@@ -84,6 +84,11 @@ void Logger::rotateLogFile() {
     m_currentFileSize = 0;
 }
 
+std::string Logger::getCurrentLogPath() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return getLogPath(m_currentLogDate, m_rotationIndex);
+}
+
 void Logger::addLog(std::string_view message) {
     std::string logEntry;
 
@@ -111,12 +116,14 @@ void Logger::addLog(std::string_view message) {
     std::cout << m_logs.back() << '\n';
     #endif
 
+    if (!m_enabled) return;
+
     openLogFile();
     if (m_logFile.is_open()) {
         m_logFile << m_logs.back() << '\n';
         m_logFile.flush();
         m_currentFileSize += m_logs.back().size() + 1;
-        if (m_currentFileSize >= MAX_FILE_SIZE) {
+        if (m_currentFileSize >= m_maxFileSize) {
             rotateLogFile();
         }
     }
