@@ -8,6 +8,7 @@
 #include "gui/imgui_utils.h"
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
+#include "gui/theme_manager.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -313,12 +314,16 @@ namespace gui {
         ImGui::TextUnformatted("Current log folder size");
         ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
         ImGui::TextUnformatted(app::getLogFolderSize().c_str());
-
-        ImGui::Spacing();
-        ImGui::Spacing();
-        if (ImGui::Button("Clean logs folder")) {
+        ImGui::SameLine();
+        const auto& sem = m_themeManager->semantic();
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
+        ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
+        if (ImGui::Button("Clean logs")) {
             m_cleanLogsConfirmDialog->open();
         }
+        ImGui::PopStyleColor(4);
     }
 
     void PreferencesDialog::renderSectionFiles() {

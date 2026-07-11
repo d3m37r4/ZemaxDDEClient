@@ -7,6 +7,7 @@
 #include "gui/popups/reset_confirm_dialog.h"
 
 class Logger;
+class ThemeManager;
 
 namespace gui {
 
@@ -29,6 +30,7 @@ namespace gui {
 
             void setActiveLogPath(const std::string& path) { m_activeLogPath = path; }
             void setLogger(Logger* logger) noexcept { m_logger = logger; }
+            void setThemeManager(ThemeManager* tm) noexcept { m_themeManager = tm; }
 
         private:
             enum class Section : int {
@@ -76,6 +78,7 @@ namespace gui {
             bool m_open = false;
             std::string m_activeLogPath;
             Logger* m_logger = nullptr;
+            ThemeManager* m_themeManager = nullptr;
     };
 
 } // namespace gui
