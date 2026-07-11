@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -20,8 +21,8 @@ struct OperationInfo {
     std::string serviceId;
     std::string command;
     OperationStatus status = OperationStatus::Pending;
-    DWORD startTime = 0;
-    DWORD elapsed = 0;
+    std::chrono::steady_clock::time_point startTime{};
+    std::chrono::milliseconds elapsed{0};
     int currentStep = 0;
     int totalSteps = 0;
     std::string message;

@@ -8,7 +8,7 @@ uint64_t OperationMonitor::registerOperation(const std::string& serviceId, int t
     info.id = m_nextId++;
     info.serviceId = serviceId;
     info.status = OperationStatus::Pending;
-    info.startTime = GetTickCount();
+    info.startTime = std::chrono::steady_clock::now();
     info.totalSteps = totalSteps;
     info.currentStep = 0;
     info.cancelRequested = false;
@@ -21,7 +21,7 @@ void OperationMonitor::onRequestQueued(uint64_t operationId, const std::string& 
     if (idx < 0) return;
     m_operations[idx].command = command;
     m_operations[idx].status = OperationStatus::InFlight;
-    m_operations[idx].startTime = GetTickCount();
+    m_operations[idx].startTime = std::chrono::steady_clock::now();
 }
 
 void OperationMonitor::reportProgress(uint64_t operationId, int currentStep, const std::string& message) {
@@ -31,7 +31,8 @@ void OperationMonitor::reportProgress(uint64_t operationId, int currentStep, con
     auto& op = m_operations[idx];
     op.currentStep = currentStep;
     op.message = message;
-    op.elapsed = GetTickCount() - op.startTime;
+    op.elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - op.startTime);
 }
 
 void OperationMonitor::onCompleted(uint64_t operationId) {
@@ -40,7 +41,8 @@ void OperationMonitor::onCompleted(uint64_t operationId) {
 
     auto& op = m_operations[idx];
     op.status = OperationStatus::Completed;
-    op.elapsed = GetTickCount() - op.startTime;
+    op.elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - op.startTime);
     op.message = "Completed";
 }
 
@@ -50,7 +52,8 @@ void OperationMonitor::onError(uint64_t operationId, const std::string& error) {
 
     auto& op = m_operations[idx];
     op.status = OperationStatus::Failed;
-    op.elapsed = GetTickCount() - op.startTime;
+    op.elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - op.startTime);
     op.error = error;
     op.message = "Error";
 }

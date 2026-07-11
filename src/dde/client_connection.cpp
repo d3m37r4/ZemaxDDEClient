@@ -230,7 +230,7 @@ namespace ZemaxDDE {
             reinterpret_cast<WPARAM>(m_hwndZemaxClient),
             PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
 
-        req.startTime = GetTickCount();
+        req.startTime = std::chrono::steady_clock::now();
 
         m_logger.addLog(std::format("[DDE] Sent request #{}: '{}'", req.id, req.command));
     }
@@ -243,22 +243,21 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::processTimeouts() {
         if (!m_activeRequest) return;
 
-        DWORD now = GetTickCount();
+        auto now = std::chrono::steady_clock::now();
         auto& req = *m_activeRequest;
 
-        if (now - req.startTime < req.timeoutMs) return;
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.startTime);
+        if (elapsed.count() < req.timeoutMs) return;
 
         if (req.retriesLeft > 0) {
             req.retriesLeft--;
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
             sendRequest(req);
 
-            auto elapsed = now - req.startTime;
             m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (elapsed={}ms, timeout={}ms)",
-                m_activeRequest->retriesLeft, req.id, req.command, elapsed, req.timeoutMs));
+                m_activeRequest->retriesLeft, req.id, req.command, elapsed.count(), req.timeoutMs));
         } else {
-            auto elapsed = now - req.startTime;
-            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}' ({}ms)", req.id, req.command, elapsed));
+            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}' ({}ms)", req.id, req.command, elapsed.count()));
             if (req.onError) {
                 req.onError("Timeout");
             }
@@ -442,9 +441,10 @@ namespace ZemaxDDE {
 
                     bool matched = false;
                     if (m_activeRequest && dde_item_str == m_activeRequest->command) {
-                        auto elapsed = GetTickCount() - m_activeRequest->startTime;
+                        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - m_activeRequest->startTime);
                         m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={}, {}ms)",
-                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId, elapsed));
+                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId, elapsed.count()));
                         if (m_activeRequest->onSuccess) {
                             m_activeRequest->onSuccess(buffer);
                         }

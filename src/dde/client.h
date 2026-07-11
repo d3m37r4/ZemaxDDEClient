@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -24,7 +25,7 @@ namespace ZemaxDDE {
         DWORD timeoutMs;
         int retriesLeft;
         std::string serviceId;
-        DWORD startTime = 0;
+        std::chrono::steady_clock::time_point startTime{};
     };
 
     class ZemaxDDEClient {
