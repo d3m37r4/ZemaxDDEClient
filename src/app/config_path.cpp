@@ -5,6 +5,7 @@
 #include <shlobj.h>
 
 #include "app/app.h"
+#include "app/utils.h"
 
 namespace {
     inline constexpr const char* IMGUI_INI_FILENAME = "imgui.ini";
@@ -14,6 +15,7 @@ namespace {
     std::string imguiIniPath;
     std::string windowStatePath;
     std::string settingsJsonPath;
+    std::string logFolderPath;
 
     const char* getLocalAppDataPath() {
         static std::string path;
@@ -69,5 +71,43 @@ namespace app {
             settingsJsonPath = resolvePath(SETTINGS_JSON_FILENAME);
         }
         return settingsJsonPath.c_str();
+    }
+
+    const char* getLogFolderPath() {
+        if (logFolderPath.empty()) {
+            std::string basePath = getLocalAppDataPath();
+            if (!basePath.empty()) {
+                logFolderPath = basePath + "\\logs";
+            }
+        }
+        return logFolderPath.c_str();
+    }
+
+    std::string getLogFolderSize() {
+        const char* path = getLogFolderPath();
+        if (!path || path[0] == '\0') return "0 B";
+
+        uintmax_t totalSize = 0;
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
+            if (entry.is_regular_file(ec))
+                totalSize += entry.file_size(ec);
+        }
+        return formatFileSize(totalSize);
+    }
+
+    size_t cleanLogFolder(const std::string& skipFilePath) {
+        const char* path = getLogFolderPath();
+        if (!path || path[0] == '\0') return 0;
+
+        size_t deleted = 0;
+        std::error_code ec;
+        for (const auto& entry : std::filesystem::directory_iterator(path, ec)) {
+            if (!entry.is_regular_file(ec)) continue;
+            if (entry.path() == skipFilePath) continue;
+            std::filesystem::remove(entry.path(), ec);
+            if (!ec) deleted++;
+        }
+        return deleted;
     }
 }
