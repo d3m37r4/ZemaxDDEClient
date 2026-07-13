@@ -3,12 +3,13 @@
 #include <chrono>
 #include <string>
 
+#include "types.h"
+
 class Logger;
 
 namespace ZemaxDDE {
 
     class ZemaxDDEClient;
-    struct OpticalSystemData;
 
     enum class LoadState {
         Idle,

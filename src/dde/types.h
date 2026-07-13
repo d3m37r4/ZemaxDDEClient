@@ -1,90 +1,21 @@
 #pragma once
 
-#include <array>
-#include <string>
-#include <vector>
-
-#include "constants.h"
+#include "app/models/surface_data.h"
+#include "app/models/optical_system.h"
+#include "app/models/types.h"
 
 namespace ZemaxDDE {
 
-    enum class ConnectionState {
-        Disconnected,
-        Connecting,
-        Connected
-    };
+    // Re-export domain models from app/models/ for backward compatibility.
+    // New code should use app::models:: directly.
+    using app::models::SagData;
+    using app::models::SurfaceProfileMetadata;
+    using app::models::SurfaceData;
+    using app::models::Wavelength;
+    using app::models::OpticalSystemData;
+    using app::models::ConnectionState;
+    using app::models::toString;
+    using app::models::MaxPVResult;
+    using app::models::TaskSource;
 
-    constexpr const char* toString(ConnectionState s) noexcept {
-        switch (s) {
-            case ConnectionState::Disconnected: return "Disconnected";
-            case ConnectionState::Connecting:   return "Connecting";
-            case ConnectionState::Connected:    return "Connected";
-        }
-        return "Unknown";
-    }
-
-    struct Wavelength {
-        double value = 0.0;
-        double weight = 1.0;
-    };
-
-    struct SagData {
-        double x = 0.0;
-        double y = 0.0;
-        double sag = 0.0;
-        double alternateSag = 0.0;
-    };
-
-    struct SurfaceProfileMetadata {
-        double angle = 0.0;
-        int sampling = 0;
-    };
-
-    struct SurfaceData {
-        int id = -1;
-        int units = 0;
-        int sampling = 0;
-        double angle = 0.0;
-        double semiDiameter = 0.0;
-        std::string type = "Unknown";
-        std::string fileName;
-        std::vector<SagData> sagDataPoints;
-        bool isValid() const noexcept { return id >= 0; }
-        double diameter() const noexcept { return 2.0 * semiDiameter; }
-
-        void clear() noexcept {
-            id = -1;
-            units = 0;
-            sampling = 0;
-            angle = 0.0;
-            semiDiameter = 0.0;
-            type = "Unknown";
-            fileName.clear();
-            sagDataPoints.clear();
-        }
-    };
-
-    struct OpticalSystemData {
-        std::string lensName;
-        std::string fileName;
-        int numSurfs = 0;
-        int units = 0;
-        int stopSurf = 0;
-        int nonAxialFlag = 0;
-        int rayAimingType = 0;
-        int adjustIndex = 0;
-        double temp = 0.0;
-        double pressure = 0.0;
-        int globalRefSurf = 0;
-        int numFields = 0;
-        int fieldType = 0;
-        std::array<double, FIELD_ARRAY_SIZE> xField{};
-        std::array<double, FIELD_ARRAY_SIZE> yField{};
-        double maxXField = 0.0;
-        double maxYField = 0.0;
-        int normalizationMethod = 0;
-        int primWave = 0;
-        int numWaves = 0;
-        std::array<Wavelength, WAVE_ARRAY_SIZE> waveData{};
-    };
 }
