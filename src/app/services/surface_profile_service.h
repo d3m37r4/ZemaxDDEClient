@@ -8,7 +8,7 @@
 #include "dde/client.h"
 #include "app/models/types.h"
 #include "app/compute/surface_profile_engine.h"
-#include "app/services/operation_monitor.h"
+#include "app/services/operation_monitor_service.h"
 
 class Logger;
 
@@ -30,7 +30,7 @@ namespace app::services {
         public:
             SurfaceProfileService(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void setUiOperationMonitor(app::services::OperationMonitor* monitor);
+            void setUiOperationMonitor(app::services::OperationMonitorService* monitor);
 
             void startCalculation(int surface, int sampling, double angle, app::models::TaskSource source = app::models::TaskSource::None);
             void cancelCalculation();

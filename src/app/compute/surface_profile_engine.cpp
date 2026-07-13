@@ -3,7 +3,7 @@
 
 #include "surface_profile_engine.h"
 #include "app/models/surface_data.h"
-#include "app/services/operation_monitor.h"
+#include "app/services/operation_monitor_service.h"
 #include "dde/constants.h"
 #include "dde/operation_monitor.h"
 #include "dde/utils.h"

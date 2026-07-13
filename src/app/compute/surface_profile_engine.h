@@ -8,7 +8,7 @@
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 
-namespace app::services { class OperationMonitor; }
+namespace app::services { class OperationMonitorService; }
 class Logger;
 
 namespace app::compute {
@@ -17,7 +17,7 @@ namespace app::compute {
         public:
             SurfaceProfileEngine(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void setMonitor(app::services::OperationMonitor* monitor) { m_uiOpMonitor = monitor; }
+            void setMonitor(app::services::OperationMonitorService* monitor) { m_uiOpMonitor = monitor; }
 
             void setSurfaceDataTimeoutMs(DWORD ms) { m_surfaceDataTimeoutMsOverride = ms; }
             void setSagTimeoutMs(DWORD ms) { m_sagTimeoutMsOverride = ms; }
@@ -47,7 +47,7 @@ namespace app::compute {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
-            app::services::OperationMonitor* m_uiOpMonitor{nullptr};
+            app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
 
             enum class State { Idle, FetchingSurfaceData, FetchingSagPoints, Completed, Failed };
             State m_state = State::Idle;

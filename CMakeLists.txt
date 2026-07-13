@@ -102,7 +102,7 @@ set(SOURCES
     ${SRC_DIR}/dde/dde_connection_manager.cpp
     ${SRC_DIR}/app/compute/surface_profile_engine.cpp
     ${SRC_DIR}/app/compute/surface_map_engine.cpp
-    ${SRC_DIR}/app/services/operation_monitor.cpp
+    ${SRC_DIR}/app/services/operation_monitor_service.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp

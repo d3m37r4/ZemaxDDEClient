@@ -9,7 +9,7 @@
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 #include "app/models/types.h"
-#include "app/services/operation_monitor.h"
+#include "app/services/operation_monitor_service.h"
 #include "app/compute/surface_profile_engine.h"
 #include "app/compute/surface_map_engine.h"
 
@@ -41,7 +41,7 @@ namespace app::services {
         public:
             SurfaceMapService(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void setUiOperationMonitor(app::services::OperationMonitor* monitor);
+            void setUiOperationMonitor(app::services::OperationMonitorService* monitor);
 
             void startCalculation(int surface, int sampling, double angle, app::models::TaskSource source);
             void cancelCalculation();
@@ -74,7 +74,7 @@ namespace app::services {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
-            app::services::OperationMonitor* m_uiOpMonitor{nullptr};
+            app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
             app::compute::SurfaceProfileEngine m_calculator;
             app::compute::SurfaceMapEngine m_mapEngine;
 

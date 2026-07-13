@@ -9,7 +9,7 @@
 
 namespace app::services {
 
-    class OperationMonitor {
+    class OperationMonitorService {
     public:
         struct TaskRecord {
             uint64_t taskId;

@@ -1,7 +1,7 @@
-#include "operation_monitor.h"
+#include "operation_monitor_service.h"
 
 namespace app::services {
-    uint64_t OperationMonitor::startTask(app::models::TaskSource source, const std::string& label, int totalSteps) {
+    uint64_t OperationMonitorService::startTask(app::models::TaskSource source, const std::string& label, int totalSteps) {
         uint64_t ddeId = 0;
         if (m_monitor) {
             ddeId = m_monitor->registerOperation(label, totalSteps);
@@ -17,45 +17,45 @@ namespace app::services {
         return rec.taskId;
     }
 
-    void OperationMonitor::reportProgress(uint64_t taskId, int currentStep, const std::string& message) {
+    void OperationMonitorService::reportProgress(uint64_t taskId, int currentStep, const std::string& message) {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->reportProgress(rec->ddeOperationId, currentStep, message);
     }
 
-    bool OperationMonitor::isCancelled(uint64_t taskId) const {
+    bool OperationMonitorService::isCancelled(uint64_t taskId) const {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return false;
         return m_monitor->isCancelled(rec->ddeOperationId);
     }
 
-    void OperationMonitor::completeTask(uint64_t taskId) {
+    void OperationMonitorService::completeTask(uint64_t taskId) {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->onCompleted(rec->ddeOperationId);
         rec->ddeOperationId = 0;
     }
 
-    void OperationMonitor::failTask(uint64_t taskId, const std::string& error) {
+    void OperationMonitorService::failTask(uint64_t taskId, const std::string& error) {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->onError(rec->ddeOperationId, error);
         rec->ddeOperationId = 0;
     }
 
-    void OperationMonitor::requestCancel(uint64_t taskId) {
+    void OperationMonitorService::requestCancel(uint64_t taskId) {
         auto* rec = findRecord(taskId);
         if (!rec) return;
         if (m_monitor && rec->ddeOperationId > 0)
             m_monitor->requestCancel(rec->ddeOperationId);
     }
 
-    uint64_t OperationMonitor::getDdeOperationId(uint64_t taskId) const {
+    uint64_t OperationMonitorService::getDdeOperationId(uint64_t taskId) const {
         auto* rec = findRecord(taskId);
         return rec ? rec->ddeOperationId : 0;
     }
 
-    bool OperationMonitor::isActive(app::models::TaskSource source) const {
+    bool OperationMonitorService::isActive(app::models::TaskSource source) const {
         for (const auto& t : m_tasks) {
             if (t.source != source) continue;
             if (t.ddeOperationId == 0) continue;
@@ -69,7 +69,7 @@ namespace app::services {
         return false;
     }
 
-    bool OperationMonitor::hasActiveTasks() const {
+    bool OperationMonitorService::hasActiveTasks() const {
         for (const auto& t : m_tasks) {
             if (t.ddeOperationId == 0) continue;
             auto* op = findDdeOp(t.ddeOperationId);
@@ -82,21 +82,21 @@ namespace app::services {
         return false;
     }
 
-    OperationMonitor::TaskRecord* OperationMonitor::findRecord(uint64_t taskId) {
+    OperationMonitorService::TaskRecord* OperationMonitorService::findRecord(uint64_t taskId) {
         for (auto& t : m_tasks) {
             if (t.taskId == taskId) return &t;
         }
         return nullptr;
     }
 
-    const OperationMonitor::TaskRecord* OperationMonitor::findRecord(uint64_t taskId) const {
+    const OperationMonitorService::TaskRecord* OperationMonitorService::findRecord(uint64_t taskId) const {
         for (const auto& t : m_tasks) {
             if (t.taskId == taskId) return &t;
         }
         return nullptr;
     }
 
-    const ZemaxDDE::OperationInfo* OperationMonitor::findDdeOp(uint64_t ddeId) const {
+    const ZemaxDDE::OperationInfo* OperationMonitorService::findDdeOp(uint64_t ddeId) const {
         if (!m_monitor) return nullptr;
         for (const auto& op : m_monitor->getOperations()) {
             if (op.id == ddeId) return &op;

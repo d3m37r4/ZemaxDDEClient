@@ -15,7 +15,7 @@ namespace app::services {
     {
     }
 
-    void SurfaceProfileService::setUiOperationMonitor(app::services::OperationMonitor* monitor) {
+    void SurfaceProfileService::setUiOperationMonitor(app::services::OperationMonitorService* monitor) {
         m_calculator.setMonitor(monitor);
     }
 
