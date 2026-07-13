@@ -4,34 +4,35 @@
 #include <functional>
 #include <string>
 
+#include "app/models/types.h"
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
-#include "gui/ui_operation_monitor.h"
 
+namespace app::services { class OperationMonitor; }
 class Logger;
 
-namespace gui {
-    class SurfaceProfileCalculator {
+namespace app::compute {
+
+    class SurfaceProfileEngine {
         public:
-            SurfaceProfileCalculator(DDEConnectionManager* connectionManager, Logger& logger);
+            SurfaceProfileEngine(DDEConnectionManager* connectionManager, Logger& logger);
 
-            void setMonitor(UiOperationMonitor* monitor) { m_uiOpMonitor = monitor; }
+            void setMonitor(app::services::OperationMonitor* monitor) { m_uiOpMonitor = monitor; }
 
-            /// Per-calculator timeout overrides. When set (>0), used instead of
-            /// the global per-request timeout from ZemaxDDEClient.
             void setSurfaceDataTimeoutMs(DWORD ms) { m_surfaceDataTimeoutMsOverride = ms; }
             void setSagTimeoutMs(DWORD ms) { m_sagTimeoutMsOverride = ms; }
 
-            void startCalculation(int surface, int sampling, double angle, TaskSource source, const std::string& label = "");
+            void startCalculation(int surface, int sampling, double angle,
+                                  app::models::TaskSource source, const std::string& label = "");
             void cancel();
             void reset() { m_state = State::Idle; m_error.clear(); m_result = {}; m_taskId = 0; m_skippedPoints = 0; }
 
             bool isCalculating() const { return m_state == State::FetchingSurfaceData || m_state == State::FetchingSagPoints; }
             bool isCancelled() const;
             const std::string& getError() const { return m_error; }
-            const ZemaxDDE::SurfaceData& getResult() const { return m_result; }
+            const app::models::SurfaceData& getResult() const { return m_result; }
             void setResultExtras(int units, const std::string& fileName) { m_result.units = units; m_result.fileName = fileName; }
-            TaskSource getSource() const { return m_source; }
+            app::models::TaskSource getSource() const { return m_source; }
 
             std::function<void()> onComplete;
             std::function<void()> onFailed;
@@ -46,13 +47,13 @@ namespace gui {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
-            UiOperationMonitor* m_uiOpMonitor{nullptr};
+            app::services::OperationMonitor* m_uiOpMonitor{nullptr};
 
             enum class State { Idle, FetchingSurfaceData, FetchingSagPoints, Completed, Failed };
             State m_state = State::Idle;
             std::string m_error;
 
-            TaskSource m_source{TaskSource::None};
+            app::models::TaskSource m_source{app::models::TaskSource::None};
             uint64_t m_taskId{0};
             int m_targetSurface = 0;
             int m_targetSampling = 0;
@@ -62,9 +63,10 @@ namespace gui {
             int m_skippedPoints = 0;
             std::chrono::steady_clock::time_point m_calcStartTime;
 
-            ZemaxDDE::SurfaceData m_result;
+            app::models::SurfaceData m_result;
 
             DWORD m_surfaceDataTimeoutMsOverride = 0;
             DWORD m_sagTimeoutMsOverride = 0;
     };
+
 }
