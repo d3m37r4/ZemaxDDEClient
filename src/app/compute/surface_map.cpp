@@ -1,8 +1,8 @@
-#include "surface_map_engine.h"
+#include "surface_map.h"
 
 namespace app::compute {
 
-    SurfaceMatrices SurfaceMapEngine::buildSurfaceMatrices(
+    SurfaceMatrices SurfaceMap::buildSurfaceMatrices(
         const std::vector<app::models::SurfaceData>& profiles,
         const app::models::SurfaceData& nominalSurfaceData,
         int targetSampling, int totalAngles, bool deviation) const
@@ -55,7 +55,7 @@ namespace app::compute {
         return result;
     }
 
-    std::optional<app::models::MaxPVResult> SurfaceMapEngine::findMaxPVSection(
+    std::optional<app::models::MaxPVResult> SurfaceMap::findMaxPVSection(
         const std::vector<app::models::SurfaceData>& profiles,
         const app::models::SurfaceData& nominalSurfaceData) const
     {

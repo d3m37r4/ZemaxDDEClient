@@ -13,9 +13,9 @@ class Logger;
 
 namespace app::compute {
 
-    class SurfaceProfileEngine {
+    class SurfaceProfile {
         public:
-            SurfaceProfileEngine(DDEConnectionManager* connectionManager, Logger& logger);
+            SurfaceProfile(DDEConnectionManager* connectionManager, Logger& logger);
 
             void setMonitor(app::services::OperationMonitorService* monitor) { m_uiOpMonitor = monitor; }
 

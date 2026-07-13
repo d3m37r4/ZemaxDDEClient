@@ -7,7 +7,7 @@
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 #include "app/models/types.h"
-#include "app/compute/surface_profile_engine.h"
+#include "app/compute/surface_profile.h"
 #include "app/services/operation_monitor_service.h"
 
 class Logger;
@@ -56,7 +56,7 @@ namespace app::services {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
-            app::compute::SurfaceProfileEngine m_calculator;
+            app::compute::SurfaceProfile m_calculator;
 
         private:
             app::models::TaskSource m_taskSource{app::models::TaskSource::None};

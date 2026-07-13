@@ -1,7 +1,7 @@
 #include <format>
 #include <cmath>
 
-#include "surface_profile_engine.h"
+#include "surface_profile.h"
 #include "app/models/surface_data.h"
 #include "app/services/operation_monitor_service.h"
 #include "dde/constants.h"
@@ -11,22 +11,22 @@
 
 namespace app::compute {
 
-    SurfaceProfileEngine::SurfaceProfileEngine(
+    SurfaceProfile::SurfaceProfile(
         DDEConnectionManager* connectionManager, Logger& logger)
         : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
     }
 
-    ZemaxDDE::ZemaxDDEClient* SurfaceProfileEngine::getClient() const {
+    ZemaxDDE::ZemaxDDEClient* SurfaceProfile::getClient() const {
         return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
     }
 
-    bool SurfaceProfileEngine::isCancelled() const {
+    bool SurfaceProfile::isCancelled() const {
         return m_uiOpMonitor && m_taskId > 0 && m_uiOpMonitor->isCancelled(m_taskId);
     }
 
-    void SurfaceProfileEngine::startCalculation(
+    void SurfaceProfile::startCalculation(
         int surface, int sampling, double angle, app::models::TaskSource source, const std::string& label)
     {
         auto* client = getClient();
@@ -85,13 +85,13 @@ namespace app::compute {
             surfaceDataTimeout, 1, "ProfileEngine");
     }
 
-    void SurfaceProfileEngine::cancel() {
+    void SurfaceProfile::cancel() {
         if (m_uiOpMonitor && m_taskId > 0) {
             m_uiOpMonitor->requestCancel(m_taskId);
         }
     }
 
-    void SurfaceProfileEngine::onSurfaceDataReceived(
+    void SurfaceProfile::onSurfaceDataReceived(
         int code, const std::string& value)
     {
         auto tokens = ZemaxDDE::tokenize(value);
@@ -117,7 +117,7 @@ namespace app::compute {
         sendNextSagRequest();
     }
 
-    void SurfaceProfileEngine::sendNextSagRequest() {
+    void SurfaceProfile::sendNextSagRequest() {
         if (m_sagPointIndex >= m_targetSampling) {
             m_result.sampling = m_targetSampling;
             m_result.angle = m_targetAngle;
@@ -189,7 +189,7 @@ namespace app::compute {
             sagTimeout, 1, "ProfileEngine");
     }
 
-    void SurfaceProfileEngine::onSagDataReceived(const std::string& buffer) {
+    void SurfaceProfile::onSagDataReceived(const std::string& buffer) {
         auto tokens = ZemaxDDE::tokenize(buffer);
         if (tokens.size() < 2) {
             onError("GetSag: invalid response format");
@@ -217,7 +217,7 @@ namespace app::compute {
         sendNextSagRequest();
     }
 
-    void SurfaceProfileEngine::onSagTimeout() {
+    void SurfaceProfile::onSagTimeout() {
         m_logger.addLog(std::format("[ProfileEngine] Point {} timed out, skipping",
             m_sagPointIndex));
         m_skippedPoints++;
@@ -225,7 +225,7 @@ namespace app::compute {
         sendNextSagRequest();
     }
 
-    void SurfaceProfileEngine::onError(const std::string& error) {
+    void SurfaceProfile::onError(const std::string& error) {
         m_state = State::Failed;
         m_error = error;
 

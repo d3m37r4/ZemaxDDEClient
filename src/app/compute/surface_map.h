@@ -15,7 +15,7 @@ namespace app::compute {
         float zMin{0}, zMax{0};
     };
 
-    class SurfaceMapEngine {
+    class SurfaceMap {
         public:
             SurfaceMatrices buildSurfaceMatrices(
                 const std::vector<app::models::SurfaceData>& profiles,

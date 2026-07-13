@@ -100,8 +100,8 @@ set(SOURCES
     ${SRC_DIR}/dde/initial_data_load_service.cpp
     ${SRC_DIR}/dde/utils.cpp
     ${SRC_DIR}/dde/dde_connection_manager.cpp
-    ${SRC_DIR}/app/compute/surface_profile_engine.cpp
-    ${SRC_DIR}/app/compute/surface_map_engine.cpp
+    ${SRC_DIR}/app/compute/surface_profile.cpp
+    ${SRC_DIR}/app/compute/surface_map.cpp
     ${SRC_DIR}/app/services/operation_monitor_service.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp

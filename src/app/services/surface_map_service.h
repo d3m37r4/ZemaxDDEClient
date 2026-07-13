@@ -10,8 +10,8 @@
 #include "dde/client.h"
 #include "app/models/types.h"
 #include "app/services/operation_monitor_service.h"
-#include "app/compute/surface_profile_engine.h"
-#include "app/compute/surface_map_engine.h"
+#include "app/compute/surface_profile.h"
+#include "app/compute/surface_map.h"
 
 class Logger;
 
@@ -75,8 +75,8 @@ namespace app::services {
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
             app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
-            app::compute::SurfaceProfileEngine m_calculator;
-            app::compute::SurfaceMapEngine m_mapEngine;
+            app::compute::SurfaceProfile m_calculator;
+            app::compute::SurfaceMap m_mapEngine;
 
             std::vector<app::models::SurfaceData> m_profiles;
             std::optional<MaxPVResult> m_maxPVResult;
