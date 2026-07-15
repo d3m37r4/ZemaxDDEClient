@@ -4,7 +4,6 @@
 #include <windows.h>
 #include <shlobj.h>
 
-#include "app/app.h"
 #include "app/utils.h"
 
 namespace {

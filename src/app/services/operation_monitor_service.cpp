@@ -50,11 +50,6 @@ namespace app::services {
             m_monitor->requestCancel(rec->ddeOperationId);
     }
 
-    uint64_t OperationMonitorService::getDdeOperationId(uint64_t taskId) const {
-        auto* rec = findRecord(taskId);
-        return rec ? rec->ddeOperationId : 0;
-    }
-
     bool OperationMonitorService::isActive(app::models::TaskSource source) const {
         for (const auto& t : m_tasks) {
             if (t.source != source) continue;

@@ -9,7 +9,6 @@ namespace ZemaxDDE {
     // Re-export domain models from app/models/ for backward compatibility.
     // New code should use app::models:: directly.
     using app::models::SagData;
-    using app::models::SurfaceProfileMetadata;
     using app::models::SurfaceData;
     using app::models::Wavelength;
     using app::models::OpticalSystemData;

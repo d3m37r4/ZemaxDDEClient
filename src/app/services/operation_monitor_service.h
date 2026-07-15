@@ -26,7 +26,6 @@ namespace app::services {
         void completeTask(uint64_t taskId);
         void failTask(uint64_t taskId, const std::string& error);
         void requestCancel(uint64_t taskId);
-        uint64_t getDdeOperationId(uint64_t taskId) const;
 
         bool isActive(app::models::TaskSource source) const;
         bool hasActiveTasks() const;

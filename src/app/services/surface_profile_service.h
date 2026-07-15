@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "dde/dde_connection_manager.h"
-#include "dde/client.h"
 #include "app/models/types.h"
 #include "app/compute/surface_profile.h"
 #include "app/services/operation_monitor_service.h"

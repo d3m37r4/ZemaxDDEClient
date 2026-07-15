@@ -1,7 +1,6 @@
 #include <cmath>
 #include <format>
 
-#include "dde/constants.h"
 #include "dde/utils.h"
 
 #include "app/services/surface_profile_service.h"

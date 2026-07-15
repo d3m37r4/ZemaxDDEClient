@@ -25,14 +25,11 @@ namespace app::compute {
             void startCalculation(int surface, int sampling, double angle,
                                   app::models::TaskSource source, const std::string& label = "");
             void cancel();
-            void reset() { m_state = State::Idle; m_error.clear(); m_result = {}; m_taskId = 0; m_skippedPoints = 0; }
 
             bool isCalculating() const { return m_state == State::FetchingSurfaceData || m_state == State::FetchingSagPoints; }
             bool isCancelled() const;
             const std::string& getError() const { return m_error; }
             const app::models::SurfaceData& getResult() const { return m_result; }
-            void setResultExtras(int units, const std::string& fileName) { m_result.units = units; m_result.fileName = fileName; }
-            app::models::TaskSource getSource() const { return m_source; }
 
             std::function<void()> onComplete;
             std::function<void()> onFailed;

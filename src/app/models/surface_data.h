@@ -12,11 +12,6 @@ namespace app::models {
         double alternateSag = 0.0;
     };
 
-    struct SurfaceProfileMetadata {
-        double angle = 0.0;
-        int sampling = 0;
-    };
-
     struct SurfaceData {
         int id = -1;
         int units = 0;
