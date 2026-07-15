@@ -3,7 +3,6 @@
 #include "app/services/surface_profile_service.h"
 #include "lib/imgui/imgui.h"
 
-class Logger;
 namespace gui { class SettingsManager; }
 
 namespace gui {

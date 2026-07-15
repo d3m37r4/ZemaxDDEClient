@@ -89,14 +89,6 @@ std::vector<WindowID> DockableWindowsManager::GetIDsByCategory(WindowCategory ca
     return result;
 }
 
-const std::vector<std::pair<WindowID, bool>> DockableWindowsManager::GetVisibilities() const {
-    std::vector<std::pair<WindowID, bool>> result;
-    for (const auto& w : windows_) {
-        result.push_back({w.id, w.isVisible});
-    }
-    return result;
-}
-
 const char* DockableWindowsManager::GetName(WindowID id) const {
     for (const auto& w : windows_) {
         if (w.id == id) return w.name.c_str();

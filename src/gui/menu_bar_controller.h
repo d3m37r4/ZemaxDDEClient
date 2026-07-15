@@ -16,9 +16,7 @@ namespace gui {
             void setExitCallback(std::function<void()> cb);
             void setAboutCallback(std::function<void()> cb);
             void setUpdatesCallback(std::function<void()> cb);
-            void setDDEConnectionManager(DDEConnectionManager* ddeMgr);
             void setWindowManager(DockableWindowsManager* wndMgr);
-            void setSidebarToggleCallback(std::function<void(bool)> cb);
             void setPreferencesCallback(std::function<void()> cb);
 
             /// Invokes the registered preferences callback (if any). Used by the
@@ -32,6 +30,5 @@ namespace gui {
             std::function<void()> m_onPreferences;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             DockableWindowsManager* m_pWndMgr{nullptr};
-            std::function<void(bool)> m_onSidebarToggle;
     };
 }

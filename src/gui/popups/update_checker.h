@@ -26,14 +26,11 @@ namespace gui {
 
             void render();
             void checkForUpdates();
-            UpdateInfo getUpdateInfo() const { return m_updateInfo; }
             std::string getCurrentVersion() const;
-            std::string getCurrentBuildDate() const;
 
             void setChannel(app::UpdateChannel c) noexcept { m_channel = c; }
             void setAutoCheckOnStartup(bool b) noexcept { m_autoCheckOnStartup = b; }
             [[nodiscard]] bool isAutoCheckEnabled() const noexcept { return m_autoCheckOnStartup; }
-            [[nodiscard]] bool hasChecked() const noexcept { return m_isCheckComplete; }
 
             /// Non-owning; bound by GuiManager after graphics.initialize().
             void setThemeManager(const ThemeManager* themeManager) noexcept { m_themeManager = themeManager; }

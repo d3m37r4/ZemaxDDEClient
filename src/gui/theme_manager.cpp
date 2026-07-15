@@ -313,28 +313,6 @@ bool ThemeManager::apply(const std::string& name) {
     return false;
 }
 
-void ThemeManager::toggle() {
-    // Toggle between light/dark: find first theme with opposite isLight
-    if (m_themes.empty()) return;
-    bool currentLight = m_themes[m_current].isLight;
-    for (size_t i = 0; i < m_themes.size(); ++i) {
-        size_t idx = (m_current + 1 + i) % m_themes.size();
-        if (m_themes[idx].isLight != currentLight) {
-            m_current = idx;
-            applyThemeData(m_themes[idx]);
-            return;
-        }
-    }
-    // fallback: just go to next
-    next();
-}
-
-void ThemeManager::next() {
-    if (m_themes.empty()) return;
-    m_current = (m_current + 1) % m_themes.size();
-    applyThemeData(m_themes[m_current]);
-}
-
 void ThemeManager::applyByMode(app::ThemeMode mode, bool isSystemDark) {
     switch (mode) {
         case app::ThemeMode::Light:

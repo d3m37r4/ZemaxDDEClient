@@ -5,7 +5,6 @@
 
 #include "gui/gui.h"
 #include "gui/constants.h"
-#include "dde/constants.h"
 #include "gui/imgui_utils.h"
 #include "logger/logger.h"
 #include "lib/imgui/imgui.h"

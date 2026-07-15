@@ -47,8 +47,6 @@ namespace gui {
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
             void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
             DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }
-            DDEConnectionManager* getDDEConnectionManager() const { return m_ddeConnectionManager; }
-            ZemaxDDE::ZemaxDDEClient* getDDEClient() const { return m_zemaxDDEClient; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 

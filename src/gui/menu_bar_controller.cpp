@@ -22,16 +22,8 @@ namespace gui {
         m_onUpdates = std::move(cb);
     }
 
-    void MenuBarController::setDDEConnectionManager(DDEConnectionManager* ddeMgr) {
-        m_pDDEClientMgr = ddeMgr;
-    }
-
     void MenuBarController::setWindowManager(DockableWindowsManager* wndMgr) {
         m_pWndMgr = wndMgr;
-    }
-
-    void MenuBarController::setSidebarToggleCallback(std::function<void(bool)> cb) {
-        m_onSidebarToggle = std::move(cb);
     }
 
     void MenuBarController::setPreferencesCallback(std::function<void()> cb) {
