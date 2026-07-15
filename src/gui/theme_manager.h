@@ -90,8 +90,6 @@ class ThemeManager {
 public:
     void registerTheme(const ThemeData& theme);
     bool apply(const std::string& name);
-    void toggle();
-    void next();
 
     /// Resolves @p mode against @p isSystemDark and applies the resulting theme.
     /// Used by SettingsManager for AppSettings.appearance.themeMode.
@@ -100,7 +98,6 @@ public:
     bool isLight() const;
     ImVec4 getClearColor() const;
     const std::string& currentThemeName() const;
-    size_t themeCount() const { return m_themes.size(); }
 
     /// Returns the semantic palette of the currently active theme.
     /// Widgets that draw status text or status-colored buttons should read

@@ -8,7 +8,6 @@
 
 #include "dde/dde_connection.h"
 
-namespace app { struct ZemaxWindowInfo; }
 namespace ZemaxDDE { class ZemaxDDEClient; }
 class Logger;
 
@@ -27,11 +26,7 @@ public:
     int getActiveIndex() const { return m_activeIndex; }
 
     DDEConnection* getConnection(int index);
-    const std::array<DDEConnection, MAX_CONNECTIONS>& getConnections() const { return m_connections; }
 
-    bool isAnyConnected() const;
-
-    void pumpAllMessages();
     void processAllTimeouts();
 
     /// Checks health of all active connections and disconnects any that are lost.
@@ -45,8 +40,6 @@ public:
     [[nodiscard]] const std::string& getConnectionLostReason() const noexcept { return m_connectionLostReason; }
     /// Clears the connection lost state (called after user handles it in popup).
     void clearConnectionLost() noexcept { m_connectionLostIndex = -1; m_connectionLostReason.clear(); }
-
-    std::vector<app::ZemaxWindowInfo> enumerateAvailableTargets();
 
     // Runtime-configurable DDE settings. Forwarded to active clients by
     // SettingsManager::applyDDE. Clamped to safe ranges.
@@ -66,7 +59,6 @@ public:
 
     [[nodiscard]] DWORD getDefaultTimeoutMs() const;
     [[nodiscard]] int   getDefaultRetries()   const;
-    [[nodiscard]] int   getMaxConnections()   const { return m_maxConnections; }
 
     [[nodiscard]] DWORD getGetNameTimeoutMs() const { return m_getNameTimeoutMs; }
     [[nodiscard]] DWORD getGetFileTimeoutMs() const { return m_getFileTimeoutMs; }

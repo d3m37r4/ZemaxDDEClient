@@ -64,8 +64,12 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_irregularityMapService->m_windowState.selectedColormapDeviation = mapSettings.defaultColormapDeviation;
     m_irregularityMapService->m_windowState.highlightWorstSurface = mapSettings.highlightWorstSurface;
     m_irregularityMapService->m_windowState.highlightWorstDeviation = mapSettings.highlightWorstDeviation;
-    m_irregularityMapService->m_windowState.worstColorSurface = ImVec4(mapSettings.worstColorSurface[0], mapSettings.worstColorSurface[1], mapSettings.worstColorSurface[2], 1.0f);
-    m_irregularityMapService->m_windowState.worstColorDeviation = ImVec4(mapSettings.worstColorDeviation[0], mapSettings.worstColorDeviation[1], mapSettings.worstColorDeviation[2], 1.0f);
+    m_irregularityMapService->m_windowState.worstColorSurface[0] = mapSettings.worstColorSurface[0];
+    m_irregularityMapService->m_windowState.worstColorSurface[1] = mapSettings.worstColorSurface[1];
+    m_irregularityMapService->m_windowState.worstColorSurface[2] = mapSettings.worstColorSurface[2];
+    m_irregularityMapService->m_windowState.worstColorDeviation[0] = mapSettings.worstColorDeviation[0];
+    m_irregularityMapService->m_windowState.worstColorDeviation[1] = mapSettings.worstColorDeviation[1];
+    m_irregularityMapService->m_windowState.worstColorDeviation[2] = mapSettings.worstColorDeviation[2];
 
     const auto& themeManager = m_graphics.getThemeManager();
     m_ddeStatusRenderer->setThemeManager(&themeManager);
@@ -182,7 +186,7 @@ void GuiManager::render() {
                         ImGui::SameLine();
                         ImGui::Checkbox("Highlight worst", &m_irregularityMapService->m_windowState.highlightWorstSurface);
                         ImGui::SameLine();
-                        ImGui::ColorEdit3("##worstColorS", &m_irregularityMapService->m_windowState.worstColorSurface.x,
+                        ImGui::ColorEdit3("##worstColorS", m_irregularityMapService->m_windowState.worstColorSurface,
                             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
                     }
                     m_irregularityMapService->renderSurfacePlotLines(ImVec2(-1, -1));
@@ -206,7 +210,7 @@ void GuiManager::render() {
                         ImGui::SameLine();
                         ImGui::Checkbox("Highlight worst", &m_irregularityMapService->m_windowState.highlightWorstDeviation);
                         ImGui::SameLine();
-                        ImGui::ColorEdit3("##worstColorD", &m_irregularityMapService->m_windowState.worstColorDeviation.x,
+                        ImGui::ColorEdit3("##worstColorD", m_irregularityMapService->m_windowState.worstColorDeviation,
                             ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
                     }
                     m_irregularityMapService->renderDeviationSurfacePlotLines(ImVec2(-1, -1));

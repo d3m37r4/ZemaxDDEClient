@@ -100,11 +100,15 @@ set(SOURCES
     ${SRC_DIR}/dde/initial_data_load_service.cpp
     ${SRC_DIR}/dde/utils.cpp
     ${SRC_DIR}/dde/dde_connection_manager.cpp
+    ${SRC_DIR}/app/compute/surface_profile.cpp
+    ${SRC_DIR}/app/compute/surface_map.cpp
+    ${SRC_DIR}/app/services/operation_monitor_service.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
+    ${SRC_DIR}/app/services/surface_profile_service.cpp
+    ${SRC_DIR}/app/services/surface_map_service.cpp
     ${SRC_DIR}/gui/surface_profile_service.cpp
-    ${SRC_DIR}/gui/surface_profile_calculator.cpp
     ${SRC_DIR}/gui/surface_irregularity_map_service.cpp
     ${SRC_DIR}/gui/theme_manager.cpp
     ${SRC_DIR}/gui/settings_manager.cpp

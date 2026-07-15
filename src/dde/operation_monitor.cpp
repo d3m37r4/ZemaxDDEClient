@@ -1,5 +1,4 @@
 #include "operation_monitor.h"
-#include <algorithm>
 
 namespace ZemaxDDE {
 
@@ -76,17 +75,6 @@ int OperationMonitor::findIndex(uint64_t id) const {
         if (m_operations[i].id == id) return static_cast<int>(i);
     }
     return -1;
-}
-
-void OperationMonitor::clearCompleted() {
-    m_operations.erase(
-        std::remove_if(m_operations.begin(), m_operations.end(),
-            [](const OperationInfo& op) {
-                return op.status == OperationStatus::Completed ||
-                       op.status == OperationStatus::Failed ||
-                       op.status == OperationStatus::Cancelled;
-            }),
-        m_operations.end());
 }
 
 } // namespace ZemaxDDE

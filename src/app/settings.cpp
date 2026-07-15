@@ -1,8 +1,6 @@
 #include "app/settings.h"
 
-#include <algorithm>
 #include <fstream>
-#include <limits>
 
 #include <nlohmann/json.hpp>
 

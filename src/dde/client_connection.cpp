@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <stdexcept>
 #include <vector>
 
@@ -20,10 +19,6 @@ namespace ZemaxDDE {
         terminateDDE();
     }
 
-    void ZemaxDDEClient::setOnDDEConnectedCallback(OnDDEConnectedCallback callback) {
-        m_onDDEConnected = callback;
-    }
-
     void ZemaxDDEClient::setOnConnectionLostCallback(OnConnectionLostCallback callback) {
         m_onConnectionLost = callback;
     }
@@ -33,51 +28,6 @@ namespace ZemaxDDE {
             m_logger.addLog(std::format("[DDE] State: {} -> {}",
                 toString(m_connectionState), toString(newState)));
             m_connectionState = newState;
-        }
-    }
-
-    void ZemaxDDEClient::initiateDDE() {
-        if (m_hwndZemaxServer != nullptr) {
-            m_logger.addLog("[DDE] DDE already connected. Skipping initiate.");
-            return;
-        }
-
-        setConnectionState(ConnectionState::Connecting);
-        m_hwndZemaxServer = nullptr;
-
-        ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
-        ATOM topicAtom = GlobalAddAtomW(DDE_TOPIC);
-        DWORD_PTR dwResult = 0;
-        if (!SendMessageTimeoutW(HWND_BROADCAST, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom),
-                SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, DDE_TIMEOUT_MS, &dwResult)) {
-            m_logger.addLog("[DDE] WM_DDE_INITIATE broadcast timed out or failed (hung window detected)");
-        }
-
-        #ifdef DEBUG_LOG
-        char appName[256], topicName[256];
-        WideCharToMultiByte(CP_ACP, 0, DDE_APP_NAME, -1, appName, sizeof(appName), NULL, NULL);
-        WideCharToMultiByte(CP_ACP, 0, DDE_TOPIC, -1, topicName, sizeof(topicName), NULL, NULL);
-        m_logger.addLog(std::format("[DDE] Sent 'WM_DDE_INITIATE' to app='{}', topic='{}'.", appName, topicName));
-        #endif
-    
-        GlobalDeleteAtom(appAtom);
-        GlobalDeleteAtom(topicAtom);
-        checkDDEConnection();
-
-        if (m_hwndZemaxServer) {
-            setConnectionState(ConnectionState::Connected);
-            m_logger.addLog("[DDE] Connection established successfully");
-        } else {
-            m_logger.addLog("[DDE] Connection not established yet (waiting for 'WM_DDE_ACK')");
-        }
-
-        if (m_onDDEConnected) {
-            try {
-                m_onDDEConnected(this);
-            } catch (const std::exception& e) {
-                m_logger.addLog(std::format("[DDE] Error in DDE connected callback: {}", e.what()));
-                throw;
-            }
         }
     }
 
@@ -113,15 +63,6 @@ namespace ZemaxDDE {
             m_logger.addLog("[DDE] Connection established successfully");
         } else {
             m_logger.addLog("[DDE] Connection not established yet (waiting for 'WM_DDE_ACK')");
-        }
-
-        if (m_onDDEConnected) {
-            try {
-                m_onDDEConnected(this);
-            } catch (const std::exception& e) {
-                m_logger.addLog(std::format("[DDE] Error in DDE connected callback: {}", e.what()));
-                throw;
-            }
         }
     }
 

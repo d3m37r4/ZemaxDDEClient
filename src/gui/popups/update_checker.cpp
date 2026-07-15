@@ -43,10 +43,6 @@ namespace gui {
         return APP_FULL_VERSION;
     }
 
-    std::string UpdateChecker::getCurrentBuildDate() const {
-        return __DATE__;
-    }
-
     int UpdateChecker::compareVersions(const std::string& v1, const std::string& v2) {
         std::string s1 = v1;
         std::string s2 = v2;

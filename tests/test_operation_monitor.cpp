@@ -45,23 +45,6 @@ TEST(OperationMonitor, TransitionToFailed) {
     EXPECT_EQ(mon.getOperations()[0].error, "timeout");
 }
 
-TEST(OperationMonitor, ClearCompletedRemovesDone) {
-    OperationMonitor mon;
-    uint64_t id1 = mon.registerOperation("svc", 1);
-    uint64_t id2 = mon.registerOperation("svc", 1);
-    uint64_t id3 = mon.registerOperation("svc", 1);
-
-    mon.onCompleted(id1);
-    mon.onError(id2, "err");
-    mon.onRequestQueued(id3, "cmd");
-
-    mon.clearCompleted();
-
-    EXPECT_EQ(mon.getOperations().size(), 1u);
-    EXPECT_EQ(mon.getOperations()[0].id, id3);
-    EXPECT_EQ(mon.getOperations()[0].status, OperationStatus::InFlight);
-}
-
 TEST(OperationMonitor, IsCancelledFalseByDefault) {
     OperationMonitor mon;
     uint64_t id = mon.registerOperation("svc", 1);
