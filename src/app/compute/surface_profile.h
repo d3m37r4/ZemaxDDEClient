@@ -5,6 +5,7 @@
 #include <string>
 
 #include "app/models/types.h"
+#include "app/models/surface_data.h"
 #include "dde/dde_connection_manager.h"
 #include "dde/client.h"
 

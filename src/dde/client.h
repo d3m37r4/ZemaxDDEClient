@@ -40,7 +40,6 @@ namespace ZemaxDDE {
             ZemaxDDEClient(HWND hwndClient, Logger& logger);
             ~ZemaxDDEClient();
 
-            void initiateDDE();
             void initiateDDE(HWND targetHwnd);
             void terminateDDE();
 
@@ -59,7 +58,6 @@ namespace ZemaxDDE {
 
             /// Sets the server PID for connection health checks.
             void setServerPid(DWORD pid) noexcept { m_serverPid = pid; }
-            [[nodiscard]] DWORD getServerPid() const noexcept { return m_serverPid; }
 
             /// Default timeout/retries used by submitRequest when caller passes
             /// the sentinel value (0 / -1). Updated by DDEConnectionManager from
@@ -92,9 +90,6 @@ namespace ZemaxDDE {
 
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
-            using OnDDEConnectedCallback = std::function<void(ZemaxDDEClient*)>;
-            void setOnDDEConnectedCallback(OnDDEConnectedCallback callback);
-
             /// Submits a DDE request for processing and starts if the pipeline is idle.
             /// @param timeoutMs 0 = use client's default (AppSettings.dde.connectionTimeoutMs).
             /// @param retries   -1 = use client's default (AppSettings.dde.maxRetryCount).
@@ -108,8 +103,6 @@ namespace ZemaxDDE {
 
             // Getters
             [[nodiscard]] const OpticalSystemData& getOpticalSystemData() const noexcept { return m_opticalSystem; }
-            [[nodiscard]] SurfaceData* getTolerancedSurface() noexcept { return &m_tolerancedSurface; }
-            [[nodiscard]] SurfaceData* getNominalSurface() noexcept { return &m_nominalSurface; }
             [[nodiscard]] OperationMonitor* getOperationMonitor() noexcept { return m_operationMonitor.get(); }
 
         private:
@@ -130,11 +123,8 @@ namespace ZemaxDDE {
             ConnectionState m_connectionState = ConnectionState::Disconnected;
             DWORD m_serverPid = 0;
             Logger& m_logger;
-            OnDDEConnectedCallback m_onDDEConnected;
             OnConnectionLostCallback m_onConnectionLost;
             OpticalSystemData m_opticalSystem;
-            SurfaceData m_tolerancedSurface;
-            SurfaceData m_nominalSurface;
 
             std::unique_ptr<InitialDataLoadService> m_initialDataLoad;
             std::unique_ptr<OperationMonitor> m_operationMonitor;

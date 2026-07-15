@@ -12,8 +12,7 @@ enum class OperationStatus {
     Pending,
     InFlight,
     Completed,
-    Failed,
-    Cancelled
+    Failed
 };
 
 struct OperationInfo {
@@ -41,7 +40,6 @@ public:
     bool isCancelled(uint64_t operationId) const;
 
     const std::vector<OperationInfo>& getOperations() const { return m_operations; }
-    void clearCompleted();
 
 private:
     std::vector<OperationInfo> m_operations;

@@ -4,7 +4,6 @@
 #include <format>
 #include <string>
 
-#include "app/zemax_window_enumerator.h"
 #include "dde/client.h"
 #include "dde/utils.h"
 #include "logger/logger.h"
@@ -199,21 +198,6 @@ DDEConnection* DDEConnectionManager::getConnection(int index) {
     return nullptr;
 }
 
-bool DDEConnectionManager::isAnyConnected() const {
-    for (const auto& conn : m_connections) {
-        if (conn.isConnected()) return true;
-    }
-    return false;
-}
-
-void DDEConnectionManager::pumpAllMessages() {
-    for (auto& conn : m_connections) {
-        if (conn.client) {
-            conn.client->pumpMessages();
-        }
-    }
-}
-
 void DDEConnectionManager::processAllTimeouts() {
     for (auto& conn : m_connections) {
         if (conn.client) {
@@ -238,10 +222,6 @@ void DDEConnectionManager::checkAllConnectionHealth() {
         // We do NOT set conn.connectionState here — disconnect() will handle it.
         conn.client->checkConnectionHealth();
     }
-}
-
-std::vector<app::ZemaxWindowInfo> DDEConnectionManager::enumerateAvailableTargets() {
-    return app::ZemaxWindowEnumerator::enumerate();
 }
 
 DWORD DDEConnectionManager::getDefaultTimeoutMs() const {
