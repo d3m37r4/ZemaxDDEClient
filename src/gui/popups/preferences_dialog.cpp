@@ -108,12 +108,18 @@ namespace gui {
             "Files",
         };
 
+        ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.259f, 0.588f, 0.976f, 0.31f));  // #4296f9 @31%
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.259f, 0.588f, 0.976f, 0.80f));  // #4296f9 @80%
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive,  ImVec4(0.259f, 0.588f, 0.976f, 1.00f));  // #4296f9 @100%
+
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
             const bool selected = (static_cast<int>(m_section) == i);
             if (ImGui::Selectable(labels[i], selected)) {
                 m_section = static_cast<Section>(i);
             }
         }
+
+        ImGui::PopStyleColor(3);
     }
 
     void PreferencesDialog::renderContent() {
@@ -353,12 +359,18 @@ namespace gui {
         float cancelBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
         float saveBtnW    = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
+        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.176f, 0.176f, 0.176f, 1.0f));  // #2d2d2d
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  ImVec4(0.220f, 0.220f, 0.220f, 1.0f));  // #383838
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   ImVec4(0.271f, 0.271f, 0.271f, 1.0f));  // #454545
+
         if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
             m_resetConfirmDialog->open();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
         }
+
+        ImGui::PopStyleColor(3);
 
         const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
