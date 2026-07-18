@@ -194,6 +194,9 @@ ThemeData ThemeData::CreateWin11Dark() {
     t.semantic = SemanticPalette::DefaultsFor(false);
     t.clearColor = col(24, 24, 24);  // #181818
 
+    t.geometry.frameRounding = 8.0f;
+    t.geometry.tabRounding   = 8.0f;
+
     ImVec4* c = t.imguiColors;
 
     c[ImGuiCol_Text]                 = col(240, 240, 240);  // #f0f0f0
