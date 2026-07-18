@@ -108,18 +108,12 @@ namespace gui {
             "Files",
         };
 
-        ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.259f, 0.588f, 0.976f, 0.31f));  // #4296f9 @31%
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.259f, 0.588f, 0.976f, 0.80f));  // #4296f9 @80%
-        ImGui::PushStyleColor(ImGuiCol_HeaderActive,  ImVec4(0.259f, 0.588f, 0.976f, 1.00f));  // #4296f9 @100%
-
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
             const bool selected = (static_cast<int>(m_section) == i);
             if (ImGui::Selectable(labels[i], selected)) {
                 m_section = static_cast<Section>(i);
             }
         }
-
-        ImGui::PopStyleColor(3);
     }
 
     void PreferencesDialog::renderContent() {
