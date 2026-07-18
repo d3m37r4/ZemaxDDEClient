@@ -220,9 +220,9 @@ ThemeData ThemeData::CreateWin11Dark() {
     c[ImGuiCol_CheckMark]            = col(66,  150, 250);  // #4296fa
     c[ImGuiCol_SliderGrab]           = col(61,  133, 224);  // #3d85e0
     c[ImGuiCol_SliderGrabActive]     = col(66,  150, 250);  // #4296fa
-    c[ImGuiCol_Button]               = col(66,  150, 249, 102); // #4296f9 @40%
-    c[ImGuiCol_ButtonHovered]        = col(66,  150, 249);  // #4296f9
-    c[ImGuiCol_ButtonActive]         = col(15,  135, 249);  // #0f87f9
+    c[ImGuiCol_Button]               = col(50,  104, 173);  // #3268ad
+    c[ImGuiCol_ButtonHovered]        = col(58,  125, 204);  // #3a7dcc
+    c[ImGuiCol_ButtonActive]         = col(27,  75,  126);  // #1b4b7e
     c[ImGuiCol_Header]               = col(66,  150, 249, 79);  // #4296f9 @31%
     c[ImGuiCol_HeaderHovered]        = col(66,  150, 249, 204); // #4296f9 @80%
     c[ImGuiCol_HeaderActive]         = col(66,  150, 249);  // #4296f9 @100%
