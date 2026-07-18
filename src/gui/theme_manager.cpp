@@ -7,14 +7,6 @@ static ImVec4 col(int r, int g, int b, int a = 255) {
     return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 }
 
-// ===============================================================
-//  Win11 Fluent-Inspired Semantic Palette
-// ===============================================================
-//  Accent-aligned with Win11 system blue (#0078d4). Status colors
-//  follow Win11 / WinUI 3 Fluent guidance: greens are slightly
-//  desaturated for dark mode to avoid eye-strain, danger is
-//  brightened on dark to keep AA contrast on dark surfaces.
-// ===============================================================
 SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
     SemanticPalette p;
 
@@ -55,13 +47,6 @@ SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
     return p;
 }
 
-// ===============================================================
-//  Win11 Light (Fluent-inspired)
-// ===============================================================
-//  Soft Mica-like backgrounds, thin 1px borders, single blue
-//  accent #0078d4, no shadows. Inspired by Win11 Light + VS Code
-//  "Light Modern" themes.
-// ===============================================================
 ThemeData ThemeData::CreateWin11Light() {
     ThemeData t;
     t.name    = std::string{kThemeNameLight};
@@ -173,20 +158,6 @@ ThemeData ThemeData::CreateWin11Light() {
     return t;
 }
 
-// ===============================================================
-//  Win11 Light (Fluent-inspired)
-// ===============================================================
-//  Soft Mica-like backgrounds, thin 1px borders, single blue
-//  accent #0078d4, no shadows. Inspired by Win11 Light + VS Code
-//  "Light Modern" themes.
-// ===============================================================
-//  Win11 Dark (Fluent-inspired)
-// ===============================================================
-//  Inspired by Win11 Dark + VS Code "Dark 2026" / "Dark Modern".
-//  Soft Mica-like charcoal backgrounds, lighter text (#f0f0f0),
-//  lighter semantic colors (success/danger) for AA contrast on
-//  dark surfaces. Accent #0078d4 stays consistent with light.
-// ===============================================================
 ThemeData ThemeData::CreateWin11Dark() {
     ThemeData t;
     t.name    = std::string{kThemeNameDark};
