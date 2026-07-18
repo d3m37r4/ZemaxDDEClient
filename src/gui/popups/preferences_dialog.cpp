@@ -52,7 +52,7 @@ namespace gui {
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_POPUP_MIN_SIZE.x, PREFERENCES_POPUP_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_POPUP_DEFAULT_SIZE);
 
-        if (!ImGui::BeginPopupModal(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
+        if (!ImGuiUtils::BeginPopupModalEx(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 

@@ -22,7 +22,7 @@ namespace gui {
         ImGuiUtils::SetDpiScaledWindowConstraints(CONNECTION_LOST_POPUP_MIN_SIZE.x, CONNECTION_LOST_POPUP_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(CONNECTION_LOST_POPUP_DEFAULT_SIZE);
 
-        if (!ImGui::BeginPopupModal("Connection Lost", &m_open, ImGuiWindowFlags_NoCollapse)) {
+        if (!ImGuiUtils::BeginPopupModalEx("Connection Lost", &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 

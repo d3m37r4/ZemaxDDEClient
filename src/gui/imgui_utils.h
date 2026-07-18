@@ -175,4 +175,16 @@ namespace ImGuiUtils {
         }
     }
 
+    /// BeginPopupModal with a taller title bar (extraPadY added to FramePadding.y).
+    /// PopStyleVar is called immediately after BeginPopupModal so content is unaffected.
+    inline bool BeginPopupModalEx(const char* name, bool* p_open = nullptr,
+        ImGuiWindowFlags flags = 0, float extraPadY = 4.0f)
+    {
+        ImVec2 pad = ImGui::GetStyle().FramePadding;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(pad.x, pad.y + extraPadY));
+        bool open = ImGui::BeginPopupModal(name, p_open, flags);
+        ImGui::PopStyleVar();
+        return open;
+    }
+
 } // namespace ImGuiUtils
