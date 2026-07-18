@@ -42,8 +42,8 @@ namespace gui {
         }
 
         // Register built-in themes
-        m_themeManager.registerTheme(ThemeData::CreateWin11Light());
-        m_themeManager.registerTheme(ThemeData::CreateWin11Dark());
+        m_themeManager.registerTheme(ThemeData::CreateThemeLight());
+        m_themeManager.registerTheme(ThemeData::CreateThemeDark());
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();

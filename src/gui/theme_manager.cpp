@@ -47,7 +47,7 @@ SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
     return p;
 }
 
-ThemeData ThemeData::CreateWin11Light() {
+ThemeData ThemeData::CreateThemeLight() {
     ThemeData t;
     t.name    = std::string{kThemeNameLight};
     t.isLight = true;
@@ -158,7 +158,7 @@ ThemeData ThemeData::CreateWin11Light() {
     return t;
 }
 
-ThemeData ThemeData::CreateWin11Dark() {
+ThemeData ThemeData::CreateThemeDark() {
     ThemeData t;
     t.name    = std::string{kThemeNameDark};
     t.isLight = false;

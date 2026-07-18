@@ -82,8 +82,8 @@ struct ThemeData {
     ThemeGeometry geometry;
     SemanticPalette semantic;
 
-    static ThemeData CreateWin11Light();
-    static ThemeData CreateWin11Dark();
+    static ThemeData CreateThemeLight();
+    static ThemeData CreateThemeDark();
 };
 
 class ThemeManager {
