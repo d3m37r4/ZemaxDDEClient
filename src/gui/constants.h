@@ -8,7 +8,7 @@ namespace gui {
     inline constexpr ImVec2 DDE_STATUS_CONTENT_SIZE      = ImVec2(0.0f, 0.0f);   // Automatic size
 
     // Debug log window constraints
-    inline constexpr ImVec2 DEBUG_LOG_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
+    inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
 
     // System info window constraints
     inline constexpr ImVec2 SYSTEM_INFO_WINDOW_MIN_SIZE  = ImVec2(200.0f, 160.0f);

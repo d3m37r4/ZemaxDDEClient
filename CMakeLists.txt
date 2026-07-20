@@ -123,7 +123,7 @@ set(SOURCES
     ${SRC_DIR}/gui/popups/connect_dde.cpp
     ${SRC_DIR}/gui/dockable_windows_manager.cpp
     ${SRC_DIR}/gui/windows_dockable/dde_status.cpp
-    ${SRC_DIR}/gui/windows_dockable/debug_log.cpp
+    ${SRC_DIR}/gui/windows_dockable/logs.cpp
     ${SRC_DIR}/gui/windows_dockable/optical_system_info.cpp
     ${SRC_DIR}/gui/windows_dockable/surface_profile_inspector.cpp
     ${SRC_DIR}/gui/windows_dockable/surface_irregularity_map.cpp

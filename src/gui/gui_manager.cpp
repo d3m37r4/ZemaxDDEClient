@@ -33,7 +33,7 @@ namespace gui {
         m_updateChecker->open();
     });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
-    m_debugLogRenderer = std::make_unique<DebugLog>();
+    m_logsRenderer = std::make_unique<Logs>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
     m_connectionLostDialog = std::make_unique<ConnectionLostDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
@@ -265,9 +265,9 @@ void GuiManager::updateDpiStyle(float dpiScale) {
     m_graphics.updateDpiStyle(dpiScale);
 }
 
-void GuiManager::renderDebugLog() {
-    if (m_debugLogRenderer) {
-        m_debugLogRenderer->render(m_logger, &m_graphics.getThemeManager());
+void GuiManager::renderLogs() {
+    if (m_logsRenderer) {
+        m_logsRenderer->render(m_logger, &m_graphics.getThemeManager());
     }
 }
 

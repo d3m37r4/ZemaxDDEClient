@@ -1,4 +1,4 @@
-#include "windows_dockable/debug_log.h"
+#include "windows_dockable/logs.h"
 
 #include <format>
 #include <string>
@@ -14,20 +14,20 @@
 #include "logger/logger.h"
 
 namespace gui {
-    void DebugLog::render(Logger& logger, const ThemeManager* themeManager) {
-        ImGui::BeginChild("DebugLogHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
+    void Logs::render(Logger& logger, const ThemeManager* themeManager) {
+        ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
         if (ImGui::Button(ICON_FA_FILE_EXPORT " Text")) {
             std::string content;
             for (const auto& entry : logger.getLogs()) {
                 content += entry;
                 content += '\n';
             }
-            auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_DebugLog_Temp.txt", content);
+            auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_Logs_Temp.txt", content);
             if (tempPathOpt) {
                 ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
-                logger.addLog(std::format("[GUI] Debug log saved to {}", tempPathOpt->string()));
+                logger.addLog(std::format("[GUI] Log exported to {}", tempPathOpt->string()));
             } else {
-                logger.addLog("[GUI] Failed to create temporary file for debug log export");
+                logger.addLog("[GUI] Failed to create temporary file for log export");
             }
         }
 
@@ -39,7 +39,7 @@ namespace gui {
                 content += entry;
                 content += '\n';
             }
-            logger.addLog("[GUI] Debug log copied to clipboard");
+            logger.addLog("[GUI] Logs copied to clipboard");
             ImGui::SetClipboardText(content.c_str());
         }
 
@@ -58,7 +58,7 @@ namespace gui {
         ImGui::PopStyleColor(4);
         ImGui::EndChild();
 
-        ImGui::BeginChild("DebugLogContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+        ImGui::BeginChild("LogsContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
         static size_t lastLogSize = 0;
         const auto& logEntries = logger.getLogs();
 

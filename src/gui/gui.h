@@ -13,7 +13,7 @@
 #include "windows_dockable/dde_status.h"
 #include "gui/menu_bar_controller.h"
 #include "gui/graphics_backend.h"
-#include "windows_dockable/debug_log.h"
+#include "windows_dockable/logs.h"
 #include "gui/popups/about_dialog.h"
 #include "gui/popups/connection_lost_dialog.h"
 #include "gui/popups/preferences_dialog.h"
@@ -53,7 +53,7 @@ namespace gui {
             void renderOpticalSystemInfo();
             void renderSurfaceProfileInspector();
             void renderSurfaceIrregularityMap();
-            void renderDebugLog();
+            void renderLogs();
 
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
@@ -71,7 +71,7 @@ namespace gui {
             std::unique_ptr<SurfaceIrregularityMapService> m_irregularityMapService;
             std::unique_ptr<MenuBarController> m_menuBarController;
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
-            std::unique_ptr<DebugLog> m_debugLogRenderer;
+            std::unique_ptr<Logs> m_logsRenderer;
             std::unique_ptr<AboutDialog> m_aboutDialog;
             std::unique_ptr<ConnectionLostDialog> m_connectionLostDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;

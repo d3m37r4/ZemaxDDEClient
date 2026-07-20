@@ -301,7 +301,7 @@ namespace gui {
     void PreferencesDialog::renderSectionLogging() {
         ImGuiUtils::SectionHeader("Logging", "Logging and debug log settings.");
 
-        ImGui::Checkbox("Show debug log window on startup", &m_working.logging.showDebugLogOnStartup);
+        ImGui::Checkbox("Show logs window on startup", &m_working.logging.showLogsOnStartup);
         ImGui::Checkbox("Enable file logging", &m_working.logging.enableFileLogging);
 
         ImGui::Spacing();

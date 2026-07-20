@@ -26,7 +26,7 @@ int main() {
     if (general.restoreWindowLayout) {
         wndMgr.LoadState();
     }
-    wndMgr.SetVisible(WindowID::DebugLog, logging.showDebugLogOnStartup);
+    wndMgr.SetVisible(WindowID::Logs, logging.showLogsOnStartup);
 
     ctx->gui->setWindowManager(&wndMgr);
 
