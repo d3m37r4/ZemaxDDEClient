@@ -141,9 +141,9 @@ namespace gui {
         ImGuiUtils::SectionHeader("Appearance", "Theme changes are applied immediately.");
 
         int mode = static_cast<int>(m_working.appearance.themeMode);
-        if (ImGui::RadioButton("Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
-        if (ImGui::RadioButton("Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
-        if (ImGui::RadioButton("System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
+        if (ImGui::RadioButton(ICON_FA_SUN " Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
+        if (ImGui::RadioButton(ICON_FA_MOON " Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
+        if (ImGui::RadioButton(ICON_FA_DISPLAY " System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
     }
 
     void PreferencesDialog::renderSectionDDE() {
@@ -354,9 +354,11 @@ namespace gui {
         float cancelBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
         float saveBtnW    = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.176f, 0.176f, 0.176f, 1.0f));  // #2d2d2d
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  ImVec4(0.220f, 0.220f, 0.220f, 1.0f));  // #383838
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   ImVec4(0.271f, 0.271f, 0.271f, 1.0f));  // #454545
+        const auto& sem = m_themeManager->semantic();
+
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
 
         if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
             m_resetConfirmDialog->open();
@@ -370,6 +372,10 @@ namespace gui {
         const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
 
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
+
         if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             onCancel();
         }
@@ -377,10 +383,11 @@ namespace gui {
             ImGui::SetTooltip("Discard all changes and revert to the last saved values.");
         }
 
+        ImGui::PopStyleColor(3);
+
         ImGui::SameLine();
 
         {
-            const auto& sem = m_themeManager->semantic();
             ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);

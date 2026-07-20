@@ -61,6 +61,10 @@ struct SemanticPalette {
     ImVec4 dangerButtonHover;
     ImVec4 dangerButtonActive;
 
+    ImVec4 neutralButton;
+    ImVec4 neutralButtonHover;
+    ImVec4 neutralButtonActive;
+
     ImVec4 onAccent;         // Text drawn on top of an accent-colored button.
 
     /// Shared default values used by both built-in themes. The @p isLight

@@ -25,6 +25,10 @@ SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
         p.dangerButtonHover  = ImVec4(0.890f, 0.298f, 0.314f, 1.0f);
         p.dangerButtonActive = ImVec4(0.671f, 0.149f, 0.165f, 1.0f);
 
+        p.neutralButton       = ImVec4(0.839f, 0.839f, 0.839f, 1.0f);  // #d6d6d6
+        p.neutralButtonHover  = ImVec4(0.890f, 0.890f, 0.890f, 1.0f);  // #e3e3e3
+        p.neutralButtonActive = ImVec4(0.780f, 0.780f, 0.780f, 1.0f);  // #c7c7c7
+
         p.onAccent = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     } else {
         p.success = ImVec4(0.247f, 0.725f, 0.314f, 1.0f);  // #3fb950  (GitHub Dark Primer green)
@@ -40,6 +44,10 @@ SemanticPalette SemanticPalette::DefaultsFor(bool isLight) {
         p.dangerButton       = ImVec4(0.675f, 0.180f, 0.157f, 1.0f);  // #ac2e28  (deep saturated red)
         p.dangerButtonHover  = ImVec4(0.792f, 0.216f, 0.184f, 1.0f);  // #ca372f  (hover)
         p.dangerButtonActive = ImVec4(0.518f, 0.141f, 0.122f, 1.0f);  // #84241f  (active)
+
+        p.neutralButton       = ImVec4(0.176f, 0.176f, 0.176f, 1.0f);  // #2d2d2d
+        p.neutralButtonHover  = ImVec4(0.220f, 0.220f, 0.220f, 1.0f);  // #383838
+        p.neutralButtonActive = ImVec4(0.271f, 0.271f, 0.271f, 1.0f);  // #454545
 
         p.onAccent = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     }
