@@ -267,7 +267,7 @@ void GuiManager::updateDpiStyle(float dpiScale) {
 
 void GuiManager::renderDebugLog() {
     if (m_debugLogRenderer) {
-        m_debugLogRenderer->render(m_logger);
+        m_debugLogRenderer->render(m_logger, &m_graphics.getThemeManager());
     }
 }
 

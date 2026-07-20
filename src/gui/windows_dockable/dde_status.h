@@ -17,7 +17,10 @@ namespace gui {
         void render(Logger& logger);
 
         /// Non-owning; bound by GuiManager after graphics.initialize().
-        void setThemeManager(const ThemeManager* themeManager) noexcept { m_themeManager = themeManager; }
+        void setThemeManager(const ThemeManager* themeManager) noexcept {
+            m_themeManager = themeManager;
+            m_connectPopup->setThemeManager(themeManager);
+        }
         void setLogger(Logger* logger) noexcept { m_connectPopup->setLogger(logger); }
 
     private:

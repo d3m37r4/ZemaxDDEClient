@@ -4,6 +4,7 @@
 #include "dde/dde_connection_manager.h"
 #include "gui/constants.h"
 #include "gui/dockable_windows_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include <format>
 
@@ -36,19 +37,19 @@ namespace gui {
 
     void MenuBarController::render() {
         if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax(m_logger);
+            if (ImGui::BeginMenu(ICON_FA_FOLDER_OPEN " File")) {
+                if (ImGui::MenuItem(ICON_FA_FILE_IMPORT " Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax(m_logger);
                 ImGui::Separator();
-                if (ImGui::MenuItem(PREFERENCES_POPUP_NAME, "Ctrl+,", false, true)) {
+                if (ImGui::MenuItem(ICON_FA_GEAR " Preferences", "Ctrl+,", false, true)) {
                     if (m_onPreferences) m_onPreferences();
                 }
                 ImGui::Separator();
-                if (ImGui::MenuItem("Exit", "Alt+F4")) {
+                if (ImGui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit", "Alt+F4")) {
                     if (m_onExit) m_onExit();
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("DDE")) {
+            if (ImGui::BeginMenu(ICON_FA_LINK " DDE")) {
                 if (m_pWndMgr) {
                     bool showDDEStatus = m_pWndMgr->IsVisible(WindowID::DDEStatus);
                     if (ImGui::MenuItem("Show DDE Status", nullptr, &showDDEStatus)) {
@@ -57,7 +58,7 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (m_pWndMgr && ImGui::BeginMenu("Tools")) {
+            if (m_pWndMgr && ImGui::BeginMenu(ICON_FA_WRENCH " Tools")) {
                 auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Tools);
                 for (WindowID id : ids) {
                     bool visible = m_pWndMgr->IsVisible(id);
@@ -69,7 +70,7 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Info")) {
+            if (ImGui::BeginMenu(ICON_FA_CIRCLE_INFO " Info")) {
                 if (m_pWndMgr) {
                     auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Info);
                     for (WindowID id : ids) {
@@ -84,10 +85,10 @@ namespace gui {
                         ImGui::Separator();
                     }
                 }
-                if (ImGui::MenuItem(UPDATE_POPUP_NAME)) {
+                if (ImGui::MenuItem("Check for Updates")) {
                     if (m_onUpdates) m_onUpdates();
                 }
-                if (ImGui::MenuItem(ABOUT_POPUP_NAME)) {
+                if (ImGui::MenuItem("About")) {
                     if (m_onAbout) m_onAbout();
                 }
                 ImGui::EndMenu();

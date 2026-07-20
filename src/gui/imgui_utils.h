@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numbers>
 #include "imgui.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 
 namespace ImGuiUtils {
     /// Vertical spacer proportional to current font size.
@@ -29,7 +30,7 @@ namespace ImGuiUtils {
 
     /// Shows a (?)-mark with a tooltip on hover.
     inline void HelpMarker(const char* desc) {
-        ImGui::TextDisabled("(?)");
+        ImGui::TextDisabled("%s", ICON_FA_CIRCLE_QUESTION);
         if (ImGui::BeginItemTooltip()) {
             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45.0f);
             ImGui::TextUnformatted(desc);

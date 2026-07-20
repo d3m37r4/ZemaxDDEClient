@@ -8,13 +8,15 @@
 
 #include "gui/constants.h"
 #include "gui/utils.h"
+#include "gui/theme_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
 namespace gui {
-    void DebugLog::render(Logger& logger) {
+    void DebugLog::render(Logger& logger, const ThemeManager* themeManager) {
         ImGui::BeginChild("DebugLogHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
-        if (ImGui::Button("Text")) {
+        if (ImGui::Button(ICON_FA_FILE_EXPORT " Text")) {
             std::string content;
             for (const auto& entry : logger.getLogs()) {
                 content += entry;
@@ -31,7 +33,7 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Copy to clipboard")) {
+        if (ImGui::Button(ICON_FA_COPY " Copy to clipboard")) {
             std::string content;
             for (const auto& entry : logger.getLogs()) {
                 content += entry;
@@ -43,10 +45,17 @@ namespace gui {
 
         ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("Clear logs").x - ImGui::GetStyle().FramePadding.x * 2);
-        if (ImGui::Button("Clear logs")) {
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(ICON_FA_TRASH " Clear logs").x - ImGui::GetStyle().FramePadding.x * 2);
+
+        const auto& sem = themeManager->semantic();
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
+        ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+        if (ImGui::Button(ICON_FA_TRASH " Clear logs")) {
             logger.clearLogs();
         }
+        ImGui::PopStyleColor(4);
         ImGui::EndChild();
 
         ImGui::BeginChild("DebugLogContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);

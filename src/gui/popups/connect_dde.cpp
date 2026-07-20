@@ -6,6 +6,8 @@
 #include "gui/utils.h"
 #include "gui/imgui_utils.h"
 #include "gui/constants.h"
+#include "gui/theme_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -64,7 +66,13 @@ namespace gui {
             ImGui::BeginDisabled();
         }
 
-        if (ImGui::Button("Connect", ImVec2(connectBtnW, 0))) {
+        const auto& sem = m_themeManager->semantic();
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);
+        ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+
+        if (ImGui::Button(ICON_FA_PLUG " Connect", ImVec2(connectBtnW, 0))) {
             const auto& wnd = windows[m_selectedWindowIndex];
             int slot = m_connectionManager->connectToZemax(wnd.hwnd, wnd.title);
             if (slot >= 0) {
@@ -75,6 +83,8 @@ namespace gui {
                 m_logger->addLog(std::format("[DDE] Failed to connect to: {}", title));
             }
         }
+
+        ImGui::PopStyleColor(4);
 
         if (!canConnect) {
             ImGui::EndDisabled();

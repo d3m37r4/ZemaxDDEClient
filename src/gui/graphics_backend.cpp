@@ -17,6 +17,8 @@
 
 #include "gui/graphics_backend.h"
 #include "gui/constants.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
+#include "assets/icons/fa/fa_compressed.h"
 #include "app/config_path.h"
 #include <cmath>
 #include "logger/logger.h"
@@ -81,6 +83,17 @@ namespace gui {
             if (!font) {
                 logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
             }
+        }
+
+        // Merge Font Awesome 6 Regular (icons)
+        {
+            ImFontConfig faCfg;
+            faCfg.MergeMode = true;
+            faCfg.PixelSnapH = true;
+            faCfg.FontNo = 0;
+            io.Fonts->AddFontFromMemoryCompressedTTF(
+                fa_compressed_compressed_data, fa_compressed_compressed_size,
+                BASE_FONT_SIZE * 0.8f, &faCfg);
         }
 
         ImGuiStyle& style = ImGui::GetStyle();

@@ -9,6 +9,7 @@
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "gui/theme_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -98,14 +99,14 @@ namespace gui {
 
     void PreferencesDialog::renderSidebar() {
         static const char* labels[static_cast<int>(Section::Count)] = {
-            "General",
-            "Appearance",
-            "DDE Connection",
-            "DDE Performance",
-            "Plot Settings",
-            "Updates",
-            "Logging",
-            "Files",
+            ICON_FA_SLIDERS " General",
+            ICON_FA_PALETTE " Appearance",
+            ICON_FA_PLUG " DDE Connection",
+            ICON_FA_GAUGE_HIGH " DDE Performance",
+            ICON_FA_CHART_LINE " Plot Settings",
+            ICON_FA_ARROW_UP " Updates",
+            ICON_FA_FILE_LINES " Logging",
+            ICON_FA_FOLDER " Files",
         };
 
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
@@ -325,7 +326,7 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
         ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
-        if (ImGui::Button("Clean logs")) {
+        if (ImGui::Button(ICON_FA_BROOM " Clean logs")) {
             m_cleanLogsConfirmDialog->open();
         }
         ImGui::PopStyleColor(4);
@@ -357,7 +358,7 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  ImVec4(0.220f, 0.220f, 0.220f, 1.0f));  // #383838
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,   ImVec4(0.271f, 0.271f, 0.271f, 1.0f));  // #454545
 
-        if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
+        if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
             m_resetConfirmDialog->open();
         }
         if (ImGui::IsItemHovered()) {
@@ -369,7 +370,7 @@ namespace gui {
         const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
 
-        if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
+        if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             onCancel();
         }
         if (ImGui::IsItemHovered()) {
@@ -378,8 +379,16 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Save", ImVec2(saveBtnW, 0))) {
-            onSave();
+        {
+            const auto& sem = m_themeManager->semantic();
+            ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);
+            ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+            if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save", ImVec2(saveBtnW, 0))) {
+                onSave();
+            }
+            ImGui::PopStyleColor(4);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json.");
