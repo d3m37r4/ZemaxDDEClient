@@ -16,7 +16,7 @@
 namespace gui {
     void Logs::render(Logger& logger, const ThemeManager* themeManager) {
         ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
-        if (ImGui::Button(ICON_FA_FILE_EXPORT " Text")) {
+        if (ImGui::Button(ICON_FA_FILE_EXPORT)) {
             std::string content;
             for (const auto& entry : logger.getLogs()) {
                 content += entry;
@@ -30,10 +30,11 @@ namespace gui {
                 logger.addLog("[GUI] Failed to create temporary file for log export");
             }
         }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Export logs to a temporary text file and open it");
 
         ImGui::SameLine();
 
-        if (ImGui::Button(ICON_FA_COPY " Copy to clipboard")) {
+        if (ImGui::Button(ICON_FA_COPY)) {
             std::string content;
             for (const auto& entry : logger.getLogs()) {
                 content += entry;
@@ -42,19 +43,21 @@ namespace gui {
             logger.addLog("[GUI] Logs copied to clipboard");
             ImGui::SetClipboardText(content.c_str());
         }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Copy all log entries to clipboard");
 
         ImGui::SameLine();
 
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(ICON_FA_TRASH " Clear logs").x - ImGui::GetStyle().FramePadding.x * 2);
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(ICON_FA_TRASH).x - ImGui::GetStyle().FramePadding.x * 2);
 
         const auto& sem = themeManager->semantic();
         ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
         ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
-        if (ImGui::Button(ICON_FA_TRASH " Clear logs")) {
+        if (ImGui::Button(ICON_FA_TRASH)) {
             logger.clearLogs();
         }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete all log entries");
         ImGui::PopStyleColor(4);
         ImGui::EndChild();
 
