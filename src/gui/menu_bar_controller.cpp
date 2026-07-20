@@ -49,7 +49,7 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu(ICON_FA_LINK " DDE")) {
+            if (ImGui::BeginMenu(ICON_FA_COMPUTER " DDE")) {
                 if (m_pWndMgr) {
                     bool showDDEStatus = m_pWndMgr->IsVisible(WindowID::DDEStatus);
                     if (ImGui::MenuItem("Show DDE Status", nullptr, &showDDEStatus)) {
@@ -70,7 +70,7 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu(ICON_FA_CIRCLE_INFO " Info")) {
+            if (ImGui::BeginMenu(ICON_FA_CLIPBOARD_LIST " Info")) {
                 if (m_pWndMgr) {
                     auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Info);
                     for (WindowID id : ids) {
