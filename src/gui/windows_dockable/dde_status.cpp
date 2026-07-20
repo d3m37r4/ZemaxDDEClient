@@ -4,6 +4,7 @@
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "dde/utils.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
@@ -31,24 +32,29 @@ namespace gui {
             const bool connected = (activeIdx >= 0) && !connectionLost;
             const char* label = "Zemax DDE Status:";
             const char* value;
+            const char* icon;
             ImVec4 valueColor;
 
             const auto& sem = m_themeManager->semantic();
             if (connectionLost) {
                 value = "Connection Lost";
+                icon = ICON_FA_TRIANGLE_EXCLAMATION;
                 valueColor = sem.warning;
             } else if (connected) {
                 value = "Connected";
+                icon = ICON_FA_CIRCLE_CHECK;
                 valueColor = sem.success;
             } else {
                 value = "Disconnected";
+                icon = ICON_FA_CIRCLE_XMARK;
                 valueColor = sem.danger;
             }
 
             float availableWidth = ImGui::GetContentRegionAvail().x;
             float labelWidth = ImGui::CalcTextSize(label).x;
             float valueWidth = ImGui::CalcTextSize(value).x;
-            float totalWidth = labelWidth + valueWidth + ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP);
+            float iconWidth = ImGui::CalcTextSize(icon).x;
+            float totalWidth = labelWidth + valueWidth + iconWidth + ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP) * 2;
             float offsetX = (availableWidth - totalWidth) * 0.5f;
             if (offsetX > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offsetX);
 
@@ -57,12 +63,15 @@ namespace gui {
 
             ImGui::PushStyleColor(ImGuiCol_Text, valueColor);
             ImGui::TextUnformatted(value);
+            ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
+            ImGui::TextUnformatted(icon);
             ImGui::PopStyleColor();
         }
 
         if (connectionCount > 0) {
             ImGui::Separator();
             ImGui::Text("Active Target:");
+            ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
 
             std::string preview;
             for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
@@ -94,7 +103,7 @@ namespace gui {
 
                 if (connectionCount < DDEConnectionManager::MAX_CONNECTIONS) {
                     ImGui::Separator();
-                    if (ImGui::Selectable("+ Connect to another Zemax...")) {
+                    if (ImGui::Selectable(ICON_FA_PLUS " Connect to another Zemax...")) {
                         m_connectPopup->open();
                     }
                 }
@@ -117,7 +126,7 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
-        if (ImGui::Button(connected ? "Disconnect from Zemax" : "Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
+        if (ImGui::Button(connected ? ICON_FA_PLUG_CIRCLE_XMARK " Disconnect from Zemax" : ICON_FA_PLUG " Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             if (connected) {
                 if (connectionLost) {
                     m_connectionManager->clearConnectionLost();

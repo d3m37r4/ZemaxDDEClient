@@ -160,18 +160,18 @@ namespace {
         }
     }
 
-    void RenderDebugLogWindow(gui::GuiManager* guiMgr) {
+    void RenderLogsWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
-        bool isVisible = mgr->IsVisible(WindowID::DebugLog);
-        const char* title = mgr->GetName(WindowID::DebugLog);
-        ImGuiUtils::SetDpiScaledWindowConstraints(gui::DEBUG_LOG_WINDOW_MIN_SIZE.x, gui::DEBUG_LOG_WINDOW_MIN_SIZE.y);
+        bool isVisible = mgr->IsVisible(WindowID::Logs);
+        const char* title = mgr->GetName(WindowID::Logs);
+        ImGuiUtils::SetDpiScaledWindowConstraints(gui::LOGS_WINDOW_MIN_SIZE.x, gui::LOGS_WINDOW_MIN_SIZE.y);
         if (ImGui::Begin(title, &isVisible)) {
-            guiMgr->renderDebugLog();
+            guiMgr->renderLogs();
         }
         ImGui::End();
         if (!isVisible) {
-            guiMgr->getWindowManager()->SetVisible(WindowID::DebugLog, false);
+            guiMgr->getWindowManager()->SetVisible(WindowID::Logs, false);
         }
     }
 
@@ -185,8 +185,8 @@ namespace {
                 return [guiMgr]() { RenderSurfaceProfileInspectorWindow(guiMgr); };
             case WindowID::SurfaceIrregularityMap:
                 return [guiMgr]() { RenderSurfaceIrregularityMapWindow(guiMgr); };
-            case WindowID::DebugLog:
-                return [guiMgr]() { RenderDebugLogWindow(guiMgr); };
+            case WindowID::Logs:
+                return [guiMgr]() { RenderLogsWindow(guiMgr); };
             default:
                 return nullptr;
         }

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numbers>
 #include "imgui.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 
 namespace ImGuiUtils {
     /// Vertical spacer proportional to current font size.
@@ -29,7 +30,7 @@ namespace ImGuiUtils {
 
     /// Shows a (?)-mark with a tooltip on hover.
     inline void HelpMarker(const char* desc) {
-        ImGui::TextDisabled("(?)");
+        ImGui::TextDisabled("%s", ICON_FA_CIRCLE_QUESTION);
         if (ImGui::BeginItemTooltip()) {
             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45.0f);
             ImGui::TextUnformatted(desc);
@@ -173,6 +174,18 @@ namespace ImGuiUtils {
             ImGui::TextDisabled(description);
             ImGui::Spacing();
         }
+    }
+
+    /// BeginPopupModal with a taller title bar (extraPadY added to FramePadding.y).
+    /// PopStyleVar is called immediately after BeginPopupModal so content is unaffected.
+    inline bool BeginPopupModalEx(const char* name, bool* p_open = nullptr,
+        ImGuiWindowFlags flags = 0, float extraPadY = 4.0f)
+    {
+        ImVec2 pad = ImGui::GetStyle().FramePadding;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(pad.x, pad.y + extraPadY));
+        bool open = ImGui::BeginPopupModal(name, p_open, flags);
+        ImGui::PopStyleVar();
+        return open;
     }
 
 } // namespace ImGuiUtils

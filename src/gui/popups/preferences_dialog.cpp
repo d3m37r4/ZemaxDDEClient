@@ -9,6 +9,7 @@
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "gui/theme_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -52,7 +53,7 @@ namespace gui {
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_POPUP_MIN_SIZE.x, PREFERENCES_POPUP_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_POPUP_DEFAULT_SIZE);
 
-        if (!ImGui::BeginPopupModal(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
+        if (!ImGuiUtils::BeginPopupModalEx(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
             return;
         }
 
@@ -98,14 +99,14 @@ namespace gui {
 
     void PreferencesDialog::renderSidebar() {
         static const char* labels[static_cast<int>(Section::Count)] = {
-            "General",
-            "Appearance",
-            "DDE Connection",
-            "DDE Performance",
-            "Plot Settings",
-            "Updates",
-            "Logging",
-            "Files",
+            ICON_FA_SLIDERS " General",
+            ICON_FA_PALETTE " Appearance",
+            ICON_FA_PLUG " DDE Connection",
+            ICON_FA_GAUGE_HIGH " DDE Performance",
+            ICON_FA_CHART_LINE " Plot Settings",
+            ICON_FA_ARROW_UP " Updates",
+            ICON_FA_FILE_LINES " Logging",
+            ICON_FA_FOLDER " Files",
         };
 
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
@@ -140,9 +141,9 @@ namespace gui {
         ImGuiUtils::SectionHeader("Appearance", "Theme changes are applied immediately.");
 
         int mode = static_cast<int>(m_working.appearance.themeMode);
-        if (ImGui::RadioButton("Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
-        if (ImGui::RadioButton("Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
-        if (ImGui::RadioButton("System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
+        if (ImGui::RadioButton(ICON_FA_SUN " Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
+        if (ImGui::RadioButton(ICON_FA_MOON " Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
+        if (ImGui::RadioButton(ICON_FA_DISPLAY " System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
     }
 
     void PreferencesDialog::renderSectionDDE() {
@@ -300,7 +301,7 @@ namespace gui {
     void PreferencesDialog::renderSectionLogging() {
         ImGuiUtils::SectionHeader("Logging", "Logging and debug log settings.");
 
-        ImGui::Checkbox("Show debug log window on startup", &m_working.logging.showDebugLogOnStartup);
+        ImGui::Checkbox("Show logs window on startup", &m_working.logging.showLogsOnStartup);
         ImGui::Checkbox("Enable file logging", &m_working.logging.enableFileLogging);
 
         ImGui::Spacing();
@@ -325,7 +326,7 @@ namespace gui {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
         ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
-        if (ImGui::Button("Clean logs")) {
+        if (ImGui::Button(ICON_FA_BROOM " Clean logs")) {
             m_cleanLogsConfirmDialog->open();
         }
         ImGui::PopStyleColor(4);
@@ -353,27 +354,48 @@ namespace gui {
         float cancelBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
         float saveBtnW    = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
-        if (ImGui::Button("Reset", ImVec2(resetBtnW, 0))) {
+        const auto& sem = m_themeManager->semantic();
+
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
+
+        if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
             m_resetConfirmDialog->open();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
         }
 
+        ImGui::PopStyleColor(3);
+
         const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
 
-        if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
+
+        if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             onCancel();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and revert to the last saved values.");
         }
 
+        ImGui::PopStyleColor(3);
+
         ImGui::SameLine();
 
-        if (ImGui::Button("Save", ImVec2(saveBtnW, 0))) {
-            onSave();
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);
+            ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+            if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save", ImVec2(saveBtnW, 0))) {
+                onSave();
+            }
+            ImGui::PopStyleColor(4);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json.");

@@ -100,7 +100,7 @@ namespace app {
         updates.autoCheckOnStartup = false;
         updates.channel = UpdateChannel::Stable;
 
-        logging.showDebugLogOnStartup = true;
+        logging.showLogsOnStartup = true;
         logging.enableFileLogging = true;
         logging.logFileSizeMB = 5;
         logging.logFolderSizeThresholdMB = 50;
@@ -273,8 +273,8 @@ namespace app {
         // --- Logging ---
         if (j.contains("logging") && j["logging"].is_object()) {
             const auto& l = j["logging"];
-            if (l.contains("showDebugLogOnStartup") && l["showDebugLogOnStartup"].is_boolean())
-                logging.showDebugLogOnStartup = l["showDebugLogOnStartup"].get<bool>();
+            if (l.contains("showLogsOnStartup") && l["showLogsOnStartup"].is_boolean())
+                logging.showLogsOnStartup = l["showLogsOnStartup"].get<bool>();
             if (l.contains("enableFileLogging") && l["enableFileLogging"].is_boolean())
                 logging.enableFileLogging = l["enableFileLogging"].get<bool>();
             if (l.contains("logFileSizeMB") && l["logFileSizeMB"].is_number_integer())
@@ -322,7 +322,7 @@ namespace app {
         j["updates"]["autoCheckOnStartup"] = updates.autoCheckOnStartup;
         j["updates"]["channel"]            = std::string{updateChannelToString(updates.channel)};
 
-        j["logging"]["showDebugLogOnStartup"] = logging.showDebugLogOnStartup;
+        j["logging"]["showLogsOnStartup"] = logging.showLogsOnStartup;
         j["logging"]["enableFileLogging"] = logging.enableFileLogging;
         j["logging"]["logFileSizeMB"] = logging.logFileSizeMB;
         j["logging"]["logFolderSizeThresholdMB"] = logging.logFolderSizeThresholdMB;

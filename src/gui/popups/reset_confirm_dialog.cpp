@@ -27,7 +27,7 @@ namespace gui {
         ImGuiUtils::SetDpiScaledWindowConstraints(RESET_CONFIRM_POPUP_MIN_SIZE.x, RESET_CONFIRM_POPUP_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(RESET_CONFIRM_POPUP_DEFAULT_SIZE);
 
-        if (!ImGui::BeginPopupModal(RESET_CONFIRM_POPUP_NAME, &m_confirmReset,
+        if (!ImGuiUtils::BeginPopupModalEx(RESET_CONFIRM_POPUP_NAME, &m_confirmReset,
                                     ImGuiWindowFlags_NoCollapse)) {
             return;
         }
