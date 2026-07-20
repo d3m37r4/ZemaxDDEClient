@@ -71,6 +71,7 @@ namespace gui {
         if (connectionCount > 0) {
             ImGui::Separator();
             ImGui::Text("Active Target:");
+            ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
 
             std::string preview;
             for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
