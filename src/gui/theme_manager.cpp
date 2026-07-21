@@ -178,7 +178,7 @@ ThemeData ThemeData::CreateThemeDark() {
 
     ImVec4* c = t.imguiColors;
 
-    c[ImGuiCol_Text]                 = col(240, 240, 240);  // #f0f0f0
+    c[ImGuiCol_Text]                 = col(255, 255, 255, 200);  // semi-transparent white
     c[ImGuiCol_TextDisabled]         = col(138, 138, 138);  // #8a8a8a
     c[ImGuiCol_WindowBg]             = col(24,  24,  24);   // #181818
     c[ImGuiCol_ChildBg]              = col(24,  24,  24);   // #181818
