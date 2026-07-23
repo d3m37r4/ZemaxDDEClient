@@ -60,7 +60,7 @@ namespace app::compute {
         m_surfaceRequestsRemaining = 2;
 
         int estimatedRequests = sampling + 2;
-        m_logger.addLog(std::format("[ProfileEngine] Starting: surface {} ({} pts, {}°) — estimated {} DDE requests",
+        m_logger.addLog(std::format("[SurfaceProfileService] Starting: surface {} ({} pts, {}°) — estimated {} DDE requests",
             surface, sampling, angle, estimatedRequests));
 
         DWORD surfaceDataTimeout = m_surfaceDataTimeoutMsOverride > 0
@@ -76,7 +76,7 @@ namespace app::compute {
             [this](const std::string& error) {
                 onError(std::format("GetSurfaceData(TYPE_NAME): {}", error));
             },
-            surfaceDataTimeout, 1, "ProfileEngine");
+            surfaceDataTimeout, 1, "SurfaceProfileService");
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
@@ -86,7 +86,7 @@ namespace app::compute {
             [this](const std::string& error) {
                 onError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error));
             },
-            surfaceDataTimeout, 1, "ProfileEngine");
+            surfaceDataTimeout, 1, "SurfaceProfileService");
     }
 
     void SurfaceProfile::cancel() {
@@ -138,11 +138,11 @@ namespace app::compute {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - m_calcStartTime);
             if (m_skippedPoints > 0) {
-                m_logger.addLog(std::format("[ProfileEngine] Completed: {}/{} points ({} skipped) in {} — {} DDE requests",
+                m_logger.addLog(std::format("[SurfaceProfileService] Completed: {}/{} points ({} skipped) in {} — {} DDE requests",
                     m_result.sagDataPoints.size(), m_targetSampling, m_skippedPoints,
                     ZemaxDDE::formatDuration(elapsed), m_totalDdeRequests));
             } else {
-                m_logger.addLog(std::format("[ProfileEngine] Completed: {}/{} points in {} — {} DDE requests",
+                m_logger.addLog(std::format("[SurfaceProfileService] Completed: {}/{} points in {} — {} DDE requests",
                     m_result.sagDataPoints.size(), m_targetSampling,
                     ZemaxDDE::formatDuration(elapsed), m_totalDdeRequests));
             }
@@ -156,7 +156,7 @@ namespace app::compute {
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->failTask(m_taskId, "Cancelled");
             }
-            m_logger.addLog("[ProfileEngine] Cancelled by user");
+            m_logger.addLog("[SurfaceProfileService] Cancelled by user");
             if (onFailed) onFailed();
             return;
         }
@@ -201,7 +201,7 @@ namespace app::compute {
                     onError(std::format("GetSag failed: {}", error));
                 }
             },
-            sagTimeout, 1, "ProfileEngine");
+            sagTimeout, 1, "SurfaceProfileService");
     }
 
     void SurfaceProfile::onSagDataReceived(const std::string& buffer) {
@@ -233,7 +233,7 @@ namespace app::compute {
     }
 
     void SurfaceProfile::onSagTimeout() {
-        m_logger.addLog(std::format("[ProfileEngine] Point {} timed out, skipping",
+        m_logger.addLog(std::format("[SurfaceProfileService] Point {} timed out, skipping",
             m_sagPointIndex));
         m_skippedPoints++;
         m_sagPointIndex++;
@@ -248,7 +248,7 @@ namespace app::compute {
             m_uiOpMonitor->failTask(m_taskId, error);
         }
 
-        m_logger.addLog(std::format("[ProfileEngine] {}", error));
+        m_logger.addLog(std::format("[SurfaceProfileService] {}", error));
         if (onFailed) onFailed();
     }
 
