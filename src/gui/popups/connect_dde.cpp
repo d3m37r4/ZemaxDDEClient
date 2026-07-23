@@ -92,17 +92,31 @@ namespace gui {
 
         ImGui::SameLine();
 
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
+
         if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             m_open = false;
             m_selectedWindowIndex = -1;
         }
 
+        ImGui::PopStyleColor(3);
+
         ImGui::SameLine();
         float remainingWidth = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + remainingWidth - refreshBtnW);
+
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.info);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 1.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.3f, 0.55f, 0.9f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
+
         if (ImGui::Button(ICON_FA_ARROWS_ROTATE " Refresh", ImVec2(refreshBtnW, 0))) {
             m_selectedWindowIndex = -1;
         }
+
+        ImGui::PopStyleColor(4);
 
         ImGui::EndPopup();
     }
