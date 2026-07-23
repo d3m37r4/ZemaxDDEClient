@@ -57,8 +57,8 @@ namespace gui {
         if (ImGui::Button(ICON_FA_TRASH)) {
             logger.clearLogs();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete all log entries");
         ImGui::PopStyleColor(4);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete all log entries");
         ImGui::EndChild();
 
         ImGui::BeginChild("LogsContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
