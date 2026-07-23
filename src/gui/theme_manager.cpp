@@ -219,8 +219,8 @@ ThemeData ThemeData::CreateThemeDark() {
     c[ImGuiCol_DockingEmptyBg]       = col(45,  45,  45);   // #2d2d2d
     c[ImGuiCol_PlotLines]            = col(155, 155, 155);  // #9b9b9b
     c[ImGuiCol_PlotLinesHovered]     = col(255, 109, 89);   // #ff6d59
-    c[ImGuiCol_PlotHistogram]        = col(229, 178, 0);    // #e5b200
-    c[ImGuiCol_PlotHistogramHovered] = col(255, 153, 0);    // #ff9900
+    c[ImGuiCol_PlotHistogram]        = col(66,  150, 249);  // #4296f9
+    c[ImGuiCol_PlotHistogramHovered] = col(100, 170, 255);  // lighter blue
     c[ImGuiCol_TableHeaderBg]        = col(48,  48,  51);   // #303033
     c[ImGuiCol_TableBorderStrong]    = col(79,  79,  89);   // #4f4f59
     c[ImGuiCol_TableBorderLight]     = col(58,  58,  63);   // #3a3a3f
