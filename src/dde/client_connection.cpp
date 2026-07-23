@@ -118,7 +118,7 @@ namespace ZemaxDDE {
         size_t consecutiveErrors = 0;
 
         // Iterative loop: avoid unbounded recursion if m_hwndZemaxServer is
-        // null and the queue holds many failed requests (audit C-5).
+        // null and the queue holds many failed requests
         // Each iteration processes one request; the loop drains the queue
         // until either an active request is dispatched (return) or the
         // queue is empty.
@@ -326,7 +326,7 @@ namespace ZemaxDDE {
                 return 0;
             }
             case WM_DDE_DATA: {
-                // ====== CLIENT-SIDE ACK STRUCTURE ======
+                // Client-side ack structure
                 // `clientAck` is what WE (the client) send back to the server in WM_DDE_ACK.
                 // It is NOT a server-side data structure.
                 // Field semantics (from client's perspective):
@@ -339,7 +339,7 @@ namespace ZemaxDDE {
                 UnpackDDElParam(WM_DDE_DATA, lParam, &lowWord, &highWord);
                 FreeDDElParam(WM_DDE_DATA, lParam);
 
-                // ====== SERVER-SIDE DATA STRUCTURE ======
+                // Server-side data structure
                 // `serverData` is the DDEDATA structure the SERVER (Zemax) sent us.
                 // We never modify it — we only read its flags and copy its Value[].
                 // Field semantics (from server's perspective):
@@ -351,7 +351,7 @@ namespace ZemaxDDE {
                 GlobalLockGuard serverDataLock(ddeDataHandle);
                 aItem = static_cast<ATOM>(highWord);
 
-                // ====== C-1 FIX: validate GlobalLock before dereferencing ======
+                // Validate GlobalLock before dereferencing
                 // Pre-existing bug: previously, ddeDataLock was validated only at the
                 // start of the CF_TEXT block. If GlobalLock returned nullptr (invalid
                 // handle, race with server freeing the handle, memory pressure), code

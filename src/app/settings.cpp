@@ -139,21 +139,21 @@ namespace app {
             }
         }
 
-        // --- General ---
+        // General
         if (j.contains("general") && j["general"].is_object()) {
             const auto& g = j["general"];
             if (g.contains("restoreWindowLayout") && g["restoreWindowLayout"].is_boolean())
                 general.restoreWindowLayout = g["restoreWindowLayout"].get<bool>();
         }
 
-        // --- Appearance ---
+        // Appearance
         if (j.contains("appearance") && j["appearance"].is_object()) {
             const auto& a = j["appearance"];
             if (a.contains("themeMode") && a["themeMode"].is_string())
                 appearance.themeMode = themeModeFromString(a["themeMode"].get<std::string_view>());
         }
 
-        // --- DDE ---
+        // DDE
         if (j.contains("dde") && j["dde"].is_object()) {
             const auto& d = j["dde"];
             if (d.contains("connectionTimeoutMs") && d["connectionTimeoutMs"].is_number_integer()) {
@@ -217,7 +217,7 @@ namespace app {
             }
         }
 
-        // --- Plot ---
+        // Plot
         if (j.contains("plot") && j["plot"].is_object()) {
             const auto& p = j["plot"];
             if (p.contains("showGridByDefault") && p["showGridByDefault"].is_boolean())
@@ -232,7 +232,7 @@ namespace app {
             }
         }
 
-        // --- Map ---
+        // Map
         if (j.contains("map") && j["map"].is_object()) {
             const auto& m = j["map"];
             constexpr int kMinCmap = 0;
@@ -261,7 +261,7 @@ namespace app {
             loadColor("worstColorDeviation", map.worstColorDeviation);
         }
 
-        // --- Updates ---
+        // Updates
         if (j.contains("updates") && j["updates"].is_object()) {
             const auto& u = j["updates"];
             if (u.contains("autoCheckOnStartup") && u["autoCheckOnStartup"].is_boolean())
@@ -270,7 +270,7 @@ namespace app {
                 updates.channel = updateChannelFromString(u["channel"].get<std::string_view>());
         }
 
-        // --- Logging ---
+        // Logging
         if (j.contains("logging") && j["logging"].is_object()) {
             const auto& l = j["logging"];
             if (l.contains("showLogsOnStartup") && l["showLogsOnStartup"].is_boolean())
