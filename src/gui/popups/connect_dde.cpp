@@ -92,7 +92,7 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
+        if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             m_open = false;
             m_selectedWindowIndex = -1;
         }
@@ -100,7 +100,7 @@ namespace gui {
         ImGui::SameLine();
         float remainingWidth = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + remainingWidth - refreshBtnW);
-        if (ImGui::Button("Refresh", ImVec2(refreshBtnW, 0))) {
+        if (ImGui::Button(ICON_FA_ARROWS_ROTATE " Refresh", ImVec2(refreshBtnW, 0))) {
             m_selectedWindowIndex = -1;
         }
 
