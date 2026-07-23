@@ -19,11 +19,11 @@ inline constexpr std::string_view kThemeNameDark  = "Dark Theme";
 struct ThemeGeometry {
     float windowRounding    = 8.0f;
     float childRounding     = 8.0f;
-    float frameRounding     = 4.0f;
+    float frameRounding     = 8.0f;
     float popupRounding     = 8.0f;
     float scrollbarRounding = 4.0f;
     float grabRounding      = 4.0f;
-    float tabRounding       = 4.0f;
+    float tabRounding       = 8.0f;
 
     ImVec2 windowPadding    = ImVec2(12, 12);
     ImVec2 framePadding     = ImVec2(8,  4);
@@ -66,11 +66,6 @@ struct SemanticPalette {
     ImVec4 neutralButtonActive;
 
     ImVec4 onAccent;         // Text drawn on top of an accent-colored button.
-
-    /// Shared default values used by both built-in themes. The @p isLight
-    /// flag only affects the muted token (a single neutral grey is too dark
-    /// on a dark background and too light on a light background).
-    static SemanticPalette DefaultsFor(bool isLight);
 };
 
 struct ThemeData {
