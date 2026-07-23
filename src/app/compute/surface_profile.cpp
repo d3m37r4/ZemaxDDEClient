@@ -23,7 +23,8 @@ namespace app::compute {
     }
 
     bool SurfaceProfile::isCancelled() const {
-        return m_uiOpMonitor && m_taskId > 0 && m_uiOpMonitor->isCancelled(m_taskId);
+        return m_cancelRequested
+            || (m_uiOpMonitor && m_taskId > 0 && m_uiOpMonitor->isCancelled(m_taskId));
     }
 
     void SurfaceProfile::startCalculation(
@@ -53,6 +54,7 @@ namespace app::compute {
         m_sagPointIndex = 0;
         m_skippedPoints = 0;
         m_totalDdeRequests = 0;
+        m_cancelRequested = false;
         m_calcStartTime = std::chrono::steady_clock::now();
         m_result = {};
         m_result.id = surface;
@@ -90,6 +92,7 @@ namespace app::compute {
     }
 
     void SurfaceProfile::cancel() {
+        m_cancelRequested = true;
         if (m_uiOpMonitor && m_taskId > 0) {
             m_uiOpMonitor->requestCancel(m_taskId);
         }

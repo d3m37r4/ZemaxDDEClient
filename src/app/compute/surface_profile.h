@@ -67,6 +67,7 @@ namespace app::compute {
 
             app::models::SurfaceData m_result;
             int m_totalDdeRequests{0};
+            bool m_cancelRequested{false};
 
             DWORD m_surfaceDataTimeoutMsOverride = 0;
             DWORD m_sagTimeoutMsOverride = 0;
