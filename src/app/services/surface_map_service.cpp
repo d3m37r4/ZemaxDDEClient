@@ -75,15 +75,18 @@ namespace app::services {
         m_totalAngles = static_cast<int>(180.0 / angleStepDeg);
         m_currentAngleIndex = 0;
         m_centerSagRef = 0.0;
+        m_totalDdeRequests = 0;
         m_mapTaskId = 0;
         m_calcStartTime = std::chrono::steady_clock::now();
 
-        m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, {} sections ({}° step, {} pts each)",
-            surface, m_totalAngles, angleStepDeg, sampling));
+        int estimatedRequests = m_totalAngles * (sampling + 2);
+        m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, {} sections ({}° step, {} pts each) — estimated {} DDE requests",
+            surface, m_totalAngles, angleStepDeg, sampling, estimatedRequests));
 
         if (m_uiOpMonitor) {
             m_mapTaskId = m_uiOpMonitor->startTask(
-                app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map", m_totalAngles);
+                app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map",
+                m_totalAngles * (m_targetSampling + 2));
         }
 
         startNextProfile();
@@ -108,9 +111,9 @@ namespace app::services {
             m_windowState.tolerancedSampling = m_targetSampling;
             m_windowState.tolerancedAngleStep = m_angleStepDeg;
 
-            m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections in {}",
+            m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections in {} — {} DDE requests",
                 m_profiles.size(), ZemaxDDE::formatDuration(std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - m_calcStartTime))));
+                    std::chrono::steady_clock::now() - m_calcStartTime)), m_totalDdeRequests));
 
             if (m_nominalSurfaceData.isValid()) {
                 m_maxPVResult = findMaxPVSection();
@@ -139,11 +142,12 @@ namespace app::services {
             }
 
             m_profiles.push_back(profile);
+            m_totalDdeRequests += m_calculator.getTotalDdeRequests();
             m_currentAngleIndex++;
 
             if (m_uiOpMonitor && m_mapTaskId > 0) {
-                m_uiOpMonitor->reportProgress(m_mapTaskId, m_currentAngleIndex,
-                    std::format("Section {}/{} at {:.1f}°", m_currentAngleIndex, m_totalAngles, angle));
+                m_uiOpMonitor->reportProgress(m_mapTaskId, m_totalDdeRequests,
+                    std::format("Section {}/{}", m_currentAngleIndex, m_totalAngles));
             }
 
             startNextProfile();

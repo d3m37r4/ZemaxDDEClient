@@ -31,6 +31,7 @@ namespace app::compute {
             bool isCancelled() const;
             const std::string& getError() const { return m_error; }
             const app::models::SurfaceData& getResult() const { return m_result; }
+            int getTotalDdeRequests() const { return m_totalDdeRequests; }
 
             std::function<void()> onComplete;
             std::function<void()> onFailed;
@@ -62,6 +63,7 @@ namespace app::compute {
             std::chrono::steady_clock::time_point m_calcStartTime;
 
             app::models::SurfaceData m_result;
+            int m_totalDdeRequests{0};
 
             DWORD m_surfaceDataTimeoutMsOverride = 0;
             DWORD m_sagTimeoutMsOverride = 0;

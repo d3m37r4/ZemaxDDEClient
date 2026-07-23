@@ -42,7 +42,7 @@ namespace app::compute {
             std::string taskLabel = label.empty()
                 ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
                 : label;
-            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling);
+            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2);
         }
 
         m_state = State::FetchingSurfaceData;
@@ -52,17 +52,21 @@ namespace app::compute {
         m_targetAngle = angle;
         m_sagPointIndex = 0;
         m_skippedPoints = 0;
+        m_totalDdeRequests = 0;
         m_calcStartTime = std::chrono::steady_clock::now();
         m_result = {};
         m_result.id = surface;
         m_result.sagDataPoints.clear();
         m_surfaceRequestsRemaining = 2;
 
-        m_logger.addLog(std::format("[ProfileEngine] Starting: surface {} ({} pts, {}°)",
-            surface, sampling, angle));
+        int estimatedRequests = sampling + 2;
+        m_logger.addLog(std::format("[ProfileEngine] Starting: surface {} ({} pts, {}°) — estimated {} DDE requests",
+            surface, sampling, angle, estimatedRequests));
 
         DWORD surfaceDataTimeout = m_surfaceDataTimeoutMsOverride > 0
             ? m_surfaceDataTimeoutMsOverride : client->getDefaultTimeoutMs();
+
+        m_totalDdeRequests += 2;
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
@@ -130,13 +134,13 @@ namespace app::compute {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - m_calcStartTime);
             if (m_skippedPoints > 0) {
-                m_logger.addLog(std::format("[ProfileEngine] Completed: {}/{} points ({} skipped) in {}",
+                m_logger.addLog(std::format("[ProfileEngine] Completed: {}/{} points ({} skipped) in {} — {} DDE requests",
                     m_result.sagDataPoints.size(), m_targetSampling, m_skippedPoints,
-                    ZemaxDDE::formatDuration(elapsed)));
+                    ZemaxDDE::formatDuration(elapsed), m_totalDdeRequests));
             } else {
-                m_logger.addLog(std::format("[ProfileEngine] Completed: {}/{} points in {}",
+                m_logger.addLog(std::format("[ProfileEngine] Completed: {}/{} points in {} — {} DDE requests",
                     m_result.sagDataPoints.size(), m_targetSampling,
-                    ZemaxDDE::formatDuration(elapsed)));
+                    ZemaxDDE::formatDuration(elapsed), m_totalDdeRequests));
             }
             if (onComplete) onComplete();
             return;
@@ -154,7 +158,7 @@ namespace app::compute {
         }
 
         if (m_uiOpMonitor) {
-            m_uiOpMonitor->reportProgress(m_taskId, m_sagPointIndex,
+            m_uiOpMonitor->reportProgress(m_taskId, 2 + m_sagPointIndex,
                 std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
         }
 
@@ -173,6 +177,8 @@ namespace app::compute {
 
         DWORD sagTimeout = m_sagTimeoutMsOverride > 0
             ? m_sagTimeoutMsOverride : client->getDefaultTimeoutMs();
+
+        m_totalDdeRequests++;
 
         client->submitRequest(
             std::format("GetSag,{},{},{}", m_targetSurface, x, y),

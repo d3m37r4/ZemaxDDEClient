@@ -42,7 +42,12 @@ namespace gui {
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - compactBarHeight) * 0.5f);
             ImGui::ProgressBar(progress, barSize, "");
 
-            std::string overlay = std::format("{}/{}", op->currentStep, op->totalSteps);
+            std::string overlay;
+            if (!op->message.empty() && op->message.starts_with("Section")) {
+                overlay = std::format("{} | DDE {}/{}", op->message, op->currentStep, op->totalSteps);
+            } else {
+                overlay = std::format("DDE {}/{}", op->currentStep, op->totalSteps);
+            }
             float overlayFontScale = 0.75f;
             ImFont* font = ImGui::GetFont();
             float fontSize = ImGui::GetFontSize() * overlayFontScale;

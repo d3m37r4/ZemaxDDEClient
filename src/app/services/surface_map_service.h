@@ -68,6 +68,7 @@ namespace app::services {
             int getTargetSampling() const { return m_targetSampling; }
             int getTotalAngles() const { return m_totalAngles; }
             double getAngleStepDeg() const { return m_angleStepDeg; }
+            int getTotalDdeRequests() const { return m_totalDdeRequests; }
 
         protected:
             void startNextProfile();
@@ -87,6 +88,7 @@ namespace app::services {
             int m_totalAngles = 0;
             int m_currentAngleIndex = 0;
             double m_centerSagRef = 0.0;
+            int m_totalDdeRequests{0};
             uint64_t m_mapTaskId{0};
             std::chrono::steady_clock::time_point m_calcStartTime;
     };
