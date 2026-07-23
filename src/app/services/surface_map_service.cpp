@@ -127,6 +127,16 @@ namespace app::services {
 
         double angle = m_currentAngleIndex * m_angleStepDeg;
 
+        m_calculator.m_createTask = false;
+
+        m_calculator.onProgress = [this](int cur, int /*total*/, const std::string& /*msg*/) {
+            if (m_uiOpMonitor && m_mapTaskId > 0) {
+                std::string sectionMsg = std::format("Section {}/{}",
+                    m_currentAngleIndex + 1, m_totalAngles);
+                m_uiOpMonitor->reportProgress(m_mapTaskId, m_totalDdeRequests + cur, sectionMsg);
+            }
+        };
+
         m_calculator.onComplete = [this, angle]() {
             auto& profile = m_calculator.getResult();
 
@@ -144,11 +154,6 @@ namespace app::services {
             m_profiles.push_back(profile);
             m_totalDdeRequests += m_calculator.getTotalDdeRequests();
             m_currentAngleIndex++;
-
-            if (m_uiOpMonitor && m_mapTaskId > 0) {
-                m_uiOpMonitor->reportProgress(m_mapTaskId, m_totalDdeRequests,
-                    std::format("Section {}/{}", m_currentAngleIndex, m_totalAngles));
-            }
 
             startNextProfile();
         };

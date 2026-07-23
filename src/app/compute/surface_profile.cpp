@@ -38,7 +38,7 @@ namespace app::compute {
         }
 
         m_source = source;
-        if (m_uiOpMonitor) {
+        if (m_createTask && m_uiOpMonitor) {
             std::string taskLabel = label.empty()
                 ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
                 : label;
@@ -117,6 +117,10 @@ namespace app::compute {
 
         if (--m_surfaceRequestsRemaining > 0) return;
 
+        if (onProgress) {
+            onProgress(2, m_targetSampling + 2, "Surface data loaded");
+        }
+
         m_state = State::FetchingSagPoints;
         sendNextSagRequest();
     }
@@ -159,6 +163,11 @@ namespace app::compute {
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->reportProgress(m_taskId, 2 + m_sagPointIndex,
+                std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
+        }
+
+        if (onProgress) {
+            onProgress(2 + m_sagPointIndex, m_targetSampling + 2,
                 std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
         }
 

@@ -35,6 +35,9 @@ namespace app::compute {
 
             std::function<void()> onComplete;
             std::function<void()> onFailed;
+            std::function<void(int currentStep, int totalSteps, const std::string& message)> onProgress;
+
+            bool m_createTask{true};
 
         private:
             ZemaxDDE::ZemaxDDEClient* getClient() const;
