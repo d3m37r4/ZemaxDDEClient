@@ -26,6 +26,7 @@ namespace ZemaxDDE {
         int retriesLeft;
         std::string serviceId;
         std::chrono::steady_clock::time_point startTime{};
+        ATOM itemAtom = 0;
     };
 
     class ZemaxDDEClient {
@@ -110,7 +111,7 @@ namespace ZemaxDDE {
             void dispatchNext();
             /// Converts command to UTF-16, creates a Win32 atom,
             /// and posts WM_DDE_REQUEST to the Zemax server window.
-            void sendRequest(DdeRequest& req);
+            bool sendRequest(DdeRequest& req);
             /// Resets active request and advances to the next in queue.
             void finishRequest();
             void checkDDEConnection();
