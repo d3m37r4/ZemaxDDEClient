@@ -1,3 +1,4 @@
+#include <iterator>
 #include <stdexcept>
 #include <vector>
 
@@ -377,7 +378,7 @@ namespace ZemaxDDE {
                 if (serverData->cfFormat == CF_TEXT) {
                     char item[512]; 
                     wchar_t wItem[512];
-                    GlobalGetAtomNameW(aItem, wItem, sizeof(wItem));
+                    GlobalGetAtomNameW(aItem, wItem, std::size(wItem));
                     WideCharToMultiByte(CP_ACP, 0, wItem, -1, item, sizeof(item), NULL, NULL);
 
                     std::string dde_item_str(item);
