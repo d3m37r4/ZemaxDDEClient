@@ -141,12 +141,16 @@ void DDEConnectionManager::disconnect(int index) {
 
     if (conn.client) {
         conn.client->terminateDDE();
-        conn.client.reset();
     }
 
     if (conn.hwndClient) {
+        SetWindowLongPtrW(conn.hwndClient, GWLP_USERDATA, 0);
         DestroyWindow(conn.hwndClient);
         conn.hwndClient = nullptr;
+    }
+
+    if (conn.client) {
+        conn.client.reset();
     }
 
     conn.hwndServer = nullptr;
