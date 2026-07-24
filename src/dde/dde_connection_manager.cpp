@@ -187,7 +187,7 @@ ZemaxDDE::ZemaxDDEClient* DDEConnectionManager::getActiveClient() const {
 }
 
 DDEConnection* DDEConnectionManager::getConnection(int index) {
-    if (index >= 0 && index < MAX_CONNECTIONS) {
+    if (index >= 0 && index < m_maxConnections) {
         return &m_connections[index];
     }
     return nullptr;
@@ -195,7 +195,7 @@ DDEConnection* DDEConnectionManager::getConnection(int index) {
 
 void DDEConnectionManager::processAllTimeouts() {
     for (auto& conn : m_connections) {
-        if (conn.client) {
+        if (conn.client && conn.isConnected()) {
             conn.client->processTimeouts();
         }
     }
