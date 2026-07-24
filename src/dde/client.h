@@ -121,6 +121,7 @@ namespace ZemaxDDE {
             HWND m_hwndZemaxServer = nullptr;
             HWND m_hwndZemaxClient = nullptr;
             ConnectionState m_connectionState = ConnectionState::Disconnected;
+            bool m_isConnecting = false;
             DWORD m_serverPid = 0;
             Logger& m_logger;
             OnConnectionLostCallback m_onConnectionLost;

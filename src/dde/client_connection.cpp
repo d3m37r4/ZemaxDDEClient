@@ -38,6 +38,7 @@ namespace ZemaxDDE {
         }
 
         setConnectionState(ConnectionState::Connecting);
+        m_isConnecting = true;
         m_hwndZemaxServer = nullptr;
 
         ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
@@ -59,6 +60,7 @@ namespace ZemaxDDE {
         checkDDEConnection();
 
         if (m_hwndZemaxServer) {
+            m_isConnecting = false;
             setConnectionState(ConnectionState::Connected);
             m_logger.addLog("[DDE] Connection established successfully");
         } else {
@@ -237,6 +239,7 @@ namespace ZemaxDDE {
 
     void ZemaxDDEClient::handleConnectionLost(const std::string& reason) {
         m_logger.addLog(std::format("[DDE] ERROR: Connection lost — {}", reason));
+        m_isConnecting = false;
         setConnectionState(ConnectionState::Disconnected);
         m_hwndZemaxServer = nullptr;
 
@@ -263,6 +266,7 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);
+            m_isConnecting = false;
             setConnectionState(ConnectionState::Disconnected);
             m_hwndZemaxServer = nullptr;
             m_logger.addLog("[DDE] Connection terminated");
@@ -294,11 +298,12 @@ namespace ZemaxDDE {
 
         switch (iMsg) {
             case WM_DDE_ACK: {
-                if (!m_hwndZemaxServer) {
+                if (!m_hwndZemaxServer && m_isConnecting) {
                     UnpackDDElParam(WM_DDE_ACK, lParam, &lowWord, &highWord);
                     FreeDDElParam(WM_DDE_ACK, lParam);
 
                     m_hwndZemaxServer = reinterpret_cast<HWND>(wParam);
+                    m_isConnecting = false;
                     setConnectionState(ConnectionState::Connected);
 
                     DWORD pid = 0;
@@ -315,6 +320,9 @@ namespace ZemaxDDE {
                     #ifdef DEBUG_LOG
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_ACK', m_hwndZemaxServer = {}", reinterpret_cast<uintptr_t>(m_hwndZemaxServer)));
                     #endif
+                } else {
+                    UnpackDDElParam(WM_DDE_ACK, lParam, &lowWord, &highWord);
+                    FreeDDElParam(WM_DDE_ACK, lParam);
                 }
 
                 return 0;
