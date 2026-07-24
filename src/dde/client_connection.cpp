@@ -20,10 +20,6 @@ namespace ZemaxDDE {
         terminateDDE();
     }
 
-    void ZemaxDDEClient::setOnConnectionLostCallback(OnConnectionLostCallback callback) {
-        m_onConnectionLost = callback;
-    }
-
     void ZemaxDDEClient::setConnectionState(ConnectionState newState) {
         if (m_connectionState != newState) {
             m_logger.addLog(std::format("[DDE] State: {} -> {}",
@@ -269,7 +265,12 @@ namespace ZemaxDDE {
         m_isConnecting = false;
         setConnectionState(ConnectionState::Disconnected);
         m_hwndZemaxServer = nullptr;
+        drainRequestQueue(reason);
+        m_connectionLost = true;
+        m_connectionLostReason = reason;
+    }
 
+    void ZemaxDDEClient::drainRequestQueue(const std::string& reason) {
         if (m_activeRequest) {
             if (m_activeRequest->onError) {
                 try {
@@ -302,26 +303,17 @@ namespace ZemaxDDE {
                 }
             }
         }
-
-        if (m_onConnectionLost) {
-            try {
-                m_onConnectionLost(reason);
-            } catch (const std::exception& e) {
-                m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onConnectionLost: {}", e.what()));
-            } catch (...) {
-                m_logger.addLog("[DDE] CRITICAL: Unknown exception in onConnectionLost");
-            }
-        }
     }
 
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);
-            m_isConnecting = false;
-            setConnectionState(ConnectionState::Disconnected);
-            m_hwndZemaxServer = nullptr;
             m_logger.addLog("[DDE] Connection terminated");
         }
+        m_isConnecting = false;
+        setConnectionState(ConnectionState::Disconnected);
+        m_hwndZemaxServer = nullptr;
+        drainRequestQueue("Manual disconnect");
     }
 
     class GlobalLockGuard {

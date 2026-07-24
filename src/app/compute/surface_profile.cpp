@@ -244,6 +244,7 @@ namespace app::compute {
     }
 
     void SurfaceProfile::onError(const std::string& error) {
+        if (m_state == State::Failed || m_state == State::Completed) return;
         m_state = State::Failed;
         m_error = error;
 

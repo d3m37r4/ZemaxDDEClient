@@ -54,8 +54,11 @@ namespace ZemaxDDE {
             /// Call once per frame to detect connection loss.
             void checkConnectionHealth();
 
-            using OnConnectionLostCallback = std::function<void(const std::string& reason)>;
-            void setOnConnectionLostCallback(OnConnectionLostCallback callback);
+            /// Polling-based connection loss detection.
+            /// After checkConnectionHealth(), call hasConnectionLost() to observe result.
+            [[nodiscard]] bool hasConnectionLost() const noexcept { return m_connectionLost; }
+            const std::string& getConnectionLostReason() const { return m_connectionLostReason; }
+            void clearConnectionLost() { m_connectionLost = false; m_connectionLostReason.clear(); }
 
             /// Sets the server PID for connection health checks.
             void setServerPid(DWORD pid) noexcept { m_serverPid = pid; }
@@ -115,8 +118,10 @@ namespace ZemaxDDE {
             /// Resets active request and advances to the next in queue.
             void finishRequest();
             void checkDDEConnection();
-            /// Handles connection loss by notifying callbacks and cleaning up.
+            /// Handles connection loss by draining queue and setting flag.
             void handleConnectionLost(const std::string& reason);
+            /// Drains active request and queue, calling onError for each.
+            void drainRequestQueue(const std::string& reason);
             void setConnectionState(ConnectionState newState);
 
             HWND m_hwndZemaxServer = nullptr;
@@ -125,7 +130,8 @@ namespace ZemaxDDE {
             bool m_isConnecting = false;
             DWORD m_serverPid = 0;
             Logger& m_logger;
-            OnConnectionLostCallback m_onConnectionLost;
+            bool m_connectionLost = false;
+            std::string m_connectionLostReason;
             OpticalSystemData m_opticalSystem;
 
             std::unique_ptr<InitialDataLoadService> m_initialDataLoad;

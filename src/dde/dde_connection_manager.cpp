@@ -105,15 +105,6 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     conn.serverPid = pid;
     conn.client->setServerPid(pid);
 
-    // Set up connection lost callback to flag for GUI popup
-    conn.client->setOnConnectionLostCallback([this, idx](const std::string& reason) {
-        if (idx >= 0 && idx < MAX_CONNECTIONS && m_connections[idx].isConnected()) {
-            m_connectionLostIndex = idx;
-            m_connectionLostReason = reason;
-            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", idx, reason));
-        }
-    });
-
     m_activeIndex = idx;
 
     m_logger.addLog(std::format("[DDE] Connected slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
@@ -211,20 +202,20 @@ void DDEConnectionManager::processAllTimeouts() {
 }
 
 void DDEConnectionManager::checkAllConnectionHealth() {
-    // If already flagged and not yet handled by GUI, skip re-checking
     if (m_connectionLostIndex >= 0) return;
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i) {
         auto& conn = m_connections[i];
         if (conn.isDisconnected() || !conn.client) continue;
 
-        // Delegate health check to the client — it knows its own HWND and PID.
-        // If client detects loss, it calls handleConnectionLost() which:
-        //   1. Sets m_connectionState = Disconnected (on client)
-        //   2. Drains the request queue
-        //   3. Fires the callback → sets m_connectionLostIndex
-        // We do NOT set conn.connectionState here — disconnect() will handle it.
         conn.client->checkConnectionHealth();
+
+        if (conn.client->hasConnectionLost()) {
+            m_connectionLostIndex = i;
+            m_connectionLostReason = conn.client->getConnectionLostReason();
+            conn.client->clearConnectionLost();
+            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", i, m_connectionLostReason));
+        }
     }
 }
 
