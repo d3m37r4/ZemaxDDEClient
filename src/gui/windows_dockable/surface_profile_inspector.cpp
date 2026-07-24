@@ -127,7 +127,7 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (m_uiOpMonitor.isActive(TaskSource::NominalSurfaceProfile)) {
+            if (m_uiOpMonitor.hasActiveTasks(TaskSource::NominalSurfaceProfile)) {
                 ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
@@ -250,7 +250,7 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (m_uiOpMonitor.isActive(TaskSource::TolerancedSurfaceProfile)) {
+            if (m_uiOpMonitor.hasActiveTasks(TaskSource::TolerancedSurfaceProfile)) {
                 ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {

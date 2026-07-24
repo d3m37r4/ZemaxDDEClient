@@ -12,7 +12,7 @@ namespace app::services {
         rec.source = source;
         rec.label = label;
         rec.ddeOperationId = ddeId;
-        m_tasks.push_back(rec);
+        m_tasks.emplace(rec.taskId, rec);
 
         return rec.taskId;
     }
@@ -33,14 +33,14 @@ namespace app::services {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->onCompleted(rec->ddeOperationId);
-        m_tasks.erase(m_tasks.begin() + (rec - m_tasks.data()));
+        m_tasks.erase(taskId);
     }
 
     void OperationMonitorService::failTask(uint64_t taskId, const std::string& error) {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->onError(rec->ddeOperationId, error);
-        m_tasks.erase(m_tasks.begin() + (rec - m_tasks.data()));
+        m_tasks.erase(taskId);
     }
 
     void OperationMonitorService::requestCancel(uint64_t taskId) {
@@ -50,22 +50,9 @@ namespace app::services {
             m_monitor->requestCancel(rec->ddeOperationId);
     }
 
-    bool OperationMonitorService::isActive(app::models::TaskSource source) const {
-        for (const auto& t : m_tasks) {
-            if (t.source != source) continue;
-            if (t.ddeOperationId == 0) continue;
-            auto* op = findDdeOp(t.ddeOperationId);
-            if (!op) continue;
-            if (op->status == ZemaxDDE::OperationStatus::Pending ||
-                op->status == ZemaxDDE::OperationStatus::InFlight) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool OperationMonitorService::hasActiveTasks() const {
-        for (const auto& t : m_tasks) {
+    bool OperationMonitorService::hasActiveTasks(std::optional<app::models::TaskSource> filter) const {
+        for (const auto& [id, t] : m_tasks) {
+            if (filter && t.source != *filter) continue;
             if (t.ddeOperationId == 0) continue;
             auto* op = findDdeOp(t.ddeOperationId);
             if (!op) continue;
@@ -78,17 +65,13 @@ namespace app::services {
     }
 
     OperationMonitorService::TaskRecord* OperationMonitorService::findRecord(uint64_t taskId) {
-        for (auto& t : m_tasks) {
-            if (t.taskId == taskId) return &t;
-        }
-        return nullptr;
+        auto it = m_tasks.find(taskId);
+        return (it != m_tasks.end()) ? &it->second : nullptr;
     }
 
     const OperationMonitorService::TaskRecord* OperationMonitorService::findRecord(uint64_t taskId) const {
-        for (const auto& t : m_tasks) {
-            if (t.taskId == taskId) return &t;
-        }
-        return nullptr;
+        auto it = m_tasks.find(taskId);
+        return (it != m_tasks.end()) ? &it->second : nullptr;
     }
 
     const ZemaxDDE::OperationInfo* OperationMonitorService::findDdeOp(uint64_t ddeId) const {

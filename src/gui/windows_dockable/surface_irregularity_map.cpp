@@ -125,7 +125,7 @@ namespace gui {
 
                 ImGuiUtils::SpacingY(0.5f);
 
-                if (m_uiOpMonitor.isActive(TaskSource::NominalSurfaceProfile)) {
+                if (m_uiOpMonitor.hasActiveTasks(TaskSource::NominalSurfaceProfile)) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
                     if (ImGui::Button("Cancel")) {
@@ -219,7 +219,7 @@ namespace gui {
 
         ImGuiUtils::SectionHeader("Analysis");
 
-        if (m_uiOpMonitor.isActive(TaskSource::SurfaceIrregularityMap)) {
+        if (m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap)) {
             ImGuiUtils::SpinnerButton("Processing...", true);
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
@@ -242,7 +242,7 @@ namespace gui {
         }
 
         if (m_irregularityMapService->hasData()) {
-            bool calculating = m_uiOpMonitor.isActive(TaskSource::SurfaceIrregularityMap);
+            bool calculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
 
             ImGuiUtils::SectionHeader("Results");
 

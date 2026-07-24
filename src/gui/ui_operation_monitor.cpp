@@ -20,7 +20,7 @@ namespace gui {
             ImGuiWindowFlags_NoDocking);
 
         bool first = true;
-        for (const auto& t : getTasks()) {
+        for (const auto& [id, t] : getTasks()) {
             if (t.ddeOperationId == 0) continue;
             auto* op = findDdeOp(t.ddeOperationId);
             if (!op) continue;

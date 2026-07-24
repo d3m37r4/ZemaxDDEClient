@@ -43,7 +43,7 @@ namespace ZemaxDDE {
         DWORD_PTR dwResult = 0;
 
         SendMessageTimeoutW(targetHwnd, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom),
-            SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, DDE_TIMEOUT_MS, &dwResult);
+            SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, m_defaultTimeoutMs, &dwResult);
 
         #ifdef DEBUG_LOG
         char appName[256], topicName[256];
