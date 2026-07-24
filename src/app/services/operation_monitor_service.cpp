@@ -33,14 +33,14 @@ namespace app::services {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->onCompleted(rec->ddeOperationId);
-        rec->ddeOperationId = 0;
+        m_tasks.erase(m_tasks.begin() + (rec - m_tasks.data()));
     }
 
     void OperationMonitorService::failTask(uint64_t taskId, const std::string& error) {
         auto* rec = findRecord(taskId);
         if (!rec || !m_monitor) return;
         m_monitor->onError(rec->ddeOperationId, error);
-        rec->ddeOperationId = 0;
+        m_tasks.erase(m_tasks.begin() + (rec - m_tasks.data()));
     }
 
     void OperationMonitorService::requestCancel(uint64_t taskId) {
