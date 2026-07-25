@@ -3,6 +3,7 @@
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 
 namespace gui {
@@ -44,9 +45,21 @@ namespace gui {
         const float totalW = cancelBtnW + cleanBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
 
-        if (ImGui::Button("Cancel", ImVec2(cancelBtnW, 0))) {
+        if (m_themeManager) {
+            const auto& sem = m_themeManager->semantic();
+            ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
+        }
+
+        if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             close();
         }
+
+        if (m_themeManager) {
+            ImGui::PopStyleColor(3);
+        }
+
         ImGui::SameLine();
 
         if (m_themeManager) {
@@ -57,7 +70,7 @@ namespace gui {
             ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
         }
 
-        if (ImGui::Button("Clean", ImVec2(cleanBtnW, 0))) {
+        if (ImGui::Button(ICON_FA_BROOM " Clean", ImVec2(cleanBtnW, 0))) {
             if (m_onConfirm) m_onConfirm();
             close();
         }

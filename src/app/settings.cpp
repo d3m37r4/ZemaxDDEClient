@@ -101,7 +101,7 @@ namespace app {
         updates.channel = UpdateChannel::Stable;
 
         logging.showLogsOnStartup = true;
-        logging.enableFileLogging = true;
+        logging.enableFileLogging = false;
         logging.logFileSizeMB = 5;
         logging.logFolderSizeThresholdMB = 50;
     }

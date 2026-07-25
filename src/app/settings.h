@@ -67,7 +67,7 @@ namespace app {
 
     struct LoggingSettings {
         bool showLogsOnStartup = true;
-        bool enableFileLogging = true;
+        bool enableFileLogging = false;
         int logFileSizeMB = 5;
         int logFolderSizeThresholdMB = 50;
     };

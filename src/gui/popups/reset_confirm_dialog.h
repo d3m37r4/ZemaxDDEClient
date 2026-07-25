@@ -2,6 +2,8 @@
 
 #include <functional>
 
+class ThemeManager;
+
 namespace gui {
 
     /// Modal confirmation dialog for resetting all preferences to factory defaults.
@@ -18,11 +20,13 @@ namespace gui {
             void render();
 
             void setOnReset(ResetCallback cb) { m_onReset = std::move(cb); }
+            void setThemeManager(ThemeManager* tm) noexcept { m_themeManager = tm; }
 
         private:
             bool m_open = false;
             bool m_confirmReset = false;
             ResetCallback m_onReset;
+            ThemeManager* m_themeManager = nullptr;
     };
 
 } // namespace gui

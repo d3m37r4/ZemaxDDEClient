@@ -26,6 +26,7 @@ namespace gui {
 
     void PreferencesDialog::setThemeManager(ThemeManager* tm) noexcept {
         m_themeManager = tm;
+        m_resetConfirmDialog->setThemeManager(tm);
         m_cleanLogsConfirmDialog->setThemeManager(tm);
     }
 
