@@ -174,6 +174,13 @@ namespace app::compute {
                 std::format("Point {}/{}", m_sagPointIndex, m_targetSampling));
         }
 
+        if (m_targetSampling <= 1) {
+            m_result.sagDataPoints.clear();
+            m_state = State::Completed;
+            if (onComplete) onComplete();
+            return;
+        }
+
         const double rad = m_targetAngle * ZemaxDDE::DEG_TO_RAD;
         double semiDiameter = m_result.semiDiameter;
         double step = 2.0 * semiDiameter / (m_targetSampling - 1);
@@ -208,6 +215,7 @@ namespace app::compute {
     }
 
     void SurfaceProfile::onSagDataReceived(const std::string& buffer) {
+        if (m_state == State::Failed || m_state == State::Completed) return;
         auto tokens = ZemaxDDE::tokenize(buffer);
         if (tokens.size() < 2) {
             onError("GetSag: invalid response format");
@@ -244,6 +252,7 @@ namespace app::compute {
     }
 
     void SurfaceProfile::onError(const std::string& error) {
+        if (m_state == State::Failed || m_state == State::Completed) return;
         m_state = State::Failed;
         m_error = error;
 

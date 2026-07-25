@@ -1,3 +1,4 @@
+#include <iterator>
 #include <stdexcept>
 #include <vector>
 
@@ -17,10 +18,6 @@ namespace ZemaxDDE {
 
     ZemaxDDEClient::~ZemaxDDEClient() {
         terminateDDE();
-    }
-
-    void ZemaxDDEClient::setOnConnectionLostCallback(OnConnectionLostCallback callback) {
-        m_onConnectionLost = callback;
     }
 
     void ZemaxDDEClient::setConnectionState(ConnectionState newState) {
@@ -46,7 +43,7 @@ namespace ZemaxDDE {
         DWORD_PTR dwResult = 0;
 
         SendMessageTimeoutW(targetHwnd, WM_DDE_INITIATE, (WPARAM)m_hwndZemaxClient, MAKELONG(appAtom, topicAtom),
-            SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, DDE_TIMEOUT_MS, &dwResult);
+            SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, m_defaultTimeoutMs, &dwResult);
 
         #ifdef DEBUG_LOG
         char appName[256], topicName[256];
@@ -135,7 +132,10 @@ namespace ZemaxDDE {
             }
 
             m_activeRequest = std::move(req);
-            sendRequest(*m_activeRequest);
+            if (!sendRequest(*m_activeRequest)) {
+                finishRequest();
+                return;
+            }
 
             if (consecutiveErrors >= kMassErrorWarnThreshold) {
                 m_logger.addLog(std::format(
@@ -157,7 +157,7 @@ namespace ZemaxDDE {
         }
     }
 
-    void ZemaxDDEClient::sendRequest(DdeRequest& req) {
+    bool ZemaxDDEClient::sendRequest(DdeRequest& req) {
         int wideCharCount = MultiByteToWideChar(CP_ACP, 0,
             req.command.data(), static_cast<int>(req.command.size()),
             nullptr, 0);
@@ -169,17 +169,30 @@ namespace ZemaxDDE {
         wItem[wideCharCount] = L'\0';
 
         ATOM aItem = GlobalAddAtomW(wItem.data());
-        PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
-            reinterpret_cast<WPARAM>(m_hwndZemaxClient),
-            PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem));
+        req.itemAtom = aItem;
+
+        if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
+                reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+                PackDDElParam(WM_DDE_REQUEST, CF_TEXT, aItem))) {
+            m_logger.addLog(std::format("[DDE] PostMessageW failed for request #{}: '{}'", req.id, req.command));
+            GlobalDeleteAtom(aItem);
+            req.itemAtom = 0;
+            return false;
+        }
 
         req.startTime = std::chrono::steady_clock::now();
-
         m_logger.addLog(std::format("[DDE] Sent request #{}: '{}'", req.id, req.command));
+        return true;
     }
 
     void ZemaxDDEClient::finishRequest() {
-        m_activeRequest.reset();
+        if (m_activeRequest) {
+            if (m_activeRequest->itemAtom != 0) {
+                GlobalDeleteAtom(m_activeRequest->itemAtom);
+                m_activeRequest->itemAtom = 0;
+            }
+            m_activeRequest.reset();
+        }
         dispatchNext();
     }
 
@@ -193,16 +206,26 @@ namespace ZemaxDDE {
         if (elapsed.count() < req.timeoutMs) return;
 
         if (req.retriesLeft > 0) {
+            if (req.itemAtom != 0) {
+                GlobalDeleteAtom(req.itemAtom);
+                req.itemAtom = 0;
+            }
             req.retriesLeft--;
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
             sendRequest(req);
 
-            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (in {}ms, timeout={}ms)",
-                m_activeRequest->retriesLeft, req.id, req.command, elapsed.count(), req.timeoutMs));
+            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
+                req.retriesLeft, req.id, req.command, req.timeoutMs));
         } else {
-            m_logger.addLog(std::format("[DDE] Request #{} timed out: '{}' (in {}ms)", req.id, req.command, elapsed.count()));
+            m_logger.addLog(std::format("[DDE] ERROR: Request #{} timed out (max retries exceeded)", req.id));
             if (req.onError) {
-                req.onError("Timeout");
+                try {
+                    req.onError("Timeout: max retries exceeded");
+                } catch (const std::exception& e) {
+                    m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+                } catch (...) {
+                    m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+                }
             }
             finishRequest();
         }
@@ -242,35 +265,55 @@ namespace ZemaxDDE {
         m_isConnecting = false;
         setConnectionState(ConnectionState::Disconnected);
         m_hwndZemaxServer = nullptr;
+        drainRequestQueue(reason);
+        m_connectionLost = true;
+        m_connectionLostReason = reason;
+    }
 
+    void ZemaxDDEClient::drainRequestQueue(const std::string& reason) {
         if (m_activeRequest) {
             if (m_activeRequest->onError) {
-                m_activeRequest->onError("Connection lost: " + reason);
+                try {
+                    m_activeRequest->onError("Connection lost: " + reason);
+                } catch (const std::exception& e) {
+                    m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+                } catch (...) {
+                    m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+                }
             }
-            m_activeRequest.reset();
+            finishRequest();
         }
 
         while (!m_requestQueue.empty()) {
-            auto& req = m_requestQueue.front();
-            if (req.onError) {
-                req.onError("Connection lost: " + reason);
-            }
+            auto req = std::move(m_requestQueue.front());
             m_requestQueue.pop_front();
-        }
 
-        if (m_onConnectionLost) {
-            m_onConnectionLost(reason);
+            if (req.itemAtom != 0) {
+                GlobalDeleteAtom(req.itemAtom);
+                req.itemAtom = 0;
+            }
+
+            if (req.onError) {
+                try {
+                    req.onError("Connection lost: " + reason);
+                } catch (const std::exception& e) {
+                    m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+                } catch (...) {
+                    m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+                }
+            }
         }
     }
 
     void ZemaxDDEClient::terminateDDE() {
         if (m_hwndZemaxServer) {
             PostMessageW(m_hwndZemaxServer, WM_DDE_TERMINATE, (WPARAM)m_hwndZemaxClient, 0L);
-            m_isConnecting = false;
-            setConnectionState(ConnectionState::Disconnected);
-            m_hwndZemaxServer = nullptr;
             m_logger.addLog("[DDE] Connection terminated");
         }
+        m_isConnecting = false;
+        setConnectionState(ConnectionState::Disconnected);
+        m_hwndZemaxServer = nullptr;
+        drainRequestQueue("Manual disconnect");
     }
 
     class GlobalLockGuard {
@@ -288,9 +331,7 @@ namespace ZemaxDDE {
     };
 
     LRESULT ZemaxDDEClient::handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam) {
-        ATOM aItem;
         UINT_PTR lowWord, highWord;
-        std::string buffer;
 
         #ifdef DEBUG_LOG
         m_logger.addLog(std::format("[DDE] Received message: {}", iMsg));
@@ -321,8 +362,29 @@ namespace ZemaxDDE {
                     m_logger.addLog(std::format("[DDE] Received 'WM_DDE_ACK', m_hwndZemaxServer = {}", reinterpret_cast<uintptr_t>(m_hwndZemaxServer)));
                     #endif
                 } else {
-                    UnpackDDElParam(WM_DDE_ACK, lParam, &lowWord, &highWord);
+                    UINT_PTR wStatus = 0;
+                    UINT_PTR aItemAck = 0;
+                    UnpackDDElParam(WM_DDE_ACK, lParam, &wStatus, &aItemAck);
                     FreeDDElParam(WM_DDE_ACK, lParam);
+
+                    if (m_activeRequest) {
+                        bool isAck = (wStatus & 0x2000) != 0;
+                        bool isBusy = (wStatus & 0x1000) != 0;
+
+                        if (!isAck && !isBusy) {
+                            m_logger.addLog(std::format("[DDE] Request #{} rejected by server (Negative ACK)", m_activeRequest->id));
+                            if (m_activeRequest->onError) {
+                                try {
+                                    m_activeRequest->onError("Server rejected the request (Negative ACK)");
+                                } catch (const std::exception& e) {
+                                    m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+                                } catch (...) {
+                                    m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+                                }
+                            }
+                            finishRequest();
+                        }
+                    }
                 }
 
                 return 0;
@@ -334,115 +396,92 @@ namespace ZemaxDDE {
                 return 0;
             }
             case WM_DDE_DATA: {
-                // Client-side ack structure
-                // `clientAck` is what WE (the client) send back to the server in WM_DDE_ACK.
-                // It is NOT a server-side data structure.
-                // Field semantics (from client's perspective):
-                //   • clientAck.fAck       — "I successfully received and processed the data"
-                //   • clientAck.fBusy      — "I am NOT busy" (always 0; we don't defer)
-                //   • clientAck.fRelease   — "I do NOT request server to free anything" (always 0)
-                //   • clientAck.fAckReq    — "I do NOT request ACK for my own ACK" (always 0)
-                DDEACK clientAck{};
-
                 UnpackDDElParam(WM_DDE_DATA, lParam, &lowWord, &highWord);
                 FreeDDElParam(WM_DDE_DATA, lParam);
 
-                // Server-side data structure
-                // `serverData` is the DDEDATA structure the SERVER (Zemax) sent us.
-                // We never modify it — we only read its flags and copy its Value[].
-                // Field semantics (from server's perspective):
-                //   • serverData->fAckReq  — "Server REQUESTS us to send WM_DDE_ACK"
-                //   • serverData->fRelease — "Server REQUESTS us to GlobalFree the handle after reading"
-                //   • serverData->fAck     — "Server is acknowledging a previous request"
-                //   • serverData->fBusy    — "Server is busy, will respond later"
                 GLOBALHANDLE ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
-                GlobalLockGuard serverDataLock(ddeDataHandle);
-                aItem = static_cast<ATOM>(highWord);
+                ATOM aItem = static_cast<ATOM>(highWord);
 
-                // Validate GlobalLock before dereferencing
-                // Pre-existing bug: previously, ddeDataLock was validated only at the
-                // start of the CF_TEXT block. If GlobalLock returned nullptr (invalid
-                // handle, race with server freeing the handle, memory pressure), code
-                // would dereference nullptr when reading fAckReq / fRelease below,
-                // causing a process crash. Now we validate ONCE up front and cache
-                // the pointer for safe subsequent access.
+                GlobalLockGuard serverDataLock(ddeDataHandle);
                 if (!serverDataLock.isValid()) {
-                    // Cannot read server's data — drop atom and exit.
-                    // No ACK sent (server will eventually timeout).
-                    GlobalDeleteAtom(aItem);
+                    m_logger.addLog("[DDE] ERROR: Invalid GlobalLock in WM_DDE_DATA");
+                    GlobalFree(ddeDataHandle);
+                    if (!m_activeRequest) {
+                        GlobalDeleteAtom(aItem);
+                    } else {
+                        finishRequest();
+                    }
                     return 0;
                 }
+
                 auto* serverData = serverDataLock.as<::DDEDATA>();
+                bool requestFulfilled = false;
+
+                if (!m_activeRequest) {
+                    if (serverData->fAckReq) {
+                        static_assert(sizeof(::DDEACK) == sizeof(WORD),
+                            "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
+                        WORD wStatus = static_cast<WORD>(0x0000);
+                        PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK,
+                                     reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+                                     PackDDElParam(WM_DDE_ACK, wStatus, aItem));
+                    }
+                    GlobalDeleteAtom(aItem);
+                    if (serverData->fRelease) {
+                        GlobalFree(ddeDataHandle);
+                    }
+                    return 0;
+                }
 
                 if (serverData->cfFormat == CF_TEXT) {
                     char item[512]; 
                     wchar_t wItem[512];
-                    GlobalGetAtomNameW(aItem, wItem, sizeof(wItem));
+                    GlobalGetAtomNameW(aItem, wItem, std::size(wItem));
                     WideCharToMultiByte(CP_ACP, 0, wItem, -1, item, sizeof(item), NULL, NULL);
 
-                    std::string dde_item_str(item);
+                    if (std::string(item) == m_activeRequest->command) {
+                        requestFulfilled = true;
+                        char* buffer = reinterpret_cast<char*>(serverData->Value);
+                        
+                        #ifdef DEBUG_LOG
+                        m_logger.addLog(std::format("[DDE] Received data for #{}: '{}'", m_activeRequest->id, m_activeRequest->command));
+                        #endif
 
-                    buffer = reinterpret_cast<char*>(serverData->Value);
-
-                    #ifdef DEBUG_LOG
-                    m_logger.addLog(std::format("[DDE] Received 'WM_DDE_DATA', content = {}", buffer));
-                    #endif
-
-                    bool matched = false;
-                    if (m_activeRequest && dde_item_str == m_activeRequest->command) {
-                        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::steady_clock::now() - m_activeRequest->startTime);
-                        m_logger.addLog(std::format("[DDE] Completed request #{}: '{}' (svc={}, in {}ms)",
-                            m_activeRequest->id, m_activeRequest->command, m_activeRequest->serviceId, elapsed.count()));
-                        if (m_activeRequest->onSuccess) {
-                            m_activeRequest->onSuccess(buffer);
+                        try {
+                            if (m_activeRequest->onSuccess) {
+                                m_activeRequest->onSuccess(buffer);
+                            }
+                        } catch (const std::exception& e) {
+                            m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onSuccess: {}", e.what()));
+                        } catch (...) {
+                            m_logger.addLog("[DDE] CRITICAL: Unknown exception in onSuccess");
                         }
-                        finishRequest();
-                        clientAck.fAck = true;
-                        matched = true;
-                    }
-
-                    if (!matched) {
-                        m_logger.addLog(std::format("[DDE] WARNING: No matching active request for '{}'", dde_item_str));
                     }
                 }
-                if (serverData->fAckReq == true) {
-                    // Server wants our ACK. Build the status word per DDE protocol:
-                    //   bit 13: fAck      (clientAck.fAck  ? 1 : 0)
-                    //   bit 12: fBusy     (clientAck.fBusy ? 1 : 0 — always 0; client never busy)
-                    //   bits 0-11, 14-15: unused/reserved (0)
-                    //
-                    // NOTE: DDEACK in MinGW's <dde.h> only has fields {unused, fBusy, fAck}.
-                    // fRelease is a SERVER-side flag (in DDEDATA), not part of the client's
-                    // outgoing DDEACK, so it is correctly omitted here. Constructed
-                    // explicitly (not via memcpy of the DDEACK struct) so the bit
-                    // positions match the wire protocol regardless of how the compiler
-                    // arranges the bitfields in DDEACK (MSVC vs MinGW/GCC differ).
+
+                if (!requestFulfilled) {
+                    m_logger.addLog(std::format("[DDE] WARNING: Data mismatch or no handler for atom {}", aItem));
+                }
+
+                if (serverData->fAckReq) {
                     static_assert(sizeof(::DDEACK) == sizeof(WORD),
                         "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
+                    DDEACK clientAck{};
+                    clientAck.fAck = requestFulfilled ? TRUE : FALSE;
                     WORD wStatus = static_cast<WORD>(
                         (clientAck.fAck  ? 0x2000 : 0) |
                         (clientAck.fBusy ? 0x1000 : 0)
                     );
-                    if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK, reinterpret_cast<WPARAM>(m_hwndZemaxClient), PackDDElParam(WM_DDE_ACK, wStatus, aItem))) {
-                        GlobalDeleteAtom(aItem);
-                        GlobalFree(ddeDataHandle);
-                        return 0;
-                    }
-                } else {
-                    GlobalDeleteAtom(aItem);
+                    PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK,
+                                 reinterpret_cast<WPARAM>(m_hwndZemaxClient),
+                                 PackDDElParam(WM_DDE_ACK, wStatus, aItem));
                 }
 
-                // Free the handle per DDE protocol in two cases:
-                //   1) Server explicitly requested release (serverData->fRelease = true).
-                //      This is the standard happy path for large data.
-                //   2) We did NOT acknowledge success (clientAck.fAck = false).
-                //      Cleanup on error to prevent handle leak. Per DDE protocol,
-                //      if the client cannot process the data, it should still free
-                //      the handle to avoid memory leak in the server's process.
-                if (serverData->fRelease == true || clientAck.fAck == false) {
+                if (serverData->fRelease) {
                     GlobalFree(ddeDataHandle);
                 }
+
+                finishRequest();
                 return 0;
             }
         }

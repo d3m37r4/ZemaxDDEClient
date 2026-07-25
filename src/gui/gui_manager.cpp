@@ -292,19 +292,17 @@ void GuiManager::renderPreferencesDialog() {
 void GuiManager::renderConnectionLostPopup() {
     if (!m_ddeConnectionManager) return;
 
-    // Check if a connection was lost and the popup isn't already open
     if (m_ddeConnectionManager->hasConnectionLost() && !m_connectionLostDialog->isOpen()) {
         int lostIdx = m_ddeConnectionManager->getConnectionLostIndex();
         std::string reason = m_ddeConnectionManager->getConnectionLostReason();
-
-        // Auto-disconnect the lost connection
-        if (lostIdx >= 0) {
-            m_ddeConnectionManager->disconnect(lostIdx);
-        }
         m_ddeConnectionManager->clearConnectionLost();
-        m_logger.addLog(std::format("[DDE] Connection lost, auto-disconnected: {}", reason));
-
         m_connectionLostDialog->open(reason);
+        m_pendingDisconnectIndex = lostIdx;
+    }
+
+    if (m_pendingDisconnectIndex >= 0 && !m_connectionLostDialog->isOpen()) {
+        m_ddeConnectionManager->disconnect(m_pendingDisconnectIndex);
+        m_pendingDisconnectIndex = -1;
     }
 
     if (m_connectionLostDialog) {

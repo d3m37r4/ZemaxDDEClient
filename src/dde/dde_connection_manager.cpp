@@ -18,6 +18,12 @@ namespace {
                 return client->handleDDEMessages(iMsg, wParam, lParam);
             }
         }
+        // Defensive: clean up GWLP_USERDATA if the window is destroyed outside of disconnect().
+        // Currently all DestroyWindow calls go through disconnect() which handles this explicitly.
+        // This handler is a safety net for future changes that may destroy the window differently.
+        if (iMsg == WM_NCDESTROY) {
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+        }
         return DefWindowProcW(hwnd, iMsg, wParam, lParam);
     }
 
@@ -105,15 +111,6 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     conn.serverPid = pid;
     conn.client->setServerPid(pid);
 
-    // Set up connection lost callback to flag for GUI popup
-    conn.client->setOnConnectionLostCallback([this, idx](const std::string& reason) {
-        if (idx >= 0 && idx < MAX_CONNECTIONS && m_connections[idx].isConnected()) {
-            m_connectionLostIndex = idx;
-            m_connectionLostReason = reason;
-            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", idx, reason));
-        }
-    });
-
     m_activeIndex = idx;
 
     m_logger.addLog(std::format("[DDE] Connected slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
@@ -178,14 +175,15 @@ void DDEConnectionManager::disconnectAll() {
 }
 
 void DDEConnectionManager::setActiveConnection(int index) {
-    if (index >= 0 && index < MAX_CONNECTIONS && m_connections[index].isConnected()) {
-        m_activeIndex = index;
-        auto& conn = m_connections[index];
-        m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
-            index, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
-            reinterpret_cast<uintptr_t>(conn.hwndClient),
-            reinterpret_cast<uintptr_t>(conn.hwndServer)));
-    }
+    if (index < 0 || index >= MAX_CONNECTIONS || !m_connections[index].isConnected()) return;
+    if (index == m_activeIndex) return;
+
+    m_activeIndex = index;
+    auto& conn = m_connections[index];
+    m_logger.addLog(std::format("[DDE] Switched active connection to slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
+        index, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
+        reinterpret_cast<uintptr_t>(conn.hwndClient),
+        reinterpret_cast<uintptr_t>(conn.hwndServer)));
 }
 
 ZemaxDDE::ZemaxDDEClient* DDEConnectionManager::getActiveClient() const {
@@ -196,7 +194,7 @@ ZemaxDDE::ZemaxDDEClient* DDEConnectionManager::getActiveClient() const {
 }
 
 DDEConnection* DDEConnectionManager::getConnection(int index) {
-    if (index >= 0 && index < MAX_CONNECTIONS) {
+    if (index >= 0 && index < m_maxConnections) {
         return &m_connections[index];
     }
     return nullptr;
@@ -204,27 +202,27 @@ DDEConnection* DDEConnectionManager::getConnection(int index) {
 
 void DDEConnectionManager::processAllTimeouts() {
     for (auto& conn : m_connections) {
-        if (conn.client) {
+        if (conn.client && conn.isConnected()) {
             conn.client->processTimeouts();
         }
     }
 }
 
 void DDEConnectionManager::checkAllConnectionHealth() {
-    // If already flagged and not yet handled by GUI, skip re-checking
     if (m_connectionLostIndex >= 0) return;
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i) {
         auto& conn = m_connections[i];
         if (conn.isDisconnected() || !conn.client) continue;
 
-        // Delegate health check to the client — it knows its own HWND and PID.
-        // If client detects loss, it calls handleConnectionLost() which:
-        //   1. Sets m_connectionState = Disconnected (on client)
-        //   2. Drains the request queue
-        //   3. Fires the callback → sets m_connectionLostIndex
-        // We do NOT set conn.connectionState here — disconnect() will handle it.
         conn.client->checkConnectionHealth();
+
+        if (conn.client->hasConnectionLost()) {
+            m_connectionLostIndex = i;
+            m_connectionLostReason = conn.client->getConnectionLostReason();
+            conn.client->clearConnectionLost();
+            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", i, m_connectionLostReason));
+        }
     }
 }
 

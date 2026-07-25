@@ -49,16 +49,19 @@ void DockableWindowsManager::RenderAll() {
 void DockableWindowsManager::LoadState() {
     std::ifstream in(app::getWindowStatePath());
     if (!in) return;
-    nlohmann::json j; in >> j;
-    for (auto& el : j.items()) {
-        const std::string& name = el.key();
-        bool visible = el.value().get<bool>();
-        for (auto& w : windows_) {
-            if (w.name == name) {
-                w.isVisible = visible;
-                break;
+    try {
+        nlohmann::json j; in >> j;
+        for (auto& el : j.items()) {
+            const std::string& name = el.key();
+            bool visible = el.value().get<bool>();
+            for (auto& w : windows_) {
+                if (w.name == name) {
+                    w.isVisible = visible;
+                    break;
+                }
             }
         }
+    } catch (const std::exception&) {
     }
 }
 

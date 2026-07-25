@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "dde/operation_monitor.h"
@@ -27,15 +29,14 @@ namespace app::services {
         void failTask(uint64_t taskId, const std::string& error);
         void requestCancel(uint64_t taskId);
 
-        bool isActive(app::models::TaskSource source) const;
-        bool hasActiveTasks() const;
+        bool hasActiveTasks(std::optional<app::models::TaskSource> filter = std::nullopt) const;
 
-        const std::vector<TaskRecord>& getTasks() const { return m_tasks; }
+        const std::unordered_map<uint64_t, TaskRecord>& getTasks() const { return m_tasks; }
         const ZemaxDDE::OperationInfo* findDdeOp(uint64_t ddeId) const;
 
     private:
         ZemaxDDE::OperationMonitor* m_monitor = nullptr;
-        std::vector<TaskRecord> m_tasks;
+        std::unordered_map<uint64_t, TaskRecord> m_tasks;
         uint64_t m_nextId = 1;
 
         TaskRecord* findRecord(uint64_t taskId);
