@@ -82,15 +82,22 @@ namespace gui {
                 nominal.clear();
             }
         } else {
-            if (!isDDEInitialized()) {
-                ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+            int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
+            int nominalCalcSlot = m_profileService->getNominalCalcSlot();
+            bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
+
+            if (nominalFrozen) {
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Nominal Profile — calculation in progress on slot %d", nominalCalcSlot);
                 ImGui::Spacing();
             }
 
-            ImGui::BeginDisabled(!isDDEInitialized());
+            ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen);
 
             {
-                auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
+                const auto& optSys = nominalFrozen
+                    ? m_profileService->m_frozenNominalOpticalSystem
+                    : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_profileService->m_frozenNominalOpticalSystem);
+                auto fileName = optSys.fileName;
                 ImGui::TextUnformatted("Optical system:");
                 ImGui::SameLine();
                 ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
@@ -100,7 +107,9 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-            state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.nominalSurfaceIndex));
+            if (!nominalFrozen) {
+                state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.nominalSurfaceIndex));
+            }
 
             ImGui::TextUnformatted("Sampling:");
             ImGui::SameLine();
@@ -127,30 +136,39 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (m_uiOpMonitor.hasActiveTasks(TaskSource::NominalSurfaceProfile)) {
+            if (nominalFrozen) {
                 ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
-                    m_profileService->cancelCalculation();
-                    m_profileService->onCalculationComplete = nullptr;
+                    m_profileService->cancelCalculation(TaskSource::NominalSurfaceProfile);
+                    m_profileService->onNominalCalculationComplete = nullptr;
                     nominal.clear();
                 }
-            } else if (m_uiOpMonitor.hasActiveTasks()) {
+            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::NominalSurfaceProfile)) {
+                ImGuiUtils::SpinnerButton("Processing...", true);
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_profileService->cancelCalculation(TaskSource::NominalSurfaceProfile);
+                    m_profileService->onNominalCalculationComplete = nullptr;
+                    nominal.clear();
+                }
+            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                 ImGui::BeginDisabled(true);
                 ImGui::Button("Get nominal surface data");
                 if (ImGui::BeginItemTooltip()) {
-                    ImGui::TextUnformatted("Another calculation is in progress");
+                    ImGui::TextUnformatted("Another calculation is in progress on this slot");
                     ImGui::EndTooltip();
                 }
                 ImGui::EndDisabled();
             } else {
                 if (ImGui::Button("Get nominal surface data")) {
                     if (isDDEInitialized()) {
+                        m_profileService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                         nominal.units = m_zemaxDDEClient->getOpticalSystemData().units;
                         nominal.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                        m_profileService->onCalculationComplete = [this, &nominal]() {
-                            const auto& result = m_profileService->getResult();
+                        m_profileService->onNominalCalculationComplete = [this, &nominal]() {
+                            const auto& result = m_profileService->getResult(TaskSource::NominalSurfaceProfile);
                             nominal.id = result.id;
                             nominal.type = result.type;
                             nominal.units = result.units;
@@ -205,15 +223,22 @@ namespace gui {
                 toleranced.clear();
             }
         } else {
-            if (!isDDEInitialized()) {
-                ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+            int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
+            int tolerancedCalcSlot = m_profileService->getTolerancedCalcSlot();
+            bool tolerancedFrozen = tolerancedCalcSlot >= 0 && tolerancedCalcSlot != activeIdx;
+
+            if (tolerancedFrozen) {
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Toleranced Profile — calculation in progress on slot %d", tolerancedCalcSlot);
                 ImGui::Spacing();
             }
 
-            ImGui::BeginDisabled(!isDDEInitialized());
+            ImGui::BeginDisabled(!isDDEInitialized() || tolerancedFrozen);
 
             {
-                auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
+                const auto& optSys = tolerancedFrozen
+                    ? m_profileService->m_frozenTolerancedOpticalSystem
+                    : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_profileService->m_frozenTolerancedOpticalSystem);
+                auto fileName = optSys.fileName;
                 ImGui::TextUnformatted("Optical system:");
                 ImGui::SameLine();
                 ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
@@ -223,7 +248,9 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.tolerancedSurfaceIndex));
+            if (!tolerancedFrozen) {
+                state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.tolerancedSurfaceIndex));
+            }
 
             ImGui::TextUnformatted("Sampling:");
             ImGui::SameLine();
@@ -250,30 +277,39 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (m_uiOpMonitor.hasActiveTasks(TaskSource::TolerancedSurfaceProfile)) {
+            if (tolerancedFrozen) {
                 ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {
-                    m_profileService->cancelCalculation();
-                    m_profileService->onCalculationComplete = nullptr;
+                    m_profileService->cancelCalculation(TaskSource::TolerancedSurfaceProfile);
+                    m_profileService->onTolerancedCalculationComplete = nullptr;
                     toleranced.clear();
                 }
-            } else if (m_uiOpMonitor.hasActiveTasks()) {
+            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::TolerancedSurfaceProfile)) {
+                ImGuiUtils::SpinnerButton("Processing...", true);
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_profileService->cancelCalculation(TaskSource::TolerancedSurfaceProfile);
+                    m_profileService->onTolerancedCalculationComplete = nullptr;
+                    toleranced.clear();
+                }
+            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                 ImGui::BeginDisabled(true);
                 ImGui::Button("Get toleranced surface data");
                 if (ImGui::BeginItemTooltip()) {
-                    ImGui::TextUnformatted("Another calculation is in progress");
+                    ImGui::TextUnformatted("Another calculation is in progress on this slot");
                     ImGui::EndTooltip();
                 }
                 ImGui::EndDisabled();
             } else {
                 if (ImGui::Button("Get toleranced surface data")) {
                     if (isDDEInitialized()) {
+                        m_profileService->m_frozenTolerancedOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                         toleranced.units = m_zemaxDDEClient->getOpticalSystemData().units;
                         toleranced.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                        m_profileService->onCalculationComplete = [this, &toleranced]() {
-                            const auto& result = m_profileService->getResult();
+                        m_profileService->onTolerancedCalculationComplete = [this, &toleranced]() {
+                            const auto& result = m_profileService->getResult(TaskSource::TolerancedSurfaceProfile);
                             toleranced.id = result.id;
                             toleranced.type = result.type;
                             toleranced.units = result.units;

@@ -86,15 +86,22 @@ namespace gui {
                     m_irregularityMapService->m_nominalSurfaceData.clear();
                 }
             } else {
-                if (!isDDEInitialized()) {
-                    ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+                int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
+                int nominalCalcSlot = m_irregularityMapService->getNominalCalcSlot();
+                bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
+
+                if (nominalFrozen) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Nominal Profile — calculation in progress on slot %d", nominalCalcSlot);
                     ImGui::Spacing();
                 }
 
-                ImGui::BeginDisabled(!isDDEInitialized());
+                ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen);
 
                 {
-                    auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
+                    const auto& optSys = nominalFrozen
+                        ? m_irregularityMapService->m_frozenNominalOpticalSystem
+                        : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenNominalOpticalSystem);
+                    auto fileName = optSys.fileName;
                     ImGui::TextUnformatted("Optical system:");
                     ImGui::SameLine();
                     ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
@@ -104,7 +111,7 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
                 ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                if (m_zemaxDDEClient)
+                if (!nominalFrozen && m_zemaxDDEClient)
                     state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
 
                 ImGui::TextUnformatted("Sampling:");
@@ -125,29 +132,38 @@ namespace gui {
 
                 ImGuiUtils::SpacingY(0.5f);
 
-                if (m_uiOpMonitor.hasActiveTasks(TaskSource::NominalSurfaceProfile)) {
+                if (nominalFrozen) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
                     if (ImGui::Button("Cancel")) {
                         m_irregularityMapService->cancelCalculation();
-                        m_irregularityMapService->onCalculationComplete = nullptr;
+                        m_irregularityMapService->onNominalCalculationComplete = nullptr;
                         m_irregularityMapService->m_nominalSurfaceData.clear();
                     }
-                } else if (m_uiOpMonitor.hasActiveTasks()) {
+                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::NominalSurfaceProfile)) {
+                    ImGuiUtils::SpinnerButton("Processing...", true);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Cancel")) {
+                        m_irregularityMapService->cancelCalculation();
+                        m_irregularityMapService->onNominalCalculationComplete = nullptr;
+                        m_irregularityMapService->m_nominalSurfaceData.clear();
+                    }
+                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                     ImGui::BeginDisabled(true);
                     ImGui::Button("Get nominal surface data");
                     if (ImGui::BeginItemTooltip()) {
-                        ImGui::TextUnformatted("Another calculation is in progress");
+                        ImGui::TextUnformatted("Another calculation is in progress on this slot");
                         ImGui::EndTooltip();
                     }
                     ImGui::EndDisabled();
                 } else {
                     if (ImGui::Button("Get nominal surface data")) {
                         if (isDDEInitialized()) {
+                            m_irregularityMapService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                             auto units = m_zemaxDDEClient->getOpticalSystemData().units;
                             auto fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
-                            m_irregularityMapService->onCalculationComplete = [this, units, fileName]() {
+                            m_irregularityMapService->onNominalCalculationComplete = [this, units, fileName]() {
                                 m_irregularityMapService->m_nominalSurfaceData.units = units;
                                 m_irregularityMapService->m_nominalSurfaceData.fileName = fileName;
                             };
@@ -171,47 +187,51 @@ namespace gui {
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
-        if (!isDDEInitialized()) {
-            ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
-            ImGui::Spacing();
-        }
-
-        ImGui::BeginDisabled(!isDDEInitialized());
-
         {
-            auto fileName = m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().fileName : std::string{};
-            ImGui::TextUnformatted("Optical system:");
+            int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
+            int mapCalcSlot = m_irregularityMapService->getMapCalcSlot();
+            bool mapFrozen = mapCalcSlot >= 0 && mapCalcSlot != activeIdx;
+
+            ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen);
+
+            {
+                const auto& optSys = mapFrozen
+                    ? m_irregularityMapService->m_frozenMapOpticalSystem
+                    : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenMapOpticalSystem);
+                auto fileName = optSys.fileName;
+                ImGui::TextUnformatted("Optical system:");
+                ImGui::SameLine();
+                ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+            }
+
+            ImGui::TextUnformatted("Surface number:");
             ImGui::SameLine();
-            ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
+            if (!mapFrozen && m_zemaxDDEClient)
+                state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
+
+            ImGui::TextUnformatted("Sampling:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
+            state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
+            ImGui::SameLine();
+            ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
+
+            ImGui::TextUnformatted("Angle step:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+            ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
+            state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 180.0);
+            ImGui::SameLine();
+            ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
+
+            int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
+            ImGui::TextUnformatted("Number of sections:");
+            ImGui::SameLine();
+            ImGui::TextUnformatted(std::to_string(numSections).c_str());
         }
-
-        ImGui::TextUnformatted("Surface number:");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-        if (m_zemaxDDEClient)
-            state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
-
-        ImGui::TextUnformatted("Sampling:");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-        state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
-        ImGui::SameLine();
-        ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-
-        ImGui::TextUnformatted("Angle step:");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
-        state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 180.0);
-        ImGui::SameLine();
-        ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
-
-        int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
-        ImGui::TextUnformatted("Number of sections:");
-        ImGui::SameLine();
-        ImGui::TextUnformatted(std::to_string(numSections).c_str());
 
         ImGui::EndDisabled();
 
@@ -219,30 +239,52 @@ namespace gui {
 
         ImGuiUtils::SectionHeader("Analysis");
 
-        if (m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap)) {
-            ImGuiUtils::SpinnerButton("Processing...", true);
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel")) {
-                m_irregularityMapService->cancelMapCalculation();
+        {
+            int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
+            int mapCalcSlot = m_irregularityMapService->getMapCalcSlot();
+            bool mapFrozen = mapCalcSlot >= 0 && mapCalcSlot != activeIdx;
+
+            if (mapFrozen) {
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Surface Map — calculation in progress on slot %d", mapCalcSlot);
+                ImGui::Spacing();
             }
-        } else if (m_uiOpMonitor.hasActiveTasks()) {
-            ImGui::BeginDisabled(true);
-            ImGui::Button("Calculate Surface Map");
-            if (ImGui::BeginItemTooltip()) {
-                ImGui::TextUnformatted("Another calculation is in progress");
-                ImGui::EndTooltip();
+
+            if (mapFrozen) {
+                ImGuiUtils::SpinnerButton("Processing...", true);
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_irregularityMapService->cancelMapCalculation();
+                }
+            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::SurfaceIrregularityMap)) {
+                ImGuiUtils::SpinnerButton("Processing...", true);
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel")) {
+                    m_irregularityMapService->cancelMapCalculation();
+                }
+            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
+                ImGui::BeginDisabled(true);
+                ImGui::Button("Calculate Surface Map");
+                if (ImGui::BeginItemTooltip()) {
+                    ImGui::TextUnformatted("Another calculation is in progress on this slot");
+                    ImGui::EndTooltip();
+                }
+                ImGui::EndDisabled();
+            } else {
+                ImGui::BeginDisabled(!isDDEInitialized());
+                if (ImGui::Button("Calculate Surface Map")) {
+                    if (m_zemaxDDEClient) {
+                        m_irregularityMapService->m_frozenMapOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
+                    }
+                    m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
+                }
+                ImGui::EndDisabled();
             }
-            ImGui::EndDisabled();
-        } else {
-            ImGui::BeginDisabled(!isDDEInitialized());
-            if (ImGui::Button("Calculate Surface Map")) {
-                m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
-            }
-            ImGui::EndDisabled();
         }
 
         if (m_irregularityMapService->hasData()) {
-            bool calculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
+            bool calculating = m_uiOpMonitor.hasActiveTasksOnSlot(
+                m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1,
+                TaskSource::SurfaceIrregularityMap);
 
             ImGuiUtils::SectionHeader("Results");
 
