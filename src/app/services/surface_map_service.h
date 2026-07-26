@@ -45,7 +45,7 @@ namespace app::services {
 
             void startCalculation(int surface, int sampling, double angle, app::models::TaskSource source);
             void cancelCalculation();
-            std::function<void()> onCalculationComplete;
+            std::function<void()> onNominalCalculationComplete;
 
             void startMapCalculation(int surface, int sampling, double angleStepDeg);
             void cancelMapCalculation();
@@ -69,6 +69,8 @@ namespace app::services {
             int getTotalAngles() const { return m_totalAngles; }
             double getAngleStepDeg() const { return m_angleStepDeg; }
             int getTotalDdeRequests() const { return m_totalDdeRequests; }
+            int getNominalCalcSlot() const { return m_nominalCalcSlot; }
+            int getMapCalcSlot() const { return m_mapCalcSlot; }
 
         protected:
             void startNextProfile();
@@ -76,7 +78,8 @@ namespace app::services {
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
             app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
-            app::compute::SurfaceProfile m_calculator;
+            app::compute::SurfaceProfile m_nominalCalculator;
+            app::compute::SurfaceProfile m_mapCalculator;
             app::compute::SurfaceMap m_mapEngine;
 
             std::vector<app::models::SurfaceData> m_profiles;
@@ -90,6 +93,8 @@ namespace app::services {
             double m_centerSagRef = 0.0;
             int m_totalDdeRequests{0};
             uint64_t m_mapTaskId{0};
+            int m_nominalCalcSlot{-1};
+            int m_mapCalcSlot{-1};
             std::chrono::steady_clock::time_point m_calcStartTime;
     };
 }

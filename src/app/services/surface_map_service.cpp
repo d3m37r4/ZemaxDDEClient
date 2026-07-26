@@ -12,37 +12,43 @@ namespace app::services {
     SurfaceMapService::SurfaceMapService(DDEConnectionManager* connectionManager, Logger& logger)
         : m_connectionManager(connectionManager)
         , m_logger(logger)
-        , m_calculator(connectionManager, logger)
+        , m_nominalCalculator(connectionManager, logger)
+        , m_mapCalculator(connectionManager, logger)
     {
     }
 
     void SurfaceMapService::setUiOperationMonitor(app::services::OperationMonitorService* monitor) {
         m_uiOpMonitor = monitor;
-        m_calculator.setMonitor(monitor);
+        m_nominalCalculator.setMonitor(monitor);
+        m_mapCalculator.setMonitor(monitor);
     }
 
     void SurfaceMapService::startCalculation(int surface, int sampling, double angle, app::models::TaskSource source) {
+        m_nominalCalcSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
         if (m_connectionManager) {
-            m_calculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
-            m_calculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
+            m_nominalCalculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
+            m_nominalCalculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
         }
 
-        m_calculator.onComplete = [this]() {
-            m_nominalSurfaceData = m_calculator.getResult();
+        m_nominalCalculator.onComplete = [this]() {
+            m_nominalSurfaceData = m_nominalCalculator.getResult();
+            m_nominalCalcSlot = -1;
             if (m_nominalSurfaceData.isValid()) {
                 m_logger.addLog("[IrregularityMapService] Nominal surface profile calculated and stored as reference");
             }
-            if (onCalculationComplete) onCalculationComplete();
+            if (onNominalCalculationComplete) onNominalCalculationComplete();
         };
-        m_calculator.onFailed = [this]() {
-            if (onCalculationComplete) onCalculationComplete();
+        m_nominalCalculator.onFailed = [this]() {
+            m_nominalCalcSlot = -1;
+            if (onNominalCalculationComplete) onNominalCalculationComplete();
         };
 
-        m_calculator.startCalculation(surface, sampling, angle, source);
+        m_nominalCalculator.startCalculation(surface, sampling, angle, source);
     }
 
     void SurfaceMapService::cancelCalculation() {
-        m_calculator.cancel();
+        m_nominalCalculator.cancel();
+        m_nominalCalcSlot = -1;
     }
 
     void SurfaceMapService::startMapCalculation(int surface, int sampling, double angleStepDeg) {
@@ -52,9 +58,11 @@ namespace app::services {
             return;
         }
 
+        m_mapCalcSlot = m_connectionManager->getActiveIndex();
+
         if (m_connectionManager) {
-            m_calculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
-            m_calculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
+            m_mapCalculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
+            m_mapCalculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
         }
 
         if (angleStepDeg <= 0.0 || angleStepDeg >= 180.0) {
@@ -84,9 +92,10 @@ namespace app::services {
             surface, m_totalAngles, angleStepDeg, sampling, estimatedRequests));
 
         if (m_uiOpMonitor) {
+            int clientSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
             m_mapTaskId = m_uiOpMonitor->startTask(
                 app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map",
-                m_totalAngles * (m_targetSampling + 2));
+                m_totalAngles * (m_targetSampling + 2), clientSlot);
         }
 
         startNextProfile();
@@ -107,6 +116,7 @@ namespace app::services {
                 m_mapTaskId = 0;
             }
 
+            m_mapCalcSlot = -1;
             m_windowState.tolerancedSurfaceIndex = m_targetSurface;
             m_windowState.tolerancedSampling = m_targetSampling;
             m_windowState.tolerancedAngleStep = m_angleStepDeg;
@@ -127,9 +137,9 @@ namespace app::services {
 
         double angle = m_currentAngleIndex * m_angleStepDeg;
 
-        m_calculator.m_createTask = false;
+        m_mapCalculator.m_createTask = false;
 
-        m_calculator.onProgress = [this](int cur, int /*total*/, const std::string& /*msg*/) {
+        m_mapCalculator.onProgress = [this](int cur, int /*total*/, const std::string& /*msg*/) {
             if (m_uiOpMonitor && m_mapTaskId > 0) {
                 std::string sectionMsg = std::format("Section {}/{}",
                     m_currentAngleIndex + 1, m_totalAngles);
@@ -137,8 +147,8 @@ namespace app::services {
             }
         };
 
-        m_calculator.onComplete = [this, angle]() {
-            auto& profile = m_calculator.getResult();
+        m_mapCalculator.onComplete = [this, angle]() {
+            auto& profile = m_mapCalculator.getResult();
 
             if (m_currentAngleIndex == 0) {
                 m_centerSagRef = profile.sagDataPoints.empty() ? 0.0
@@ -152,44 +162,46 @@ namespace app::services {
             }
 
             m_profiles.push_back(profile);
-            m_totalDdeRequests += m_calculator.getTotalDdeRequests();
+            m_totalDdeRequests += m_mapCalculator.getTotalDdeRequests();
             m_currentAngleIndex++;
 
             startNextProfile();
         };
 
-        m_calculator.onFailed = [this]() {
+        m_mapCalculator.onFailed = [this]() {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - m_calcStartTime);
-            if (m_calculator.isCancelled()) {
+            if (m_mapCalculator.isCancelled()) {
                 m_logger.addLog(std::format("[IrregularityMapService] Surface map cancelled in {}",
                     ZemaxDDE::formatDuration(elapsed)));
             } else {
                 m_logger.addLog(std::format("[IrregularityMapService] Profile calculation failed after {}: {}",
-                    ZemaxDDE::formatDuration(elapsed), m_calculator.getError()));
+                    ZemaxDDE::formatDuration(elapsed), m_mapCalculator.getError()));
             }
             if (m_uiOpMonitor && m_mapTaskId > 0) {
-                m_uiOpMonitor->failTask(m_mapTaskId, m_calculator.getError().empty() ? "Cancelled" : m_calculator.getError());
+                m_uiOpMonitor->failTask(m_mapTaskId, m_mapCalculator.getError().empty() ? "Cancelled" : m_mapCalculator.getError());
                 m_mapTaskId = 0;
             }
             m_profiles.clear();
             m_currentAngleIndex = 0;
+            m_mapCalcSlot = -1;
         };
 
-        m_calculator.startCalculation(m_targetSurface, m_targetSampling, angle,
+        m_mapCalculator.startCalculation(m_targetSurface, m_targetSampling, angle,
             app::models::TaskSource::SurfaceIrregularityMap,
             std::format("Section {}/{} at {:.1f}°", m_currentAngleIndex + 1, m_totalAngles, angle));
     }
 
     void SurfaceMapService::cancelMapCalculation() {
-        if (m_calculator.isCalculating()) {
-            m_calculator.cancel();
+        if (m_mapCalculator.isCalculating()) {
+            m_mapCalculator.cancel();
         } else if (m_mapTaskId > 0) {
             if (m_uiOpMonitor) m_uiOpMonitor->failTask(m_mapTaskId, "Cancelled");
             m_mapTaskId = 0;
             m_profiles.clear();
             m_currentAngleIndex = 0;
         }
+        m_mapCalcSlot = -1;
     }
 
     void SurfaceMapService::clearData() {
