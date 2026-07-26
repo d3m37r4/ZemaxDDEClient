@@ -100,8 +100,7 @@ void GuiManager::render() {
     }
 
     float navbarHeight = ImGui::GetFrameHeight();
-    constexpr float kStatusBarHeightMultiplier = 1.5f;
-    float statusBarHeight = m_uiOpMonitor.hasActiveTasks() ? ImGui::GetFrameHeight() * kStatusBarHeightMultiplier : 0.0f;
+    float statusBarHeight = m_uiOpMonitor.computeStatusBarHeight();
     ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
         ImGui::GetIO().DisplaySize.x,
