@@ -50,6 +50,7 @@ namespace app::compute {
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
             app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
+            ZemaxDDE::ZemaxDDEClient* m_boundClient{nullptr};
 
             enum class State { Idle, FetchingSurfaceData, FetchingSagPoints, Completed, Failed };
             State m_state = State::Idle;

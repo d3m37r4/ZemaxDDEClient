@@ -19,6 +19,7 @@ namespace app::compute {
     }
 
     ZemaxDDE::ZemaxDDEClient* SurfaceProfile::getClient() const {
+        if (m_boundClient) return m_boundClient;
         return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
     }
 
@@ -38,12 +39,14 @@ namespace app::compute {
             return;
         }
 
+        m_boundClient = client;
         m_source = source;
         if (m_createTask && m_uiOpMonitor) {
             std::string taskLabel = label.empty()
                 ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
                 : label;
-            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2);
+            int clientSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
+            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot);
         }
 
         m_state = State::FetchingSurfaceData;
@@ -93,6 +96,7 @@ namespace app::compute {
 
     void SurfaceProfile::cancel() {
         m_cancelRequested = true;
+        m_boundClient = nullptr;
         if (m_uiOpMonitor && m_taskId > 0) {
             m_uiOpMonitor->requestCancel(m_taskId);
         }
@@ -255,6 +259,7 @@ namespace app::compute {
         if (m_state == State::Failed || m_state == State::Completed) return;
         m_state = State::Failed;
         m_error = error;
+        m_boundClient = nullptr;
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->failTask(m_taskId, error);

@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include "dde/dde_connection.h"
+#include "app/models/types.h"
 
 namespace ZemaxDDE { class ZemaxDDEClient; }
 class Logger;
@@ -31,6 +32,10 @@ public:
 
     /// Checks health of all active connections and disconnects any that are lost.
     void checkAllConnectionHealth();
+
+    /// Finds which slot has an active task of the given source type.
+    /// Returns slot index or -1 if not found.
+    int findActiveTaskSlot(app::models::TaskSource source) const;
 
     /// Returns true if a connection was lost and needs user attention.
     [[nodiscard]] bool hasConnectionLost() const noexcept { return m_connectionLostIndex >= 0; }
