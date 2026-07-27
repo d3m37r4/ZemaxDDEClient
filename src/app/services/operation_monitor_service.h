@@ -31,9 +31,16 @@ namespace app::services {
         void failTask(uint64_t taskId, const std::string& error);
         void requestCancel(uint64_t taskId);
 
+        struct TaskProgress {
+            int currentStep;
+            int totalSteps;
+            int clientSlot{-1};
+        };
+
         bool hasActiveTasks(std::optional<app::models::TaskSource> filter = std::nullopt) const;
         bool hasActiveTasksOnSlot(int slot, std::optional<app::models::TaskSource> filter = std::nullopt) const;
         int getTaskClientSlot(uint64_t taskId) const;
+        std::optional<TaskProgress> getTaskProgress(app::models::TaskSource source) const;
 
         const std::unordered_map<uint64_t, TaskRecord>& getTasks() const { return m_tasks; }
         const ZemaxDDE::OperationInfo* findDdeOp(uint64_t ddeId) const;

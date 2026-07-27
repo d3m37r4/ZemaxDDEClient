@@ -96,6 +96,23 @@ namespace app::services {
         return rec ? rec->clientSlot : -1;
     }
 
+    std::optional<OperationMonitorService::TaskProgress> OperationMonitorService::getTaskProgress(app::models::TaskSource source) const {
+        for (const auto& [id, t] : m_tasks) {
+            if (t.source != source) continue;
+            if (t.ddeOperationId == 0 || !t.boundMonitor) continue;
+            for (const auto& op : t.boundMonitor->getOperations()) {
+                if (op.id == t.ddeOperationId) {
+                    if (op.status == ZemaxDDE::OperationStatus::Pending ||
+                        op.status == ZemaxDDE::OperationStatus::InFlight) {
+                        return TaskProgress{op.currentStep, op.totalSteps, t.clientSlot};
+                    }
+                    break;
+                }
+            }
+        }
+        return std::nullopt;
+    }
+
     OperationMonitorService::TaskRecord* OperationMonitorService::findRecord(uint64_t taskId) {
         auto it = m_tasks.find(taskId);
         return (it != m_tasks.end()) ? &it->second : nullptr;

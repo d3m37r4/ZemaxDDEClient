@@ -30,6 +30,13 @@ namespace {
     std::string getAngleTooltip() {
         return "Orientation angle in degrees relative to the local x axis.";
     }
+
+    void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor) {
+        auto progress = monitor.getTaskProgress(source);
+        if (!progress) return;
+        int pct = progress->totalSteps > 0 ? (progress->currentStep * 100 / progress->totalSteps) : 0;
+        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "%s — calculation in progress on slot %d: %d%%", label, progress->clientSlot, pct);
+    }
 }
 
 namespace gui {
@@ -63,6 +70,7 @@ namespace gui {
 
         {
             const auto& nominal = m_irregularityMapService->m_nominalSurfaceData;
+            int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
 
             if (nominal.isValid() && nominal.id == state.nominalSurfaceIndex) {
                 ImGuiUtils::BeginPropertyGrid("##NominalData", maxLabelWidth);
@@ -76,6 +84,8 @@ namespace gui {
                 ImGuiUtils::EndPropertyGrid();
                 ImGuiUtils::SpacingY(0.25f);
 
+                renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+
                 if (ImGui::Button("Export txt")) {
                     m_profileService->saveCrossSectionToFile(nominal);
                 }
@@ -86,14 +96,8 @@ namespace gui {
                     m_irregularityMapService->m_nominalSurfaceData.clear();
                 }
             } else {
-                int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
                 int nominalCalcSlot = m_irregularityMapService->getNominalCalcSlot();
                 bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
-
-                if (nominalFrozen) {
-                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Nominal Profile — calculation in progress on slot %d", nominalCalcSlot);
-                    ImGui::Spacing();
-                }
 
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen);
 
@@ -244,10 +248,7 @@ namespace gui {
             int mapCalcSlot = m_irregularityMapService->getMapCalcSlot();
             bool mapFrozen = mapCalcSlot >= 0 && mapCalcSlot != activeIdx;
 
-            if (mapFrozen) {
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Surface Map — calculation in progress on slot %d", mapCalcSlot);
-                ImGui::Spacing();
-            }
+            renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
 
             if (mapFrozen) {
                 ImGuiUtils::SpinnerButton("Processing...", true);
