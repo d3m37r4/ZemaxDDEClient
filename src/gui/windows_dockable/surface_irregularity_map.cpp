@@ -207,108 +207,137 @@ namespace gui {
             bool mapCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
             bool mapOnActiveSlot = mapCalculating && mapCalcSlot == activeIdx;
 
-            ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen || mapOnActiveSlot);
+            if (m_irregularityMapService->hasData()) {
+                const auto& optSys = m_irregularityMapService->m_frozenMapOpticalSystem;
+                int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
 
-            {
-                const auto& optSys = mapFrozen
-                    ? m_irregularityMapService->m_frozenMapOpticalSystem
-                    : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenMapOpticalSystem);
-                auto fileName = optSys.fileName;
-                ImGui::TextUnformatted("Optical system:");
+                ImGuiUtils::BeginPropertyGrid("##TolerancedData", maxLabelWidth);
+                ImGuiUtils::PropertyGridRow("Optical system", optSys.fileName.c_str());
+                ImGuiUtils::PropertyGridRow("Surface", std::to_string(state.tolerancedSurfaceIndex).c_str());
+                ImGuiUtils::PropertyGridRow("Sampling", std::to_string(state.tolerancedSampling).c_str());
+                ImGuiUtils::PropertyGridRow("Angle step", std::format("{}°", state.tolerancedAngleStep).c_str());
+                ImGuiUtils::PropertyGridRow("Sections", std::to_string(numSections).c_str());
+                ImGuiUtils::EndPropertyGrid();
+                ImGuiUtils::SpacingY(0.25f);
+
+                if (ImGui::Button("Show 3D surface map")) {
+                    m_irregularityMapService->m_showTolerancedSurfaceMap = true;
+                }
+
                 ImGui::SameLine();
-                ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+
+                if (ImGui::Button("Clear data")) {
+                    m_irregularityMapService->clearData();
+                    m_irregularityMapService->m_showTolerancedSurfaceMap = false;
+                    m_irregularityMapService->m_showDeviationSurfaceMap = false;
+                    m_irregularityMapService->m_showWorstSectionProfile = false;
+                    m_irregularityMapService->m_showWorstSectionDeviation = false;
+                    m_irregularityMapService->m_worstProfileData.clear();
+                }
+            } else {
+                ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen || mapOnActiveSlot);
+
+                {
+                    const auto& optSys = mapFrozen
+                        ? m_irregularityMapService->m_frozenMapOpticalSystem
+                        : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenMapOpticalSystem);
+                    auto fileName = optSys.fileName;
+                    ImGui::TextUnformatted("Optical system:");
+                    ImGui::SameLine();
+                    ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+                }
+
+                ImGui::TextUnformatted("Surface number:");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
+                if (!mapFrozen && !mapOnActiveSlot && m_zemaxDDEClient)
+                    state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
+
+                ImGui::TextUnformatted("Sampling:");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
+                state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
+                ImGui::SameLine();
+                ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
+
+                ImGui::TextUnformatted("Angle step:");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
+                state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 180.0);
+                ImGui::SameLine();
+                ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
+
+                int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
+                ImGui::TextUnformatted("Number of sections:");
+                ImGui::SameLine();
+                ImGui::TextUnformatted(std::to_string(numSections).c_str());
+
+                ImGuiUtils::SpacingY(0.5f);
+
+                if (mapFrozen) {
+                    renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
+                }
+
+                ImGui::EndDisabled();
+
+                if (mapOnActiveSlot) {
+                    renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
+                }
+
+                if (mapFrozen || mapOnActiveSlot) {
+                    ImGuiUtils::SpinnerButton("Processing...", true);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Cancel")) {
+                        m_irregularityMapService->cancelMapCalculation();
+                    }
+                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
+                    ImGui::BeginDisabled(true);
+                    ImGui::Button("Calculate Surface Map");
+                    if (ImGui::BeginItemTooltip()) {
+                        ImGui::TextUnformatted("Another calculation is in progress on this slot");
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::EndDisabled();
+                } else {
+                    ImGui::BeginDisabled(!isDDEInitialized());
+                    if (ImGui::Button("Calculate Surface Map")) {
+                        if (m_zemaxDDEClient) {
+                            m_irregularityMapService->m_frozenMapOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
+                        }
+                        m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
+                    }
+                    ImGui::EndDisabled();
+                }
             }
-
-            ImGui::TextUnformatted("Surface number:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-            if (!mapFrozen && !mapOnActiveSlot && m_zemaxDDEClient)
-                state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
-
-            ImGui::TextUnformatted("Sampling:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-            state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
-            ImGui::SameLine();
-            ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-
-            ImGui::TextUnformatted("Angle step:");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-            ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
-            state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 180.0);
-            ImGui::SameLine();
-            ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
-
-            int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
-            ImGui::TextUnformatted("Number of sections:");
-            ImGui::SameLine();
-            ImGui::TextUnformatted(std::to_string(numSections).c_str());
         }
-
-        ImGui::EndDisabled();
 
         ImGui::EndChild();
-
-        ImGuiUtils::SectionHeader("Analysis");
-
-        {
-            int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
-            int mapCalcSlot = m_irregularityMapService->getMapCalcSlot();
-            bool mapFrozen = mapCalcSlot >= 0 && mapCalcSlot != activeIdx;
-            bool mapCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
-            bool mapOnActiveSlot = mapCalculating && mapCalcSlot == activeIdx;
-
-            if (mapFrozen) {
-                ImGui::BeginDisabled(true);
-                renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
-                ImGui::EndDisabled();
-            } else if (mapOnActiveSlot) {
-                renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
-            }
-
-            if (mapFrozen || mapOnActiveSlot) {
-                ImGuiUtils::SpinnerButton("Processing...", true);
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel")) {
-                    m_irregularityMapService->cancelMapCalculation();
-                }
-            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
-                ImGui::BeginDisabled(true);
-                ImGui::Button("Calculate Surface Map");
-                if (ImGui::BeginItemTooltip()) {
-                    ImGui::TextUnformatted("Another calculation is in progress on this slot");
-                    ImGui::EndTooltip();
-                }
-                ImGui::EndDisabled();
-            } else {
-                ImGui::BeginDisabled(!isDDEInitialized());
-                if (ImGui::Button("Calculate Surface Map")) {
-                    if (m_zemaxDDEClient) {
-                        m_irregularityMapService->m_frozenMapOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
-                    }
-                    m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
-                }
-                ImGui::EndDisabled();
-            }
-        }
 
         if (m_irregularityMapService->hasData()) {
             bool calculating = m_uiOpMonitor.hasActiveTasksOnSlot(
                 m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1,
                 TaskSource::SurfaceIrregularityMap);
 
-            ImGuiUtils::SectionHeader("Results");
+            ImGuiUtils::SectionHeader("Analysis");
 
             ImGui::BeginDisabled(calculating);
 
             const auto& profiles = m_irregularityMapService->getProfiles();
-            ImGui::Text(std::format("Sections calculated: {} ({}° step, {} pts each)",
+            ImGui::Text(std::format("Sections available for analysis: {} ({:.1f}° step, {} pts each)",
                 profiles.size(), state.tolerancedAngleStep, state.tolerancedSampling).c_str());
 
             auto& maxPV = m_irregularityMapService->getMaxPVResult();
+            bool canCalculate = m_irregularityMapService->m_nominalSurfaceData.isValid() && !maxPV.has_value();
+
+            ImGui::BeginDisabled(!canCalculate);
+            if (ImGui::Button("Find MaxPV (Profile deviation)")) {
+                m_irregularityMapService->calculateDeviations();
+            }
+            ImGui::EndDisabled();
+
             if (maxPV.has_value() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
                 ImGui::Spacing();
                 ImGui::TextUnformatted("Maximum P-V section:");
@@ -318,7 +347,7 @@ namespace gui {
                 ImGui::Text(std::format("  P-V:       {:.6f} mm", maxPV->pv).c_str());
 
                 ImGui::Spacing();
-                if (ImGui::Button("Show worst section profile")) {
+                if (ImGui::Button("Show worst profile")) {
                     for (const auto& p : profiles) {
                         if (std::abs(p.angle - maxPV->angle) < 0.01) {
                             m_irregularityMapService->m_worstProfileData = p;
@@ -345,13 +374,7 @@ namespace gui {
 
             ImGui::Spacing();
 
-            if (ImGui::Button("Show 3D surface map")) {
-                m_irregularityMapService->m_showTolerancedSurfaceMap = true;
-            }
-
-            ImGui::SameLine();
-
-            ImGui::BeginDisabled(!m_irregularityMapService->m_nominalSurfaceData.isValid());
+            ImGui::BeginDisabled(!m_irregularityMapService->m_nominalSurfaceData.isValid() || !maxPV.has_value());
             if (ImGui::Button("Show 3D deviation map")) {
                 m_irregularityMapService->m_showDeviationSurfaceMap = true;
             }
@@ -359,12 +382,14 @@ namespace gui {
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Clear data")) {
+            if (ImGui::Button("Clear all")) {
+                m_irregularityMapService->m_nominalSurfaceData.clear();
                 m_irregularityMapService->clearData();
                 m_irregularityMapService->m_showTolerancedSurfaceMap = false;
                 m_irregularityMapService->m_showDeviationSurfaceMap = false;
                 m_irregularityMapService->m_showWorstSectionProfile = false;
                 m_irregularityMapService->m_showWorstSectionDeviation = false;
+                m_irregularityMapService->m_worstProfileData.clear();
             }
 
             ImGui::EndDisabled();
