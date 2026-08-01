@@ -98,8 +98,10 @@ namespace gui {
             } else {
                 int nominalCalcSlot = m_irregularityMapService->getNominalCalcSlot();
                 bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
+                bool nominalCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::NominalSurfaceProfile);
+                bool nominalOnActiveSlot = nominalCalculating && nominalCalcSlot == activeIdx;
 
-                ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen);
+                ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen || nominalOnActiveSlot);
 
                 {
                     const auto& optSys = nominalFrozen
@@ -115,7 +117,7 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
                 ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                if (!nominalFrozen && m_zemaxDDEClient)
+                if (!nominalFrozen && !nominalOnActiveSlot && m_zemaxDDEClient)
                     state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
 
                 ImGui::TextUnformatted("Sampling:");
@@ -136,15 +138,9 @@ namespace gui {
 
                 ImGuiUtils::SpacingY(0.5f);
 
-                if (nominalFrozen) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
-                        m_irregularityMapService->cancelCalculation();
-                        m_irregularityMapService->onNominalCalculationComplete = nullptr;
-                        m_irregularityMapService->m_nominalSurfaceData.clear();
-                    }
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::NominalSurfaceProfile)) {
+                ImGui::EndDisabled();
+
+                if (nominalFrozen || nominalOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
                     if (ImGui::Button("Cancel")) {
@@ -175,8 +171,6 @@ namespace gui {
                         }
                     }
                 }
-
-                ImGui::EndDisabled();
             }
         }
 
@@ -195,8 +189,10 @@ namespace gui {
             int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
             int mapCalcSlot = m_irregularityMapService->getMapCalcSlot();
             bool mapFrozen = mapCalcSlot >= 0 && mapCalcSlot != activeIdx;
+            bool mapCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
+            bool mapOnActiveSlot = mapCalculating && mapCalcSlot == activeIdx;
 
-            ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen);
+            ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen || mapOnActiveSlot);
 
             {
                 const auto& optSys = mapFrozen
@@ -212,7 +208,7 @@ namespace gui {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
             ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-            if (!mapFrozen && m_zemaxDDEClient)
+            if (!mapFrozen && !mapOnActiveSlot && m_zemaxDDEClient)
                 state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
 
             ImGui::TextUnformatted("Sampling:");
@@ -247,16 +243,12 @@ namespace gui {
             int activeIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
             int mapCalcSlot = m_irregularityMapService->getMapCalcSlot();
             bool mapFrozen = mapCalcSlot >= 0 && mapCalcSlot != activeIdx;
+            bool mapCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
+            bool mapOnActiveSlot = mapCalculating && mapCalcSlot == activeIdx;
 
             renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
 
-            if (mapFrozen) {
-                ImGuiUtils::SpinnerButton("Processing...", true);
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel")) {
-                    m_irregularityMapService->cancelMapCalculation();
-                }
-            } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::SurfaceIrregularityMap)) {
+            if (mapFrozen || mapOnActiveSlot) {
                 ImGuiUtils::SpinnerButton("Processing...", true);
                 ImGui::SameLine();
                 if (ImGui::Button("Cancel")) {

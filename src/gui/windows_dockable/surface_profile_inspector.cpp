@@ -96,8 +96,10 @@ namespace gui {
             } else {
                 int nominalCalcSlot = m_profileService->getNominalCalcSlot();
                 bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
+                bool nominalCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::NominalSurfaceProfile);
+                bool nominalOnActiveSlot = nominalCalculating && nominalCalcSlot == activeIdx;
 
-                ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen);
+                ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen || nominalOnActiveSlot);
 
                 {
                     const auto& optSys = nominalFrozen
@@ -113,7 +115,7 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
                 ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                if (!nominalFrozen) {
+                if (!nominalFrozen && !nominalOnActiveSlot) {
                     state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.nominalSurfaceIndex));
                 }
 
@@ -137,22 +139,18 @@ namespace gui {
 
                 renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
 
+                ImGui::BeginDisabled(nominalCalculating);
                 if (ImGui::Button("Copy toleranced surface settings")) {
                     state.nominalSampling = state.tolerancedSampling;
                     state.nominalAngle = state.tolerancedAngle;
                 }
+                ImGui::EndDisabled();
+
+                ImGui::EndDisabled();
 
                 ImGui::SameLine();
 
-                if (nominalFrozen) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
-                        m_profileService->cancelCalculation(TaskSource::NominalSurfaceProfile);
-                        m_profileService->onNominalCalculationComplete = nullptr;
-                        nominal.clear();
-                    }
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::NominalSurfaceProfile)) {
+                if (nominalFrozen || nominalOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
                     if (ImGui::Button("Cancel")) {
@@ -189,8 +187,6 @@ namespace gui {
                         }
                     }
                 }
-
-                ImGui::EndDisabled();
             }
         }
         ImGui::EndChild();
@@ -238,8 +234,10 @@ namespace gui {
             } else {
                 int tolerancedCalcSlot = m_profileService->getTolerancedCalcSlot();
                 bool tolerancedFrozen = tolerancedCalcSlot >= 0 && tolerancedCalcSlot != activeIdx;
+                bool tolerancedCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::TolerancedSurfaceProfile);
+                bool tolerancedOnActiveSlot = tolerancedCalculating && tolerancedCalcSlot == activeIdx;
 
-                ImGui::BeginDisabled(!isDDEInitialized() || tolerancedFrozen);
+                ImGui::BeginDisabled(!isDDEInitialized() || tolerancedFrozen || tolerancedOnActiveSlot);
 
                 {
                     const auto& optSys = tolerancedFrozen
@@ -255,7 +253,7 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
                 ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-                if (!tolerancedFrozen) {
+                if (!tolerancedFrozen && !tolerancedOnActiveSlot) {
                     state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.tolerancedSurfaceIndex));
                 }
 
@@ -279,22 +277,18 @@ namespace gui {
 
                 renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
 
+                ImGui::BeginDisabled(tolerancedCalculating);
                 if (ImGui::Button("Copy nominal surface settings")) {
                     state.tolerancedSampling = state.nominalSampling;
                     state.tolerancedAngle = state.nominalAngle;
                 }
+                ImGui::EndDisabled();
+
+                ImGui::EndDisabled();
 
                 ImGui::SameLine();
 
-                if (tolerancedFrozen) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
-                        m_profileService->cancelCalculation(TaskSource::TolerancedSurfaceProfile);
-                        m_profileService->onTolerancedCalculationComplete = nullptr;
-                        toleranced.clear();
-                    }
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx, TaskSource::TolerancedSurfaceProfile)) {
+                if (tolerancedFrozen || tolerancedOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
                     if (ImGui::Button("Cancel")) {
@@ -331,8 +325,6 @@ namespace gui {
                         }
                     }
                 }
-
-                ImGui::EndDisabled();
             }
         }
         ImGui::EndChild();
