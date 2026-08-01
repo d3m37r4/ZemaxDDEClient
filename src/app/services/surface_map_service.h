@@ -55,6 +55,7 @@ namespace app::services {
             const std::vector<app::models::SurfaceData>& getProfiles() const { return m_profiles; }
             const std::optional<MaxPVResult>& getMaxPVResult() const { return m_maxPVResult; }
             std::optional<MaxPVResult> findMaxPVSection() const;
+            bool calculateDeviations();
 
             bool m_showTolerancedSurfaceMap{false};
             bool m_showDeviationSurfaceMap{false};

@@ -124,14 +124,6 @@ namespace app::services {
             m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections in {} — {} DDE requests",
                 m_profiles.size(), ZemaxDDE::formatDuration(std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - m_calcStartTime)), m_totalDdeRequests));
-
-            if (m_nominalSurfaceData.isValid()) {
-                m_maxPVResult = findMaxPVSection();
-                if (m_maxPVResult) {
-                    m_logger.addLog(std::format("[IrregularityMapService] Max P-V section: {:.2f}°, P={:.6f}, V={:.6f}, PV={:.6f}",
-                        m_maxPVResult->angle, m_maxPVResult->peak, m_maxPVResult->valley, m_maxPVResult->pv));
-                }
-            }
             return;
         }
 
@@ -213,5 +205,15 @@ namespace app::services {
 
     std::optional<MaxPVResult> SurfaceMapService::findMaxPVSection() const {
         return m_mapEngine.findMaxPVSection(m_profiles, m_nominalSurfaceData);
+    }
+
+    bool SurfaceMapService::calculateDeviations() {
+        if (!hasData() || !m_nominalSurfaceData.isValid()) return false;
+        m_maxPVResult = findMaxPVSection();
+        if (m_maxPVResult) {
+            m_logger.addLog(std::format("[IrregularityMapService] Max P-V section: {:.2f}°, P={:.6f}, V={:.6f}, PV={:.6f}",
+                m_maxPVResult->angle, m_maxPVResult->peak, m_maxPVResult->valley, m_maxPVResult->pv));
+        }
+        return m_maxPVResult.has_value();
     }
 }
