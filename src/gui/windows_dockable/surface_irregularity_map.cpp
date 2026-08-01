@@ -84,7 +84,12 @@ namespace gui {
                 ImGuiUtils::EndPropertyGrid();
                 ImGuiUtils::SpacingY(0.25f);
 
+                int nominalCalcSlotV = m_irregularityMapService->getNominalCalcSlot();
+                bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
+
+                ImGui::BeginDisabled(nominalFrozenV);
                 renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                ImGui::EndDisabled();
 
                 if (ImGui::Button("Export txt")) {
                     m_profileService->saveCrossSectionToFile(nominal);
@@ -138,7 +143,15 @@ namespace gui {
 
                 ImGuiUtils::SpacingY(0.5f);
 
+                if (nominalFrozen) {
+                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                }
+
                 ImGui::EndDisabled();
+
+                if (nominalOnActiveSlot) {
+                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                }
 
                 if (nominalFrozen || nominalOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
@@ -248,7 +261,13 @@ namespace gui {
             bool mapCalculating = m_uiOpMonitor.hasActiveTasks(TaskSource::SurfaceIrregularityMap);
             bool mapOnActiveSlot = mapCalculating && mapCalcSlot == activeIdx;
 
-            renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
+            if (mapFrozen) {
+                ImGui::BeginDisabled(true);
+                renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
+                ImGui::EndDisabled();
+            } else if (mapOnActiveSlot) {
+                renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
+            }
 
             if (mapFrozen || mapOnActiveSlot) {
                 ImGuiUtils::SpinnerButton("Processing...", true);

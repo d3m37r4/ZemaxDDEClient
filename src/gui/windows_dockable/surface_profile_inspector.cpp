@@ -75,7 +75,12 @@ namespace gui {
                 ImGuiUtils::EndPropertyGrid();
                 ImGuiUtils::SpacingY(0.25f);
 
+                int nominalCalcSlotV = m_profileService->getNominalCalcSlot();
+                bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
+
+                ImGui::BeginDisabled(nominalFrozenV);
                 renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                ImGui::EndDisabled();
 
                 if (ImGui::Button("Export txt")) {
                     m_profileService->saveCrossSectionToFile(nominal);
@@ -137,15 +142,21 @@ namespace gui {
 
                 ImGuiUtils::SpacingY(0.5f);
 
-                renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                if (nominalFrozen) {
+                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                }
 
-                ImGui::BeginDisabled(nominalCalculating);
+                ImGui::EndDisabled();
+
+                if (nominalOnActiveSlot) {
+                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                }
+
+                ImGui::BeginDisabled(!isDDEInitialized() || nominalCalculating);
                 if (ImGui::Button("Copy toleranced surface settings")) {
                     state.nominalSampling = state.tolerancedSampling;
                     state.nominalAngle = state.tolerancedAngle;
                 }
-                ImGui::EndDisabled();
-
                 ImGui::EndDisabled();
 
                 ImGui::SameLine();
@@ -215,7 +226,12 @@ namespace gui {
                 ImGuiUtils::EndPropertyGrid();
                 ImGuiUtils::SpacingY(0.25f);
 
+                int tolerancedCalcSlotV = m_profileService->getTolerancedCalcSlot();
+                bool tolerancedFrozenV = tolerancedCalcSlotV >= 0 && tolerancedCalcSlotV != activeIdx;
+
+                ImGui::BeginDisabled(tolerancedFrozenV);
                 renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                ImGui::EndDisabled();
 
                 if (ImGui::Button("Export txt")) {
                     m_profileService->saveCrossSectionToFile(toleranced);
@@ -277,15 +293,21 @@ namespace gui {
 
                 ImGuiUtils::SpacingY(0.5f);
 
-                renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                if (tolerancedFrozen) {
+                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                }
 
-                ImGui::BeginDisabled(tolerancedCalculating);
+                ImGui::EndDisabled();
+
+                if (tolerancedOnActiveSlot) {
+                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                }
+
+                ImGui::BeginDisabled(!isDDEInitialized() || tolerancedCalculating);
                 if (ImGui::Button("Copy nominal surface settings")) {
                     state.tolerancedSampling = state.nominalSampling;
                     state.tolerancedAngle = state.nominalAngle;
                 }
-                ImGui::EndDisabled();
-
                 ImGui::EndDisabled();
 
                 ImGui::SameLine();
