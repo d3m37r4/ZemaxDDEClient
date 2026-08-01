@@ -167,6 +167,7 @@ namespace gui {
                     }
                     ImGui::EndDisabled();
                 } else {
+                    ImGui::BeginDisabled(!isDDEInitialized());
                     if (ImGui::Button("Get nominal surface data")) {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
@@ -186,6 +187,7 @@ namespace gui {
                             m_profileService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
                     }
+                    ImGui::EndDisabled();
                 }
             }
         }
@@ -305,6 +307,7 @@ namespace gui {
                     }
                     ImGui::EndDisabled();
                 } else {
+                    ImGui::BeginDisabled(!isDDEInitialized());
                     if (ImGui::Button("Get toleranced surface data")) {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenTolerancedOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
@@ -324,6 +327,7 @@ namespace gui {
                             m_profileService->startCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
                         }
                     }
+                    ImGui::EndDisabled();
                 }
             }
         }

@@ -157,6 +157,7 @@ namespace gui {
                     }
                     ImGui::EndDisabled();
                 } else {
+                    ImGui::BeginDisabled(!isDDEInitialized());
                     if (ImGui::Button("Get nominal surface data")) {
                         if (isDDEInitialized()) {
                             m_irregularityMapService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
@@ -170,6 +171,7 @@ namespace gui {
                             m_irregularityMapService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
                     }
+                    ImGui::EndDisabled();
                 }
             }
         }
