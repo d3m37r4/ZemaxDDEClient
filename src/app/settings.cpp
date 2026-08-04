@@ -139,6 +139,12 @@ namespace app {
             }
         }
 
+        // The remainder of the JSON processing may throw type_error / out_of_range for
+        // malformed but well-formed-JSON files (e.g. a string where a number is expected,
+        // an array element of the wrong type). loadFromFileWithReason is noexcept, so an
+        // uncaught exception here would call std::terminate. Guard against it so a corrupt
+        // configuration degrades to defaults instead of crashing the process.
+        try {
         // General
         if (j.contains("general") && j["general"].is_object()) {
             const auto& g = j["general"];
@@ -253,8 +259,10 @@ namespace app {
             }
             auto loadColor = [&](const char* key, float out[3]) {
                 if (m.contains(key) && m[key].is_array() && m[key].size() == 3) {
-                    for (int i = 0; i < 3; ++i)
+                    for (int i = 0; i < 3; ++i) {
+                        if (!m[key][i].is_number()) continue;
                         out[i] = clampValue(m[key][i].get<float>(), 0.0f, 1.0f, (i == 0) ? 1.0f : 0.0f);
+                    }
                 }
             };
             loadColor("worstColorSurface", map.worstColorSurface);
@@ -284,6 +292,10 @@ namespace app {
         }
 
         return LoadResult::Success;
+        } catch (const std::exception& e) {
+            errorOut = e.what();
+            return LoadResult::ParseError;
+        }
     }
 
     bool AppSettings::saveToFile(const std::string& path) const {
