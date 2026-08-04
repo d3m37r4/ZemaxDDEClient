@@ -134,6 +134,15 @@ namespace App {
         // Initialize graphics with the correct theme (no re-apply needed)
         ctx->gui->initialize(!useDark, ctx->dpiScale);
 
+        // Push the persisted runtime settings into bound subsystems. loadFromDisk()
+        // above only resolved the JSON into memory so the theme could be picked; it
+        // does not apply DDE timeouts, file-logging or update channels. bind() is now
+        // complete (post-initialize) so these can take effect safely.
+        const auto& settings = ctx->gui->getSettingsManager().current();
+        ctx->gui->getSettingsManager().applyDDE(settings.dde);
+        ctx->gui->getSettingsManager().applyLogging(settings.logging);
+        ctx->gui->getSettingsManager().applyUpdates(settings.updates);
+
         if (ctx->gui->getUpdateChecker() && ctx->gui->getUpdateChecker()->isAutoCheckEnabled()) {
             logger.addLog("[APP] Auto-checking for updates on startup");
             ctx->gui->getUpdateChecker()->checkForUpdates();
