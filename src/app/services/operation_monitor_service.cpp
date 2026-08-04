@@ -54,6 +54,16 @@ namespace app::services {
             rec->boundMonitor->requestCancel(rec->ddeOperationId);
     }
 
+    void OperationMonitorService::failAllTasksOnSlot(int slot) {
+        for (auto it = m_tasks.begin(); it != m_tasks.end();) {
+            if (it->second.clientSlot != slot) {
+                ++it;
+                continue;
+            }
+            it = m_tasks.erase(it);
+        }
+    }
+
     bool OperationMonitorService::hasActiveTasks(std::optional<app::models::TaskSource> filter) const {
         for (const auto& [id, t] : m_tasks) {
             if (filter && t.source != *filter) continue;

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "dde/operation_monitor.h"
+#include "app/services/operation_monitor_service.h"
 
 namespace ZemaxDDE {
 namespace {
@@ -54,6 +55,30 @@ TEST(OperationMonitor, IsCancelledFalseByDefault) {
     mon.requestCancel(id);
     EXPECT_TRUE(mon.isCancelled(id));
     EXPECT_EQ(mon.getOperations()[0].message, "Cancelling...");
+}
+
+TEST(OperationMonitorService, FailAllTasksOnSlotRemovesOnlyThatSlot) {
+    app::services::OperationMonitorService svc;
+
+    uint64_t slot0Task = svc.startTask(
+        app::models::TaskSource::NominalSurfaceProfile, "Nominal", 10, /*clientSlot=*/0);
+    uint64_t slot1Task = svc.startTask(
+        app::models::TaskSource::TolerancedSurfaceProfile, "Toleranced", 10, /*clientSlot=*/1);
+
+    EXPECT_EQ(svc.getTasks().size(), 2u);
+
+    // Tearing down slot 0 must drop only that slot's records, leaving slot 1 intact.
+    svc.failAllTasksOnSlot(0);
+
+    EXPECT_EQ(svc.getTasks().size(), 1u);
+    EXPECT_EQ(svc.getTasks().count(slot0Task), 0u);
+    EXPECT_EQ(svc.getTasks().count(slot1Task), 1u);
+
+    // Clearing the remaining slot empties the map without crashing (would expose
+    // any dangling boundMonitor dereference introduced by the cleanup path).
+    svc.failAllTasksOnSlot(1);
+    EXPECT_TRUE(svc.getTasks().empty());
+    EXPECT_FALSE(svc.hasActiveTasks());
 }
 
 } // namespace

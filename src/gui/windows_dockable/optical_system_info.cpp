@@ -72,7 +72,7 @@ namespace gui {
         float maxLabelWidth = 0.0f;
         for (auto* l : allLabels)
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
-        maxLabelWidth += 8.0f;
+        maxLabelWidth += ImGuiUtils::DpiScale(8.0f);
 
         ImGuiUtils::SectionHeader("File");
         ImGuiUtils::BeginPropertyGrid("##File", maxLabelWidth);

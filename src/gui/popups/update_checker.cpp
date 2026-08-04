@@ -104,12 +104,15 @@ namespace gui {
         WinHttpCloseHandle(hSession);
 
         if (!success || response.empty()) {
+            std::lock_guard<std::mutex> lock(m_dataMutex);
             m_errorMessage = "Failed to connect to GitHub API";
             return false;
         }
 
         try {
             auto json = nlohmann::json::parse(response);
+
+            std::lock_guard<std::mutex> lock(m_dataMutex);
 
             if (m_channel == app::UpdateChannel::Beta) {
                 // /releases returns an array; pick the first prerelease.
@@ -138,6 +141,7 @@ namespace gui {
             }
             return true;
         } catch (...) {
+            std::lock_guard<std::mutex> lock(m_dataMutex);
             m_errorMessage = "Failed to parse GitHub response";
             return false;
         }
@@ -157,11 +161,15 @@ namespace gui {
     }
 
     void UpdateChecker::workerThread() {
-        if (fetchLatestVersion()) {
-            int cmp = compareVersions(getCurrentVersion(), m_updateInfo.version);
-            m_updateInfo.hasUpdate = (cmp < 0);
-        } else {
-            m_updateInfo.hasUpdate = false;
+        bool found = fetchLatestVersion();
+        {
+            std::lock_guard<std::mutex> lock(m_dataMutex);
+            if (found) {
+                int cmp = compareVersions(getCurrentVersion(), m_updateInfo.version);
+                m_updateInfo.hasUpdate = (cmp < 0);
+            } else {
+                m_updateInfo.hasUpdate = false;
+            }
         }
 
         m_isCheckComplete = true;
@@ -199,12 +207,22 @@ namespace gui {
         if (!m_isCheckComplete) {
             ImGui::TextUnformatted("Click the button below to check for updates.");
         } else {
+            // Take a consistent snapshot so the UI never reads a half-updated struct
+            // that the network worker thread may still be writing.
+            UpdateInfo info;
+            std::string errMsg;
+            {
+                std::lock_guard<std::mutex> lock(m_dataMutex);
+                info = m_updateInfo;
+                errMsg = m_errorMessage;
+            }
+
             const auto& sem = m_themeManager->semantic();
-            if (!m_errorMessage.empty()) {
-                ImGui::TextColored(sem.danger, "Error: %s", m_errorMessage.c_str());
-            } else if (m_updateInfo.hasUpdate) {
-                ImGui::TextColored(sem.success, "New version available: %s", m_updateInfo.version.c_str());
-                ImGui::TextUnformatted(std::format("Released: {}", m_updateInfo.releaseDate).c_str());
+            if (!errMsg.empty()) {
+                ImGui::TextColored(sem.danger, "Error: %s", errMsg.c_str());
+            } else if (info.hasUpdate) {
+                ImGui::TextColored(sem.success, "New version available: %s", info.version.c_str());
+                ImGui::TextUnformatted(std::format("Released: {}", info.releaseDate).c_str());
             } else {
                 ImGui::TextColored(sem.muted, "Your software is up to date!");
             }
@@ -221,11 +239,17 @@ namespace gui {
             float totalW = actionBtnW + spacing + okBtnW;
             ImGui::SetCursorPosX((windowWidth - totalW) * 0.5f);
 
-            if (!m_updateInfo.hasUpdate || !m_isCheckComplete) {
+            bool hasUpdate = false;
+            {
+                std::lock_guard<std::mutex> lock(m_dataMutex);
+                hasUpdate = m_updateInfo.hasUpdate;
+            }
+
+            if (!hasUpdate || !m_isCheckComplete) {
                 if (ImGuiUtils::SpinnerButton(UPDATE_POPUP_NAME, m_isChecking, ImVec2(actionBtnW, 0))) {
                     checkForUpdates();
                 }
-            } else if (m_updateInfo.hasUpdate && m_isCheckComplete) {
+            } else if (hasUpdate && m_isCheckComplete) {
                 if (ImGuiUtils::SpinnerButton("Download Update", false, ImVec2(actionBtnW, 0))) {
                     if (!m_updateInfo.downloadUrl.empty()) {
                         ShellExecuteA(nullptr, "open", m_updateInfo.downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
@@ -238,10 +262,13 @@ namespace gui {
         }
 
         if (ImGui::Button("OK", ImVec2(okBtnW, 0))) {
-            close();
-            m_isCheckComplete = false;
-            m_updateInfo.hasUpdate = false;
-            m_errorMessage.clear();
+            {
+                std::lock_guard<std::mutex> lock(m_dataMutex);
+                close();
+                m_isCheckComplete = false;
+                m_updateInfo.hasUpdate = false;
+                m_errorMessage.clear();
+            }
         }
 
         ImGui::EndPopup();

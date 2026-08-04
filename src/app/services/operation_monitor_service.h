@@ -31,6 +31,13 @@ namespace app::services {
         void failTask(uint64_t taskId, const std::string& error);
         void requestCancel(uint64_t taskId);
 
+        /// Fails and removes every task bound to the given client slot.
+        /// Intended to be called when a DDE connection is torn down, so that
+        /// records do not keep a dangling pointer to a destroyed OperationMonitor.
+        /// Deliberately does NOT dereference boundMonitor (the client may already
+        /// be gone or about to be destroyed) — it only drops the bookkeeping record.
+        void failAllTasksOnSlot(int slot);
+
         struct TaskProgress {
             int currentStep;
             int totalSteps;

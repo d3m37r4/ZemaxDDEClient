@@ -9,8 +9,13 @@
 class Logger {
     public:
         void addLog(std::string_view message);
-        void clearLogs() noexcept { m_logs.clear(); }
-        [[nodiscard]] const std::vector<std::string>& getLogs() const noexcept { return m_logs; }
+
+        /// Thread-safe: removes all entries under the mutex.
+        void clearLogs();
+
+        /// Thread-safe: returns a snapshot copy of all entries taken under the mutex,
+        /// so a reader can never observe the vector mid-mutation from another thread.
+        [[nodiscard]] std::vector<std::string> getLogs() const;
 
         void setEnabled(bool enabled) noexcept { m_enabled = enabled; }
         void setMaxFileSize(size_t bytes) noexcept { m_maxFileSize = bytes; }
