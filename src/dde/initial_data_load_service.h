@@ -25,6 +25,7 @@ namespace ZemaxDDE {
             InitialDataLoadService(ZemaxDDEClient& client, OpticalSystemData& opticalSystem, Logger& logger);
 
             void start();
+            void reset();
             LoadState getState() const { return m_state; }
             const std::string& getError() const { return m_error; }
 

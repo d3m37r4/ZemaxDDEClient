@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,6 +26,11 @@ public:
     void setActiveConnection(int index);
     ZemaxDDE::ZemaxDDEClient* getActiveClient() const;
     int getActiveIndex() const { return m_activeIndex; }
+
+    /// Registers a callback invoked when a connection slot is torn down (immediately
+    /// before the client object is destroyed). Upper layers use it to release any
+    /// bookkeeping that references that connection's resources.
+    void setOnClientDisconnect(std::function<void(int index)> cb) { m_onClientDisconnect = std::move(cb); }
 
     DDEConnection* getConnection(int index);
 
@@ -82,6 +88,7 @@ private:
     int m_maxConnections = MAX_CONNECTIONS;
     DWORD m_defaultTimeoutMs = 5000;
     int m_defaultRetries = 3;
+    std::function<void(int index)> m_onClientDisconnect;
 
     DWORD m_getNameTimeoutMs = 2000;
     DWORD m_getFileTimeoutMs = 2000;

@@ -16,8 +16,25 @@ namespace ZemaxDDE {
     {
     }
 
+    void InitialDataLoadService::reset() {
+        m_state = LoadState::Idle;
+        m_error.clear();
+        m_currentField = 0;
+        m_totalFields = 0;
+        m_currentWave = 0;
+        m_totalWaves = 0;
+    }
+
     void InitialDataLoadService::start() {
-        if (m_state != LoadState::Idle) return;
+        // Allow a fresh load after a completed or failed attempt (and on reconnect).
+        if (m_state != LoadState::Idle) {
+            if (m_state == LoadState::LoadingSystem ||
+                m_state == LoadState::LoadingFields ||
+                m_state == LoadState::LoadingWaves) {
+                return; // already in flight
+            }
+            reset();
+        }
         m_state = LoadState::LoadingSystem;
         m_error.clear();
         m_startTime = std::chrono::steady_clock::now();
