@@ -224,5 +224,34 @@ TEST(SettingsClamp, MarkerSizeAboveMax) {
     std::remove(path.c_str());
 }
 
+// Corrupt-but-well-formed JSON must degrade gracefully (never std::terminate):
+// loadFromFileWithReason is noexcept, so no exception may escape it.
+TEST(SettingsLoad, ColorWithNonNumericElementDoesNotCrash) {
+    std::string path = tmpPath("_settings_color_corrupt.json");
+    // Third element is a string — a valid JSON array, but not a valid number.
+    writeFile(path, R"({"version": 1, "map": {"worstColorSurface": [1.0, 0.0, "red"]}})");
+
+    AppSettings s;
+    std::string err;
+    EXPECT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    // Invalid element must be ignored, keeping the default channel value.
+    EXPECT_FLOAT_EQ(s.map.worstColorSurface[2], 0.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsLoad, WrongScalarTypeIsTolerated) {
+    std::string path = tmpPath("_settings_wrongtype.json");
+    // A string where an integer is expected must be ignored, not throw.
+    writeFile(path, R"({"version": 1, "dde": {"maxRetryCount": "many"}})");
+
+    AppSettings s;
+    std::string err;
+    EXPECT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_EQ(s.dde.maxRetryCount, 3);
+
+    std::remove(path.c_str());
+}
+
 } // namespace
 } // namespace app
