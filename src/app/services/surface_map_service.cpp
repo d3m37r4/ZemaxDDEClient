@@ -23,6 +23,22 @@ namespace app::services {
         m_mapCalculator.setMonitor(monitor);
     }
 
+    void SurfaceMapService::onClientDisconnected(int index) {
+        if (m_nominalCalcSlot == index) {
+            m_nominalCalculator.cancel();
+            m_nominalCalcSlot = -1;
+            m_nominalSurfaceData = {};
+        }
+        if (m_mapCalcSlot == index) {
+            m_mapCalculator.cancel();
+            m_mapTaskId = 0;
+            m_currentAngleIndex = 0;
+            m_profiles.clear();
+            m_maxPVResult.reset();
+            m_mapCalcSlot = -1;
+        }
+    }
+
     void SurfaceMapService::startCalculation(int surface, int sampling, double angle, app::models::TaskSource source) {
         m_nominalCalcSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
         if (m_connectionManager) {
@@ -58,6 +74,36 @@ namespace app::services {
             return;
         }
 
+        if (angleStepDeg <= 0.0 || angleStepDeg >= 180.0) {
+            m_logger.addLog("[IrregularityMapService] Invalid angle step, must be in range (0, 180)");
+            return;
+        }
+
+        // Clamp sampling so a pathological UI value cannot create an unbounded
+        // number of DDE requests.
+        if (sampling < 3) sampling = 3;
+        if (sampling > MAX_SAMPLING) sampling = MAX_SAMPLING;
+
+        // Clamp the angle step so the number of sections never exceeds a sane bound.
+        // (0.01° step x 16385 pt sampling would otherwise produce ~295M requests.)
+        double step = angleStepDeg;
+        if (step < MIN_ANGLE_STEP_DEG) {
+            m_logger.addLog(std::format("[IrregularityMapService] Clamping angle step {:.2f}° -> min {:.2f}°", angleStepDeg, MIN_ANGLE_STEP_DEG));
+            step = MIN_ANGLE_STEP_DEG;
+        }
+
+        int totalAngles = static_cast<int>(180.0 / step);
+
+        // Guard: if a map is already in flight, cancel it before starting a new one
+        // so old async callbacks cannot contaminate the fresh run.
+        if (m_mapCalculator.isCalculating()) {
+            m_mapCalculator.cancel();
+        }
+        if (m_uiOpMonitor && m_mapTaskId > 0) {
+            m_uiOpMonitor->failTask(m_mapTaskId, "Restarted");
+            m_mapTaskId = 0;
+        }
+
         m_mapCalcSlot = m_connectionManager->getActiveIndex();
 
         if (m_connectionManager) {
@@ -65,22 +111,12 @@ namespace app::services {
             m_mapCalculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
         }
 
-        if (angleStepDeg <= 0.0 || angleStepDeg >= 180.0) {
-            m_logger.addLog("[IrregularityMapService] Invalid angle step, must be in range (0, 180)");
-            return;
-        }
-
-        if (sampling < 3) {
-            m_logger.addLog("[IrregularityMapService] Invalid sampling, must be >= 3");
-            return;
-        }
-
         m_profiles.clear();
         m_maxPVResult.reset();
         m_targetSurface = surface;
         m_targetSampling = sampling;
-        m_angleStepDeg = angleStepDeg;
-        m_totalAngles = static_cast<int>(180.0 / angleStepDeg);
+        m_angleStepDeg = step;
+        m_totalAngles = totalAngles;
         m_currentAngleIndex = 0;
         m_centerSagRef = 0.0;
         m_totalDdeRequests = 0;

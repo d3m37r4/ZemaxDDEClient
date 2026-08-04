@@ -20,6 +20,17 @@ namespace app::services {
         m_tolerancedCalculator.setMonitor(monitor);
     }
 
+    void SurfaceProfileService::onClientDisconnected(int index) {
+        if (m_nominalCalcSlot == index) {
+            m_nominalCalculator.cancel();
+            m_nominalCalcSlot = -1;
+        }
+        if (m_tolerancedCalcSlot == index) {
+            m_tolerancedCalculator.cancel();
+            m_tolerancedCalcSlot = -1;
+        }
+    }
+
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const app::models::SurfaceData& surface) {
         std::vector<double> x_vals, y_vals;
 
@@ -48,9 +59,18 @@ namespace app::services {
     }
 
     const app::models::SurfaceData& SurfaceProfileService::getResult(app::models::TaskSource source) const {
-        if (source == app::models::TaskSource::NominalSurfaceProfile)
-            return m_nominalCalculator.getResult();
-        return m_tolerancedCalculator.getResult();
+        switch (source) {
+            case app::models::TaskSource::NominalSurfaceProfile:
+                return m_nominalCalculator.getResult();
+            case app::models::TaskSource::TolerancedSurfaceProfile:
+                return m_tolerancedCalculator.getResult();
+            case app::models::TaskSource::SurfaceIrregularityMap:
+            case app::models::TaskSource::None:
+            default:
+                // Explicit no-fall-through: unknown sources must never silently map
+                // to the toleranced profile. Return the nominal result as neutral.
+                return m_nominalCalculator.getResult();
+        }
     }
 
     void SurfaceProfileService::startCalculation(int surface, int sampling, double angle, app::models::TaskSource source) {

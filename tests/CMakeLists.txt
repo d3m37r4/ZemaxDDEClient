@@ -11,11 +11,14 @@ include(GoogleTest)
 set(TEST_SOURCES
     test_settings.cpp
     test_operation_monitor.cpp
+    test_surface_map.cpp
 )
 
 set(TEST_LIB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/app/settings.cpp
     ${CMAKE_SOURCE_DIR}/src/dde/operation_monitor.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/services/operation_monitor_service.cpp
+    ${CMAKE_SOURCE_DIR}/src/app/compute/surface_map.cpp
 )
 
 add_executable(tests ${TEST_SOURCES} ${TEST_LIB_SOURCES})

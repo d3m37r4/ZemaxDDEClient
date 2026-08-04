@@ -31,6 +31,14 @@ namespace app::compute {
     void SurfaceProfile::startCalculation(
         int surface, int sampling, double angle, app::models::TaskSource source, const std::string& label)
     {
+        // Bump the generation so any still-in-flight callbacks from a previous run
+        // will be ignored when they arrive.
+        uint64_t generation = ++m_generation;
+
+        // Resolve the client fresh each run so a stale pointer from a previously
+        // disconnected slot can never be re-used (use-after-free guard).
+        m_boundClient = nullptr;
+
         auto* client = getClient();
         if (!client) {
             m_state = State::Failed;
@@ -75,21 +83,21 @@ namespace app::compute {
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::TYPE_NAME),
-            [this](const std::string& result) {
-                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result);
+            [this, generation](const std::string& result) {
+                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::TYPE_NAME, result, generation);
             },
-            [this](const std::string& error) {
-                onError(std::format("GetSurfaceData(TYPE_NAME): {}", error));
+            [this, generation](const std::string& error) {
+                onError(std::format("GetSurfaceData(TYPE_NAME): {}", error), generation);
             },
             surfaceDataTimeout, 1, "SurfaceProfileService");
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
-            [this](const std::string& result) {
-                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result);
+            [this, generation](const std::string& result) {
+                onSurfaceDataReceived(ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER, result, generation);
             },
-            [this](const std::string& error) {
-                onError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error));
+            [this, generation](const std::string& error) {
+                onError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error), generation);
             },
             surfaceDataTimeout, 1, "SurfaceProfileService");
     }
@@ -103,11 +111,12 @@ namespace app::compute {
     }
 
     void SurfaceProfile::onSurfaceDataReceived(
-        int code, const std::string& value)
+        int code, const std::string& value, uint64_t generation)
     {
+        if (generation != m_generation || m_state == State::Failed || m_state == State::Completed) return;
         auto tokens = ZemaxDDE::tokenize(value);
         if (tokens.empty()) {
-            onError(std::format("GetSurfaceData({}): empty response", code));
+            onError(std::format("GetSurfaceData({}): empty response", code), generation);
             return;
         }
 
@@ -116,8 +125,12 @@ namespace app::compute {
         } else if (code == ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER) {
             try {
                 m_result.semiDiameter = std::stod(tokens[0]);
+                if (!std::isfinite(m_result.semiDiameter)) {
+                    onError("GetSurfaceData(SEMI_DIAMETER): non-finite value", generation);
+                    return;
+                }
             } catch (...) {
-                onError("GetSurfaceData(SEMI_DIAMETER): invalid number");
+                onError("GetSurfaceData(SEMI_DIAMETER): invalid number", generation);
                 return;
             }
         }
@@ -137,6 +150,9 @@ namespace app::compute {
             m_result.sampling = m_targetSampling;
             m_result.angle = m_targetAngle;
             m_state = State::Completed;
+            // Drop the reference to the client at completion so a later disconnect
+            // cannot leave 'this' holding a dangling client pointer.
+            m_boundClient = nullptr;
 
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->completeTask(m_taskId);
@@ -181,6 +197,7 @@ namespace app::compute {
         if (m_targetSampling <= 1) {
             m_result.sagDataPoints.clear();
             m_state = State::Completed;
+            m_boundClient = nullptr;
             if (onComplete) onComplete();
             return;
         }
@@ -194,7 +211,7 @@ namespace app::compute {
 
         auto* client = getClient();
         if (!client) {
-            onError("Connection lost during calculation");
+            onError("Connection lost during calculation", m_generation);
             return;
         }
 
@@ -203,26 +220,27 @@ namespace app::compute {
 
         m_totalDdeRequests++;
 
+        uint64_t generation = m_generation;
         client->submitRequest(
             std::format("GetSag,{},{},{}", m_targetSurface, x, y),
-            [this](const std::string& result) {
-                onSagDataReceived(result);
+            [this, generation](const std::string& result) {
+                onSagDataReceived(result, generation);
             },
-            [this](const std::string& error) {
+            [this, generation](const std::string& error) {
                 if (error == "Timeout") {
-                    onSagTimeout();
+                    onSagTimeout(generation);
                 } else {
-                    onError(std::format("GetSag failed: {}", error));
+                    onError(std::format("GetSag failed: {}", error), generation);
                 }
             },
             sagTimeout, 1, "SurfaceProfileService");
     }
 
-    void SurfaceProfile::onSagDataReceived(const std::string& buffer) {
-        if (m_state == State::Failed || m_state == State::Completed) return;
+    void SurfaceProfile::onSagDataReceived(const std::string& buffer, uint64_t generation) {
+        if (generation != m_generation || m_state == State::Failed || m_state == State::Completed) return;
         auto tokens = ZemaxDDE::tokenize(buffer);
         if (tokens.size() < 2) {
-            onError("GetSag: invalid response format");
+            onError("GetSag: invalid response format", generation);
             return;
         }
 
@@ -237,9 +255,22 @@ namespace app::compute {
             point.y = r * std::sin(rad);
             point.sag = std::stod(tokens[0]);
             point.alternateSag = std::stod(tokens[1]);
+
+            // Filter NaN/Inf so they never enter the result set (they would skew
+            // P-V and deviation plots downstream).
+            if (!std::isfinite(point.sag) || !std::isfinite(point.alternateSag) ||
+                !std::isfinite(point.x) || !std::isfinite(point.y)) {
+                m_logger.addLog(std::format("[SurfaceProfileService] Point {} has non-finite sag, skipping",
+                    m_sagPointIndex));
+                m_skippedPoints++;
+                m_sagPointIndex++;
+                sendNextSagRequest();
+                return;
+            }
+
             m_result.sagDataPoints.push_back(point);
         } catch (...) {
-            onError("GetSag: failed to parse sag values");
+            onError("GetSag: failed to parse sag values", generation);
             return;
         }
 
@@ -247,16 +278,16 @@ namespace app::compute {
         sendNextSagRequest();
     }
 
-    void SurfaceProfile::onSagTimeout() {
-        m_logger.addLog(std::format("[SurfaceProfileService] Point {} timed out, skipping",
-            m_sagPointIndex));
+    void SurfaceProfile::onSagTimeout(uint64_t generation) {
+        if (generation != m_generation || m_state == State::Failed || m_state == State::Completed) return;
+        m_logger.addLog(std::format("[SurfaceProfileService] Point {} timed out, skipping", m_sagPointIndex));
         m_skippedPoints++;
         m_sagPointIndex++;
         sendNextSagRequest();
     }
 
-    void SurfaceProfile::onError(const std::string& error) {
-        if (m_state == State::Failed || m_state == State::Completed) return;
+    void SurfaceProfile::onError(const std::string& error, uint64_t generation) {
+        if (generation != m_generation || m_state == State::Failed || m_state == State::Completed) return;
         m_state = State::Failed;
         m_error = error;
         m_boundClient = nullptr;

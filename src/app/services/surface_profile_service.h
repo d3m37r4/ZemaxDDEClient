@@ -35,6 +35,10 @@ namespace app::services {
             void cancelCalculation();
             void cancelCalculation(app::models::TaskSource source);
 
+            /// Called when a connection slot is torn down. Cancels any calculation
+            /// bound to that slot so its resources are released safely.
+            void onClientDisconnected(int index);
+
             bool isCalculating() const { return m_nominalCalculator.isCalculating() || m_tolerancedCalculator.isCalculating(); }
             bool isCalculating(app::models::TaskSource source) const;
             const app::models::SurfaceData& getResult() const;

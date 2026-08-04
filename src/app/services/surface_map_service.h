@@ -17,6 +17,11 @@ class Logger;
 
 namespace app::services {
 
+    // Guard rails that cap the DDE request load for a surface map so a pathological
+    // UI value cannot spawn an unbounded number of sections/points (~millions).
+    constexpr int    MAX_SAMPLING       = 4096;
+    constexpr double MIN_ANGLE_STEP_DEG = 0.05;
+
     struct MapWindowState {
         int nominalSurfaceIndex = 0;
         int nominalSampling = 65;
@@ -50,6 +55,10 @@ namespace app::services {
             void startMapCalculation(int surface, int sampling, double angleStepDeg);
             void cancelMapCalculation();
             void clearData();
+
+            /// Called when a connection slot is torn down. Cancels any calculation
+            /// bound to that slot so its resources are released safely.
+            void onClientDisconnected(int index);
 
             bool hasData() const { return !m_profiles.empty() && m_totalAngles > 0 && static_cast<int>(m_profiles.size()) >= m_totalAngles; }
             const std::vector<app::models::SurfaceData>& getProfiles() const { return m_profiles; }

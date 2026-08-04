@@ -42,10 +42,16 @@ namespace app::compute {
         private:
             ZemaxDDE::ZemaxDDEClient* getClient() const;
             void sendNextSagRequest();
-            void onSurfaceDataReceived(int code, const std::string& value);
-            void onSagDataReceived(const std::string& buffer);
-            void onSagTimeout();
-            void onError(const std::string& error);
+            void onSurfaceDataReceived(int code, const std::string& value, uint64_t generation);
+            void onSagDataReceived(const std::string& buffer, uint64_t generation);
+            void onSagTimeout(uint64_t generation);
+            void onError(const std::string& error, uint64_t generation);
+
+            /// Monotonic counter bumped on every startCalculation(). Asynchronous DDE
+            /// callbacks capture the generation they belong to and are ignored if a
+            /// newer calculation has started (prevents stale responses from writing
+            /// into a brand-new result set).
+            uint64_t m_generation{0};
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
