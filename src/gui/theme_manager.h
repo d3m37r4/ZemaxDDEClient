@@ -17,13 +17,13 @@ inline constexpr std::string_view kThemeNameDark  = "Dark Theme";
 /// Stored per-theme so future themes can override look-and-feel without
 /// touching color values. Defaults match the legacy hardcoded applyGeometry().
 struct ThemeGeometry {
-    float windowRounding    = 8.0f;
-    float childRounding     = 8.0f;
-    float frameRounding     = 8.0f;
-    float popupRounding     = 8.0f;
-    float scrollbarRounding = 4.0f;
-    float grabRounding      = 4.0f;
-    float tabRounding       = 8.0f;
+    float windowRounding    = 5.0f;
+    float childRounding     = 5.0f;
+    float frameRounding     = 5.0f;
+    float popupRounding     = 5.0f;
+    float scrollbarRounding = 3.0f;
+    float grabRounding      = 3.0f;
+    float tabRounding       = 5.0f;
 
     ImVec2 windowPadding    = ImVec2(12, 12);
     ImVec2 framePadding     = ImVec2(8,  4);
