@@ -89,6 +89,16 @@ std::string Logger::getCurrentLogPath() const {
     return getLogPath(m_currentLogDate, m_rotationIndex);
 }
 
+void Logger::clearLogs() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_logs.clear();
+}
+
+std::vector<std::string> Logger::getLogs() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_logs;
+}
+
 void Logger::addLog(std::string_view message) {
     std::string logEntry;
 

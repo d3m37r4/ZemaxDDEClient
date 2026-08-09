@@ -1,12 +1,14 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 #include <windows.h>
 
 #include "dde/dde_connection.h"
+#include "app/models/types.h"
 
 namespace ZemaxDDE { class ZemaxDDEClient; }
 class Logger;
@@ -25,12 +27,21 @@ public:
     ZemaxDDE::ZemaxDDEClient* getActiveClient() const;
     int getActiveIndex() const { return m_activeIndex; }
 
+    /// Registers a callback invoked when a connection slot is torn down (immediately
+    /// before the client object is destroyed). Upper layers use it to release any
+    /// bookkeeping that references that connection's resources.
+    void setOnClientDisconnect(std::function<void(int index)> cb) { m_onClientDisconnect = std::move(cb); }
+
     DDEConnection* getConnection(int index);
 
     void processAllTimeouts();
 
     /// Checks health of all active connections and disconnects any that are lost.
     void checkAllConnectionHealth();
+
+    /// Finds which slot has an active task of the given source type.
+    /// Returns slot index or -1 if not found.
+    int findActiveTaskSlot(app::models::TaskSource source) const;
 
     /// Returns true if a connection was lost and needs user attention.
     [[nodiscard]] bool hasConnectionLost() const noexcept { return m_connectionLostIndex >= 0; }
@@ -77,6 +88,7 @@ private:
     int m_maxConnections = MAX_CONNECTIONS;
     DWORD m_defaultTimeoutMs = 5000;
     int m_defaultRetries = 3;
+    std::function<void(int index)> m_onClientDisconnect;
 
     DWORD m_getNameTimeoutMs = 2000;
     DWORD m_getFileTimeoutMs = 2000;

@@ -107,9 +107,9 @@ namespace gui {
         float remainingWidth = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + remainingWidth - refreshBtnW);
 
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.info);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.68f, 1.0f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.3f, 0.55f, 0.9f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.neutralButtonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.neutralButtonActive);
         ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
 
         if (ImGui::Button(ICON_FA_ARROWS_ROTATE " Refresh", ImVec2(refreshBtnW, 0))) {

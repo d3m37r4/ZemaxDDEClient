@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
 #include "app/settings.h"
 #include "gui/theme_manager.h"
@@ -39,6 +40,11 @@ namespace gui {
             bool m_open = false;
             UpdateInfo m_updateInfo;
             std::string m_errorMessage;
+
+            /// Guards m_updateInfo and m_errorMessage, which are written by the network
+            /// worker thread and read by the UI thread during render(). Plain std::atom
+            /// covers only the flags; the payload strings need this mutex.
+            mutable std::mutex m_dataMutex;
 
             std::atomic<bool> m_isChecking{false};
             std::atomic<bool> m_isCheckComplete{false};

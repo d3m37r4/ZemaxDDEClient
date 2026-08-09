@@ -5,6 +5,7 @@
 #include <string>
 
 #include "dde/client.h"
+#include "dde/operation_monitor.h"
 #include "dde/utils.h"
 #include "logger/logger.h"
 
@@ -104,7 +105,11 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
 
     conn.hwndServer = targetHwnd;
     conn.serverTitle = title;
-    conn.connectionState = ZemaxDDE::ConnectionState::Connected;
+    // Follow the client's actual state instead of assuming Connected. For a
+    // synchronous DDE handshake this is already Connected; for an asynchronous
+    // ACK the slot stays in Connecting until the ACK handler promotes the client
+    // and the per-frame sync in checkAllConnectionHealth() copies it here.
+    conn.connectionState = conn.client->connectionState();
 
     DWORD pid = 0;
     GetWindowThreadProcessId(targetHwnd, &pid);
@@ -130,6 +135,12 @@ void DDEConnectionManager::disconnect(int index) {
 
     auto& conn = m_connections[index];
     if (conn.isDisconnected()) return;
+
+    // Notify upper layers before the client is destroyed so that any bookkeeping
+    // referencing this connection's OperationMonitor can be released.
+    if (m_onClientDisconnect) {
+        m_onClientDisconnect(index);
+    }
 
     m_logger.addLog(std::format("[DDE] Disconnected slot {}: '{}' (PID: {}, hwndClient={:#010x}, hwndServer={:#010x})",
         index, ZemaxDDE::wstring_to_utf8(conn.serverTitle), conn.serverPid,
@@ -215,6 +226,13 @@ void DDEConnectionManager::checkAllConnectionHealth() {
         auto& conn = m_connections[i];
         if (conn.isDisconnected() || !conn.client) continue;
 
+        // Sync the slot's externally-visible state with the actual client state
+        // (covers asynchronous WM_DDE_ACK handshakes promoted during pump/glfw).
+        ZemaxDDE::ConnectionState actual = conn.client->connectionState();
+        if (conn.connectionState != actual) {
+            conn.connectionState = actual;
+        }
+
         conn.client->checkConnectionHealth();
 
         if (conn.client->hasConnectionLost()) {
@@ -224,6 +242,44 @@ void DDEConnectionManager::checkAllConnectionHealth() {
             m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", i, m_connectionLostReason));
         }
     }
+}
+
+int DDEConnectionManager::findActiveTaskSlot(app::models::TaskSource source) const {
+    for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+        auto* conn = const_cast<DDEConnectionManager*>(this)->getConnection(i);
+        if (!conn || !conn->isConnected() || !conn->client) continue;
+
+        auto* monitor = conn->client->getOperationMonitor();
+        if (!monitor) continue;
+
+        bool matches = false;
+        for (const auto& op : monitor->getOperations()) {
+            if (op.status != ZemaxDDE::OperationStatus::Pending &&
+                op.status != ZemaxDDE::OperationStatus::InFlight) continue;
+
+            bool labelMatch = false;
+            switch (source) {
+                case app::models::TaskSource::NominalSurfaceProfile:
+                    labelMatch = op.serviceId == "Nominal Profile";
+                    break;
+                case app::models::TaskSource::TolerancedSurfaceProfile:
+                    labelMatch = op.serviceId == "Toleranced Profile";
+                    break;
+                case app::models::TaskSource::SurfaceIrregularityMap:
+                    labelMatch = op.serviceId == "Surface Irregularity Map"
+                              || op.serviceId.starts_with("Section ");
+                    break;
+                default:
+                    break;
+            }
+            if (labelMatch) {
+                matches = true;
+                break;
+            }
+        }
+        if (matches) return i;
+    }
+    return -1;
 }
 
 DWORD DDEConnectionManager::getDefaultTimeoutMs() const {

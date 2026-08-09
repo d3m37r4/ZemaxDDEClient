@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/services/surface_map_service.h"
+#include "app/models/optical_system.h"
 #include "lib/imgui/imgui.h"
 
 namespace gui { class SettingsManager; }
@@ -15,6 +16,9 @@ namespace gui {
 
             void renderSurfacePlotLines(const ImVec2& size);
             void renderDeviationSurfacePlotLines(const ImVec2& size);
+
+            app::models::OpticalSystemData m_frozenNominalOpticalSystem;
+            app::models::OpticalSystemData m_frozenMapOpticalSystem;
 
         private:
             SettingsManager* m_settingsManager = nullptr;

@@ -84,6 +84,12 @@ namespace ImGuiUtils {
         return value * ImGui::GetWindowDpiScale();
     }
 
+    /// Scales an ImVec2 (e.g. a size or position) by the current window DPI factor.
+    inline ImVec2 DpiScaleVec2(const ImVec2& value) {
+        return ImVec2(value.x * ImGui::GetWindowDpiScale(),
+                      value.y * ImGui::GetWindowDpiScale());
+    }
+
     /// Disabled button with animated spinner arc (3/4 circle) inside.
     /// Shows a spinning indicator when @p isActive=true, otherwise a normal Button.
     /// @return true only when clicked in non-active state.

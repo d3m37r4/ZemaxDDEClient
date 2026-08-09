@@ -17,13 +17,13 @@ inline constexpr std::string_view kThemeNameDark  = "Dark Theme";
 /// Stored per-theme so future themes can override look-and-feel without
 /// touching color values. Defaults match the legacy hardcoded applyGeometry().
 struct ThemeGeometry {
-    float windowRounding    = 8.0f;
-    float childRounding     = 8.0f;
-    float frameRounding     = 8.0f;
-    float popupRounding     = 8.0f;
-    float scrollbarRounding = 4.0f;
-    float grabRounding      = 4.0f;
-    float tabRounding       = 8.0f;
+    float windowRounding    = 5.0f;
+    float childRounding     = 5.0f;
+    float frameRounding     = 5.0f;
+    float popupRounding     = 5.0f;
+    float scrollbarRounding = 3.0f;
+    float grabRounding      = 3.0f;
+    float tabRounding       = 5.0f;
 
     ImVec2 windowPadding    = ImVec2(12, 12);
     ImVec2 framePadding     = ImVec2(8,  4);
@@ -32,7 +32,7 @@ struct ThemeGeometry {
     ImVec2 cellPadding      = ImVec2(8,  4);
 
     float indentSpacing     = 25.0f;
-    float scrollbarSize     = 14.0f;
+    float scrollbarSize     = 10.0f;
     float grabMinSize       = 12.0f;
 
     float windowBorderSize  = 1.0f;
@@ -94,6 +94,13 @@ public:
     /// Used by SettingsManager for AppSettings.appearance.themeMode.
     void applyByMode(app::ThemeMode mode, bool isSystemDark);
 
+    /// Sets the current window DPI scale factor used to scale geometry tokens
+    /// (rounding, padding, spacing, border sizes) when applying a theme.
+    /// @note ImGui::GetWindowDpiScale() is unreliable before the first frame,
+    /// so the caller (GraphicsBackend) passes the value from
+    /// glfwGetWindowContentScale() instead.
+    void setDpiScale(float dpiScale);
+
     bool isLight() const;
     ImVec4 getClearColor() const;
     const std::string& currentThemeName() const;
@@ -106,6 +113,7 @@ public:
 private:
     std::vector<ThemeData> m_themes;
     size_t m_current = 0;
+    float m_dpiScale = 1.0f;
 
     void applyThemeData(const ThemeData& data);
     void applyGeometryData(const ThemeGeometry& geometry);

@@ -212,7 +212,24 @@ namespace ZemaxDDE {
             }
             req.retriesLeft--;
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
-            sendRequest(req);
+            if (!sendRequest(req)) {
+                // Re-send failed (e.g. PostMessageW error). The atom was already
+                // released inside sendRequest; treat the retry as a hard failure
+                // instead of leaving the request suspended in limbo.
+                m_logger.addLog(std::format("[DDE] ERROR: Retry resend failed for request #{}: '{}'",
+                    req.id, req.command));
+                if (req.onError) {
+                    try {
+                        req.onError("Failed to resend request (PostMessage failed)");
+                    } catch (const std::exception& e) {
+                        m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+                    } catch (...) {
+                        m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+                    }
+                }
+                finishRequest();
+                return;
+            }
 
             m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
                 req.retriesLeft, req.id, req.command, req.timeoutMs));
@@ -368,6 +385,12 @@ namespace ZemaxDDE {
                     FreeDDElParam(WM_DDE_ACK, lParam);
 
                     if (m_activeRequest) {
+                        // NOTE (verify): the DDEACK structure defines fAck as bit 15
+                        // (0x8000) and fBusy as bit 14 (0x4000). Here the code tests
+                        // 0x2000/0x1000 instead, which deviates from the DDE spec but
+                        // appears to match what Zemax's server actually sends. Any
+                        // change requires verification against a real Zemax instance;
+                        // only the semantics (ack/busy flags) are consumed below.
                         bool isAck = (wStatus & 0x2000) != 0;
                         bool isBusy = (wStatus & 0x1000) != 0;
 
@@ -384,6 +407,13 @@ namespace ZemaxDDE {
                             }
                             finishRequest();
                         }
+                    }
+
+                    // The ACK item atom is owned by us after UnpackDDElParam; release it
+                    // in all sub-cases (positive ack, busy, negative ack, stale) to avoid
+                    // a per-message atom leak.
+                    if (aItemAck != 0) {
+                        GlobalDeleteAtom(static_cast<ATOM>(aItemAck));
                     }
                 }
 
@@ -441,15 +471,25 @@ namespace ZemaxDDE {
 
                     if (std::string(item) == m_activeRequest->command) {
                         requestFulfilled = true;
-                        char* buffer = reinterpret_cast<char*>(serverData->Value);
-                        
+
                         #ifdef DEBUG_LOG
                         m_logger.addLog(std::format("[DDE] Received data for #{}: '{}'", m_activeRequest->id, m_activeRequest->command));
                         #endif
 
+                        // Build a length-bounded payload from the global memory block so
+                        // that non-null-terminated / binary data cannot overread past the
+                        // allocated buffer (Value is a flexible trailing array).
+                        static constexpr size_t kHeaderSize = offsetof(::DDEDATA, Value);
+                        size_t blockSize = GlobalSize(ddeDataHandle);
+                        std::string payload;
+                        if (blockSize > kHeaderSize) {
+                            payload.assign(reinterpret_cast<const char*>(serverData->Value),
+                                           blockSize - kHeaderSize);
+                        }
+
                         try {
                             if (m_activeRequest->onSuccess) {
-                                m_activeRequest->onSuccess(buffer);
+                                m_activeRequest->onSuccess(payload);
                             }
                         } catch (const std::exception& e) {
                             m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onSuccess: {}", e.what()));
@@ -481,7 +521,12 @@ namespace ZemaxDDE {
                     GlobalFree(ddeDataHandle);
                 }
 
-                finishRequest();
+                // Data that did not match the active request (e.g. a stale reply from
+                // an already-timed-out retry whose atom got reused) must NOT complete
+                // the active request. Only advance when the payload is actually ours.
+                if (requestFulfilled) {
+                    finishRequest();
+                }
                 return 0;
             }
         }

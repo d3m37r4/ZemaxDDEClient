@@ -5,6 +5,8 @@
 #include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
+#include "dde/client.h"
+#include "dde/operation_monitor.h"
 #include "dde/utils.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
@@ -90,7 +92,25 @@ namespace gui {
                     auto* conn = m_connectionManager->getConnection(i);
                     if (!conn || !conn->isConnected()) continue;
                     std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
+
+                    bool slotBusy = false;
+                    if (conn->client) {
+                        auto* monitor = conn->client->getOperationMonitor();
+                        if (monitor) {
+                            for (const auto& op : monitor->getOperations()) {
+                                if (op.status == ZemaxDDE::OperationStatus::Pending ||
+                                    op.status == ZemaxDDE::OperationStatus::InFlight) {
+                                    slotBusy = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     std::string itemLabel = std::format("[{}] {}", i, title);
+                    if (slotBusy) {
+                        itemLabel += " " ICON_FA_SPINNER;
+                    }
 
                     bool isSelected = (i == activeIdx);
                     if (ImGui::Selectable(itemLabel.c_str(), isSelected)) {

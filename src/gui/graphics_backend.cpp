@@ -103,6 +103,11 @@ namespace gui {
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 
+        // Geometry tokens are scaled by the DPI factor stored in ThemeManager.
+        // Must be set before apply() so rounding/padding scale correctly even
+        // before the first frame (ImGui::GetWindowDpiScale() is 0 until then).
+        m_themeManager.setDpiScale(dpiScale);
+
         // Apply initial theme
         if (isLightTheme) {
             m_themeManager.apply(std::string{kThemeNameLight});
@@ -120,6 +125,11 @@ namespace gui {
 
         ImGuiStyle& style = ImGui::GetStyle();
         style.FontScaleDpi = dpiScale;
+
+        // Re-apply the current theme so geometry tokens (rounding, padding,
+        // spacing, border sizes) are rescaled to the new DPI factor.
+        m_themeManager.setDpiScale(dpiScale);
+        m_themeManager.apply(m_themeManager.currentThemeName());
     }
 
     void GraphicsBackend::beginFrame() {
