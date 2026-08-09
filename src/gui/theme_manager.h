@@ -94,6 +94,13 @@ public:
     /// Used by SettingsManager for AppSettings.appearance.themeMode.
     void applyByMode(app::ThemeMode mode, bool isSystemDark);
 
+    /// Sets the current window DPI scale factor used to scale geometry tokens
+    /// (rounding, padding, spacing, border sizes) when applying a theme.
+    /// @note ImGui::GetWindowDpiScale() is unreliable before the first frame,
+    /// so the caller (GraphicsBackend) passes the value from
+    /// glfwGetWindowContentScale() instead.
+    void setDpiScale(float dpiScale);
+
     bool isLight() const;
     ImVec4 getClearColor() const;
     const std::string& currentThemeName() const;
@@ -106,6 +113,7 @@ public:
 private:
     std::vector<ThemeData> m_themes;
     size_t m_current = 0;
+    float m_dpiScale = 1.0f;
 
     void applyThemeData(const ThemeData& data);
     void applyGeometryData(const ThemeGeometry& geometry);

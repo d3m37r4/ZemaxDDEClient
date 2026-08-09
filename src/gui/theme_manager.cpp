@@ -1,4 +1,8 @@
 #include "gui/theme_manager.h"
+#include "gui/constants.h"
+
+#include <algorithm>
+#include <cmath>
 
 // Helper: create an ImVec4 from 0..255 RGBA bytes
 static ImVec4 col(int r, int g, int b, int a = 255) {
@@ -306,6 +310,11 @@ void ThemeManager::applyByMode(app::ThemeMode mode, bool isSystemDark) {
     }
 }
 
+void ThemeManager::setDpiScale(float dpiScale) {
+    if (!std::isfinite(dpiScale) || dpiScale <= 0.0f) dpiScale = gui::MIN_DPI_SCALE;
+    m_dpiScale = std::clamp(dpiScale, gui::MIN_DPI_SCALE, gui::MAX_DPI_SCALE);
+}
+
 bool ThemeManager::isLight() const {
     if (m_themes.empty()) return false;
     return m_themes[m_current].isLight;
@@ -353,25 +362,39 @@ void ThemeManager::applyThemeData(const ThemeData& data) {
 void ThemeManager::applyGeometryData(const ThemeGeometry& g) {
     ImGuiStyle& style = ImGui::GetStyle();
 
-    style.WindowRounding    = g.windowRounding;
-    style.ChildRounding     = g.childRounding;
-    style.FrameRounding     = g.frameRounding;
-    style.PopupRounding     = g.popupRounding;
-    style.ScrollbarRounding = g.scrollbarRounding;
-    style.GrabRounding      = g.grabRounding;
-    style.TabRounding       = g.tabRounding;
+    // ThemeGeometry stores values in design units (px at 100% DPI).
+    // Multiply by the current DPI scale so rounding, padding, spacing
+    // and border sizes grow proportionally on HiDPI displays (e.g. 200%).
+    // The scale comes from ThemeManager::setDpiScale() (sourced from
+    // glfwGetWindowContentScale) because ImGui::GetWindowDpiScale() returns 0
+    // before the first frame, when this is called during initialization.
+    float dpi = m_dpiScale;
+    if (!std::isfinite(dpi) || dpi <= 0.0f) dpi = 1.0f;
 
-    style.WindowPadding     = g.windowPadding;
-    style.FramePadding      = g.framePadding;
-    style.ItemSpacing       = g.itemSpacing;
-    style.ItemInnerSpacing  = g.itemInnerSpacing;
-    style.CellPadding       = g.cellPadding;
-    style.IndentSpacing     = g.indentSpacing;
-    style.ScrollbarSize     = g.scrollbarSize;
-    style.GrabMinSize       = g.grabMinSize;
-    style.WindowBorderSize  = g.windowBorderSize;
-    style.ChildBorderSize   = g.childBorderSize;
-    style.PopupBorderSize   = g.popupBorderSize;
-    style.FrameBorderSize   = g.frameBorderSize;
-    style.TabBorderSize     = g.tabBorderSize;
+    auto scaleV2 = [dpi](const ImVec2& v) {
+        return ImVec2(v.x * dpi, v.y * dpi);
+    };
+
+    style.WindowRounding    = g.windowRounding    * dpi;
+    style.ChildRounding     = g.childRounding     * dpi;
+    style.FrameRounding     = g.frameRounding     * dpi;
+    style.PopupRounding     = g.popupRounding     * dpi;
+    style.ScrollbarRounding = g.scrollbarRounding * dpi;
+    style.GrabRounding      = g.grabRounding      * dpi;
+    style.TabRounding       = g.tabRounding       * dpi;
+
+    style.WindowPadding     = scaleV2(g.windowPadding);
+    style.FramePadding      = scaleV2(g.framePadding);
+    style.ItemSpacing       = scaleV2(g.itemSpacing);
+    style.ItemInnerSpacing  = scaleV2(g.itemInnerSpacing);
+    style.CellPadding       = scaleV2(g.cellPadding);
+    style.IndentSpacing     = g.indentSpacing     * dpi;
+    style.ScrollbarSize     = g.scrollbarSize     * dpi;
+    style.GrabMinSize       = g.grabMinSize       * dpi;
+
+    style.WindowBorderSize  = g.windowBorderSize  * dpi;
+    style.ChildBorderSize   = g.childBorderSize   * dpi;
+    style.PopupBorderSize   = g.popupBorderSize   * dpi;
+    style.FrameBorderSize   = g.frameBorderSize   * dpi;
+    style.TabBorderSize     = g.tabBorderSize     * dpi;
 }
