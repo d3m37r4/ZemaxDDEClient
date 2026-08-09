@@ -32,7 +32,7 @@ struct ThemeGeometry {
     ImVec2 cellPadding      = ImVec2(8,  4);
 
     float indentSpacing     = 25.0f;
-    float scrollbarSize     = 14.0f;
+    float scrollbarSize     = 10.0f;
     float grabMinSize       = 12.0f;
 
     float windowBorderSize  = 1.0f;
