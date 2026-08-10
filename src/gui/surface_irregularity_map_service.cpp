@@ -4,6 +4,7 @@
 
 #include "surface_irregularity_map_service.h"
 #include "gui/settings_manager.h"
+#include "gui/utils.h"
 #include "lib/implot3d/implot3d.h"
 
 namespace {
@@ -45,10 +46,14 @@ namespace gui {
 
         float worstAngle = getMaxPVResult().has_value() ? static_cast<float>(getMaxPVResult()->angle) : -1.0f;
 
+        const double scaleX = gui::unitScaleFactor(m_windowState.units.x);
+        const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
+        const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
+
         float sagMin = 1e30f, sagMax = -1e30f;
         for (const auto& profile : getProfiles()) {
             for (const auto& pt : profile.sagDataPoints) {
-                float s = static_cast<float>(pt.sag);
+                float s = static_cast<float>(pt.sag * scaleZ);
                 sagMin = std::min(sagMin, s);
                 sagMax = std::max(sagMax, s);
             }
@@ -57,7 +62,12 @@ namespace gui {
         if (sagRange < 1e-12f) sagRange = 1.0f;
 
         if (ImPlot3D::BeginPlot("##Surface3D_Lines", size, ImPlot3DFlags_NoLegend)) {
-            ImPlot3D::SetupAxes("X (mm)", "Y (mm)", "Z (mm)");
+            const char* unitX = gui::displayUnitName(m_windowState.units.x);
+            const char* unitY = gui::displayUnitName(m_windowState.units.y);
+            const char* unitZ = gui::displayUnitName(m_windowState.units.z);
+            ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
+                                std::format("Y ({})", unitY).c_str(),
+                                std::format("Z ({})", unitZ).c_str());
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
             constexpr int SEGMENT_SIZE = 3;
@@ -76,12 +86,12 @@ namespace gui {
 
                 for (int i = 0; i < numRadii; ++i) {
                     double r = i * rStep;
-                    xBuf[i] = static_cast<float>(r * std::cos(angleRad));
-                    yBuf[i] = static_cast<float>(r * std::sin(angleRad));
+                    xBuf[i] = static_cast<float>(r * std::cos(angleRad) * scaleX);
+                    yBuf[i] = static_cast<float>(r * std::sin(angleRad) * scaleY);
 
                     int srcIdx = positiveHalf ? centerIdx + i : centerIdx - i;
                     srcIdx = std::max(0, std::min(static_cast<int>(getProfiles()[profileIdx].sagDataPoints.size()) - 1, srcIdx));
-                    zBuf[i] = static_cast<float>(getProfiles()[profileIdx].sagDataPoints[srcIdx].sag);
+                    zBuf[i] = static_cast<float>(getProfiles()[profileIdx].sagDataPoints[srcIdx].sag * scaleZ);
                 }
 
                 if (isWorst && m_windowState.highlightWorstSurface) {
@@ -131,10 +141,14 @@ namespace gui {
 
         float worstAngle = getMaxPVResult().has_value() ? static_cast<float>(getMaxPVResult()->angle) : -1.0f;
 
+        const double scaleX = gui::unitScaleFactor(m_windowState.units.x);
+        const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
+        const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
+
         float devMin = 1e30f, devMax = -1e30f;
         for (const auto& profile : getProfiles()) {
             for (size_t k = 0; k < profile.sagDataPoints.size() && k < m_nominalSurfaceData.sagDataPoints.size(); ++k) {
-                float dev = static_cast<float>(profile.sagDataPoints[k].sag - m_nominalSurfaceData.sagDataPoints[k].sag);
+                float dev = static_cast<float>((profile.sagDataPoints[k].sag - m_nominalSurfaceData.sagDataPoints[k].sag) * scaleZ);
                 devMin = std::min(devMin, dev);
                 devMax = std::max(devMax, dev);
             }
@@ -143,7 +157,12 @@ namespace gui {
         if (devRange < 1e-12f) devRange = 1.0f;
 
         if (ImPlot3D::BeginPlot("##Deviation3D_Lines", size, ImPlot3DFlags_NoLegend)) {
-            ImPlot3D::SetupAxes("X (mm)", "Y (mm)", "ΔSag (mm)");
+            const char* unitX = gui::displayUnitName(m_windowState.units.x);
+            const char* unitY = gui::displayUnitName(m_windowState.units.y);
+            const char* unitZ = gui::displayUnitName(m_windowState.units.z);
+            ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
+                                std::format("Y ({})", unitY).c_str(),
+                                std::format("ΔSag ({})", unitZ).c_str());
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 
             constexpr int SEGMENT_SIZE = 3;
@@ -162,8 +181,8 @@ namespace gui {
 
                 for (int i = 0; i < numRadii; ++i) {
                     double r = i * rStep;
-                    xBuf[i] = static_cast<float>(r * std::cos(angleRad));
-                    yBuf[i] = static_cast<float>(r * std::sin(angleRad));
+                    xBuf[i] = static_cast<float>(r * std::cos(angleRad) * scaleX);
+                    yBuf[i] = static_cast<float>(r * std::sin(angleRad) * scaleY);
 
                     int srcIdx = positiveHalf ? centerIdx + i : centerIdx - i;
                     srcIdx = std::max(0, std::min(static_cast<int>(getProfiles()[profileIdx].sagDataPoints.size()) - 1, srcIdx));
@@ -172,7 +191,7 @@ namespace gui {
                     if (srcIdx < static_cast<int>(m_nominalSurfaceData.sagDataPoints.size())) {
                         sag -= static_cast<float>(m_nominalSurfaceData.sagDataPoints[srcIdx].sag);
                     }
-                    zBuf[i] = sag;
+                    zBuf[i] = sag * static_cast<float>(scaleZ);
                 }
 
                 if (isWorst && m_windowState.highlightWorstDeviation) {

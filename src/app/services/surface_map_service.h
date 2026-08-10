@@ -12,6 +12,7 @@
 #include "app/services/operation_monitor_service.h"
 #include "app/compute/surface_profile.h"
 #include "app/compute/surface_map.h"
+#include "app/services/surface_profile_service.h"
 
 class Logger;
 
@@ -38,6 +39,8 @@ namespace app::services {
         bool highlightWorstDeviation = true;
         float worstColorSurface[3] = {1.0f, 0.0f, 0.0f};
         float worstColorDeviation[3] = {1.0f, 0.0f, 0.0f};
+
+        AxisUnits units;
     };
 
     using app::models::MaxPVResult;

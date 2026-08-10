@@ -2,6 +2,7 @@
 
 #include "gui/gui.h"
 #include "lib/imgui/imgui.h"
+#include "app/services/surface_profile_service.h"
 
 namespace gui {
     const char* getUnitString(int unitCode, bool full) {
@@ -21,6 +22,14 @@ namespace gui {
             case 2: return "Real";
             default: return "Unknown";
         }
+    }
+
+    double unitScaleFactor(app::services::DisplayUnit unit) {
+        return unit == app::services::DisplayUnit::Micrometers ? 1000.0 : 1.0;
+    }
+
+    const char* displayUnitName(app::services::DisplayUnit unit) {
+        return unit == app::services::DisplayUnit::Micrometers ? "μm" : "mm";
     }
 
     std::optional<std::filesystem::path> writeToTemporaryFile(const std::string& filename, const std::string& content) {

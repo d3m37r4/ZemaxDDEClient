@@ -13,6 +13,14 @@ class Logger;
 
 namespace app::services {
 
+    enum class DisplayUnit : int { Millimeters = 0, Micrometers = 1 };
+
+    struct AxisUnits {
+        DisplayUnit x = DisplayUnit::Millimeters;
+        DisplayUnit y = DisplayUnit::Millimeters;
+        DisplayUnit z = DisplayUnit::Millimeters;
+    };
+
     struct ProfileWindowState {
         int tolerancedSurfaceIndex = 0;
         int nominalSurfaceIndex = 0;
@@ -21,6 +29,8 @@ namespace app::services {
         double tolerancedAngle = 0.0;
         int nominalSampling = 65;
         double nominalAngle = 0.0;
+
+        AxisUnits units;
     };
 
     std::pair<std::vector<double>, std::vector<double>> extractSagCoordinates(const app::models::SurfaceData& surface);

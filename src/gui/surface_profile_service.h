@@ -20,6 +20,9 @@ namespace gui {
             void renderProfileComparisonPlot(const char* plotLabel, const app::models::SurfaceData& nominal, const app::models::SurfaceData& toleranced, const ImVec2& size);
             void renderProfileDeviationPlot(const char* plotLabel, const app::models::SurfaceData& nominal, const app::models::SurfaceData& toleranced, const ImVec2& size);
 
+            void renderMenuBar(app::services::AxisUnits& units, bool is3D,
+                               int* colormapIdx = nullptr, bool* showWorst = nullptr, float* worstColor = nullptr);
+
             app::models::OpticalSystemData m_frozenNominalOpticalSystem;
             app::models::OpticalSystemData m_frozenTolerancedOpticalSystem;
 
