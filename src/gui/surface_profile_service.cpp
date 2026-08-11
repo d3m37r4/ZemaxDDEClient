@@ -66,13 +66,9 @@ namespace gui {
 
     static constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
-    void SurfaceProfileService::renderMenuBar(app::services::AxisUnits& units, bool is3D,
+    void SurfaceProfileService::renderToolbar(app::services::AxisUnits& units, bool is3D,
                                                int* colormapIdx, bool* showWorst, float* worstColor) {
-        ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
-        if (!ImGui::BeginMenuBar()) {
-            ImGui::PopStyleColor();
-            return;
-        }
+        if (!ImGui::BeginMenuBar()) return;
 
         if (ImGui::BeginMenu(ICON_FA_GEARS " Settings")) {
             ImGui::TextUnformatted("X axis");
@@ -115,7 +111,6 @@ namespace gui {
         }
 
         ImGui::EndMenuBar();
-        ImGui::PopStyleColor();
     }
 
     void SurfaceProfileService::renderSurfaceProfilePlot(const char* plotLabel, const app::models::SurfaceData& surface, const ImVec2& size) {
