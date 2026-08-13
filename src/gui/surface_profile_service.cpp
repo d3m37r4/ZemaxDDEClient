@@ -1,6 +1,7 @@
 #include <format>
 #include <cmath>
 
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
@@ -18,6 +19,18 @@ namespace gui {
         ImPlotSpec buildLineSpec(float lineWeight, float markerSize) {
             return ImPlotSpec(ImPlotProp_LineWeight, lineWeight,
                               ImPlotProp_MarkerSize, markerSize);
+        }
+
+        const char* kDisplayUnitNames[] = { "mm", "μm" };
+
+        int displayUnitCombo(const char* label, app::services::DisplayUnit& unit) {
+            int staticUnit = static_cast<int>(unit);
+            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.0f);
+            if (ImGui::Combo(label, &staticUnit, kDisplayUnitNames, IM_ARRAYSIZE(kDisplayUnitNames))) {
+                unit = static_cast<app::services::DisplayUnit>(staticUnit);
+                return 1;
+            }
+            return 0;
         }
     }
 
@@ -51,6 +64,55 @@ namespace gui {
         m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
     }
 
+    static constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
+
+    void SurfaceProfileService::renderToolbar(app::services::AxisUnits& units, bool is3D,
+                                               int* colormapIdx, bool* showWorst, float* worstColor) {
+        if (!ImGui::BeginMenuBar()) return;
+
+        if (ImGui::BeginMenu(ICON_FA_GEARS " Settings")) {
+            ImGui::TextUnformatted("X axis");
+            ImGui::SameLine(ImGui::GetFontSize() * 6.0f);
+            displayUnitCombo("##UnitX", units.x);
+
+            if (is3D) {
+                ImGui::TextUnformatted("Y axis");
+                ImGui::SameLine(ImGui::GetFontSize() * 6.0f);
+                displayUnitCombo("##UnitY", units.y);
+            }
+
+            const char* yLabel = is3D ? "Z axis" : "Sag axis";
+            ImGui::TextUnformatted(yLabel);
+            ImGui::SameLine(ImGui::GetFontSize() * 6.0f);
+            displayUnitCombo(is3D ? "##UnitZ" : "##UnitY", is3D ? units.z : units.y);
+
+            if (is3D && showWorst && worstColor) {
+                ImGui::Separator();
+                ImGui::Checkbox("##ShowWorst", showWorst);
+                ImGui::SameLine();
+                ImGui::TextUnformatted("Show worst");
+                ImGui::SameLine();
+                ImGui::ColorEdit3("##WorstColor", worstColor,
+                    ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        if (is3D && colormapIdx) {
+            if (ImGui::BeginMenu(ICON_FA_PALETTE " Colormap")) {
+                for (int i = 0; i < IM_ARRAYSIZE(kColormapNames); ++i) {
+                    if (ImGui::MenuItem(kColormapNames[i], nullptr, *colormapIdx == i)) {
+                        *colormapIdx = i;
+                    }
+                }
+                ImGui::EndMenu();
+            }
+        }
+
+        ImGui::EndMenuBar();
+    }
+
     void SurfaceProfileService::renderSurfaceProfilePlot(const char* plotLabel, const app::models::SurfaceData& surface, const ImVec2& size) {
         if (surface.sagDataPoints.empty()) return;
 
@@ -59,13 +121,24 @@ namespace gui {
         const float lineWeight = m_settingsManager ? m_settingsManager->plotLineWeight() : 1.0f;
         const float markerSize = m_settingsManager ? m_settingsManager->plotMarkerSize() : 4.0f;
 
+        const app::services::AxisUnits& units = m_windowState.units;
+        double scaleX = gui::unitScaleFactor(units.x);
+        double scaleY = gui::unitScaleFactor(units.y);
+
+        std::vector<double> x_scaled(x_vals.size()), y_scaled(y_vals.size());
+        for (size_t i = 0; i < x_vals.size(); ++i) {
+            x_scaled[i] = x_vals[i] * scaleX;
+            y_scaled[i] = y_vals[i] * scaleY;
+        }
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
-            std::string unitName = gui::getUnitString(surface.units);
-            ImPlot::SetupAxes(std::format("X ({})", unitName).c_str(),
-                              std::format("Sag ({})", unitName).c_str(),
+            const char* unitX = gui::displayUnitName(units.x);
+            const char* unitY = gui::displayUnitName(units.y);
+            ImPlot::SetupAxes(std::format("X ({})", unitX).c_str(),
+                              std::format("Sag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine("Surface", x_vals.data(), y_vals.data(), x_vals.size(),
+            ImPlot::PlotLine("Surface", x_scaled.data(), y_scaled.data(), x_scaled.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
         }
@@ -78,13 +151,31 @@ namespace gui {
         const float lineWeight = m_settingsManager ? m_settingsManager->plotLineWeight() : 1.0f;
         const float markerSize = m_settingsManager ? m_settingsManager->plotMarkerSize() : 4.0f;
 
+        const app::services::AxisUnits& units = m_windowState.units;
+        double scaleX = gui::unitScaleFactor(units.x);
+        double scaleY = gui::unitScaleFactor(units.y);
+
+        std::vector<double> x_nom_s(x_nom.size()), y_nom_s(y_nom.size());
+        std::vector<double> x_tol_s(x_tol.size()), y_tol_s(y_tol.size());
+        for (size_t i = 0; i < x_nom.size(); ++i) {
+            x_nom_s[i] = x_nom[i] * scaleX;
+            y_nom_s[i] = y_nom[i] * scaleY;
+        }
+        for (size_t i = 0; i < x_tol.size(); ++i) {
+            x_tol_s[i] = x_tol[i] * scaleX;
+            y_tol_s[i] = y_tol[i] * scaleY;
+        }
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
-            ImPlot::SetupAxes("X (mm)", "Sag (mm)",
+            const char* unitX = gui::displayUnitName(units.x);
+            const char* unitY = gui::displayUnitName(units.y);
+            ImPlot::SetupAxes(std::format("X ({})", unitX).c_str(),
+                              std::format("Sag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine("Nominal", x_nom.data(), y_nom.data(), x_nom.size(),
+            ImPlot::PlotLine("Nominal", x_nom_s.data(), y_nom_s.data(), x_nom_s.size(),
                              buildLineSpec(lineWeight, markerSize));
-            ImPlot::PlotLine("Toleranced", x_tol.data(), y_tol.data(), x_tol.size(),
+            ImPlot::PlotLine("Toleranced", x_tol_s.data(), y_tol_s.data(), x_tol_s.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
         }
@@ -105,11 +196,24 @@ namespace gui {
         const float lineWeight = m_settingsManager ? m_settingsManager->plotLineWeight() : 1.0f;
         const float markerSize = m_settingsManager ? m_settingsManager->plotMarkerSize() : 4.0f;
 
+        const app::services::AxisUnits& units = m_windowState.units;
+        double scaleX = gui::unitScaleFactor(units.x);
+        double scaleY = gui::unitScaleFactor(units.y);
+
+        std::vector<double> x_s(x_nom.size()), y_s(y_dev.size());
+        for (size_t i = 0; i < x_nom.size(); ++i) {
+            x_s[i] = x_nom[i] * scaleX;
+            y_s[i] = y_dev[i] * scaleY;
+        }
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
-            ImPlot::SetupAxes("X (mm)", "ΔSag (mm)",
+            const char* unitX = gui::displayUnitName(units.x);
+            const char* unitY = gui::displayUnitName(units.y);
+            ImPlot::SetupAxes(std::format("X ({})", unitX).c_str(),
+                              std::format("ΔSag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
-            ImPlot::PlotLine("Deviation", x_nom.data(), y_dev.data(), x_nom.size(),
+            ImPlot::PlotLine("Deviation", x_s.data(), y_s.data(), x_s.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
         }

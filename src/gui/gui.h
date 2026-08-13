@@ -50,6 +50,16 @@ namespace gui {
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
+            template<typename Func>
+            void renderToolbarWindow(const char* title, bool* open, Func content) {
+                ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
+                if (ImGui::Begin(title, open, ImGuiWindowFlags_MenuBar)) {
+                    content();
+                }
+                ImGui::End();
+                ImGui::PopStyleColor();
+            }
+
             void renderOpticalSystemInfo();
             void renderSurfaceProfileInspector();
             void renderSurfaceIrregularityMap();

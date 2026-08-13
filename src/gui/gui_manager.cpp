@@ -133,7 +133,10 @@ void GuiManager::render() {
     }
 
     const ImVec2 kDetachedWindowSize(600, 400);
-    const float kComboWidthMultiplier = 10.0f;
+
+    auto& profileUnits = m_profileService->m_windowState.units;
+    auto& mapUnits = m_irregularityMapService->m_windowState.units;
+
     {
         auto& tolSurface = m_profileService->m_tolerancedSurfaceData;
         auto& nomSurface = m_profileService->m_nominalSurfaceData;
@@ -142,10 +145,10 @@ void GuiManager::render() {
             if (tolSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
                 std::string title = std::format("Toleranced Surface Profile ({}°, {} pts)", tolSurface.angle, tolSurface.sampling);
-                if (ImGui::Begin(title.c_str(), &m_profileService->m_showTolerancedProfileWindow)) {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, [&]() {
+                    m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Toleranced", tolSurface, ImVec2(-1, -1));
-                }
-                ImGui::End();
+                });
             }
         }
 
@@ -153,109 +156,93 @@ void GuiManager::render() {
             if (nomSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
                 std::string title = std::format("Nominal Surface Profile ({}°, {} pts)", nomSurface.angle, nomSurface.sampling);
-                if (ImGui::Begin(title.c_str(), &m_profileService->m_showNominalProfileWindow)) {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, [&]() {
+                    m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Nominal", nomSurface, ImVec2(-1, -1));
-                }
-                ImGui::End();
+                });
             }
         }
 
         if (m_profileService->m_showComparisonProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
-                if (ImGui::Begin("Surface Profile Comparison", &m_profileService->m_showComparisonProfileWindow)) {
+                renderToolbarWindow("Surface Profile Comparison", &m_profileService->m_showComparisonProfileWindow, [&]() {
+                    m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
-                }
-                ImGui::End();
+                });
             }
         }
 
         if (m_profileService->m_showDeviationProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
-                if (ImGui::Begin("Surface Profile Irregularity (PV)", &m_profileService->m_showDeviationProfileWindow)) {
+                renderToolbarWindow("Surface Profile Irregularity (PV)", &m_profileService->m_showDeviationProfileWindow, [&]() {
+                    m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
-                }
-                ImGui::End();
+                });
             }
         }
     }
 
     {
-        if (m_irregularityMapService->m_showTolerancedSurfaceMap) {
-            if (m_irregularityMapService->hasData()) {
+        auto* mapService = m_irregularityMapService.get();
+
+        if (mapService->m_showTolerancedSurfaceMap) {
+            if (mapService->hasData()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
-                if (ImGui::Begin("Surface Irregularity Map 3D", &m_irregularityMapService->m_showTolerancedSurfaceMap)) {
-                    {
-                        const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
-                        int cmap = m_irregularityMapService->m_windowState.selectedColormapSurface;
-                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * kComboWidthMultiplier);
-                        if (ImGui::Combo("Colormap", &cmap, cmapNames, IM_ARRAYSIZE(cmapNames)))
-                            m_irregularityMapService->m_windowState.selectedColormapSurface = cmap;
-                        ImGui::SameLine();
-                        ImGui::Checkbox("Highlight worst", &m_irregularityMapService->m_windowState.highlightWorstSurface);
-                        ImGui::SameLine();
-                        ImGui::ColorEdit3("##worstColorS", m_irregularityMapService->m_windowState.worstColorSurface,
-                            ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
-                    }
-                    m_irregularityMapService->renderSurfacePlotLines(ImVec2(-1, -1));
-                }
-                ImGui::End();
+                renderToolbarWindow("Surface Irregularity Map 3D", &mapService->m_showTolerancedSurfaceMap, [&]() {
+                    m_profileService->renderToolbar(mapUnits, true,
+                        &mapService->m_windowState.selectedColormapSurface,
+                        &mapService->m_windowState.highlightWorstSurface,
+                        mapService->m_windowState.worstColorSurface);
+                    mapService->renderSurfacePlotLines(ImVec2(-1, -1));
+                });
             } else {
-                m_irregularityMapService->m_showTolerancedSurfaceMap = false;
+                mapService->m_showTolerancedSurfaceMap = false;
             }
         }
 
-        if (m_irregularityMapService->m_showDeviationSurfaceMap) {
-            if (m_irregularityMapService->hasData() && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+        if (mapService->m_showDeviationSurfaceMap) {
+            if (mapService->hasData() && mapService->m_nominalSurfaceData.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
-                if (ImGui::Begin("Surface Irregularity Map 3D Deviation", &m_irregularityMapService->m_showDeviationSurfaceMap)) {
-                    {
-                        const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
-                        int cmap = m_irregularityMapService->m_windowState.selectedColormapDeviation;
-                        ImGui::SetNextItemWidth(ImGui::GetFontSize() * kComboWidthMultiplier);
-                        if (ImGui::Combo("Colormap", &cmap, cmapNames, IM_ARRAYSIZE(cmapNames)))
-                            m_irregularityMapService->m_windowState.selectedColormapDeviation = cmap;
-                        ImGui::SameLine();
-                        ImGui::Checkbox("Highlight worst", &m_irregularityMapService->m_windowState.highlightWorstDeviation);
-                        ImGui::SameLine();
-                        ImGui::ColorEdit3("##worstColorD", m_irregularityMapService->m_windowState.worstColorDeviation,
-                            ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
-                    }
-                    m_irregularityMapService->renderDeviationSurfacePlotLines(ImVec2(-1, -1));
-                }
-                ImGui::End();
+                renderToolbarWindow("Surface Irregularity Map 3D Deviation", &mapService->m_showDeviationSurfaceMap, [&]() {
+                    m_profileService->renderToolbar(mapUnits, true,
+                        &mapService->m_windowState.selectedColormapDeviation,
+                        &mapService->m_windowState.highlightWorstDeviation,
+                        mapService->m_windowState.worstColorDeviation);
+                    mapService->renderDeviationSurfacePlotLines(ImVec2(-1, -1));
+                });
             } else {
-                m_irregularityMapService->m_showDeviationSurfaceMap = false;
+                mapService->m_showDeviationSurfaceMap = false;
             }
         }
 
-        if (m_irregularityMapService->m_showWorstSectionProfile) {
-            if (m_irregularityMapService->m_worstProfileData.isValid()) {
+        if (mapService->m_showWorstSectionProfile) {
+            if (mapService->m_worstProfileData.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
-                if (ImGui::Begin("Worst Section Profile", &m_irregularityMapService->m_showWorstSectionProfile)) {
-                    auto& wp = m_irregularityMapService->m_worstProfileData;
+                renderToolbarWindow("Worst Section Profile", &mapService->m_showWorstSectionProfile, [&]() {
+                    m_profileService->renderToolbar(profileUnits, false);
+                    auto& wp = mapService->m_worstProfileData;
                     std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
                     m_profileService->renderSurfaceProfilePlot(title.c_str(), wp, ImVec2(-1, -1));
-                }
-                ImGui::End();
+                });
             } else {
-                m_irregularityMapService->m_showWorstSectionProfile = false;
+                mapService->m_showWorstSectionProfile = false;
             }
         }
 
-        if (m_irregularityMapService->m_showWorstSectionDeviation) {
-            if (m_irregularityMapService->m_worstProfileData.isValid()
-                && m_irregularityMapService->m_nominalSurfaceData.isValid()) {
+        if (mapService->m_showWorstSectionDeviation) {
+            if (mapService->m_worstProfileData.isValid()
+                && mapService->m_nominalSurfaceData.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
-                if (ImGui::Begin("Worst Section Deviation", &m_irregularityMapService->m_showWorstSectionDeviation)) {
+                renderToolbarWindow("Worst Section Deviation", &mapService->m_showWorstSectionDeviation, [&]() {
+                    m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##WorstDeviation",
-                        m_irregularityMapService->m_nominalSurfaceData,
-                        m_irregularityMapService->m_worstProfileData, ImVec2(-1, -1));
-                }
-                ImGui::End();
+                        mapService->m_nominalSurfaceData,
+                        mapService->m_worstProfileData, ImVec2(-1, -1));
+                });
             } else {
-                m_irregularityMapService->m_showWorstSectionDeviation = false;
+                mapService->m_showWorstSectionDeviation = false;
             }
         }
     }
