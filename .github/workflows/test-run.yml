@@ -1,0 +1,14 @@
+name: CD Runners Smoke Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-binaries:
+    uses: ./.github/workflows/test/build-binaries.yml
+
+  run-tests:
+    needs: build-binaries
+    uses: ./.github/workflows/test/run-tests.yml
+    with:
+      artifact_name: binaries-${{ github.sha }}
