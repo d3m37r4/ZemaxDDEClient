@@ -1,6 +1,9 @@
 name: CD Runners Smoke Test
 
 on:
+  push:
+    branches:
+      - test/cd-jobs
   workflow_dispatch:
 
 jobs:
