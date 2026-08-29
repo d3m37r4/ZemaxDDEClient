@@ -1,0 +1,89 @@
+name: Package Release
+
+on:
+  workflow_call:
+    inputs:
+      release_id:
+        required: true
+        type: string
+      tag_name:
+        required: true
+        type: string
+      artifact_name:
+        required: true
+        type: string
+      vt_artifact_name:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: Download binaries artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: bin
+
+      - name: Download VT result artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.vt_artifact_name }}
+          path: vt
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          files: bin/build/bin/*.zip
+
+      - name: Append VT scan results to release body
+        run: |
+          $token = "${{ github.token }}"
+          $releaseId = "${{ inputs.release_id }}"
+          $repo = "${{ github.repository }}"
+          $headers = @{
+            "Authorization" = "token $token"
+            "Accept" = "application/vnd.github.v3+json"
+          }
+
+          $releaseJson = Get-Content -Path "vt/release_vt.json" -Raw | ConvertFrom-Json
+          $releaseZipSha = (Get-Content -Path "bin/release_sha.txt" -Raw).Trim()
+          $releaseExeSha = (Get-Content -Path "bin/release_exe_sha.txt" -Raw).Trim()
+
+          $debugJson = Get-Content -Path "vt/debug_vt.json" -Raw | ConvertFrom-Json
+          $debugZipSha = (Get-Content -Path "bin/debug_sha.txt" -Raw).Trim()
+          $debugExeSha = (Get-Content -Path "bin/debug_exe_sha.txt" -Raw).Trim()
+
+          $releaseLink = $releaseJson.vt_link
+          $releaseMal = $releaseJson.malicious
+          $releaseTotal = $releaseJson.total
+
+          $debugLink = $debugJson.vt_link
+          $debugMal = $debugJson.malicious
+          $debugTotal = $debugJson.total
+
+          $current = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$releaseId" `
+            -Headers $headers
+          $currentBody = if ($current.body) { $current.body } else { "" }
+
+          $vtSection = "`n`n## VirusTotal Scan Results`n`n" +
+            "> **Release build scan result**: [$releaseMal/$releaseTotal detections]($releaseLink)`n" +
+            "> **EXE SHA256**: $releaseExeSha`n> **ZIP SHA256**: $releaseZipSha`n`n" +
+            "> **Debug build scan result**: [$debugMal/$debugTotal detections]($debugLink)`n" +
+            "> **EXE SHA256**: $debugExeSha`n> **ZIP SHA256**: $debugZipSha"
+
+          $newBody = $currentBody + $vtSection
+
+          Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$releaseId" `
+            -Method Patch `
+            -Headers $headers `
+            -Body (@{ body = $newBody } | ConvertTo-Json) `
+            -ContentType "application/json"
+
+          Write-Host "Release body updated with VT scan results"
+        shell: pwsh

@@ -1,0 +1,57 @@
+name: Run Tests
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            git
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-ninja
+            zip
+
+      - name: Make build.sh executable
+        run: git update-index --chmod=+x build.sh
+        shell: msys2 {0}
+
+      - name: Download binaries artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: binaries
+
+      - name: Build Unit Tests
+        run: |
+          cmake -B build -DBUILD_TESTING=ON -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            --fresh
+          cmake --build build --target tests
+        shell: msys2 {0}
+
+      - name: Run Unit Tests
+        run: |
+          cd build && ctest --output-on-failure
+        shell: msys2 {0}

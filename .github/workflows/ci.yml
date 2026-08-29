@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
+      - 'fix/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - 'build.sh'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - 'build.sh'
+      - '.github/workflows/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build-binaries:
+    uses: ./.github/workflows/test/build-binaries.yml
+
+  run-tests:
+    needs: build-binaries
+    uses: ./.github/workflows/test/run-tests.yml
+    with:
+      artifact_name: binaries-${{ github.sha }}
