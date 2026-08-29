@@ -9,11 +9,11 @@ permissions:
 
 jobs:
   build-binaries:
-    uses: ./.github/workflows/test/build-binaries.yml
+    uses: ./.github/workflows/build-binaries.yml
 
   vt-scan:
     needs: build-binaries
-    uses: ./.github/workflows/test/vt-scan-binaries.yml
+    uses: ./.github/workflows/vt-scan-binaries.yml
     with:
       artifact_name: binaries-${{ github.sha }}
     secrets:
@@ -21,7 +21,7 @@ jobs:
 
   package:
     needs: vt-scan
-    uses: ./.github/workflows/test/package-release.yml
+    uses: ./.github/workflows/package-release.yml
     with:
       release_id: ${{ github.event.release.id }}
       tag_name: ${{ github.event.release.tag_name }}
