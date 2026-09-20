@@ -80,10 +80,20 @@ jobs:
             $uploadResponse = $null
             try {
               Write-Host "  Upload attempt $uploadAttempt/3..."
-              $uploadResponse = Invoke-RestMethod -Uri $uploadUrl `
-                -Method Post `
-                -Headers @{ "x-apikey" = $apiKey } `
-                -Form @{ file = (Get-Item $file.FullName) }
+              $curlOut = curl.exe -s -w "`n%{http_code}" -X POST "$uploadUrl" `
+                -H "x-apikey: $apiKey" `
+                -F "file=@$($file.FullName)"
+              $httpCode = ($curlOut | Select-Object -Last 1).Trim()
+              $jsonResponse = ($curlOut | Select-Object -SkipLast 1) -join "`n"
+
+              if ($httpCode -ne "200") {
+                Write-Warning "  Upload HTTP code: $httpCode. Body: $jsonResponse"
+                if ($uploadAttempt -eq 3) { throw "VT upload failed with HTTP $httpCode after 3 attempts" }
+                Start-Sleep -Seconds 15
+                continue
+              }
+
+              $uploadResponse = $jsonResponse | ConvertFrom-Json
 
               Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
               $analysisId = $uploadResponse.data.id
@@ -200,10 +210,20 @@ jobs:
             $uploadResponse = $null
             try {
               Write-Host "  Upload attempt $uploadAttempt/3..."
-              $uploadResponse = Invoke-RestMethod -Uri $uploadUrl `
-                -Method Post `
-                -Headers @{ "x-apikey" = $apiKey } `
-                -Form @{ file = (Get-Item $file.FullName) }
+              $curlOut = curl.exe -s -w "`n%{http_code}" -X POST "$uploadUrl" `
+                -H "x-apikey: $apiKey" `
+                -F "file=@$($file.FullName)"
+              $httpCode = ($curlOut | Select-Object -Last 1).Trim()
+              $jsonResponse = ($curlOut | Select-Object -SkipLast 1) -join "`n"
+
+              if ($httpCode -ne "200") {
+                Write-Warning "  Upload HTTP code: $httpCode. Body: $jsonResponse"
+                if ($uploadAttempt -eq 3) { throw "VT upload failed with HTTP $httpCode after 3 attempts" }
+                Start-Sleep -Seconds 15
+                continue
+              }
+
+              $uploadResponse = $jsonResponse | ConvertFrom-Json
 
               Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
               $analysisId = $uploadResponse.data.id
