@@ -83,8 +83,7 @@ jobs:
               $uploadResponse = Invoke-RestMethod -Uri $uploadUrl `
                 -Method Post `
                 -Headers @{ "x-apikey" = $apiKey } `
-                -InFile $file.FullName `
-                -ContentType "multipart/form-data"
+                -Form @{ file = (Get-Item $file.FullName) }
 
               Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
               $analysisId = $uploadResponse.data.id
@@ -204,8 +203,7 @@ jobs:
               $uploadResponse = Invoke-RestMethod -Uri $uploadUrl `
                 -Method Post `
                 -Headers @{ "x-apikey" = $apiKey } `
-                -InFile $file.FullName `
-                -ContentType "multipart/form-data"
+                -Form @{ file = (Get-Item $file.FullName) }
 
               Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
               $analysisId = $uploadResponse.data.id
