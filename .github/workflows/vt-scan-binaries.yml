@@ -75,26 +75,36 @@ jobs:
             }
           }
 
-          $uploadResponse = $null
-          for ($attempt = 1; $attempt -le 3; $attempt++) {
+          $analysisId = $null
+          for ($uploadAttempt = 1; $uploadAttempt -le 3; $uploadAttempt++) {
+            $uploadResponse = $null
             try {
-              $jsonResponse = curl -s -X POST "$uploadUrl" `
-                -H "x-apikey: $apiKey" `
-                -F "file=@$($file.FullName)"
-              $uploadResponse = $jsonResponse | ConvertFrom-Json
-              Write-Host "  File uploaded (attempt $attempt)"
-              break
+              Write-Host "  Upload attempt $uploadAttempt/3..."
+              $uploadResponse = Invoke-RestMethod -Uri $uploadUrl `
+                -Method Post `
+                -Headers @{ "x-apikey" = $apiKey } `
+                -InFile $file.FullName `
+                -ContentType "multipart/form-data"
+
+              Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
+              $analysisId = $uploadResponse.data.id
+
+              if ($analysisId) {
+                Write-Host "  Analysis ID: $analysisId"
+                break
+              } else {
+                Write-Warning "  Analysis ID is empty. Response: $($uploadResponse | ConvertTo-Json -Depth 5)"
+                if ($uploadAttempt -eq 3) { throw "Failed to get analysis ID after 3 upload attempts" }
+                Start-Sleep -Seconds 15
+              }
             } catch {
-              Write-Host "  File upload attempt $attempt/3 failed: $($_.Exception.Message)"
-              if ($attempt -eq 3) { throw }
+              Write-Warning "  Upload attempt $uploadAttempt/3 failed: $($_.Exception.Message)"
+              if ($uploadAttempt -eq 3) { throw }
               Start-Sleep -Seconds 15
             }
           }
 
-          $analysisId = $uploadResponse.data.id
-          Write-Host "  Analysis ID: $analysisId"
-
-          $maxAttempts = 60
+          $maxAttempts = 30
           $attempt = 0
           $stats = $null
           $meta = $null
@@ -108,7 +118,7 @@ jobs:
                 -Headers @{ "x-apikey" = $apiKey }
 
               $status = $analysisResponse.data.attributes.status
-              if ($attempt % 5 -eq 0 -or $status -eq "completed") {
+              if ($attempt % 3 -eq 0 -or $status -eq "completed") {
                 Write-Host "  Status: $status (attempt $attempt/$maxAttempts)"
               }
 
@@ -118,7 +128,7 @@ jobs:
                 break
               }
             } catch {
-              Write-Host "  Retry: $($_.Exception.Message)"
+              Write-Warning "  Poll attempt $attempt/$maxAttempts failed: $($_.Exception.Message)"
             }
           } while ($attempt -lt $maxAttempts)
 
@@ -138,7 +148,7 @@ jobs:
               sha_match = ($localSha256 -eq $vtSha256)
             }
           } else {
-            Write-Warning "VirusTotal scan timed out"
+            Write-Error "VirusTotal scan timed out after $maxAttempts attempts (Release)"
             $result = @{
               vt_link = "timeout"
               malicious = -1
@@ -186,26 +196,36 @@ jobs:
             }
           }
 
-          $uploadResponse = $null
-          for ($attempt = 1; $attempt -le 3; $attempt++) {
+          $analysisId = $null
+          for ($uploadAttempt = 1; $uploadAttempt -le 3; $uploadAttempt++) {
+            $uploadResponse = $null
             try {
-              $jsonResponse = curl -s -X POST "$uploadUrl" `
-                -H "x-apikey: $apiKey" `
-                -F "file=@$($file.FullName)"
-              $uploadResponse = $jsonResponse | ConvertFrom-Json
-              Write-Host "  File uploaded (attempt $attempt)"
-              break
+              Write-Host "  Upload attempt $uploadAttempt/3..."
+              $uploadResponse = Invoke-RestMethod -Uri $uploadUrl `
+                -Method Post `
+                -Headers @{ "x-apikey" = $apiKey } `
+                -InFile $file.FullName `
+                -ContentType "multipart/form-data"
+
+              Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
+              $analysisId = $uploadResponse.data.id
+
+              if ($analysisId) {
+                Write-Host "  Analysis ID: $analysisId"
+                break
+              } else {
+                Write-Warning "  Analysis ID is empty. Response: $($uploadResponse | ConvertTo-Json -Depth 5)"
+                if ($uploadAttempt -eq 3) { throw "Failed to get analysis ID after 3 upload attempts" }
+                Start-Sleep -Seconds 15
+              }
             } catch {
-              Write-Host "  File upload attempt $attempt/3 failed: $($_.Exception.Message)"
-              if ($attempt -eq 3) { throw }
+              Write-Warning "  Upload attempt $uploadAttempt/3 failed: $($_.Exception.Message)"
+              if ($uploadAttempt -eq 3) { throw }
               Start-Sleep -Seconds 15
             }
           }
 
-          $analysisId = $uploadResponse.data.id
-          Write-Host "  Analysis ID: $analysisId"
-
-          $maxAttempts = 60
+          $maxAttempts = 30
           $attempt = 0
           $stats = $null
           $meta = $null
@@ -219,7 +239,7 @@ jobs:
                 -Headers @{ "x-apikey" = $apiKey }
 
               $status = $analysisResponse.data.attributes.status
-              if ($attempt % 5 -eq 0 -or $status -eq "completed") {
+              if ($attempt % 3 -eq 0 -or $status -eq "completed") {
                 Write-Host "  Status: $status (attempt $attempt/$maxAttempts)"
               }
 
@@ -229,7 +249,7 @@ jobs:
                 break
               }
             } catch {
-              Write-Host "  Retry: $($_.Exception.Message)"
+              Write-Warning "  Poll attempt $attempt/$maxAttempts failed: $($_.Exception.Message)"
             }
           } while ($attempt -lt $maxAttempts)
 
@@ -249,7 +269,7 @@ jobs:
               sha_match = ($localSha256 -eq $vtSha256)
             }
           } else {
-            Write-Warning "VirusTotal scan timed out"
+            Write-Error "VirusTotal scan timed out after $maxAttempts attempts (Debug)"
             $result = @{
               vt_link = "timeout"
               malicious = -1
