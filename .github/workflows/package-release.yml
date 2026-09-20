@@ -71,13 +71,20 @@ jobs:
             -Headers $headers
           $currentBody = if ($current.body) { $current.body } else { "" }
 
+          # Remove ALL existing VT sections (rescan-safe: replace instead of duplicate)
+          $cleanBody = [regex]::Replace(
+            $currentBody,
+            '(?ms)^## VirusTotal Scan Results.*?(?=^## |\z)',
+            ''
+          ).TrimEnd()
+
           $vtSection = "`n`n## VirusTotal Scan Results`n`n" +
             "> **Release build scan result**: [$releaseMal/$releaseTotal detections]($releaseLink)`n" +
             "> **EXE SHA256**: $releaseExeSha`n> **ZIP SHA256**: $releaseZipSha`n`n" +
             "> **Debug build scan result**: [$debugMal/$debugTotal detections]($debugLink)`n" +
             "> **EXE SHA256**: $debugExeSha`n> **ZIP SHA256**: $debugZipSha"
 
-          $newBody = $currentBody + $vtSection
+          $newBody = $cleanBody + $vtSection
 
           Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/$releaseId" `
             -Method Patch `
