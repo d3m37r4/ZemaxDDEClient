@@ -1,0 +1,329 @@
+name: VirusTotal Scan
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        required: true
+        type: string
+    secrets:
+      VIRUSTOTAL_API_KEY:
+        required: true
+    outputs:
+      release_vt_link:
+        value: ${{ jobs.scan.outputs.release_vt_link }}
+      release_vt_malicious:
+        value: ${{ jobs.scan.outputs.release_vt_malicious }}
+      release_vt_total:
+        value: ${{ jobs.scan.outputs.release_vt_total }}
+      debug_vt_link:
+        value: ${{ jobs.scan.outputs.debug_vt_link }}
+      debug_vt_malicious:
+        value: ${{ jobs.scan.outputs.debug_vt_malicious }}
+      debug_vt_total:
+        value: ${{ jobs.scan.outputs.debug_vt_total }}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: windows-latest
+    outputs:
+      release_vt_link: ${{ steps.out_release.outputs.vt_link }}
+      release_vt_malicious: ${{ steps.out_release.outputs.malicious }}
+      release_vt_total: ${{ steps.out_release.outputs.total }}
+      debug_vt_link: ${{ steps.out_debug.outputs.vt_link }}
+      debug_vt_malicious: ${{ steps.out_debug.outputs.malicious }}
+      debug_vt_total: ${{ steps.out_debug.outputs.total }}
+    steps:
+      - name: Download binaries artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: binaries
+
+      - name: VirusTotal Scan Release
+        id: vt_release
+        run: |
+          $apiKey = "${{ secrets.VIRUSTOTAL_API_KEY }}"
+          $file = Get-ChildItem -Path "binaries/release_exe" -Filter "*.exe" | Select-Object -First 1
+
+          if (-not $file) {
+            Write-Error "No release exe found"
+            exit 1
+          }
+
+          Write-Host "Scanning Release: $($file.Name)"
+          Write-Host "  File size: $($file.Length) bytes"
+
+          $localSha256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
+          Write-Host "  Local EXE SHA256 (before upload): $localSha256"
+
+          $uploadUrl = $null
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
+                -Headers @{ "x-apikey" = $apiKey }
+              $uploadUrl = $uploadUrlResponse.data
+              Write-Host "  Upload URL obtained (attempt $attempt)"
+              break
+            } catch {
+              Write-Host "  Upload URL attempt $attempt/3 failed: $($_.Exception.Message)"
+              if ($attempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
+
+          $analysisId = $null
+          for ($uploadAttempt = 1; $uploadAttempt -le 3; $uploadAttempt++) {
+            $uploadResponse = $null
+            try {
+              Write-Host "  Upload attempt $uploadAttempt/3..."
+              $curlOut = curl.exe -s -w "`n%{http_code}" -X POST "$uploadUrl" `
+                -H "x-apikey: $apiKey" `
+                -F "file=@$($file.FullName)"
+              $httpCode = ($curlOut | Select-Object -Last 1).Trim()
+              $jsonResponse = ($curlOut | Select-Object -SkipLast 1) -join "`n"
+
+              if ($httpCode -ne "200") {
+                Write-Warning "  Upload HTTP code: $httpCode. Body: $jsonResponse"
+                if ($uploadAttempt -eq 3) { throw "VT upload failed with HTTP $httpCode after 3 attempts" }
+                Start-Sleep -Seconds 15
+                continue
+              }
+
+              $uploadResponse = $jsonResponse | ConvertFrom-Json
+
+              Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
+              $analysisId = $uploadResponse.data.id
+
+              if ($analysisId) {
+                Write-Host "  Analysis ID: $analysisId"
+                break
+              } else {
+                Write-Warning "  Analysis ID is empty. Response: $($uploadResponse | ConvertTo-Json -Depth 5)"
+                if ($uploadAttempt -eq 3) { throw "Failed to get analysis ID after 3 upload attempts" }
+                Start-Sleep -Seconds 15
+              }
+            } catch {
+              Write-Warning "  Upload attempt $uploadAttempt/3 failed: $($_.Exception.Message)"
+              if ($uploadAttempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
+
+          $maxAttempts = 30
+          $attempt = 0
+          $stats = $null
+          $meta = $null
+
+          do {
+            Start-Sleep -Seconds 10
+            $attempt++
+
+            try {
+              $analysisResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/analyses/$analysisId" `
+                -Headers @{ "x-apikey" = $apiKey }
+
+              $status = $analysisResponse.data.attributes.status
+              if ($attempt % 3 -eq 0 -or $status -eq "completed") {
+                Write-Host "  Status: $status (attempt $attempt/$maxAttempts)"
+              }
+
+              if ($status -eq "completed") {
+                $stats = $analysisResponse.data.attributes.stats
+                $meta = $analysisResponse.meta.file_info
+                break
+              }
+            } catch {
+              Write-Warning "  Poll attempt $attempt/$maxAttempts failed: $($_.Exception.Message)"
+            }
+          } while ($attempt -lt $maxAttempts)
+
+          if ($stats) {
+            $total = $stats.malicious + $stats.suspicious + $stats.undetected + $stats.harmless
+            $vtSha256 = $meta.sha256.ToLower()
+            $vtLink = "https://www.virustotal.com/gui/file/$vtSha256"
+
+            Write-Host "  EXE SHA256: $vtSha256"
+
+            $result = @{
+              vt_link = $vtLink
+              malicious = $stats.malicious
+              total = $total
+              exe_sha256 = $vtSha256
+              local_sha256 = $localSha256
+              sha_match = ($localSha256 -eq $vtSha256)
+            }
+          } else {
+            Write-Error "VirusTotal scan timed out after $maxAttempts attempts (Release)"
+            $result = @{
+              vt_link = "timeout"
+              malicious = -1
+              total = 0
+              exe_sha256 = $localSha256
+              local_sha256 = $localSha256
+              sha_match = $false
+            }
+          }
+
+          New-Item -ItemType Directory -Force -Path "vt" | Out-Null
+          $result | ConvertTo-Json | Out-File -FilePath "vt/release_vt.json" -Encoding UTF8
+          $result | ConvertTo-Json | Write-Host
+        shell: pwsh
+
+      - name: VirusTotal Scan Debug
+        id: vt_debug
+        run: |
+          $apiKey = "${{ secrets.VIRUSTOTAL_API_KEY }}"
+          $file = Get-ChildItem -Path "binaries/debug_exe" -Filter "*.exe" | Select-Object -First 1
+
+          if (-not $file) {
+            Write-Error "No debug exe found"
+            exit 1
+          }
+
+          Write-Host "Scanning Debug: $($file.Name)"
+          Write-Host "  File size: $($file.Length) bytes"
+
+          $localSha256 = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
+          Write-Host "  Local EXE SHA256 (before upload): $localSha256"
+
+          $uploadUrl = $null
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              $uploadUrlResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/files/upload_url" `
+                -Headers @{ "x-apikey" = $apiKey }
+              $uploadUrl = $uploadUrlResponse.data
+              Write-Host "  Upload URL obtained (attempt $attempt)"
+              break
+            } catch {
+              Write-Host "  Upload URL attempt $attempt/3 failed: $($_.Exception.Message)"
+              if ($attempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
+
+          $analysisId = $null
+          for ($uploadAttempt = 1; $uploadAttempt -le 3; $uploadAttempt++) {
+            $uploadResponse = $null
+            try {
+              Write-Host "  Upload attempt $uploadAttempt/3..."
+              $curlOut = curl.exe -s -w "`n%{http_code}" -X POST "$uploadUrl" `
+                -H "x-apikey: $apiKey" `
+                -F "file=@$($file.FullName)"
+              $httpCode = ($curlOut | Select-Object -Last 1).Trim()
+              $jsonResponse = ($curlOut | Select-Object -SkipLast 1) -join "`n"
+
+              if ($httpCode -ne "200") {
+                Write-Warning "  Upload HTTP code: $httpCode. Body: $jsonResponse"
+                if ($uploadAttempt -eq 3) { throw "VT upload failed with HTTP $httpCode after 3 attempts" }
+                Start-Sleep -Seconds 15
+                continue
+              }
+
+              $uploadResponse = $jsonResponse | ConvertFrom-Json
+
+              Write-Host "  Upload response: $($uploadResponse | ConvertTo-Json -Compress)"
+              $analysisId = $uploadResponse.data.id
+
+              if ($analysisId) {
+                Write-Host "  Analysis ID: $analysisId"
+                break
+              } else {
+                Write-Warning "  Analysis ID is empty. Response: $($uploadResponse | ConvertTo-Json -Depth 5)"
+                if ($uploadAttempt -eq 3) { throw "Failed to get analysis ID after 3 upload attempts" }
+                Start-Sleep -Seconds 15
+              }
+            } catch {
+              Write-Warning "  Upload attempt $uploadAttempt/3 failed: $($_.Exception.Message)"
+              if ($uploadAttempt -eq 3) { throw }
+              Start-Sleep -Seconds 15
+            }
+          }
+
+          $maxAttempts = 30
+          $attempt = 0
+          $stats = $null
+          $meta = $null
+
+          do {
+            Start-Sleep -Seconds 10
+            $attempt++
+
+            try {
+              $analysisResponse = Invoke-RestMethod -Uri "https://www.virustotal.com/api/v3/analyses/$analysisId" `
+                -Headers @{ "x-apikey" = $apiKey }
+
+              $status = $analysisResponse.data.attributes.status
+              if ($attempt % 3 -eq 0 -or $status -eq "completed") {
+                Write-Host "  Status: $status (attempt $attempt/$maxAttempts)"
+              }
+
+              if ($status -eq "completed") {
+                $stats = $analysisResponse.data.attributes.stats
+                $meta = $analysisResponse.meta.file_info
+                break
+              }
+            } catch {
+              Write-Warning "  Poll attempt $attempt/$maxAttempts failed: $($_.Exception.Message)"
+            }
+          } while ($attempt -lt $maxAttempts)
+
+          if ($stats) {
+            $total = $stats.malicious + $stats.suspicious + $stats.undetected + $stats.harmless
+            $vtSha256 = $meta.sha256.ToLower()
+            $vtLink = "https://www.virustotal.com/gui/file/$vtSha256"
+
+            Write-Host "  EXE SHA256: $vtSha256"
+
+            $result = @{
+              vt_link = $vtLink
+              malicious = $stats.malicious
+              total = $total
+              exe_sha256 = $vtSha256
+              local_sha256 = $localSha256
+              sha_match = ($localSha256 -eq $vtSha256)
+            }
+          } else {
+            Write-Error "VirusTotal scan timed out after $maxAttempts attempts (Debug)"
+            $result = @{
+              vt_link = "timeout"
+              malicious = -1
+              total = 0
+              exe_sha256 = $localSha256
+              local_sha256 = $localSha256
+              sha_match = $false
+            }
+          }
+
+          New-Item -ItemType Directory -Force -Path "vt" | Out-Null
+          $result | ConvertTo-Json | Out-File -FilePath "vt/debug_vt.json" -Encoding UTF8
+          $result | ConvertTo-Json | Write-Host
+        shell: pwsh
+
+      - name: Collect Release VT outputs
+        id: out_release
+        run: |
+          $j = Get-Content -Path "vt/release_vt.json" -Raw | ConvertFrom-Json
+          echo "vt_link=$($j.vt_link)" >> $env:GITHUB_OUTPUT
+          echo "malicious=$($j.malicious)" >> $env:GITHUB_OUTPUT
+          echo "total=$($j.total)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Collect Debug VT outputs
+        id: out_debug
+        run: |
+          $j = Get-Content -Path "vt/debug_vt.json" -Raw | ConvertFrom-Json
+          echo "vt_link=$($j.vt_link)" >> $env:GITHUB_OUTPUT
+          echo "malicious=$($j.malicious)" >> $env:GITHUB_OUTPUT
+          echo "total=$($j.total)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Upload VT result artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vt-result
+          path: vt/*.json
+          retention-days: 90

@@ -1,0 +1,199 @@
+name: Build Binaries
+
+on:
+  workflow_call:
+    inputs:
+      build_timestamp:
+        required: false
+        type: string
+    outputs:
+      version:
+        value: ${{ jobs.build.outputs.version }}
+      release_build_number:
+        value: ${{ jobs.build.outputs.release_build_number }}
+      debug_build_number:
+        value: ${{ jobs.build.outputs.debug_build_number }}
+      release_zip_name:
+        value: ${{ jobs.build.outputs.release_zip_name }}
+      release_zip_sha:
+        value: ${{ jobs.build.outputs.release_zip_sha }}
+      release_exe_sha:
+        value: ${{ jobs.build.outputs.release_exe_sha }}
+      debug_zip_name:
+        value: ${{ jobs.build.outputs.debug_zip_name }}
+      debug_zip_sha:
+        value: ${{ jobs.build.outputs.debug_zip_sha }}
+      debug_exe_sha:
+        value: ${{ jobs.build.outputs.debug_exe_sha }}
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_NAME: ZemaxDDEClient
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_build_number: ${{ steps.rel_num.outputs.build_num }}
+      debug_build_number: ${{ steps.dbg_num.outputs.build_num }}
+      release_zip_name: ${{ steps.zip_rel.outputs.zip_name }}
+      release_zip_sha: ${{ steps.zip_rel.outputs.zip_sha }}
+      release_exe_sha: ${{ steps.zip_rel.outputs.exe_sha }}
+      debug_zip_name: ${{ steps.zip_dbg.outputs.zip_name }}
+      debug_zip_sha: ${{ steps.zip_dbg.outputs.zip_sha }}
+      debug_exe_sha: ${{ steps.zip_dbg.outputs.exe_sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set build timestamp and extract version
+        id: version
+        run: |
+          TS="${{ inputs.build_timestamp }}"
+          if [ -z "$TS" ]; then TS=$(date +%s); fi
+          echo "BUILD_TIMESTAMP=$TS" >> $GITHUB_ENV
+          major=$(sed -n 's/.*set(APP_VERSION_MAJOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
+          minor=$(sed -n 's/.*set(APP_VERSION_MINOR \([0-9]\+\).*/\1/p' CMakeLists.txt)
+          patch=$(sed -n 's/.*set(APP_VERSION_PATCH \([0-9]\+\).*/\1/p' CMakeLists.txt)
+          prerelease=$(sed -n 's/.*set(APP_VERSION_PRERELEASE "\(.*\)".*/\1/p' CMakeLists.txt)
+          version="${major}.${minor}.${patch}${prerelease}"
+          echo "APP_VERSION=$version" >> $GITHUB_ENV
+          echo "version=$version" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            git
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-make
+            zip
+            coreutils
+
+      - name: Make build.sh executable
+        run: git update-index --chmod=+x build.sh
+        shell: msys2 {0}
+
+      - name: Build Release
+        run: |
+          export MSYS_NO_PATHCONV=1
+          BUILD_TIMESTAMP=$BUILD_TIMESTAMP ./build.sh release
+        shell: msys2 {0}
+
+      - name: Extract Release APP_BUILD_NUMBER
+        id: rel_num
+        run: |
+          BUILD_NUM=$(grep -o '#define APP_BUILD_NUMBER [0-9]\+' build/version.h | cut -d' ' -f3)
+          echo "RELEASE_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+          echo "build_num=$BUILD_NUM" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Stage Release binary
+        run: |
+          mkdir -p release_exe
+          exe=$(ls build/bin/*.exe | head -n1)
+          if [ -f "$exe" ]; then
+            newName="$PROJECT_NAME-v$APP_VERSION-Release-build$RELEASE_BUILD_NUMBER.exe"
+            cp "$exe" "release_exe/$newName"
+            echo "Staged: release_exe/$newName"
+            echo "RELEASE_EXE_NAME=$newName" >> $GITHUB_ENV
+          else
+            echo "ERROR: No .exe found in build/bin/"
+            exit 1
+          fi
+        shell: msys2 {0}
+
+      - name: Build Debug
+        run: |
+          export MSYS_NO_PATHCONV=1
+          BUILD_TIMESTAMP=$BUILD_TIMESTAMP ./build.sh debug
+        shell: msys2 {0}
+
+      - name: Extract Debug APP_BUILD_NUMBER
+        id: dbg_num
+        run: |
+          BUILD_NUM=$(grep -o '#define APP_BUILD_NUMBER [0-9]\+' build/version.h | cut -d' ' -f3)
+          echo "DEBUG_BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+          echo "build_num=$BUILD_NUM" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Stage Debug binary
+        run: |
+          mkdir -p debug_exe
+          exe=$(ls build/bin/*.exe | head -n1)
+          if [ -f "$exe" ]; then
+            newName="$PROJECT_NAME-v$APP_VERSION-Debug-build$DEBUG_BUILD_NUMBER.exe"
+            cp "$exe" "debug_exe/$newName"
+            echo "Staged: debug_exe/$newName"
+            echo "DEBUG_EXE_NAME=$newName" >> $GITHUB_ENV
+          else
+            echo "ERROR: No .exe found in build/bin/"
+            exit 1
+          fi
+        shell: msys2 {0}
+
+      - name: Package Release binary
+        id: zip_rel
+        run: |
+          cd release_exe
+          zipName="$PROJECT_NAME-v$APP_VERSION-Release-build$RELEASE_BUILD_NUMBER.zip"
+          zip -j "$zipName" *.exe
+          mv "$zipName" "$GITHUB_WORKSPACE/build/bin/"
+
+          sha=$(sha256sum "$GITHUB_WORKSPACE/build/bin/$zipName" | awk '{print $1}' | sed 's/[^a-f0-9]//g')
+          printf "%s" "$sha" > "$GITHUB_WORKSPACE/release_sha.txt"
+          echo "Release ZIP SHA256: $sha"
+
+          exeSha=$(sha256sum *.exe | awk '{print $1}')
+          printf "%s" "$exeSha" > "$GITHUB_WORKSPACE/release_exe_sha.txt"
+          echo "Release EXE SHA256: $exeSha"
+
+          echo "zip_name=$zipName" >> $GITHUB_OUTPUT
+          echo "zip_sha=$sha" >> $GITHUB_OUTPUT
+          echo "exe_sha=$exeSha" >> $GITHUB_OUTPUT
+        shell: msys2 {0}
+
+      - name: Package Debug binary
+        id: zip_dbg
+        run: |
+          cd debug_exe
+          zipName="$PROJECT_NAME-v$APP_VERSION-Debug-build$DEBUG_BUILD_NUMBER.zip"
+          zip -j "$zipName" *.exe
+          mv "$zipName" "$GITHUB_WORKSPACE/build/bin/"
+
+          sha=$(sha256sum "$GITHUB_WORKSPACE/build/bin/$zipName" | awk '{print $1}' | sed 's/[^a-f0-9]//g')
+          printf "%s" "$sha" > "$GITHUB_WORKSPACE/debug_sha.txt"
+          echo "Debug ZIP SHA256: $sha"
+
+          exeSha=$(sha256sum *.exe | awk '{print $1}')
+          printf "%s" "$exeSha" > "$GITHUB_WORKSPACE/debug_exe_sha.txt"
+          echo "Debug EXE SHA256: $exeSha"
+
+          echo "zip_name=$zipName" >> $GITHUB_OUTPUT
+          echo "zip_sha=$sha" >> $GITHUB_OUTPUT
+          echo "exe_sha=$exeSha" >> $GITHUB_OUTPUT
+        shell: msys2 {0}
+
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ github.sha }}
+          path: |
+            build/bin/*.zip
+            release_exe/*.exe
+            debug_exe/*.exe
+            release_sha.txt
+            release_exe_sha.txt
+            debug_sha.txt
+            debug_exe_sha.txt
+          retention-days: 90
