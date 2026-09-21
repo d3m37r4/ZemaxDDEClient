@@ -43,6 +43,14 @@ namespace gui {
     inline constexpr const char* RESET_CONFIRM_POPUP_NAME = "Reset Preferences?";
     inline constexpr const char* CONNECT_DDE_POPUP_NAME  = "Connect to Zemax \xe2\x80\x93 select a window";
 
+    // GitHub links (used by About dialog)
+    inline constexpr const char* GITHUB_OWNER_NAME     = "Dmitry Isakov";
+    inline constexpr const char* GITHUB_OWNER_URL      = "https://github.com/d3m37r4";
+    inline constexpr const char* GITHUB_REPO_LABEL     = "github.com/d3m37r4/ZemaxDDEClient";
+    inline constexpr const char* GITHUB_REPO_URL       = "https://github.com/d3m37r4/ZemaxDDEClient";
+    inline constexpr const char* GITHUB_LICENSE_URL    = "https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE";
+    inline constexpr const char* GITHUB_COMMIT_URL_FMT = "https://github.com/d3m37r4/ZemaxDDEClient/commit/{}";
+
     // About popup
     inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(428.0f, 242.0f);
     inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(428.0f, 242.0f);

@@ -173,7 +173,7 @@ namespace ImGuiUtils {
 
         return changed;
     }
-    /// Renders a section header with bold title + separator line, optional description.
+    /// Renders a section header with separator title + separator line, optional description.
     inline void SectionHeader(const char* title, const char* description = nullptr) {
         ImGui::SeparatorText(title);
         if (description) {

@@ -34,10 +34,7 @@ namespace gui {
         std::string version = std::format("Version: {}", APP_FULL_VERSION);
         std::string built   = std::format("Built: {} {}", __DATE__, __TIME__);
 
-        std::string commitUrl = std::format(
-            "https://github.com/d3m37r4/ZemaxDDEClient/commit/{}",
-            APP_GIT_COMMIT
-        );
+        std::string commitUrl = std::format(GITHUB_COMMIT_URL_FMT, APP_GIT_COMMIT);
 
         ImGui::TextWrapped(
             "%s - Advanced analysis of optical systems using parameters "
@@ -48,16 +45,15 @@ namespace gui {
 
         ImGui::TextUnformatted("GitHub Repository:");
         ImGui::SameLine();
-        ImGui::TextLinkOpenURL("github.com/d3m37r4/ZemaxDDEClient",
-                               "https://github.com/d3m37r4/ZemaxDDEClient");
+        ImGui::TextLinkOpenURL(GITHUB_REPO_LABEL, GITHUB_REPO_URL);
 
         ImGui::TextUnformatted("License:");
         ImGui::SameLine();
-        ImGui::TextLinkOpenURL("MIT", "https://github.com/d3m37r4/ZemaxDDEClient/blob/main/LICENSE");
+        ImGui::TextLinkOpenURL("MIT", GITHUB_LICENSE_URL);
 
         ImGui::TextUnformatted("Author:");
         ImGui::SameLine();
-        ImGui::TextLinkOpenURL("Dmitry Isakov", "https://github.com/d3m37r4");
+        ImGui::TextLinkOpenURL(GITHUB_OWNER_NAME, GITHUB_OWNER_URL);
 
         ImGui::TextUnformatted(version.c_str());
         ImGui::TextUnformatted(built.c_str());
