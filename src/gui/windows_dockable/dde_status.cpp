@@ -177,7 +177,7 @@ namespace gui {
             toggleConnection(logger);
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(connected ? "Disconnect from Zemax (Ctrl+D)" : "Connect to Zemax (Ctrl+D)");
+            ImGui::SetTooltip(connected ? "Disconnect active slot (Ctrl+Shift+D)" : "Connect to Zemax (Ctrl+Shift+C)");
         }
 
         ImGui::PopStyleVar();

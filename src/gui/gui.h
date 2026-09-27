@@ -42,9 +42,11 @@ namespace gui {
             void handleShortcuts();
             /// True if any modal dialog is currently open (used as a hotkey guard).
             [[nodiscard]] bool isAnyModalOpen() const noexcept;
-            /// Connect/disconnect toggle (Ctrl+D). No-op while any DDE task
-            /// is active to avoid tearing down a slot mid-calculation.
-            void toggleDDEConnection();
+            /// Connect/disconnect split (replaces the old toggle):
+            /// Opens the Connect popup if a slot is free (Ctrl+Shift+C).
+            void openDdeConnect();
+            /// Disconnects the active slot; no-op while tasks run (Ctrl+Shift+D).
+            void disconnectDdeSlot();
             /// Opens the Check for Updates dialog (Ctrl+U).
             void openUpdates();
             /// Opens the keyboard shortcuts help dialog (F1).

@@ -19,6 +19,8 @@ namespace gui {
             void setShortcutsCallback(std::function<void()> cb);
             void setWindowManager(DockableWindowsManager* wndMgr);
             void setPreferencesCallback(std::function<void()> cb);
+            void setConnectCallback(std::function<void()> cb);
+            void setDisconnectCallback(std::function<void()> cb);
 
             /// Invokes the registered preferences callback (if any). Used by the
             /// application main loop to dispatch the global Ctrl+, shortcut.
@@ -29,6 +31,8 @@ namespace gui {
             std::function<void()> m_onAbout;
             std::function<void()> m_onUpdates;
             std::function<void()> m_onShortcuts;
+            std::function<void()> m_onConnect;
+            std::function<void()> m_onDisconnect;
             std::function<void()> m_onPreferences;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             DockableWindowsManager* m_pWndMgr{nullptr};

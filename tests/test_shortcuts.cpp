@@ -37,4 +37,25 @@ TEST(ShortcutsTable, HelpHasTwoChords) {
     EXPECT_EQ(helpCount, 2) << "Help must be reachable via F1 and Ctrl+/";
 }
 
+TEST(ShortcutsTable, DdeConnectDisconnectAreSplitWithShift) {
+    using gui::shortcuts::Mod_Ctrl;
+    using gui::shortcuts::Mod_Shift;
+    bool connectFound = false;
+    bool disconnectFound = false;
+    for (int i = 0; i < kEntryCount; ++i) {
+        const std::string_view id(kEntries[i].id);
+        if (id == "dde-connect") {
+            EXPECT_EQ(kEntries[i].mods, Mod_Ctrl | Mod_Shift);
+            connectFound = true;
+        }
+        if (id == "dde-disconnect") {
+            EXPECT_EQ(kEntries[i].mods, Mod_Ctrl | Mod_Shift);
+            disconnectFound = true;
+        }
+        EXPECT_NE(id, "dde-toggle") << "Toggle must be replaced by split connect/disconnect";
+    }
+    EXPECT_TRUE(connectFound);
+    EXPECT_TRUE(disconnectFound);
+}
+
 } // namespace

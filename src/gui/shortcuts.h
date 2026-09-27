@@ -12,6 +12,7 @@ namespace gui::shortcuts {
 enum class Key : int {
     O,
     Comma,
+    C,
     D,
     U,
     F1,
@@ -26,6 +27,7 @@ enum Mod : int {
     Mod_None = 0,
     Mod_Ctrl = 1 << 0,
     Mod_Alt = 1 << 1,
+    Mod_Shift = 1 << 2,
 };
 
 struct Entry {
@@ -40,7 +42,8 @@ inline constexpr Entry kEntries[] = {
     {"open-zmx", Key::O, Mod_Ctrl, "Ctrl+O", "Open *.ZMX file in Zemax"},
     {"preferences", Key::Comma, Mod_Ctrl, "Ctrl+,", "Open Preferences"},
     {"check-updates", Key::U, Mod_Ctrl, "Ctrl+U", "Check for Updates"},
-    {"dde-toggle", Key::D, Mod_Ctrl, "Ctrl+D", "Connect / disconnect DDE"},
+    {"dde-connect", Key::C, Mod_Ctrl | Mod_Shift, "Ctrl+Shift+C", "Connect to Zemax..."},
+    {"dde-disconnect", Key::D, Mod_Ctrl | Mod_Shift, "Ctrl+Shift+D", "Disconnect active DDE slot"},
     {"target-next", Key::F6, Mod_None, "F6", "Switch to next DDE target"},
     {"target-slot-0", Key::Digit1, Mod_Alt, "Alt+1", "Select DDE target [0]"},
     {"target-slot-1", Key::Digit2, Mod_Alt, "Alt+2", "Select DDE target [1]"},

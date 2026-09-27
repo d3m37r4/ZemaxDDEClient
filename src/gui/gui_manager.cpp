@@ -45,6 +45,12 @@ namespace gui {
     m_menuBarController->setShortcutsCallback([this]() {
         m_shortcutsHelpDialog->open();
     });
+    m_menuBarController->setConnectCallback([this]() {
+        openDdeConnect();
+    });
+    m_menuBarController->setDisconnectCallback([this]() {
+        disconnectDdeSlot();
+    });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_logsRenderer = std::make_unique<Logs>();
     m_aboutDialog        = std::make_unique<AboutDialog>();

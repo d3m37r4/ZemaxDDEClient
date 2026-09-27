@@ -27,6 +27,14 @@ namespace gui {
         m_onShortcuts = std::move(cb);
     }
 
+    void MenuBarController::setConnectCallback(std::function<void()> cb) {
+        m_onConnect = std::move(cb);
+    }
+
+    void MenuBarController::setDisconnectCallback(std::function<void()> cb) {
+        m_onDisconnect = std::move(cb);
+    }
+
     void MenuBarController::setWindowManager(DockableWindowsManager* wndMgr) {
         m_pWndMgr = wndMgr;
     }
@@ -58,6 +66,24 @@ namespace gui {
                     bool showDDEStatus = m_pWndMgr->IsVisible(WindowID::DDEStatus);
                     if (ImGui::MenuItem("Show DDE Status", nullptr, &showDDEStatus)) {
                         m_pWndMgr->SetVisible(WindowID::DDEStatus, showDDEStatus);
+                    }
+                }
+                if (m_pDDEClientMgr) {
+                    int connectedCount = 0;
+                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                        auto* conn = m_pDDEClientMgr->getConnection(i);
+                        if (conn && conn->isConnected()) {
+                            ++connectedCount;
+                        }
+                    }
+                    const int activeIdx = m_pDDEClientMgr->getActiveIndex();
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Connect to Zemax...", "Ctrl+Shift+C", false,
+                                        connectedCount < DDEConnectionManager::MAX_CONNECTIONS)) {
+                        if (m_onConnect) m_onConnect();
+                    }
+                    if (ImGui::MenuItem("Disconnect Active Slot", "Ctrl+Shift+D", false, activeIdx >= 0)) {
+                        if (m_onDisconnect) m_onDisconnect();
                     }
                 }
                 ImGui::EndMenu();

@@ -3,6 +3,7 @@
 #include "app/app.h"
 #include "gui/gui.h"
 #include "lib/imgui/imgui.h"
+#include "logger/logger.h"
 
 namespace gui {
 namespace {
@@ -12,6 +13,7 @@ ImGuiKey toImGuiKey(shortcuts::Key key) {
     switch (key) {
         case Key::O: return ImGuiKey_O;
         case Key::Comma: return ImGuiKey_Comma;
+        case Key::C: return ImGuiKey_C;
         case Key::D: return ImGuiKey_D;
         case Key::U: return ImGuiKey_U;
         case Key::F1: return ImGuiKey_F1;
@@ -32,14 +34,20 @@ bool isAltDown() {
     return ImGui::IsKeyDown(ImGuiKey_LeftAlt) || ImGui::IsKeyDown(ImGuiKey_RightAlt);
 }
 
-// Exact-match on Ctrl/Alt (Shift is ignored): holding extra modifiers must
-// not trigger an unrelated shortcut.
+bool isShiftDown() {
+    return ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+}
+
+// Exact-match on Ctrl/Alt/Shift: holding extra modifiers must not trigger
+// an unrelated shortcut (e.g. Ctrl+C must not fire Ctrl+Shift+C).
 bool isChordPressed(shortcuts::Key key, int mods) {
     using shortcuts::Mod_Alt;
     using shortcuts::Mod_Ctrl;
+    using shortcuts::Mod_Shift;
     const bool wantCtrl = (mods & Mod_Ctrl) != 0;
     const bool wantAlt = (mods & Mod_Alt) != 0;
-    if (isCtrlDown() != wantCtrl || isAltDown() != wantAlt) {
+    const bool wantShift = (mods & Mod_Shift) != 0;
+    if (isCtrlDown() != wantCtrl || isAltDown() != wantAlt || isShiftDown() != wantShift) {
         return false;
     }
     return ImGui::IsKeyPressed(toImGuiKey(key), false);
@@ -94,8 +102,10 @@ void GuiManager::handleShortcuts() {
         }
     } else if (isChordPressed(shortcuts::Key::U, shortcuts::Mod_Ctrl)) {
         openUpdates();
-    } else if (isChordPressed(shortcuts::Key::D, shortcuts::Mod_Ctrl)) {
-        toggleDDEConnection();
+    } else if (isChordPressed(shortcuts::Key::C, shortcuts::Mod_Ctrl | shortcuts::Mod_Shift)) {
+        openDdeConnect();
+    } else if (isChordPressed(shortcuts::Key::D, shortcuts::Mod_Ctrl | shortcuts::Mod_Shift)) {
+        disconnectDdeSlot();
     } else if (isChordPressed(shortcuts::Key::F6, shortcuts::Mod_None)) {
         cycleDdeTarget();
     } else if (isChordPressed(shortcuts::Key::Digit1, shortcuts::Mod_Alt)) {
@@ -108,12 +118,34 @@ void GuiManager::handleShortcuts() {
     }
 }
 
-void GuiManager::toggleDDEConnection() {
+void GuiManager::openDdeConnect() {
+    if (!m_ddeConnectionManager || !m_ddeStatusRenderer) {
+        return;
+    }
+    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+        auto* conn = m_ddeConnectionManager->getConnection(i);
+        if (conn && !conn->isConnected()) {
+            m_ddeStatusRenderer->openConnectPopup();
+            return;
+        }
+    }
+}
+
+void GuiManager::disconnectDdeSlot() {
     if (m_uiOpMonitor.hasActiveTasks()) {
         return;
     }
-    if (m_ddeStatusRenderer) {
-        m_ddeStatusRenderer->toggleConnection(m_logger);
+    if (!m_ddeConnectionManager) {
+        return;
+    }
+    const int active = m_ddeConnectionManager->getActiveIndex();
+    if (active < 0) {
+        return;
+    }
+    auto* conn = m_ddeConnectionManager->getConnection(active);
+    if (conn && conn->isConnected()) {
+        m_ddeConnectionManager->disconnect(active);
+        m_logger.addLog("[DDE] Disconnected from Zemax");
     }
 }
 
