@@ -55,6 +55,11 @@ namespace gui {
     inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(428.0f, 242.0f);
     inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(428.0f, 242.0f);
 
+    // Keyboard shortcuts help popup
+    inline constexpr const char* SHORTCUTS_POPUP_NAME = "Keyboard Shortcuts";
+    inline constexpr ImVec2 SHORTCUTS_POPUP_DEFAULT_SIZE = ImVec2(480.0f, 320.0f);
+    inline constexpr ImVec2 SHORTCUTS_POPUP_MIN_SIZE     = ImVec2(420.0f, 260.0f);
+
     // Check for Updates popup
     inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(340.0f, 120.0f);
     inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);

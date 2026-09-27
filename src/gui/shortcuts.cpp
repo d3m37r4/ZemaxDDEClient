@@ -51,6 +51,9 @@ bool GuiManager::isAnyModalOpen() const noexcept {
     if (m_aboutDialog && m_aboutDialog->isOpen()) {
         return true;
     }
+    if (m_shortcutsHelpDialog && m_shortcutsHelpDialog->isOpen()) {
+        return true;
+    }
     if (m_updateChecker && m_updateChecker->isOpen()) {
         return true;
     }
@@ -93,6 +96,9 @@ void GuiManager::handleShortcuts() {
         selectDdeTarget(0);
     } else if (isChordPressed(shortcuts::Key::Digit2, shortcuts::Mod_Alt)) {
         selectDdeTarget(1);
+    } else if (isChordPressed(shortcuts::Key::F1, shortcuts::Mod_None)
+               || isChordPressed(shortcuts::Key::Slash, shortcuts::Mod_Ctrl)) {
+        openShortcutsHelp();
     }
 }
 
@@ -108,6 +114,12 @@ void GuiManager::toggleDDEConnection() {
 void GuiManager::openUpdates() {
     if (m_updateChecker) {
         m_updateChecker->open();
+    }
+}
+
+void GuiManager::openShortcutsHelp() {
+    if (m_shortcutsHelpDialog) {
+        m_shortcutsHelpDialog->open();
     }
 }
 

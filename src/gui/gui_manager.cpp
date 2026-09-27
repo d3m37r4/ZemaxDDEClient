@@ -42,9 +42,13 @@ namespace gui {
     m_menuBarController->setUpdatesCallback([this]() {
         m_updateChecker->open();
     });
+    m_menuBarController->setShortcutsCallback([this]() {
+        m_shortcutsHelpDialog->open();
+    });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_logsRenderer = std::make_unique<Logs>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
+    m_shortcutsHelpDialog = std::make_unique<ShortcutsHelpDialog>();
     m_connectionLostDialog = std::make_unique<ConnectionLostDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
     m_settingsManager   = std::make_unique<SettingsManager>();
@@ -249,6 +253,7 @@ void GuiManager::render() {
 
     renderUpdatesPopup();
     renderAboutPopup();
+    renderShortcutsHelpDialog();
     renderPreferencesDialog();
     renderConnectionLostPopup();
 
@@ -270,6 +275,12 @@ void GuiManager::renderLogs() {
 void GuiManager::renderAboutPopup() {
     if (m_aboutDialog) {
         m_aboutDialog->render();
+    }
+}
+
+void GuiManager::renderShortcutsHelpDialog() {
+    if (m_shortcutsHelpDialog) {
+        m_shortcutsHelpDialog->render();
     }
 }
 

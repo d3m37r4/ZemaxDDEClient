@@ -16,6 +16,7 @@ namespace gui {
             void setExitCallback(std::function<void()> cb);
             void setAboutCallback(std::function<void()> cb);
             void setUpdatesCallback(std::function<void()> cb);
+            void setShortcutsCallback(std::function<void()> cb);
             void setWindowManager(DockableWindowsManager* wndMgr);
             void setPreferencesCallback(std::function<void()> cb);
 
@@ -27,6 +28,7 @@ namespace gui {
             std::function<void()> m_onExit;
             std::function<void()> m_onAbout;
             std::function<void()> m_onUpdates;
+            std::function<void()> m_onShortcuts;
             std::function<void()> m_onPreferences;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             DockableWindowsManager* m_pWndMgr{nullptr};

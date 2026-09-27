@@ -23,6 +23,10 @@ namespace gui {
         m_onUpdates = std::move(cb);
     }
 
+    void MenuBarController::setShortcutsCallback(std::function<void()> cb) {
+        m_onShortcuts = std::move(cb);
+    }
+
     void MenuBarController::setWindowManager(DockableWindowsManager* wndMgr) {
         m_pWndMgr = wndMgr;
     }
@@ -87,6 +91,9 @@ namespace gui {
                 }
                 if (ImGui::MenuItem("Check for Updates", "Ctrl+U")) {
                     if (m_onUpdates) m_onUpdates();
+                }
+                if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
+                    if (m_onShortcuts) m_onShortcuts();
                 }
                 if (ImGui::MenuItem("About")) {
                     if (m_onAbout) m_onAbout();

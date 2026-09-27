@@ -116,6 +116,7 @@ set(SOURCES
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
+    ${SRC_DIR}/gui/popups/shortcuts_help_dialog.cpp
     ${SRC_DIR}/gui/popups/connection_lost_dialog.cpp
     ${SRC_DIR}/gui/popups/preferences_dialog.cpp
     ${SRC_DIR}/gui/popups/clean_logs_confirm_dialog.cpp
