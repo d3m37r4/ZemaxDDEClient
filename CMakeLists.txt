@@ -104,6 +104,7 @@ set(SOURCES
     ${SRC_DIR}/app/compute/surface_map.cpp
     ${SRC_DIR}/app/services/operation_monitor_service.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
+    ${SRC_DIR}/gui/shortcuts.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/app/services/surface_profile_service.cpp

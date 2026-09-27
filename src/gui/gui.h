@@ -36,6 +36,12 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
+            /// Polls global hotkeys (see gui/shortcuts.h). Called once per frame
+            /// from the main loop; safe to call before render().
+            void handleShortcuts();
+            /// True if any modal dialog is currently open (used as a hotkey guard).
+            [[nodiscard]] bool isAnyModalOpen() const noexcept;
+
             void renderAboutPopup();
             void renderUpdatesPopup();
             void renderPreferencesDialog();

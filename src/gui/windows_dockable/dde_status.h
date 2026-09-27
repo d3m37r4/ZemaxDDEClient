@@ -23,6 +23,8 @@ namespace gui {
         }
         void setLogger(Logger* logger) noexcept { m_connectPopup->setLogger(logger); }
 
+        [[nodiscard]] bool isConnectPopupOpen() const noexcept { return m_connectPopup->isOpen(); }
+
     private:
         DDEConnectionManager* m_connectionManager;
         const ThemeManager* m_themeManager = nullptr;
