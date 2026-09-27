@@ -85,7 +85,7 @@ namespace gui {
                         ImGui::Separator();
                     }
                 }
-                if (ImGui::MenuItem("Check for Updates")) {
+                if (ImGui::MenuItem("Check for Updates", "Ctrl+U")) {
                     if (m_onUpdates) m_onUpdates();
                 }
                 if (ImGui::MenuItem("About")) {

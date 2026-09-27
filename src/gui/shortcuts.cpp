@@ -83,6 +83,25 @@ void GuiManager::handleShortcuts() {
         if (m_menuBarController) {
             m_menuBarController->openPreferences();
         }
+    } else if (isChordPressed(shortcuts::Key::U, shortcuts::Mod_Ctrl)) {
+        openUpdates();
+    } else if (isChordPressed(shortcuts::Key::D, shortcuts::Mod_Ctrl)) {
+        toggleDDEConnection();
+    }
+}
+
+void GuiManager::toggleDDEConnection() {
+    if (m_uiOpMonitor.hasActiveTasks()) {
+        return;
+    }
+    if (m_ddeStatusRenderer) {
+        m_ddeStatusRenderer->toggleConnection(m_logger);
+    }
+}
+
+void GuiManager::openUpdates() {
+    if (m_updateChecker) {
+        m_updateChecker->open();
     }
 }
 
