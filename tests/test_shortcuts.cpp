@@ -22,8 +22,31 @@ TEST(ShortcutsTable, ChordsAreUnique) {
 TEST(ShortcutsTable, IdsHintsAndActionsAreNonEmpty) {
     for (int i = 0; i < kEntryCount; ++i) {
         EXPECT_FALSE(std::string_view(kEntries[i].id).empty()) << "Empty id at index " << i;
+        EXPECT_FALSE(std::string_view(kEntries[i].section).empty()) << "Empty section at index " << i;
         EXPECT_FALSE(std::string_view(kEntries[i].hint).empty()) << "Empty hint at index " << i;
         EXPECT_FALSE(std::string_view(kEntries[i].action).empty()) << "Empty action at index " << i;
+    }
+}
+
+TEST(ShortcutsTable, SectionsAreContiguous) {
+    std::string_view last;
+    bool seen[4] = {};
+    const std::string_view known[] = {"File", "Info", "DDE", "Dialogs"};
+    for (int i = 0; i < kEntryCount; ++i) {
+        const std::string_view section(kEntries[i].section);
+        int knownIdx = -1;
+        for (int k = 0; k < 4; ++k) {
+            if (section == known[k]) {
+                knownIdx = k;
+                break;
+            }
+        }
+        EXPECT_GE(knownIdx, 0) << "Unknown section at index " << i;
+        if (section != last) {
+            EXPECT_FALSE(seen[knownIdx]) << "Section reappears: " << section;
+            seen[knownIdx] = true;
+            last = section;
+        }
     }
 }
 

@@ -1,5 +1,9 @@
 #include "gui/popups/shortcuts_help_dialog.h"
 
+#include <format>
+#include <string>
+#include <string_view>
+
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "gui/shortcuts.h"
@@ -28,17 +32,40 @@ namespace gui {
         }
 
         ImGui::BeginChild("##shortcuts_body", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), ImGuiChildFlags_Borders);
-        if (ImGui::BeginTable("##shortcuts_table", 2, ImGuiTableFlags_SizingStretchProp)) {
-            ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed);
-            for (int i = 0; i < shortcuts::kEntryCount; ++i) {
-                const auto& entry = shortcuts::kEntries[i];
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::TextUnformatted(entry.action);
-                ImGui::TableSetColumnIndex(1);
-                ImGui::TextUnformatted(entry.hint);
+
+        const char* currentSection = nullptr;
+        bool tableOpen = false;
+        int tableIndex = 0;
+        for (int i = 0; i < shortcuts::kEntryCount; ++i) {
+            const auto& entry = shortcuts::kEntries[i];
+            if (currentSection == nullptr || std::string_view(currentSection) != entry.section) {
+                if (tableOpen) {
+                    ImGui::EndTable();
+                    tableOpen = false;
+                }
+                currentSection = entry.section;
+                ImGuiUtils::SectionHeader(currentSection);
+                ImGui::BeginTable(std::format("##shortcuts_table_{}", tableIndex++).c_str(), 2,
+                                  ImGuiTableFlags_SizingStretchProp);
+                ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed);
+                tableOpen = true;
             }
+            // Merge consecutive rows with the same action (F1 + Ctrl+/).
+            std::string hint = entry.hint;
+            while (i + 1 < shortcuts::kEntryCount
+                   && std::string_view(shortcuts::kEntries[i + 1].section) == currentSection
+                   && std::string_view(shortcuts::kEntries[i + 1].action) == entry.action) {
+                hint += " / ";
+                hint += shortcuts::kEntries[++i].hint;
+            }
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(entry.action);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextUnformatted(hint.c_str());
+        }
+        if (tableOpen) {
             ImGui::EndTable();
         }
         ImGui::EndChild();
