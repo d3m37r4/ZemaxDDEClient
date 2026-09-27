@@ -99,6 +99,8 @@ namespace gui {
             ImGui::Separator();
             ImGui::Text("Active Target:");
             ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
+            ImGuiUtils::HelpMarker("Switch target: F6 (next), Alt+1 / Alt+2 (direct)");
+            ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
 
             std::string preview;
             for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {

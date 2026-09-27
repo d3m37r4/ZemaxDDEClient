@@ -87,6 +87,12 @@ void GuiManager::handleShortcuts() {
         openUpdates();
     } else if (isChordPressed(shortcuts::Key::D, shortcuts::Mod_Ctrl)) {
         toggleDDEConnection();
+    } else if (isChordPressed(shortcuts::Key::F6, shortcuts::Mod_None)) {
+        cycleDdeTarget();
+    } else if (isChordPressed(shortcuts::Key::Digit1, shortcuts::Mod_Alt)) {
+        selectDdeTarget(0);
+    } else if (isChordPressed(shortcuts::Key::Digit2, shortcuts::Mod_Alt)) {
+        selectDdeTarget(1);
     }
 }
 
@@ -102,6 +108,44 @@ void GuiManager::toggleDDEConnection() {
 void GuiManager::openUpdates() {
     if (m_updateChecker) {
         m_updateChecker->open();
+    }
+}
+
+void GuiManager::cycleDdeTarget() {
+    if (!m_ddeConnectionManager) {
+        return;
+    }
+    int connected[DDEConnectionManager::MAX_CONNECTIONS];
+    int count = 0;
+    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+        auto* conn = m_ddeConnectionManager->getConnection(i);
+        if (conn && conn->isConnected()) {
+            connected[count++] = i;
+        }
+    }
+    if (count < 2) {
+        return;
+    }
+    const int active = m_ddeConnectionManager->getActiveIndex();
+    for (int k = 0; k < count; ++k) {
+        if (connected[k] == active) {
+            m_ddeConnectionManager->setActiveConnection(connected[(k + 1) % count]);
+            return;
+        }
+    }
+    m_ddeConnectionManager->setActiveConnection(connected[0]);
+}
+
+void GuiManager::selectDdeTarget(int slot) {
+    if (!m_ddeConnectionManager) {
+        return;
+    }
+    if (slot < 0 || slot >= DDEConnectionManager::MAX_CONNECTIONS) {
+        return;
+    }
+    auto* conn = m_ddeConnectionManager->getConnection(slot);
+    if (conn && conn->isConnected()) {
+        m_ddeConnectionManager->setActiveConnection(slot);
     }
 }
 

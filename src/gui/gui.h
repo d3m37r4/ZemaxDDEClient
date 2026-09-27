@@ -46,6 +46,10 @@ namespace gui {
             void toggleDDEConnection();
             /// Opens the Check for Updates dialog (Ctrl+U).
             void openUpdates();
+            /// Switches to the next connected DDE target (F6). No-op with <2 targets.
+            void cycleDdeTarget();
+            /// Selects a DDE target slot directly (Alt+1/Alt+2). No-op if empty.
+            void selectDdeTarget(int slot);
 
             void renderAboutPopup();
             void renderUpdatesPopup();
