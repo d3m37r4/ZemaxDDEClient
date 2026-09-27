@@ -53,6 +53,9 @@ namespace gui {
             void cycleDdeTarget();
             /// Selects a DDE target slot directly (Alt+1/Alt+2). No-op if empty.
             void selectDdeTarget(int slot);
+            /// Closes the topmost open dialog, innermost layer first (Esc).
+            /// Returns true if anything was closed.
+            bool closeTopmostPopup();
 
             void renderAboutPopup();
             void renderUpdatesPopup();

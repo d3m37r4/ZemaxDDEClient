@@ -45,6 +45,19 @@ namespace gui {
         m_cleanLogsConfirmDialog->close();
     }
 
+    bool PreferencesDialog::closeTopmost() {
+        if (m_resetConfirmDialog->isOpen()) {
+            m_resetConfirmDialog->close();
+            return true;
+        }
+        if (m_cleanLogsConfirmDialog->isOpen()) {
+            m_cleanLogsConfirmDialog->close();
+            return true;
+        }
+        close();
+        return true;
+    }
+
     void PreferencesDialog::render() {
         if (m_open && !ImGui::IsPopupOpen(PREFERENCES_POPUP_NAME)) {
             ImGui::OpenPopup(PREFERENCES_POPUP_NAME);

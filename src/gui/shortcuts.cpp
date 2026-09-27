@@ -70,8 +70,14 @@ bool GuiManager::isAnyModalOpen() const noexcept {
 }
 
 void GuiManager::handleShortcuts() {
+    // Esc owns the keyboard: it dismisses the topmost dialog even while
+    // typing in one of its fields (same as the X button).
+    if (isChordPressed(shortcuts::Key::Escape, shortcuts::Mod_None)) {
+        closeTopmostPopup();
+        return;
+    }
     // Guard 1: never steal keys from text inputs (same behavior as before,
-    // now centralized). Esc is handled separately by closeTopmostPopup().
+    // now centralized).
     if (ImGui::GetIO().WantTextInput) {
         return;
     }
@@ -159,6 +165,33 @@ void GuiManager::selectDdeTarget(int slot) {
     if (conn && conn->isConnected()) {
         m_ddeConnectionManager->setActiveConnection(slot);
     }
+}
+
+bool GuiManager::closeTopmostPopup() {
+    if (m_preferencesDialog && m_preferencesDialog->isOpen()) {
+        return m_preferencesDialog->closeTopmost();
+    }
+    if (m_ddeStatusRenderer && m_ddeStatusRenderer->isConnectPopupOpen()) {
+        m_ddeStatusRenderer->closeConnectPopup();
+        return true;
+    }
+    if (m_connectionLostDialog && m_connectionLostDialog->isOpen()) {
+        m_connectionLostDialog->close();
+        return true;
+    }
+    if (m_updateChecker && m_updateChecker->isOpen()) {
+        m_updateChecker->close();
+        return true;
+    }
+    if (m_aboutDialog && m_aboutDialog->isOpen()) {
+        m_aboutDialog->close();
+        return true;
+    }
+    if (m_shortcutsHelpDialog && m_shortcutsHelpDialog->isOpen()) {
+        m_shortcutsHelpDialog->close();
+        return true;
+    }
+    return false;
 }
 
 } // namespace gui
