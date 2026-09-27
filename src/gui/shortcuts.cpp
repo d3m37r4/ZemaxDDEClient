@@ -15,6 +15,7 @@ ImGuiKey toImGuiKey(shortcuts::Key key) {
         case Key::Comma: return ImGuiKey_Comma;
         case Key::C: return ImGuiKey_C;
         case Key::D: return ImGuiKey_D;
+        case Key::I: return ImGuiKey_I;
         case Key::U: return ImGuiKey_U;
         case Key::F1: return ImGuiKey_F1;
         case Key::F6: return ImGuiKey_F6;
@@ -102,6 +103,10 @@ void GuiManager::handleShortcuts() {
         }
     } else if (isChordPressed(shortcuts::Key::U, shortcuts::Mod_Ctrl)) {
         openUpdates();
+    } else if (isChordPressed(shortcuts::Key::I, shortcuts::Mod_Ctrl)) {
+        if (m_aboutDialog) {
+            m_aboutDialog->open();
+        }
     } else if (isChordPressed(shortcuts::Key::C, shortcuts::Mod_Ctrl | shortcuts::Mod_Shift)) {
         openDdeConnect();
     } else if (isChordPressed(shortcuts::Key::D, shortcuts::Mod_Ctrl | shortcuts::Mod_Shift)) {

@@ -159,7 +159,7 @@ namespace gui {
                 if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
                     if (m_onShortcuts) m_onShortcuts();
                 }
-                if (ImGui::MenuItem("About")) {
+                if (ImGui::MenuItem("About", "Ctrl+I")) {
                     if (m_onAbout) m_onAbout();
                 }
                 ImGui::EndMenu();
