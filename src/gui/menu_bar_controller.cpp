@@ -103,7 +103,7 @@ namespace gui {
                     for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
                         auto* conn = m_pDDEClientMgr->getConnection(i);
                         const bool slotConnected = conn && conn->isConnected();
-                        std::string label = std::format("Slot {}", i);
+                        std::string label = std::format("Select Slot {}", i);
                         if (slotConnected) {
                             label += std::format(" - {}", ZemaxDDE::wstring_to_utf8(conn->serverTitle));
                         }
