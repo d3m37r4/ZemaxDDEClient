@@ -51,6 +51,12 @@ namespace gui {
     m_menuBarController->setDisconnectCallback([this]() {
         disconnectDdeSlot();
     });
+    m_menuBarController->setSelectTargetCallback([this](int slot) {
+        selectDdeTarget(slot);
+    });
+    m_menuBarController->setCycleTargetCallback([this]() {
+        cycleDdeTarget();
+    });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_logsRenderer = std::make_unique<Logs>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
@@ -92,6 +98,7 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_irregularityMapService->m_windowState.worstColorDeviation[2] = mapSettings.worstColorDeviation[2];
 
     const auto& themeManager = m_graphics.getThemeManager();
+    m_menuBarController->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setLogger(&m_logger);
     m_updateChecker->setThemeManager(&themeManager);
