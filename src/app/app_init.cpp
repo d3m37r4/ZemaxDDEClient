@@ -54,6 +54,13 @@ namespace App {
 
         logger.addLog("[APP] GLFW initialized");
 
+        // Initialize Native File Dialog Extended (after framework init, per NFDe docs)
+        if (NFD_Init() != NFD_OKAY) {
+            logger.addLog("[APP] Failed to initialize NFD");
+            glfwTerminate();
+            return nullptr;
+        }
+
         glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
@@ -181,16 +188,20 @@ namespace App {
             ctx.glfwWindow = nullptr;
         }
 
+        // Deinitialize NFD before deinitializing the framework (per NFDe docs)
+        NFD_Quit();
+
         glfwTerminate();
     }
 
     void openZmxFileInZemax(Logger& logger) {
-        nfdchar_t* outPath = nullptr;
-        nfdresult_t result = NFD_OpenDialog("zmx", nullptr, &outPath);
+        nfdu8char_t* outPath = nullptr;
+        const nfdu8filteritem_t filters[] = { {"Zemax files", "zmx"} };
+        nfdresult_t result = NFD_OpenDialogU8(&outPath, filters, 1, nullptr);
 
         if (result == NFD_OKAY) {
-            struct NFDDeleter { void operator()(nfdchar_t* p) const { std::free(p); } };
-            std::unique_ptr<nfdchar_t, NFDDeleter> pathGuard{outPath};
+            struct NFDPathDeleter { void operator()(nfdu8char_t* p) const { NFD_FreePathU8(p); } };
+            std::unique_ptr<nfdu8char_t, NFDPathDeleter> pathGuard{outPath};
 
             #ifdef DEBUG_LOG
             logger.addLog(std::format("[APP] Selected file: {}", outPath));

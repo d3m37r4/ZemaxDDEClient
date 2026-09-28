@@ -72,7 +72,7 @@ Zemax реализует интерфейс DDE-сервера, что даёт 
 Этот проект использует следующие сторонние библиотеки:
 - **[Dear ImGui](https://github.com/ocornut/imgui)** от Omar Cornut — библиотека для создания графических интерфейсов (Immediate Mode)
 - **[ImPlot](https://github.com/epezent/implot)** от Evan Pezent — библиотека двумерной визуализации для Dear ImGui
-- **[Native File Dialog (NFD)](https://github.com/mlabbe/nativefiledialog)** от Michael Labbe — кроссплатформенные нативные диалоги выбора файлов и папок
+- **[Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended)** от Bernard Teo (на основе NFD от Michael Labbe) — кроссплатформенные нативные диалоги выбора файлов и папок
 - **[ImPlot3D](https://github.com/brenocq/implot3d)** от brenocq — библиотека трёхмерной визуализации для Dear ImGui
 - **[JSON for Modern C++](https://github.com/nlohmann/json)** от Niels Lohmann — заголовочная библиотека для работы с JSON
 
