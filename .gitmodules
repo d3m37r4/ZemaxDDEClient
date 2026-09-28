@@ -4,12 +4,12 @@
 [submodule "src/lib/implot"]
 	path = src/lib/implot
 	url = https://github.com/epezent/implot.git
-[submodule "src/lib/nfd"]
-	path = src/lib/nfd
-	url = https://github.com/mlabbe/nativefiledialog
 [submodule "src/lib/json"]
 	path = src/lib/json
 	url = https://github.com/nlohmann/json.git
 [submodule "src/lib/implot3d"]
 	path = src/lib/implot3d
 	url = https://github.com/brenocq/implot3d.git
+[submodule "src/lib/nfd"]
+	path = src/lib/nfd
+	url = https://github.com/btzy/nativefiledialog-extended.git

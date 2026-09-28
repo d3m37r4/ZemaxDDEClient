@@ -153,15 +153,11 @@ list(APPEND SOURCES
     ${IMPLOT3D_DIR}/implot3d_items.cpp
 )
 
-# Add NFD source files directly
+# Add NFD-Extended source files directly (Windows backend only)
 list(APPEND SOURCES
-    ${NFD_DIR}/src/nfd_common.c
     ${NFD_DIR}/src/nfd_win.cpp
     ${CMAKE_BINARY_DIR}/version.rc
 )
-
-# Compile 'nfd_common.c' as C-code
-set_source_files_properties(${NFD_DIR}/src/nfd_common.c PROPERTIES LANGUAGE C)
 
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
