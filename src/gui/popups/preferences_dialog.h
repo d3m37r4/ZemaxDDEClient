@@ -26,6 +26,11 @@ namespace gui {
             void close() noexcept;
             [[nodiscard]] bool isOpen() const noexcept { return m_open; }
 
+            /// Closes the innermost open layer: nested confirm dialogs first,
+            /// the Preferences dialog itself otherwise. Returns true (always
+            /// closes something when open) for Esc dispatch.
+            bool closeTopmost();
+
             // Must be called every frame from the main GUI loop while the dialog is open.
             void render();
 

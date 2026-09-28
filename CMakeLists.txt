@@ -104,6 +104,7 @@ set(SOURCES
     ${SRC_DIR}/app/compute/surface_map.cpp
     ${SRC_DIR}/app/services/operation_monitor_service.cpp
     ${SRC_DIR}/gui/gui_manager.cpp
+    ${SRC_DIR}/gui/shortcuts.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/app/services/surface_profile_service.cpp
@@ -115,6 +116,7 @@ set(SOURCES
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
+    ${SRC_DIR}/gui/popups/shortcuts_help_dialog.cpp
     ${SRC_DIR}/gui/popups/connection_lost_dialog.cpp
     ${SRC_DIR}/gui/popups/preferences_dialog.cpp
     ${SRC_DIR}/gui/popups/clean_logs_confirm_dialog.cpp

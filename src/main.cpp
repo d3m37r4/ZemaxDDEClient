@@ -1,7 +1,6 @@
 #include <fstream>
 
 #include <GLFW/glfw3.h>
-#include <imgui.h>
 
 #include "logger/logger.h"
 #include "app/app.h"
@@ -40,14 +39,7 @@ int main() {
     while (!ctx->gui->shouldClose()) {
         glfwPollEvents();
 
-        // Hotkeys: Ctrl+O, Ctrl+,
-        const bool ctrlDown = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
-        if (ctrlDown && ImGui::IsKeyPressed(ImGuiKey_O, false)) {
-            App::openZmxFileInZemax(logger);
-        } else if (ctrlDown && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
-            if (menuBar) menuBar->openPreferences();
-        }
-
+        ctx->gui->handleShortcuts();
         ctx->gui->render();
         glfwSwapBuffers(ctx->glfwWindow);
     }

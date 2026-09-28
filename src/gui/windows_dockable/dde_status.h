@@ -16,12 +16,20 @@ namespace gui {
 
         void render(Logger& logger);
 
+        /// Same action as the Connect/Disconnect button: opens the connect
+        /// popup when disconnected, disconnects the active slot otherwise.
+        void toggleConnection(Logger& logger);
+        void openConnectPopup();
+        void closeConnectPopup() noexcept;
+
         /// Non-owning; bound by GuiManager after graphics.initialize().
         void setThemeManager(const ThemeManager* themeManager) noexcept {
             m_themeManager = themeManager;
             m_connectPopup->setThemeManager(themeManager);
         }
         void setLogger(Logger* logger) noexcept { m_connectPopup->setLogger(logger); }
+
+        [[nodiscard]] bool isConnectPopupOpen() const noexcept { return m_connectPopup->isOpen(); }
 
     private:
         DDEConnectionManager* m_connectionManager;

@@ -15,6 +15,7 @@
 #include "gui/graphics_backend.h"
 #include "windows_dockable/logs.h"
 #include "gui/popups/about_dialog.h"
+#include "gui/popups/shortcuts_help_dialog.h"
 #include "gui/popups/connection_lost_dialog.h"
 #include "gui/popups/preferences_dialog.h"
 #include "gui/popups/update_checker.h"
@@ -36,8 +37,31 @@ namespace gui {
             void render();
             void updateDpiStyle(float dpiScale);
 
+            /// Polls global hotkeys (see gui/shortcuts.h). Called once per frame
+            /// from the main loop; safe to call before render().
+            void handleShortcuts();
+            /// True if any modal dialog is currently open (used as a hotkey guard).
+            [[nodiscard]] bool isAnyModalOpen() const noexcept;
+            /// Connect/disconnect split (replaces the old toggle):
+            /// Opens the Connect popup if a slot is free (Ctrl+Shift+C).
+            void openDdeConnect();
+            /// Disconnects the active slot; no-op while tasks run (Ctrl+Shift+D).
+            void disconnectDdeSlot();
+            /// Opens the Check for Updates dialog (Ctrl+U).
+            void openUpdates();
+            /// Opens the keyboard shortcuts help dialog (F1).
+            void openShortcutsHelp();
+            /// Switches to the next connected DDE target (F6). No-op with <2 targets.
+            void cycleDdeTarget();
+            /// Selects a DDE target slot directly (Alt+1/Alt+2). No-op if empty.
+            void selectDdeTarget(int slot);
+            /// Closes the topmost open dialog, innermost layer first (Esc).
+            /// Returns true if anything was closed.
+            bool closeTopmostPopup();
+
             void renderAboutPopup();
             void renderUpdatesPopup();
+            void renderShortcutsHelpDialog();
             void renderPreferencesDialog();
             void renderConnectionLostPopup();
 
@@ -83,6 +107,7 @@ namespace gui {
             std::unique_ptr<DDEStatus> m_ddeStatusRenderer;
             std::unique_ptr<Logs> m_logsRenderer;
             std::unique_ptr<AboutDialog> m_aboutDialog;
+            std::unique_ptr<ShortcutsHelpDialog> m_shortcutsHelpDialog;
             std::unique_ptr<ConnectionLostDialog> m_connectionLostDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
             std::unique_ptr<SettingsManager>   m_settingsManager;

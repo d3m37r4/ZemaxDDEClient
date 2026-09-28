@@ -4,6 +4,7 @@
 class Logger;
 class DDEConnectionManager;
 class DockableWindowsManager;
+class ThemeManager;
 
 namespace gui {
     /**
@@ -16,8 +17,14 @@ namespace gui {
             void setExitCallback(std::function<void()> cb);
             void setAboutCallback(std::function<void()> cb);
             void setUpdatesCallback(std::function<void()> cb);
+            void setShortcutsCallback(std::function<void()> cb);
             void setWindowManager(DockableWindowsManager* wndMgr);
             void setPreferencesCallback(std::function<void()> cb);
+            void setConnectCallback(std::function<void()> cb);
+            void setDisconnectCallback(std::function<void()> cb);
+            void setSelectTargetCallback(std::function<void(int)> cb);
+            void setCycleTargetCallback(std::function<void()> cb);
+            void setThemeManager(const ThemeManager* themeManager) noexcept;
 
             /// Invokes the registered preferences callback (if any). Used by the
             /// application main loop to dispatch the global Ctrl+, shortcut.
@@ -27,6 +34,12 @@ namespace gui {
             std::function<void()> m_onExit;
             std::function<void()> m_onAbout;
             std::function<void()> m_onUpdates;
+            std::function<void()> m_onShortcuts;
+            std::function<void()> m_onConnect;
+            std::function<void()> m_onDisconnect;
+            std::function<void(int)> m_onSelectTarget;
+            std::function<void()> m_onCycleTarget;
+            const ThemeManager* m_themeManager{nullptr};
             std::function<void()> m_onPreferences;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             DockableWindowsManager* m_pWndMgr{nullptr};

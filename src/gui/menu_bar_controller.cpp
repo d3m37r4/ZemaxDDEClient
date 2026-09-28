@@ -2,8 +2,10 @@
 #include "app/app.h"
 #include "logger/logger.h"
 #include "dde/dde_connection_manager.h"
+#include "dde/utils.h"
 #include "gui/constants.h"
 #include "gui/dockable_windows_manager.h"
+#include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include <format>
@@ -21,6 +23,30 @@ namespace gui {
 
     void MenuBarController::setUpdatesCallback(std::function<void()> cb) {
         m_onUpdates = std::move(cb);
+    }
+
+    void MenuBarController::setShortcutsCallback(std::function<void()> cb) {
+        m_onShortcuts = std::move(cb);
+    }
+
+    void MenuBarController::setConnectCallback(std::function<void()> cb) {
+        m_onConnect = std::move(cb);
+    }
+
+    void MenuBarController::setDisconnectCallback(std::function<void()> cb) {
+        m_onDisconnect = std::move(cb);
+    }
+
+    void MenuBarController::setSelectTargetCallback(std::function<void(int)> cb) {
+        m_onSelectTarget = std::move(cb);
+    }
+
+    void MenuBarController::setCycleTargetCallback(std::function<void()> cb) {
+        m_onCycleTarget = std::move(cb);
+    }
+
+    void MenuBarController::setThemeManager(const ThemeManager* themeManager) noexcept {
+        m_themeManager = themeManager;
     }
 
     void MenuBarController::setWindowManager(DockableWindowsManager* wndMgr) {
@@ -56,6 +82,48 @@ namespace gui {
                         m_pWndMgr->SetVisible(WindowID::DDEStatus, showDDEStatus);
                     }
                 }
+                if (m_pDDEClientMgr) {
+                    int connectedCount = 0;
+                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                        auto* conn = m_pDDEClientMgr->getConnection(i);
+                        if (conn && conn->isConnected()) {
+                            ++connectedCount;
+                        }
+                    }
+                    const int activeIdx = m_pDDEClientMgr->getActiveIndex();
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Connect to Zemax...", "Ctrl+Shift+C", false,
+                                        connectedCount < DDEConnectionManager::MAX_CONNECTIONS)) {
+                        if (m_onConnect) m_onConnect();
+                    }
+                    if (ImGui::MenuItem("Disconnect Active Slot", "Ctrl+Shift+D", false, activeIdx >= 0)) {
+                        if (m_onDisconnect) m_onDisconnect();
+                    }
+                    ImGui::Separator();
+                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                        auto* conn = m_pDDEClientMgr->getConnection(i);
+                        const bool slotConnected = conn && conn->isConnected();
+                        std::string label = std::format("Select Slot {}", i);
+                        if (slotConnected) {
+                            label += std::format(" - {}", ZemaxDDE::wstring_to_utf8(conn->serverTitle));
+                        }
+                        const char* hint = (i == 0) ? "Alt+1" : "Alt+2";
+                        bool selected = slotConnected && (i == activeIdx);
+                        const bool pushedColor = slotConnected && (m_themeManager != nullptr);
+                        if (pushedColor) {
+                            ImGui::PushStyleColor(ImGuiCol_Text, m_themeManager->semantic().success);
+                        }
+                        if (ImGui::MenuItem(label.c_str(), hint, &selected, slotConnected)) {
+                            if (m_onSelectTarget) m_onSelectTarget(i);
+                        }
+                        if (pushedColor) {
+                            ImGui::PopStyleColor();
+                        }
+                    }
+                    if (ImGui::MenuItem("Next Target", "F6", false, connectedCount >= 2)) {
+                        if (m_onCycleTarget) m_onCycleTarget();
+                    }
+                }
                 ImGui::EndMenu();
             }
             if (m_pWndMgr && ImGui::BeginMenu(ICON_FA_WRENCH " Tools")) {
@@ -85,10 +153,13 @@ namespace gui {
                         ImGui::Separator();
                     }
                 }
-                if (ImGui::MenuItem("Check for Updates")) {
+                if (ImGui::MenuItem("Check for Updates", "Ctrl+U")) {
                     if (m_onUpdates) m_onUpdates();
                 }
-                if (ImGui::MenuItem("About")) {
+                if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
+                    if (m_onShortcuts) m_onShortcuts();
+                }
+                if (ImGui::MenuItem("About", "Ctrl+I")) {
                     if (m_onAbout) m_onAbout();
                 }
                 ImGui::EndMenu();

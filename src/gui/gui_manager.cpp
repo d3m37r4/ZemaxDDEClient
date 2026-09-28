@@ -42,9 +42,25 @@ namespace gui {
     m_menuBarController->setUpdatesCallback([this]() {
         m_updateChecker->open();
     });
+    m_menuBarController->setShortcutsCallback([this]() {
+        m_shortcutsHelpDialog->open();
+    });
+    m_menuBarController->setConnectCallback([this]() {
+        openDdeConnect();
+    });
+    m_menuBarController->setDisconnectCallback([this]() {
+        disconnectDdeSlot();
+    });
+    m_menuBarController->setSelectTargetCallback([this](int slot) {
+        selectDdeTarget(slot);
+    });
+    m_menuBarController->setCycleTargetCallback([this]() {
+        cycleDdeTarget();
+    });
     m_ddeStatusRenderer = std::make_unique<DDEStatus>(m_ddeConnectionManager);
     m_logsRenderer = std::make_unique<Logs>();
     m_aboutDialog        = std::make_unique<AboutDialog>();
+    m_shortcutsHelpDialog = std::make_unique<ShortcutsHelpDialog>();
     m_connectionLostDialog = std::make_unique<ConnectionLostDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
     m_settingsManager   = std::make_unique<SettingsManager>();
@@ -82,6 +98,7 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_irregularityMapService->m_windowState.worstColorDeviation[2] = mapSettings.worstColorDeviation[2];
 
     const auto& themeManager = m_graphics.getThemeManager();
+    m_menuBarController->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setLogger(&m_logger);
     m_updateChecker->setThemeManager(&themeManager);
@@ -249,6 +266,7 @@ void GuiManager::render() {
 
     renderUpdatesPopup();
     renderAboutPopup();
+    renderShortcutsHelpDialog();
     renderPreferencesDialog();
     renderConnectionLostPopup();
 
@@ -270,6 +288,12 @@ void GuiManager::renderLogs() {
 void GuiManager::renderAboutPopup() {
     if (m_aboutDialog) {
         m_aboutDialog->render();
+    }
+}
+
+void GuiManager::renderShortcutsHelpDialog() {
+    if (m_shortcutsHelpDialog) {
+        m_shortcutsHelpDialog->render();
     }
 }
 

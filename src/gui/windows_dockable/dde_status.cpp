@@ -12,6 +12,31 @@
 #include "logger/logger.h"
 
 namespace gui {
+    void DDEStatus::toggleConnection(Logger& logger) {
+        if (!m_connectionManager) return;
+        const int activeIdx = m_connectionManager->getActiveIndex();
+        const bool connected = (activeIdx >= 0) || m_connectionManager->hasConnectionLost();
+        if (connected) {
+            if (m_connectionManager->hasConnectionLost()) {
+                m_connectionManager->clearConnectionLost();
+            }
+            if (activeIdx >= 0) {
+                m_connectionManager->disconnect(activeIdx);
+            }
+            logger.addLog("[DDE] Disconnected from Zemax");
+        } else {
+            m_connectPopup->open();
+        }
+    }
+
+    void DDEStatus::openConnectPopup() {
+        m_connectPopup->open();
+    }
+
+    void DDEStatus::closeConnectPopup() noexcept {
+        m_connectPopup->close();
+    }
+
     void DDEStatus::render(Logger& logger) {
         if (!m_connectionManager) return;
         if (!m_themeManager) return;
@@ -73,6 +98,8 @@ namespace gui {
         if (connectionCount > 0) {
             ImGui::Separator();
             ImGui::Text("Active Target:");
+            ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
+            ImGuiUtils::HelpMarker("Switch target: F6 (next), Alt+1 / Alt+2 (direct)");
             ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
 
             std::string preview;
@@ -147,17 +174,10 @@ namespace gui {
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
         if (ImGui::Button(connected ? ICON_FA_PLUG_CIRCLE_XMARK " Disconnect from Zemax" : ICON_FA_PLUG " Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
-            if (connected) {
-                if (connectionLost) {
-                    m_connectionManager->clearConnectionLost();
-                }
-                if (activeIdx >= 0) {
-                    m_connectionManager->disconnect(activeIdx);
-                }
-                logger.addLog("[DDE] Disconnected from Zemax");
-            } else {
-                m_connectPopup->open();
-            }
+            toggleConnection(logger);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(connected ? "Disconnect active slot (Ctrl+Shift+D)" : "Connect to Zemax (Ctrl+Shift+C)");
         }
 
         ImGui::PopStyleVar();
