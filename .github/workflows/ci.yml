@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'feature/**'
-      - 'release/**'
-      - 'hotfix/**'
-      - 'fix/**'
     paths:
       - 'src/**'
       - 'tests/**'
@@ -23,6 +19,7 @@ on:
       - 'CMakeLists.txt'
       - 'build.sh'
       - '.github/workflows/**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
