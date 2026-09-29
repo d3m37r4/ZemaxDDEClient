@@ -4,6 +4,7 @@
 #include "gui/surface_profile_service.h"
 #include "gui/surface_irregularity_map_service.h"
 #include "gui/menu_bar_controller.h"
+#include "app/sandbox/sandbox_launcher.h"
 #include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
 #include "dde/dde_connection_manager.h"
@@ -73,6 +74,12 @@ namespace gui {
         m_preferencesDialog->setActiveLogPath(m_logger.getCurrentLogPath());
         m_preferencesDialog->open();
     });
+    m_menuBarController->setSandboxLaunchCallback([this]() {
+        auto result = app::sandbox::LaunchSandboxedZemax(m_logger);
+        if (!result.ok) {
+            MessageBoxA(nullptr, result.error.c_str(), "Sandbox launch", MB_ICONWARNING);
+        }
+    });
 }
 
 GuiManager::~GuiManager() = default;
@@ -101,6 +108,7 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_menuBarController->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setLogger(&m_logger);
+    m_shortcutsHelpDialog->setThemeManager(&themeManager);
     m_updateChecker->setThemeManager(&themeManager);
 }
 

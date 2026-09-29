@@ -57,6 +57,10 @@ namespace gui {
         m_onPreferences = std::move(cb);
     }
 
+    void MenuBarController::setSandboxLaunchCallback(std::function<void()> cb) {
+        m_onSandboxLaunch = std::move(cb);
+    }
+
     void MenuBarController::openPreferences() {
         if (m_onPreferences) m_onPreferences();
     }
@@ -65,6 +69,9 @@ namespace gui {
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu(ICON_FA_FOLDER_OPEN " File")) {
                 if (ImGui::MenuItem(ICON_FA_FILE_IMPORT " Open *.ZMX file in Zemax", "Ctrl+O")) App::openZmxFileInZemax(m_logger);
+                if (ImGui::MenuItem(ICON_FA_ROCKET " Launch Sandboxed Zemax")) {
+                    if (m_onSandboxLaunch) m_onSandboxLaunch();
+                }
                 ImGui::Separator();
                 if (ImGui::MenuItem(ICON_FA_GEAR " Preferences", "Ctrl+,", false, true)) {
                     if (m_onPreferences) m_onPreferences();

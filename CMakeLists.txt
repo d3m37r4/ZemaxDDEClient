@@ -86,6 +86,16 @@ configure_file(
     @ONLY
 )
 
+# Embed the SandboxHook.dll image into the main exe (single-file distribution).
+# The path is resolved by windres at build time, so the SandboxHook target
+# must finish first (see add_dependencies below).
+set(SANDBOX_HOOK_DLL "${CMAKE_BINARY_DIR}/bin/SandboxHook.dll")
+configure_file(
+    ${CMAKE_SOURCE_DIR}/src/app/sandbox/hook/sandbox.rc.in
+    ${CMAKE_BINARY_DIR}/sandbox.rc
+    @ONLY
+)
+
 # Source files
 set(SOURCES
     ${SRC_DIR}/main.cpp
@@ -94,6 +104,7 @@ set(SOURCES
     ${SRC_DIR}/app/settings.cpp
     ${SRC_DIR}/app/utils.cpp
     ${SRC_DIR}/app/zemax_window_enumerator.cpp
+    ${SRC_DIR}/app/sandbox/sandbox_launcher.cpp
     ${SRC_DIR}/logger/logger.cpp
     ${SRC_DIR}/dde/client_connection.cpp
     ${SRC_DIR}/dde/operation_monitor.cpp
@@ -157,6 +168,7 @@ list(APPEND SOURCES
 list(APPEND SOURCES
     ${NFD_DIR}/src/nfd_win.cpp
     ${CMAKE_BINARY_DIR}/version.rc
+    ${CMAKE_BINARY_DIR}/sandbox.rc
 )
 
 # Create executable
@@ -251,6 +263,29 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME "${PROJECT_NAME}_${APP_VERSION_STRING}_${APP_BUILD_NUMBER}"
 )
+
+# Sandbox hook DLL (IAT patch for user32 FindWindow/EnumWindows).
+# Pure WinAPI, no third-party deps. Must match the bitness of Zemax it
+# injects into (Zemax 13 shows a 64-bit image base 0x140000000, so the
+# default 64-bit build applies; a 32-bit Zemax would need an i686 build).
+add_library(SandboxHook SHARED ${SRC_DIR}/app/sandbox/hook/sandbox_hook.cpp)
+target_compile_options(SandboxHook PRIVATE
+    -Wall -Wextra -fdiagnostics-color=always
+    -DUNICODE -D_UNICODE
+)
+set_target_properties(SandboxHook PROPERTIES
+    OUTPUT_NAME "SandboxHook"
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    PREFIX ""
+    SUFFIX ".dll"
+)
+target_link_libraries(SandboxHook PRIVATE User32)
+
+# The embedded resource references the built DLL image, so it must exist
+# before the main exe (and its .rc) compiles.
+add_dependencies(${PROJECT_NAME} SandboxHook)
 
 # Tests (opt-in)
 option(BUILD_TESTING "Build unit tests (GoogleTest)" OFF)

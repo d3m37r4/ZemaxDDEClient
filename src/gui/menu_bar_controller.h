@@ -20,6 +20,7 @@ namespace gui {
             void setShortcutsCallback(std::function<void()> cb);
             void setWindowManager(DockableWindowsManager* wndMgr);
             void setPreferencesCallback(std::function<void()> cb);
+            void setSandboxLaunchCallback(std::function<void()> cb);
             void setConnectCallback(std::function<void()> cb);
             void setDisconnectCallback(std::function<void()> cb);
             void setSelectTargetCallback(std::function<void(int)> cb);
@@ -41,6 +42,7 @@ namespace gui {
             std::function<void()> m_onCycleTarget;
             const ThemeManager* m_themeManager{nullptr};
             std::function<void()> m_onPreferences;
+            std::function<void()> m_onSandboxLaunch;
             ::DDEConnectionManager* m_pDDEClientMgr{nullptr};
             DockableWindowsManager* m_pWndMgr{nullptr};
     };

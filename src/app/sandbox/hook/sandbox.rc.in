@@ -1,0 +1,3 @@
+// Embedded SandboxHook.dll image (built by the SandboxHook CMake target).
+// Keep the numeric id in sync with kHookResourceId in sandbox_launcher.cpp.
+101 BINARY "@SANDBOX_HOOK_DLL@"
