@@ -71,6 +71,7 @@ namespace app {
         general.restoreWindowLayout = true;
 
         appearance.themeMode = ThemeMode::System;
+        appearance.fontScale = kDefaultFontScale;
 
         dde.connectionTimeoutMs = 5000;
         dde.maxRetryCount = 3;
@@ -157,6 +158,9 @@ namespace app {
             const auto& a = j["appearance"];
             if (a.contains("themeMode") && a["themeMode"].is_string())
                 appearance.themeMode = themeModeFromString(a["themeMode"].get<std::string_view>());
+            if (a.contains("fontScale") && a["fontScale"].is_number())
+                appearance.fontScale = clampValue(
+                    a["fontScale"].get<float>(), kMinFontScale, kMaxFontScale, kDefaultFontScale);
         }
 
         // DDE
@@ -305,6 +309,7 @@ namespace app {
         j["general"]["restoreWindowLayout"]   = general.restoreWindowLayout;
 
         j["appearance"]["themeMode"]      = std::string{themeModeToString(appearance.themeMode)};
+        j["appearance"]["fontScale"]      = appearance.fontScale;
 
         j["dde"]["connectionTimeoutMs"] = dde.connectionTimeoutMs;
         j["dde"]["maxRetryCount"]       = dde.maxRetryCount;

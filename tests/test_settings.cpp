@@ -32,6 +32,7 @@ TEST(SettingsDefaults, AllFieldsMatchExpected) {
     EXPECT_TRUE(s.general.restoreWindowLayout);
     EXPECT_TRUE(s.logging.showLogsOnStartup);
     EXPECT_EQ(s.appearance.themeMode, ThemeMode::System);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
     EXPECT_EQ(s.dde.maxRetryCount, 3);
     EXPECT_EQ(s.dde.maxConnections, 4);
@@ -55,12 +56,14 @@ TEST(SettingsReset, RestoresDefaults) {
     AppSettings s;
     s.dde.connectionTimeoutMs = 9999;
     s.appearance.themeMode = ThemeMode::Light;
+    s.appearance.fontScale = 1.5f;
     s.plot.lineWeight = 2.5f;
 
     s.reset();
 
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
     EXPECT_EQ(s.appearance.themeMode, ThemeMode::System);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
     EXPECT_FLOAT_EQ(s.plot.lineWeight, 1.0f);
 }
 
@@ -99,6 +102,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
     AppSettings s;
     s.dde.connectionTimeoutMs = 7777;
     s.appearance.themeMode = ThemeMode::Dark;
+    s.appearance.fontScale = 1.25f;
     s.plot.lineWeight = 2.0f;
     s.updates.channel = UpdateChannel::Beta;
     ASSERT_TRUE(s.saveToFile(path));
@@ -108,6 +112,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
     EXPECT_EQ(loaded.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(loaded.dde.connectionTimeoutMs, 7777);
     EXPECT_EQ(loaded.appearance.themeMode, ThemeMode::Dark);
+    EXPECT_FLOAT_EQ(loaded.appearance.fontScale, 1.25f);
     EXPECT_FLOAT_EQ(loaded.plot.lineWeight, 2.0f);
     EXPECT_EQ(loaded.updates.channel, UpdateChannel::Beta);
 
@@ -249,6 +254,66 @@ TEST(SettingsLoad, WrongScalarTypeIsTolerated) {
     std::string err;
     EXPECT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(s.dde.maxRetryCount, 3);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleBelowMinFallsBack) {
+    std::string path = tmpPath("_settings_fs_min.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 0.1}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleAboveMaxFallsBack) {
+    std::string path = tmpPath("_settings_fs_max.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 5.0}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleValidPreserved) {
+    std::string path = tmpPath("_settings_fs_valid.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 1.5}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.5f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleMaxPresetPreserved) {
+    std::string path = tmpPath("_settings_fs_maxpreset.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 3.0}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 3.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsLoad, FontScaleWrongTypeIsTolerated) {
+    std::string path = tmpPath("_settings_fs_wrongtype.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": "large"}})");
+
+    AppSettings s;
+    std::string err;
+    EXPECT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
 
     std::remove(path.c_str());
 }

@@ -18,6 +18,9 @@ namespace gui {
 
             void initialize(GLFWwindow* window, Logger& logger, bool isLightTheme = true, float initialDpiScale = 1.0f);
             void updateDpiStyle(float dpiScale);
+            /// User font-scale multiplier over BASE_FONT_SIZE (Preferences → Appearance).
+            /// Independent from DPI scaling; clamps to app::kMin/MaxFontScale.
+            void setFontScale(float scale);
             void beginFrame();
             void endFrame();
 

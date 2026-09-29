@@ -1,6 +1,7 @@
 #include "gui/popups/preferences_dialog.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "app/config_path.h"
@@ -152,12 +153,34 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionAppearance() {
-        ImGuiUtils::SectionHeader("Appearance", "Theme changes are applied immediately.");
+        ImGuiUtils::SectionHeader("Appearance", "Theme and interface scale apply immediately.");
 
         int mode = static_cast<int>(m_working.appearance.themeMode);
         if (ImGui::RadioButton(ICON_FA_SUN " Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
         if (ImGui::RadioButton(ICON_FA_MOON " Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
         if (ImGui::RadioButton(ICON_FA_DISPLAY " System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Interface scale");
+        // Same preset steps as Windows Settings → Display → Scale.
+        static constexpr const char* kScaleLabels[] = {
+            "100%", "125%", "150%", "175%", "200%", "225%", "250%", "300%"};
+        static constexpr float kScaleValues[] = {1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.25f, 2.5f, 3.0f};
+        static constexpr int kScaleCount = 8;
+        int current = 0;
+        float best = std::fabs(m_working.appearance.fontScale - kScaleValues[0]);
+        for (int i = 1; i < kScaleCount; ++i) {
+            float d = std::fabs(m_working.appearance.fontScale - kScaleValues[i]);
+            if (d < best) {
+                best = d;
+                current = i;
+            }
+        }
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        if (ImGui::Combo("##font_scale", &current, kScaleLabels, kScaleCount)) {
+            m_working.appearance.fontScale = kScaleValues[current];
+            applyWorkingTheme();
+        }
     }
 
     void PreferencesDialog::renderSectionDDE() {
@@ -297,7 +320,8 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionUpdates() {
-        ImGuiUtils::SectionHeader("Updates", "Update checker settings. Channel changes take effect on next check.");
+        ImGuiUtils::SectionHeader("Updates",
+            "Update checker settings. Channel changes take effect on next check.");
 
         ImGui::Checkbox("Check for updates on startup", &m_working.updates.autoCheckOnStartup);
 

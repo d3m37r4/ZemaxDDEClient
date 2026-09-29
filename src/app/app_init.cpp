@@ -146,6 +146,7 @@ namespace App {
         // does not apply DDE timeouts, file-logging or update channels. bind() is now
         // complete (post-initialize) so these can take effect safely.
         const auto& settings = ctx->gui->getSettingsManager().current();
+        ctx->gui->getSettingsManager().applyTheme(settings.appearance);
         ctx->gui->getSettingsManager().applyDDE(settings.dde);
         ctx->gui->getSettingsManager().applyLogging(settings.logging);
         ctx->gui->getSettingsManager().applyUpdates(settings.updates);

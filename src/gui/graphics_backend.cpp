@@ -17,6 +17,7 @@
 
 #include "gui/graphics_backend.h"
 #include "gui/constants.h"
+#include "app/settings.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "assets/icons/fa/fa_compressed.h"
 #include "app/config_path.h"
@@ -130,6 +131,12 @@ namespace gui {
         // spacing, border sizes) are rescaled to the new DPI factor.
         m_themeManager.setDpiScale(dpiScale);
         m_themeManager.apply(m_themeManager.currentThemeName());
+    }
+
+    void GraphicsBackend::setFontScale(float scale) {
+        if (!std::isfinite(scale)) scale = app::kDefaultFontScale;
+        scale = std::clamp(scale, app::kMinFontScale, app::kMaxFontScale);
+        ImGui::GetIO().FontGlobalScale = scale;
     }
 
     void GraphicsBackend::beginFrame() {

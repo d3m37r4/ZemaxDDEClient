@@ -47,6 +47,11 @@ namespace gui {
     }
 
     void SettingsManager::applyTheme(const app::AppearanceSettings& appearance) {
+        // Font scale applies independently of the theme name so it also takes
+        // effect when the resolved theme is unchanged (startup, Cancel).
+        if (m_graphicsBackend) {
+            m_graphicsBackend->setFontScale(appearance.fontScale);
+        }
         if (!m_themeManager) return;
 
         bool isDark = detectSystemDarkMode();

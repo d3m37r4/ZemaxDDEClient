@@ -16,12 +16,20 @@ namespace app {
         Beta,
     };
 
+    // Interface font scale bounds (multiplier over BASE_FONT_SIZE).
+    inline constexpr float kDefaultFontScale = 1.0f;
+    inline constexpr float kMinFontScale = 0.75f;
+    inline constexpr float kMaxFontScale = 3.0f;
+
     struct GeneralSettings {
         bool restoreWindowLayout = true;
     };
 
     struct AppearanceSettings {
         ThemeMode themeMode = ThemeMode::System;
+        // Interface font scale multiplier over BASE_FONT_SIZE (1.0 = 100%).
+        // Applied via ImGui::GetIO().FontGlobalScale; clamped on load.
+        float fontScale = kDefaultFontScale;
     };
 
     struct DDESettings {
