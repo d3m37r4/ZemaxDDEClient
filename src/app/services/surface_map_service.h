@@ -40,6 +40,14 @@ namespace app::services {
         float worstColorSurface[3] = {1.0f, 0.0f, 0.0f};
         float worstColorDeviation[3] = {1.0f, 0.0f, 0.0f};
 
+        // Same "value adjusted" feedback flags as ProfileWindowState.
+        bool nominalSurfaceAdjusted = false;
+        bool nominalSamplingAdjusted = false;
+        bool nominalAngleAdjusted = false;
+        bool tolerancedSurfaceAdjusted = false;
+        bool tolerancedSamplingAdjusted = false;
+        bool tolerancedAngleStepAdjusted = false;
+
         AxisUnits units;
     };
 

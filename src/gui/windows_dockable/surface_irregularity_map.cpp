@@ -6,6 +6,7 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "app/utils.h"
 #include "logger/logger.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
@@ -42,6 +43,7 @@ namespace {
 namespace gui {
     void GuiManager::renderSurfaceIrregularityMap() {
         auto& state = m_irregularityMapService->m_windowState;
+        const auto& sem = m_graphics.getThemeManager().semantic();
 
         ImGui::BeginChild("##SurfaceIrregularityMapContent",
             ImVec2(0.0f, 0.0f),
@@ -121,25 +123,47 @@ namespace gui {
                 ImGui::TextUnformatted("Surface number:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(
+                    state.nominalSurfaceAdjusted, sem.danger);
                 ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                if (!nominalFrozen && !nominalOnActiveSlot && m_zemaxDDEClient)
-                    state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.nominalSurfaceIndex));
+                if (surfTint) ImGui::PopStyleColor();
+                if (!nominalFrozen && !nominalOnActiveSlot && m_zemaxDDEClient) {
+                    const int maxSurf = m_zemaxDDEClient->getOpticalSystemData().numSurfs;
+                    state.nominalSurfaceAdjusted = app::ClampWithFeedback(
+                        state.nominalSurfaceIndex, 0, maxSurf);
+                    ImGuiUtils::AdjustedHint(state.nominalSurfaceAdjusted,
+                        std::format("Adjusted to 0-{}", maxSurf).c_str(), sem.warning);
+                }
 
                 ImGui::TextUnformatted("Sampling:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(
+                    state.nominalSamplingAdjusted, sem.danger);
                 ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-                state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling)) | 1;
+                if (sampTint) ImGui::PopStyleColor();
+                state.nominalSamplingAdjusted = app::ClampWithFeedback(
+                    state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
+                state.nominalSamplingAdjusted |= app::SnapOddWithFeedback(state.nominalSampling);
+                app::ClampWithFeedback(state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
+                ImGuiUtils::AdjustedHint(state.nominalSamplingAdjusted,
+                    std::format("Adjusted to {}-{} (odd)",
+                        gui::MIN_SAMPLING, gui::MAX_SAMPLING).c_str(), sem.warning);
 
                 ImGui::TextUnformatted("Angle:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                const bool angTint = ImGuiUtils::BeginAdjustedHighlight(
+                    state.nominalAngleAdjusted, sem.danger);
                 ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
-                state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
+                if (angTint) ImGui::PopStyleColor();
+                state.nominalAngleAdjusted = app::ClampWithFeedback(state.nominalAngle, -360.0, 360.0);
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
+                ImGuiUtils::AdjustedHint(state.nominalAngleAdjusted,
+                    "Adjusted to -360 - 360", sem.warning);
 
                 ImGuiUtils::SpacingY(0.5f);
 
@@ -250,25 +274,48 @@ namespace gui {
                 ImGui::TextUnformatted("Surface number:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(
+                    state.tolerancedSurfaceAdjusted, sem.danger);
                 ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-                if (!mapFrozen && !mapOnActiveSlot && m_zemaxDDEClient)
-                    state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient->getOpticalSystemData().numSurfs, state.tolerancedSurfaceIndex));
+                if (surfTint) ImGui::PopStyleColor();
+                if (!mapFrozen && !mapOnActiveSlot && m_zemaxDDEClient) {
+                    const int maxSurf = m_zemaxDDEClient->getOpticalSystemData().numSurfs;
+                    state.tolerancedSurfaceAdjusted = app::ClampWithFeedback(
+                        state.tolerancedSurfaceIndex, 0, maxSurf);
+                    ImGuiUtils::AdjustedHint(state.tolerancedSurfaceAdjusted,
+                        std::format("Adjusted to 0-{}", maxSurf).c_str(), sem.warning);
+                }
 
                 ImGui::TextUnformatted("Sampling:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(
+                    state.tolerancedSamplingAdjusted, sem.danger);
                 ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-                state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
+                if (sampTint) ImGui::PopStyleColor();
+                state.tolerancedSamplingAdjusted = app::ClampWithFeedback(
+                    state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
+                state.tolerancedSamplingAdjusted |= app::SnapOddWithFeedback(state.tolerancedSampling);
+                app::ClampWithFeedback(state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
+                ImGuiUtils::AdjustedHint(state.tolerancedSamplingAdjusted,
+                    std::format("Adjusted to {}-{} (odd)",
+                        gui::MIN_SAMPLING, gui::MAX_SAMPLING).c_str(), sem.warning);
 
                 ImGui::TextUnformatted("Angle step:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+                const bool stepTint = ImGuiUtils::BeginAdjustedHighlight(
+                    state.tolerancedAngleStepAdjusted, sem.danger);
                 ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
-                state.tolerancedAngleStep = std::clamp(state.tolerancedAngleStep, 0.01, 180.0);
+                if (stepTint) ImGui::PopStyleColor();
+                state.tolerancedAngleStepAdjusted = app::ClampWithFeedback(
+                    state.tolerancedAngleStep, 0.01, 180.0);
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
+                ImGuiUtils::AdjustedHint(state.tolerancedAngleStepAdjusted,
+                    "Adjusted to 0.01-180", sem.warning);
 
                 int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
                 ImGui::TextUnformatted("Number of sections:");

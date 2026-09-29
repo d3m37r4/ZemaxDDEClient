@@ -13,6 +13,7 @@ set(TEST_SOURCES
     test_operation_monitor.cpp
     test_surface_map.cpp
     test_shortcuts.cpp
+    test_input_validation.cpp
 )
 
 set(TEST_LIB_SOURCES

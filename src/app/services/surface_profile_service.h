@@ -30,6 +30,16 @@ namespace app::services {
         int nominalSampling = 65;
         double nominalAngle = 0.0;
 
+        // Set when the matching input was clamped/snapped on the last edit;
+        // drives the "value adjusted" highlight + hint. Cleared on the next
+        // in-range edit.
+        bool nominalSurfaceAdjusted = false;
+        bool nominalSamplingAdjusted = false;
+        bool nominalAngleAdjusted = false;
+        bool tolerancedSurfaceAdjusted = false;
+        bool tolerancedSamplingAdjusted = false;
+        bool tolerancedAngleAdjusted = false;
+
         AxisUnits units;
     };
 

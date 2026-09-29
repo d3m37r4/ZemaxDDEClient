@@ -182,6 +182,25 @@ namespace ImGuiUtils {
         }
     }
 
+    /// Pushes a danger-tinted FrameBg while the field holds a value that was
+    /// clamped/snapped on the last edit. Returns true when pushed — the caller
+    /// must call ImGui::PopStyleColor() after the input. Colors come from
+    /// SemanticPalette — never hardcode.
+    inline bool BeginAdjustedHighlight(bool adjusted, const ImVec4& danger) {
+        if (!adjusted) return false;
+        ImVec4 tint = danger;
+        tint.w = 0.28f;
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, tint);
+        return true;
+    }
+
+    /// Warning hint under an input whose value was clamped/snapped.
+    /// No-op when @p adjusted is false. Call after the input row.
+    inline void AdjustedHint(bool adjusted, const char* text, const ImVec4& warning) {
+        if (!adjusted) return;
+        ImGui::TextColored(warning, "%s", text);
+    }
+
     /// BeginPopupModal with a taller title bar (extraPadY added to FramePadding.y).
     /// PopStyleVar is called immediately after BeginPopupModal so content is unaffected.
     inline bool BeginPopupModalEx(const char* name, bool* p_open = nullptr,
