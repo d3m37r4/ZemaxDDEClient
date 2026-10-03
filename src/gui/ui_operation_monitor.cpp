@@ -60,6 +60,10 @@ namespace gui {
         ImGui::SetCursorPosY((barHeight - frameH) * 0.5f);
         ImGui::SetCursorPosX(horizontalPadding);
 
+        ImGuiUtils::BusyArc("##taskbusy", ImGui::GetFrameHeight() * 0.65f,
+                             ImGui::GetStyleColorVec4(ImGuiCol_Text), ImGui::GetFrameHeight());
+        ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(4.0f));
+
         // Clamp selected index
         if (m_selectedTaskIndex >= static_cast<int>(activeTasks.size())) {
             m_selectedTaskIndex = 0;

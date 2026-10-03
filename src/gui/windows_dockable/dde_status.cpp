@@ -135,11 +135,14 @@ namespace gui {
                     }
 
                     std::string itemLabel = std::format("[{}] {}", i, title);
-                    if (slotBusy) {
-                        itemLabel += " " ICON_FA_SPINNER;
-                    }
 
                     bool isSelected = (i == activeIdx);
+                    if (slotBusy) {
+                        const float eqH = ImGui::GetTextLineHeight() * 0.75f;
+                        ImGuiUtils::BusyEqualizer(eqH * 1.4f, eqH,
+                            m_themeManager->semantic().info);
+                        ImGui::SameLine();
+                    }
                     if (ImGui::Selectable(itemLabel.c_str(), isSelected)) {
                         m_connectionManager->setActiveConnection(i);
                     }

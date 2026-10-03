@@ -91,6 +91,20 @@ namespace ImGuiUtils {
                       value.y * ImGui::GetWindowDpiScale());
     }
 
+    /// Low-level 270-degree arc spinner: draws a background ring plus a rotating
+    /// arc at an absolute position (no layout). Shared by BusyArc and SpinnerButton.
+    /// @param speed  Revolutions scaled by time (6.0 matches the approved look).
+    inline void DrawBusyArc(const ImVec2& center, float radius, const ImVec4& color,
+                            float speed = 6.0f) {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        const float thickness = DpiScale(2.0f);
+        dl->AddCircle(center, radius,
+            ImGui::GetColorU32(ImVec4(color.x, color.y, color.z, color.w * 0.5f)), 32, thickness);
+        const float a0 = static_cast<float>(ImGui::GetTime()) * speed;
+        dl->PathArcTo(center, radius, a0, a0 + 1.5f * std::numbers::pi_v<float>, 32);
+        dl->PathStroke(ImGui::GetColorU32(color), 0, thickness);
+    }
+
     /// Disabled button with animated spinner arc (3/4 circle) inside.
     /// Shows a spinning indicator when @p isActive=true, otherwise a normal Button.
     /// @return true only when clicked in non-active state.
@@ -124,12 +138,18 @@ namespace ImGuiUtils {
                           ImGui::GetColorU32(ImGuiCol_Button, disabledAlpha),
                           style.FrameRounding);
 
-        float angle = ImGui::GetTime() * 5.0f;
-        ImVec2 spinnerCenter(pos.x + style.FramePadding.x + spinnerRadius,
-                             pos.y + btnSize.y * 0.5f);
-        dl->PathArcTo(spinnerCenter, spinnerRadius, angle,
-                      angle + static_cast<float>(std::numbers::pi) * 1.5f, 32);
-        dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, DpiScale(2.0f));
+        // Legacy arc (replaced by DrawBusyArc above, kept for reference):
+        // float angle = ImGui::GetTime() * 5.0f;
+        // ImVec2 spinnerCenter(pos.x + style.FramePadding.x + spinnerRadius,
+        //                      pos.y + btnSize.y * 0.5f);
+        // dl->PathArcTo(spinnerCenter, spinnerRadius, angle,
+        //               angle + static_cast<float>(std::numbers::pi) * 1.5f, 32);
+        // dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, DpiScale(2.0f));
+        ImVec4 spinCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+        spinCol.w *= disabledAlpha;
+        DrawBusyArc(ImVec2(pos.x + style.FramePadding.x + spinnerRadius,
+                           pos.y + btnSize.y * 0.5f),
+                    spinnerRadius, spinCol);
 
         ImVec2 textPos(pos.x + style.FramePadding.x + spinnerDiameter + spacing,
                        pos.y + (btnSize.y - textSize.y) * 0.5f);
@@ -200,6 +220,53 @@ namespace ImGuiUtils {
     inline void AdjustedHint(bool adjusted, const char* text, const ImVec4& warning) {
         if (!adjusted) return;
         ImGui::TextColored(warning, "%s", text);
+    }
+
+    /// 270-degree arc spinner (custom draw, no third-party dependency).
+    /// Reserves a full row height (like BusyEqualizer) so the arc centers on
+    /// tall neighbours such as combo boxes instead of sticking to the top.
+    /// @param diameterPx  Final pixel diameter (already DPI-aware).
+    /// @param color       Theme color — never hardcode.
+    /// @param rowHeightPx Full row box height; 0 keeps the legacy compact box.
+    inline void BusyArc(const char* id, float diameterPx, const ImVec4& color, float rowHeightPx = 0.0f) {
+        (void)id;
+        const float r = diameterPx * 0.5f;
+        const float boxH = rowHeightPx > diameterPx ? rowHeightPx : diameterPx;
+        ImGui::Dummy(ImVec2(diameterPx, boxH));
+        const ImVec2 mn = ImGui::GetItemRectMin();
+        const ImVec2 mx = ImGui::GetItemRectMax();
+        DrawBusyArc(ImVec2((mn.x + mx.x) * 0.5f, (mn.y + mx.y) * 0.5f), r, color);
+    }
+
+    /// Rectangular busy indicator: three fading bars strictly inside their
+    /// layout box (the vendored FadeBars overpaints neighbouring items, so it
+    /// is unsuitable for dense rows). Reserves exactly one text-line height —
+    /// the same box Selectable uses — so bars center on the text by construction.
+    /// Fits combo items.
+    /// @param widthPx   Final pixel width of the whole widget (DPI-aware).
+    /// @param heightPx  Final pixel bar-area height (DPI-aware, e.g. text height).
+    /// @param color     Theme color — never hardcode.
+    inline void BusyEqualizer(float widthPx, float heightPx, const ImVec4& color) {
+        const float lineH = ImGui::GetTextLineHeight();
+        const float h = std::min(heightPx, lineH);
+        ImGui::Dummy(ImVec2(widthPx, lineH));
+        const ImVec2 mn = ImGui::GetItemRectMin();
+        const ImVec2 mx = ImGui::GetItemRectMax();
+        const float yc = (mn.y + mx.y) * 0.5f;
+        const float y0 = yc - h * 0.5f;
+        const float y1 = yc + h * 0.5f;
+        const float t = static_cast<float>(ImGui::GetTime()) * 2.8f;
+        const float bw = (mx.x - mn.x) / 3.0f;
+        for (int i = 0; i < 3; ++i) {
+            const float frac = 0.35f + 0.65f * (0.5f + 0.5f * sinf(t - i * std::numbers::pi_v<float> / 3.0f));
+            const float bh = h * frac;
+            const float bc = (y0 + y1) * 0.5f;
+            ImGui::GetWindowDrawList()->AddRectFilled(
+                ImVec2(mn.x + bw * i + 1.0f, bc - bh * 0.5f),
+                ImVec2(mn.x + bw * (i + 1) - 1.0f, bc + bh * 0.5f),
+                ImGui::GetColorU32(ImVec4(color.x, color.y, color.z,
+                    color.w * (0.35f + 0.65f * frac))));
+        }
     }
 
     /// Width of an icon-only CopyButton (for SetNextItemWidth math at call sites).
