@@ -8,6 +8,7 @@
 #include "gui/surface_profile_service.h"
 #include "gui/imgui_utils.h"
 #include "app/utils.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 
 namespace {
@@ -84,22 +85,27 @@ namespace gui {
                 renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
                 ImGui::EndDisabled();
 
-                if (ImGui::Button("Export txt")) {
+                if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(nominal);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Show profile graphic")) {
+                if (ImGui::Button(ICON_FA_CHART_LINE " Show profile graphic")) {
                     m_profileService->m_showNominalProfileWindow = true;
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Clear data")) {
+                ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
+                ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                if (ImGui::Button(ICON_FA_TRASH " Clear data")) {
                     m_profileService->m_showNominalProfileWindow = false;
                     nominal.clear();
                 }
+                ImGui::PopStyleColor(4);
             } else {
                 int nominalCalcSlot = m_profileService->getNominalCalcSlot();
                 bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
@@ -183,7 +189,7 @@ namespace gui {
                 }
 
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalCalculating);
-                if (ImGui::Button("Copy toleranced surface settings")) {
+                if (ImGui::Button(ICON_FA_COPY " Copy toleranced surface settings")) {
                     state.nominalSampling = state.tolerancedSampling;
                     state.nominalAngle = state.tolerancedAngle;
                 }
@@ -194,14 +200,24 @@ namespace gui {
                 if (nominalFrozen || nominalOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
+                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    if (ImGui::Button(ICON_FA_XMARK " Cancel")) {
                         m_profileService->cancelCalculation(TaskSource::NominalSurfaceProfile);
                         m_profileService->onNominalCalculationComplete = nullptr;
                         nominal.clear();
                     }
+                    ImGui::PopStyleColor(4);
                 } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                     ImGui::BeginDisabled(true);
-                    ImGui::Button("Get nominal surface data");
+                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
+                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGui::Button(ICON_FA_DOWNLOAD " Get nominal surface data");
+                    ImGui::PopStyleColor(4);
                     if (ImGui::BeginItemTooltip()) {
                         ImGui::TextUnformatted("Another calculation is in progress on this slot");
                         ImGui::EndTooltip();
@@ -209,7 +225,11 @@ namespace gui {
                     ImGui::EndDisabled();
                 } else {
                     ImGui::BeginDisabled(!isDDEInitialized());
-                    if (ImGui::Button("Get nominal surface data")) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
+                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    if (ImGui::Button(ICON_FA_DOWNLOAD " Get nominal surface data")) {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                             nominal.units = m_zemaxDDEClient->getOpticalSystemData().units;
@@ -228,6 +248,7 @@ namespace gui {
                             m_profileService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
                     }
+                    ImGui::PopStyleColor(4);
                     ImGui::EndDisabled();
                 }
             }
@@ -263,22 +284,27 @@ namespace gui {
                 renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
                 ImGui::EndDisabled();
 
-                if (ImGui::Button("Export txt")) {
+                if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(toleranced);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Show profile graphic")) {
+                if (ImGui::Button(ICON_FA_CHART_LINE " Show profile graphic")) {
                     m_profileService->m_showTolerancedProfileWindow = true;
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Clear data")) {
+                ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
+                ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                if (ImGui::Button(ICON_FA_TRASH " Clear data")) {
                     m_profileService->m_showTolerancedProfileWindow = false;
                     toleranced.clear();
                 }
+                ImGui::PopStyleColor(4);
             } else {
                 int tolerancedCalcSlot = m_profileService->getTolerancedCalcSlot();
                 bool tolerancedFrozen = tolerancedCalcSlot >= 0 && tolerancedCalcSlot != activeIdx;
@@ -362,7 +388,7 @@ namespace gui {
                 }
 
                 ImGui::BeginDisabled(!isDDEInitialized() || tolerancedCalculating);
-                if (ImGui::Button("Copy nominal surface settings")) {
+                if (ImGui::Button(ICON_FA_COPY " Copy nominal surface settings")) {
                     state.tolerancedSampling = state.nominalSampling;
                     state.tolerancedAngle = state.nominalAngle;
                 }
@@ -373,14 +399,24 @@ namespace gui {
                 if (tolerancedFrozen || tolerancedOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
+                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    if (ImGui::Button(ICON_FA_XMARK " Cancel")) {
                         m_profileService->cancelCalculation(TaskSource::TolerancedSurfaceProfile);
                         m_profileService->onTolerancedCalculationComplete = nullptr;
                         toleranced.clear();
                     }
+                    ImGui::PopStyleColor(4);
                 } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                     ImGui::BeginDisabled(true);
-                    ImGui::Button("Get toleranced surface data");
+                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
+                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGui::Button(ICON_FA_DOWNLOAD " Get toleranced surface data");
+                    ImGui::PopStyleColor(4);
                     if (ImGui::BeginItemTooltip()) {
                         ImGui::TextUnformatted("Another calculation is in progress on this slot");
                         ImGui::EndTooltip();
@@ -388,7 +424,11 @@ namespace gui {
                     ImGui::EndDisabled();
                 } else {
                     ImGui::BeginDisabled(!isDDEInitialized());
-                    if (ImGui::Button("Get toleranced surface data")) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
+                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    if (ImGui::Button(ICON_FA_DOWNLOAD " Get toleranced surface data")) {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenTolerancedOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                             toleranced.units = m_zemaxDDEClient->getOpticalSystemData().units;
@@ -407,6 +447,7 @@ namespace gui {
                             m_profileService->startCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
                         }
                     }
+                    ImGui::PopStyleColor(4);
                     ImGui::EndDisabled();
                 }
             }
@@ -416,13 +457,13 @@ namespace gui {
         if (nominal.isValid() && toleranced.isValid()) {
             ImGuiUtils::SectionHeader("Surface profile analysis results");
 
-            if (ImGui::Button("Show comparison graphic")) {
+            if (ImGui::Button(ICON_FA_CHART_LINE " Show comparison graphic")) {
                 m_profileService->m_showComparisonProfileWindow = true;
             }
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Show deviation graphic")) {
+            if (ImGui::Button(ICON_FA_CHART_LINE " Show deviation graphic")) {
                 m_profileService->m_showDeviationProfileWindow = true;
             }
         }
