@@ -35,6 +35,8 @@ namespace gui {
         m_working = m_settings.current();
         m_loaded  = m_settings.current();
         m_section = Section::General;
+        m_wasOpen = false;
+        m_closedByAction = false;
         m_resetConfirmDialog->close();
         m_cleanLogsConfirmDialog->close();
         m_open = true;
@@ -68,8 +70,23 @@ namespace gui {
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_POPUP_MIN_SIZE.x, PREFERENCES_POPUP_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_POPUP_DEFAULT_SIZE);
 
+        const bool wasOpen = m_wasOpen;
         if (!ImGuiUtils::BeginPopupModalEx(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
+            // Fully closed. If it was visible and no action (Save/Cancel) did
+            // it, the user hit X or Esc: revert the working copy like Cancel.
+            if (wasOpen && !m_open && !m_closedByAction) {
+                revertWorkingCopy();
+            }
+            m_wasOpen = false;
+            m_closedByAction = false;
             return;
+        }
+        m_wasOpen = true;
+        if (!m_open && !m_closedByAction) {
+            // Title-bar X clicked this frame: ImGui cleared m_open behind our
+            // back while the popup is still visible. Revert like Cancel.
+            revertWorkingCopy();
+            m_closedByAction = true;
         }
 
         static const char* sidebarLabels[] = {
@@ -422,7 +439,7 @@ namespace gui {
             onCancel();
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Discard all changes and revert to the last saved values.");
+            ImGui::SetTooltip("Discard all changes and revert to the last saved values. Closes the dialog.");
         }
 
         ImGui::PopStyleColor(3);
@@ -440,7 +457,7 @@ namespace gui {
             ImGui::PopStyleColor(4);
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Persist the current values to settings.json.");
+            ImGui::SetTooltip("Persist the current values to settings.json. Closes the dialog.");
         }
     }
 
@@ -464,9 +481,17 @@ namespace gui {
         m_settings.apply(m_working);
         m_loaded = m_working;
         m_settings.saveToFile();
+        m_closedByAction = true;
+        close();
     }
 
     void PreferencesDialog::onCancel() {
+        revertWorkingCopy();
+        m_closedByAction = true;
+        close();
+    }
+
+    void PreferencesDialog::revertWorkingCopy() {
         m_working = m_loaded;
         m_settings.apply(m_working);
     }

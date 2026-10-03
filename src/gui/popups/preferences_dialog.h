@@ -74,6 +74,10 @@ namespace gui {
             void onReset();
             void onCleanLogs();
 
+            /// Restores the last-saved snapshot into the working copy and pushes
+            /// it to the runtime (undoes live preview). Does not close or save.
+            void revertWorkingCopy();
+
             SettingsManager& m_settings;
             std::unique_ptr<ResetConfirmDialog> m_resetConfirmDialog;
             std::unique_ptr<CleanLogsConfirmDialog> m_cleanLogsConfirmDialog;
@@ -82,6 +86,10 @@ namespace gui {
             Section m_section = Section::General;
             float m_sidebarWidth = 0.0f;
             bool m_open = false;
+            // Last-frame visibility (X-click detection) and "closed by an
+            // explicit action" (Save/Cancel) for the revert-on-X/Esc contract.
+            bool m_wasOpen = false;
+            bool m_closedByAction = false;
             std::string m_activeLogPath;
             Logger* m_logger = nullptr;
             ThemeManager* m_themeManager = nullptr;
