@@ -25,6 +25,16 @@ namespace {
         return "Orientation angle in degrees relative to the local x axis.";
     }
 
+    // Right-aligned (?) after a section header, visible only while this
+    // section's calculation source is frozen on another slot.
+    void frozenSectionHelp(int calcSlot, int activeIdx) {
+        if (calcSlot < 0 || calcSlot == activeIdx) return;
+        ImGui::SameLine();
+        ImGuiUtils::HelpMarker(
+            "Frozen form: values were captured from the slot where the calculation started. "
+            "Switch target (F6) to edit, or Cancel the running calculation.");
+    }
+
     void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor) {
         auto progress = monitor.getTaskProgress(source);
         if (!progress) return;
@@ -39,6 +49,7 @@ namespace gui {
         auto& nominal = m_profileService->m_nominalSurfaceData;
         auto& toleranced = m_profileService->m_tolerancedSurfaceData;
         const auto& sem = m_graphics.getThemeManager().semantic();
+        const int hdrActiveIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
 
         ImGui::BeginChild("##SurfaceProfileContent",
             ImVec2(0.0f, 0.0f),
@@ -57,6 +68,7 @@ namespace gui {
         maxLabelWidth += cp * 2.0f;
 
         ImGuiUtils::SectionHeader("Nominal surface parameters");
+        frozenSectionHelp(m_profileService->getNominalCalcSlot(), hdrActiveIdx);
         ImGui::BeginChild(
             "NominalSurfaceContent",
             ImVec2(0.0f, 0.0f),
@@ -83,6 +95,10 @@ namespace gui {
 
                 ImGui::BeginDisabled(nominalFrozenV);
                 renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                if (nominalFrozenV) {
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        nominalCalcSlotV);
+                }
                 ImGui::EndDisabled();
 
                 if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
@@ -184,6 +200,8 @@ namespace gui {
 
                 if (nominalFrozen) {
                     renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        nominalCalcSlot);
                 }
 
                 ImGui::EndDisabled();
@@ -260,6 +278,7 @@ namespace gui {
         ImGui::EndChild();
 
         ImGuiUtils::SectionHeader("Toleranced surface parameters");
+        frozenSectionHelp(m_profileService->getTolerancedCalcSlot(), hdrActiveIdx);
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
             ImVec2(0.0f, 0.0f),
@@ -286,6 +305,10 @@ namespace gui {
 
                 ImGui::BeginDisabled(tolerancedFrozenV);
                 renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                if (tolerancedFrozenV) {
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        tolerancedCalcSlotV);
+                }
                 ImGui::EndDisabled();
 
                 if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
@@ -387,6 +410,8 @@ namespace gui {
 
                 if (tolerancedFrozen) {
                     renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        tolerancedCalcSlot);
                 }
 
                 ImGui::EndDisabled();

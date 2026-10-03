@@ -33,6 +33,16 @@ namespace {
         return "Orientation angle in degrees relative to the local x axis.";
     }
 
+    // Right-aligned (?) after a section header, visible only while this
+    // section's calculation source is frozen on another slot.
+    void frozenSectionHelp(int calcSlot, int activeIdx) {
+        if (calcSlot < 0 || calcSlot == activeIdx) return;
+        ImGui::SameLine();
+        ImGuiUtils::HelpMarker(
+            "Frozen form: values were captured from the slot where the calculation started. "
+            "Switch target (F6) to edit, or Cancel the running calculation.");
+    }
+
     void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor) {
         auto progress = monitor.getTaskProgress(source);
         if (!progress) return;
@@ -45,6 +55,7 @@ namespace gui {
     void GuiManager::renderSurfaceIrregularityMap() {
         auto& state = m_irregularityMapService->m_windowState;
         const auto& sem = m_graphics.getThemeManager().semantic();
+        const int hdrActiveIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
 
         ImGui::BeginChild("##SurfaceIrregularityMapContent",
             ImVec2(0.0f, 0.0f),
@@ -63,6 +74,7 @@ namespace gui {
         maxLabelWidth += cp * 2.0f;
 
         ImGuiUtils::SectionHeader("Nominal surface parameters");
+        frozenSectionHelp(m_irregularityMapService->getNominalCalcSlot(), hdrActiveIdx);
 
         ImGui::BeginChild(
             "NominalSurfaceContent",
@@ -92,6 +104,10 @@ namespace gui {
 
                 ImGui::BeginDisabled(nominalFrozenV);
                 renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                if (nominalFrozenV) {
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        nominalCalcSlotV);
+                }
                 ImGui::EndDisabled();
 
                 if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
@@ -185,6 +201,8 @@ namespace gui {
 
                 if (nominalFrozen) {
                     renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        nominalCalcSlot);
                 }
 
                 ImGui::EndDisabled();
@@ -247,6 +265,7 @@ namespace gui {
         ImGui::EndChild();
 
         ImGuiUtils::SectionHeader("Toleranced surface parameters");
+        frozenSectionHelp(m_irregularityMapService->getMapCalcSlot(), hdrActiveIdx);
 
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
@@ -371,6 +390,8 @@ namespace gui {
 
                 if (mapFrozen) {
                     renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor);
+                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                        mapCalcSlot);
                 }
 
                 ImGui::EndDisabled();
