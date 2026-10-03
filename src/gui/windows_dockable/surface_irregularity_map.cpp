@@ -123,7 +123,11 @@ namespace gui {
                     auto fileName = optSys.fileName;
                     ImGui::TextUnformatted("Optical system:");
                     ImGui::SameLine();
+                    ImGui::SetNextItemWidth(-(ImGuiUtils::CopyButtonWidth()
+                        + ImGui::GetStyle().ItemSpacing.x));
                     ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+                    ImGui::SameLine();
+                    ImGuiUtils::CopyButton(ICON_FA_COPY "##copy_optical_nominal", fileName.c_str(), sem);
                 }
 
                 ImGui::TextUnformatted("Surface number:");
@@ -300,7 +304,11 @@ namespace gui {
                     auto fileName = optSys.fileName;
                     ImGui::TextUnformatted("Optical system:");
                     ImGui::SameLine();
+                    ImGui::SetNextItemWidth(-(ImGuiUtils::CopyButtonWidth()
+                        + ImGui::GetStyle().ItemSpacing.x));
                     ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+                    ImGui::SameLine();
+                    ImGuiUtils::CopyButton(ICON_FA_COPY "##copy_optical_map", fileName.c_str(), sem);
                 }
 
                 ImGui::TextUnformatted("Surface number:");

@@ -8,6 +8,7 @@
 
 #include "gui/constants.h"
 #include "gui/utils.h"
+#include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
@@ -34,16 +35,16 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (ImGui::Button(ICON_FA_COPY)) {
-            std::string content;
-            for (const auto& entry : logger.getLogs()) {
-                content += entry;
-                content += '\n';
-            }
-            logger.addLog("[GUI] Logs copied to clipboard");
-            ImGui::SetClipboardText(content.c_str());
+        std::string content;
+        for (const auto& entry : logger.getLogs()) {
+            content += entry;
+            content += '\n';
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Copy all log entries to clipboard");
+        if (ImGuiUtils::CopyButton(ICON_FA_COPY "##logs_copy_all", content.c_str(),
+                                   themeManager->semantic(),
+                                   "Copy all log entries to clipboard")) {
+            logger.addLog("[GUI] Logs copied to clipboard");
+        }
 
         ImGui::SameLine();
 

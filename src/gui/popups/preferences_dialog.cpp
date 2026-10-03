@@ -373,18 +373,22 @@ namespace gui {
     void PreferencesDialog::renderSectionFiles() {
         ImGuiUtils::SectionHeader("Files", "Configuration file locations (read-only).");
 
-        auto pathRow = [](const char* label, const char* id, const char* path) {
+        const auto& sem = m_themeManager->semantic();
+        auto pathRow = [&sem](const char* label, const char* inputId, const char* copyId, const char* path) {
             ImGui::TextUnformatted(label);
-            ImGui::SetNextItemWidth(-1.0f);
-            ImGui::InputText(id, const_cast<char*>(path),
+            ImGui::SetNextItemWidth(-(ImGuiUtils::CopyButtonWidth()
+                + ImGui::GetStyle().ItemSpacing.x));
+            ImGui::InputText(inputId, const_cast<char*>(path),
                              static_cast<int>(std::strlen(path)), ImGuiInputTextFlags_ReadOnly);
+            ImGui::SameLine();
+            ImGuiUtils::CopyButton(copyId, path, sem);
             ImGui::Spacing();
         };
 
-        pathRow("ImGui Layout",         "##path_imgui",    app::getImguiIniPath());
-        pathRow("Window Layout",        "##path_window",   app::getWindowStatePath());
-        pathRow("Application Settings", "##path_settings", app::getSettingsJsonPath());
-        pathRow("Log Folder",           "##path_log",      app::getLogFolderPath());
+        pathRow("ImGui Layout",         "##path_imgui",    ICON_FA_COPY "##copy_imgui",    app::getImguiIniPath());
+        pathRow("Window Layout",        "##path_window",   ICON_FA_COPY "##copy_window",   app::getWindowStatePath());
+        pathRow("Application Settings", "##path_settings", ICON_FA_COPY "##copy_settings", app::getSettingsJsonPath());
+        pathRow("Log Folder",           "##path_log",      ICON_FA_COPY "##copy_log",      app::getLogFolderPath());
     }
 
     void PreferencesDialog::renderFooter() {
