@@ -201,6 +201,13 @@ namespace ImGuiUtils {
         ImGui::TextColored(warning, "%s", text);
     }
 
+    /// True while a value clamped at @p clampedAt (ImGui::GetTime()) should keep
+    /// its "adjusted" flash. Self-expiring — no flag to clear, no stale states.
+    inline bool AdjustedFlashActive(double clampedAt, float windowSec = 3.0f) {
+        if (clampedAt <= 0.0) return false;
+        return (ImGui::GetTime() - clampedAt) < static_cast<double>(windowSec);
+    }
+
     /// BeginPopupModal with a taller title bar (extraPadY added to FramePadding.y).
     /// PopStyleVar is called immediately after BeginPopupModal so content is unaffected.
     inline bool BeginPopupModalEx(const char* name, bool* p_open = nullptr,

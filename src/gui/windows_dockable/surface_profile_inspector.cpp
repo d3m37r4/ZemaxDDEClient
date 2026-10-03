@@ -121,47 +121,53 @@ namespace gui {
                 ImGui::TextUnformatted("Surface number:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(
-                    state.nominalSurfaceAdjusted, sem.danger);
+                const bool surfFlash = ImGuiUtils::AdjustedFlashActive(
+                    state.nominalSurfaceAdjustedAt);
+                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(surfFlash, sem.danger);
                 ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
                 if (surfTint) ImGui::PopStyleColor();
                 if (!nominalFrozen && !nominalOnActiveSlot) {
                     const int maxSurf = m_zemaxDDEClient
                         ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0;
-                    state.nominalSurfaceAdjusted = app::ClampWithFeedback(
-                        state.nominalSurfaceIndex, 0, maxSurf);
-                    ImGuiUtils::AdjustedHint(state.nominalSurfaceAdjusted,
+                    if (app::ClampWithFeedback(state.nominalSurfaceIndex, 0, maxSurf))
+                        state.nominalSurfaceAdjustedAt = ImGui::GetTime();
+                    ImGuiUtils::AdjustedHint(surfFlash,
                         std::format("Adjusted to 0-{}", maxSurf).c_str(), sem.warning);
                 }
 
                 ImGui::TextUnformatted("Sampling:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(
-                    state.nominalSamplingAdjusted, sem.danger);
+                const bool sampFlash = ImGuiUtils::AdjustedFlashActive(
+                    state.nominalSamplingAdjustedAt);
+                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(sampFlash, sem.danger);
                 ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
                 if (sampTint) ImGui::PopStyleColor();
-                state.nominalSamplingAdjusted = app::ClampWithFeedback(
-                    state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
-                state.nominalSamplingAdjusted |= app::SnapOddWithFeedback(state.nominalSampling);
+                if (app::ClampWithFeedback(
+                        state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING))
+                    state.nominalSamplingAdjustedAt = ImGui::GetTime();
+                if (app::SnapOddWithFeedback(state.nominalSampling))
+                    state.nominalSamplingAdjustedAt = ImGui::GetTime();
                 app::ClampWithFeedback(state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-                ImGuiUtils::AdjustedHint(state.nominalSamplingAdjusted,
+                ImGuiUtils::AdjustedHint(sampFlash,
                     std::format("Adjusted to {}-{} (odd)",
                         gui::MIN_SAMPLING, gui::MAX_SAMPLING).c_str(), sem.warning);
 
                 ImGui::TextUnformatted("Angle:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool angTint = ImGuiUtils::BeginAdjustedHighlight(
-                    state.nominalAngleAdjusted, sem.danger);
+                const bool angFlash = ImGuiUtils::AdjustedFlashActive(
+                    state.nominalAngleAdjustedAt);
+                const bool angTint = ImGuiUtils::BeginAdjustedHighlight(angFlash, sem.danger);
                 ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
                 if (angTint) ImGui::PopStyleColor();
-                state.nominalAngleAdjusted = app::ClampWithFeedback(state.nominalAngle, -360.0, 360.0);
+                if (app::ClampWithFeedback(state.nominalAngle, -360.0, 360.0))
+                    state.nominalAngleAdjustedAt = ImGui::GetTime();
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
-                ImGuiUtils::AdjustedHint(state.nominalAngleAdjusted,
+                ImGuiUtils::AdjustedHint(angFlash,
                     "Adjusted to -360 - 360", sem.warning);
 
                 ImGuiUtils::SpacingY(0.5f);
@@ -294,48 +300,53 @@ namespace gui {
                 ImGui::TextUnformatted("Surface number:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(
-                    state.tolerancedSurfaceAdjusted, sem.danger);
+                const bool surfFlash = ImGuiUtils::AdjustedFlashActive(
+                    state.tolerancedSurfaceAdjustedAt);
+                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(surfFlash, sem.danger);
                 ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
                 if (surfTint) ImGui::PopStyleColor();
                 if (!tolerancedFrozen && !tolerancedOnActiveSlot) {
                     const int maxSurf = m_zemaxDDEClient
                         ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0;
-                    state.tolerancedSurfaceAdjusted = app::ClampWithFeedback(
-                        state.tolerancedSurfaceIndex, 0, maxSurf);
-                    ImGuiUtils::AdjustedHint(state.tolerancedSurfaceAdjusted,
+                    if (app::ClampWithFeedback(state.tolerancedSurfaceIndex, 0, maxSurf))
+                        state.tolerancedSurfaceAdjustedAt = ImGui::GetTime();
+                    ImGuiUtils::AdjustedHint(surfFlash,
                         std::format("Adjusted to 0-{}", maxSurf).c_str(), sem.warning);
                 }
 
                 ImGui::TextUnformatted("Sampling:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(
-                    state.tolerancedSamplingAdjusted, sem.danger);
+                const bool sampFlash = ImGuiUtils::AdjustedFlashActive(
+                    state.tolerancedSamplingAdjustedAt);
+                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(sampFlash, sem.danger);
                 ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
                 if (sampTint) ImGui::PopStyleColor();
-                state.tolerancedSamplingAdjusted = app::ClampWithFeedback(
-                    state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
-                state.tolerancedSamplingAdjusted |= app::SnapOddWithFeedback(state.tolerancedSampling);
+                if (app::ClampWithFeedback(
+                        state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING))
+                    state.tolerancedSamplingAdjustedAt = ImGui::GetTime();
+                if (app::SnapOddWithFeedback(state.tolerancedSampling))
+                    state.tolerancedSamplingAdjustedAt = ImGui::GetTime();
                 app::ClampWithFeedback(state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-                ImGuiUtils::AdjustedHint(state.tolerancedSamplingAdjusted,
+                ImGuiUtils::AdjustedHint(sampFlash,
                     std::format("Adjusted to {}-{} (odd)",
                         gui::MIN_SAMPLING, gui::MAX_SAMPLING).c_str(), sem.warning);
 
                 ImGui::TextUnformatted("Angle:");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool angTint = ImGuiUtils::BeginAdjustedHighlight(
-                    state.tolerancedAngleAdjusted, sem.danger);
+                const bool angFlash = ImGuiUtils::AdjustedFlashActive(
+                    state.tolerancedAngleAdjustedAt);
+                const bool angTint = ImGuiUtils::BeginAdjustedHighlight(angFlash, sem.danger);
                 ImGui::InputDouble("##toleranced_angle", &state.tolerancedAngle, 1.0, 10.0, "%.2f");
                 if (angTint) ImGui::PopStyleColor();
-                state.tolerancedAngleAdjusted = app::ClampWithFeedback(
-                    state.tolerancedAngle, -360.0, 360.0);
+                if (app::ClampWithFeedback(state.tolerancedAngle, -360.0, 360.0))
+                    state.tolerancedAngleAdjustedAt = ImGui::GetTime();
                 ImGui::SameLine();
                 ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
-                ImGuiUtils::AdjustedHint(state.tolerancedAngleAdjusted,
+                ImGuiUtils::AdjustedHint(angFlash,
                     "Adjusted to -360 - 360", sem.warning);
 
                 ImGuiUtils::SpacingY(0.5f);

@@ -30,15 +30,15 @@ namespace app::services {
         int nominalSampling = 65;
         double nominalAngle = 0.0;
 
-        // Set when the matching input was clamped/snapped on the last edit;
-        // drives the "value adjusted" highlight + hint. Cleared on the next
-        // in-range edit.
-        bool nominalSurfaceAdjusted = false;
-        bool nominalSamplingAdjusted = false;
-        bool nominalAngleAdjusted = false;
-        bool tolerancedSurfaceAdjusted = false;
-        bool tolerancedSamplingAdjusted = false;
-        bool tolerancedAngleAdjusted = false;
+        // ImGui::GetTime() of the last clamp/snap of the matching input (0 = never).
+        // Drives the "value adjusted" flash highlight + hint, visible for a few
+        // seconds, then expires on its own — no stale states.
+        double nominalSurfaceAdjustedAt = 0.0;
+        double nominalSamplingAdjustedAt = 0.0;
+        double nominalAngleAdjustedAt = 0.0;
+        double tolerancedSurfaceAdjustedAt = 0.0;
+        double tolerancedSamplingAdjustedAt = 0.0;
+        double tolerancedAngleAdjustedAt = 0.0;
 
         AxisUnits units;
     };
