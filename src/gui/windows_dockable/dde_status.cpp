@@ -179,13 +179,16 @@ namespace gui {
         if (ImGui::Button(connected ? ICON_FA_PLUG_CIRCLE_XMARK " Disconnect from Zemax" : ICON_FA_PLUG " Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             toggleConnection(logger);
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(connected ? "Disconnect active slot (Ctrl+Shift+D)" : "Connect to Zemax (Ctrl+Shift+C)");
-        }
 
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(4);
         ImGui::PopStyleVar();
+
+        // Tooltip after Pop: it must render in the default text color, not the
+        // white on-accent color pushed for the button above (invisible on Light).
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(connected ? "Disconnect active slot (Ctrl+Shift+D)" : "Connect to Zemax (Ctrl+Shift+C)");
+        }
 
         ImGui::EndChild();
 
