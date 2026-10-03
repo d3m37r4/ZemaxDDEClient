@@ -74,24 +74,6 @@ void DockableWindowsManager::SaveState() {
     out << j.dump(4);
 }
 
-std::vector<WindowID> DockableWindowsManager::GetIDsByCategory(WindowCategory category) const {
-    std::vector<WindowID> result;
-    for (const auto& w : windows_) {
-        if (w.category == category) {
-            result.push_back(w.id);
-        }
-    }
-    std::stable_sort(result.begin(), result.end(), [this](WindowID a, WindowID b) {
-        int orderA = 0, orderB = 0;
-        for (const auto& w : windows_) {
-            if (w.id == a) orderA = w.order;
-            if (w.id == b) orderB = w.order;
-        }
-        return orderA < orderB;
-    });
-    return result;
-}
-
 const char* DockableWindowsManager::GetName(WindowID id) const {
     for (const auto& w : windows_) {
         if (w.id == id) return w.name.c_str();

@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include "gui/constants.h"
+#include "gui/dockable_windows_manager.h"
 #include "gui/utils.h"
 #include "gui/surface_profile_service.h"
 #include "gui/surface_irregularity_map_service.h"
@@ -55,6 +56,8 @@ namespace gui {
             void cycleDdeTarget();
             /// Selects a DDE target slot directly (Alt+1/Alt+2). No-op if empty.
             void selectDdeTarget(int slot);
+            /// Toggles a dockable panel (View menu, Ctrl+1..5). No-op without a window manager.
+            void toggleDockableWindow(WindowID id);
             /// Closes the topmost open dialog, innermost layer first (Esc).
             /// Returns true if anything was closed.
             bool closeTopmostPopup();

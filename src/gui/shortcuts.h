@@ -22,6 +22,9 @@ enum class Key : int {
     Escape,
     Digit1,
     Digit2,
+    Digit3,
+    Digit4,
+    Digit5,
 };
 
 enum Mod : int {
@@ -43,6 +46,11 @@ struct Entry {
 inline constexpr Entry kEntries[] = {
     {"open-zmx", "File", Key::O, Mod_Ctrl, "Ctrl+O", "Open *.ZMX file in Zemax"},
     {"preferences", "File", Key::Comma, Mod_Ctrl, "Ctrl+,", "Open Preferences"},
+    {"view-dde-status", "View", Key::Digit1, Mod_Ctrl, "Ctrl+1", "Toggle DDE Status panel"},
+    {"view-system-info", "View", Key::Digit2, Mod_Ctrl, "Ctrl+2", "Toggle Optical System Information panel"},
+    {"view-profile", "View", Key::Digit3, Mod_Ctrl, "Ctrl+3", "Toggle Surface Profile Inspector panel"},
+    {"view-map", "View", Key::Digit4, Mod_Ctrl, "Ctrl+4", "Toggle Surface Irregularity Map panel"},
+    {"view-logs", "View", Key::Digit5, Mod_Ctrl, "Ctrl+5", "Toggle Logs panel"},
     {"check-updates", "Info", Key::U, Mod_Ctrl, "Ctrl+U", "Check for Updates"},
     {"about", "Info", Key::I, Mod_Ctrl, "Ctrl+I", "Open About dialog"},
     {"shortcuts-help", "Info", Key::F1, Mod_None, "F1", "Keyboard shortcuts help"},

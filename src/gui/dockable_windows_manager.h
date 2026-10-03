@@ -53,8 +53,6 @@ class DockableWindowsManager {
         void LoadState();
         void SaveState();
 
-        std::vector<WindowID> GetIDsByCategory(WindowCategory category) const;
-
         const char* GetName(WindowID id) const;
 
         void RegisterDockableWindows(gui::GuiManager* guiMgr);

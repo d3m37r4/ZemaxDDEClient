@@ -23,6 +23,9 @@ ImGuiKey toImGuiKey(shortcuts::Key key) {
         case Key::Escape: return ImGuiKey_Escape;
         case Key::Digit1: return ImGuiKey_1;
         case Key::Digit2: return ImGuiKey_2;
+        case Key::Digit3: return ImGuiKey_3;
+        case Key::Digit4: return ImGuiKey_4;
+        case Key::Digit5: return ImGuiKey_5;
     }
     return ImGuiKey_None;
 }
@@ -101,6 +104,16 @@ void GuiManager::handleShortcuts() {
         if (m_menuBarController) {
             m_menuBarController->openPreferences();
         }
+    } else if (isChordPressed(shortcuts::Key::Digit1, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::DDEStatus);
+    } else if (isChordPressed(shortcuts::Key::Digit2, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::SystemInfo);
+    } else if (isChordPressed(shortcuts::Key::Digit3, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::SurfaceProfileInspector);
+    } else if (isChordPressed(shortcuts::Key::Digit4, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::SurfaceIrregularityMap);
+    } else if (isChordPressed(shortcuts::Key::Digit5, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::Logs);
     } else if (isChordPressed(shortcuts::Key::U, shortcuts::Mod_Ctrl)) {
         openUpdates();
     } else if (isChordPressed(shortcuts::Key::I, shortcuts::Mod_Ctrl)) {
@@ -202,6 +215,13 @@ void GuiManager::selectDdeTarget(int slot) {
     if (conn && conn->isConnected()) {
         m_ddeConnectionManager->setActiveConnection(slot);
     }
+}
+
+void GuiManager::toggleDockableWindow(WindowID id) {
+    if (!m_pWndMgr) {
+        return;
+    }
+    m_pWndMgr->SetVisible(id, !m_pWndMgr->IsVisible(id));
 }
 
 bool GuiManager::closeTopmostPopup() {
