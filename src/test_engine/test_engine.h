@@ -91,6 +91,8 @@ public:
 private:
     ImGuiTestEngine* m_engine = nullptr;
     bool m_runTests = false;
+    bool m_showEngineUi = false;
+    std::string m_testFilter = "all";
 };
 
 namespace app::testing {

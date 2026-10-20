@@ -1,4 +1,5 @@
 #include "test_engine/test_engine.h"
+#include "test_engine/test_capture.h"
 #include "test_engine/test_cli.h"
 
 #include "imgui_test_engine/imgui_te_engine.h"
@@ -31,6 +32,16 @@ void TestEngine::start(const app::testing::TestCliOptions& options) {
     test_io.ConfigVerboseLevelOnError = ImGuiTestVerboseLevel_Debug;
     test_io.ConfigRunSpeed = ImGuiTestRunSpeed_Fast;
     test_io.ConfigStopOnError = false;
+    // Mirror the log to the console so a failing test can be diagnosed
+    // without opening the Test Engine UI.
+    test_io.ConfigLogToTTY = true;
+    // Screen capture (screenshots, videos) needs a callback that reads the
+    // rendered frame back from the OpenGL framebuffer.
+    test_io.ScreenCaptureFunc = &app::testing::captureScreenRegion;
+
+    m_runTests = options.runTests;
+    m_testFilter = options.filter;
+    m_showEngineUi = options.showEngineUi;
 
     if (!options.resultsFile.empty()) {
         test_io.ExportResultsFilename = options.resultsFile.c_str();
@@ -41,13 +52,6 @@ void TestEngine::start(const app::testing::TestCliOptions& options) {
     // (NewFramePre/Post, EndFramePre, RenderPre/Post) with the context.
     ImGuiTestEngine_Start(m_engine, ImGui::GetCurrentContext());
     ImGuiTestEngine_InstallDefaultCrashHandler();
-
-    if (options.runTests) {
-        ImGuiTestEngine_QueueTests(m_engine, ImGuiTestGroup_Unknown, options.filter.c_str(),
-                                   ImGuiTestRunFlags_RunFromCommandLine);
-        m_runTests = true;
-        std::fprintf(stdout, "[TEST] Queued tests matching '%s'\n", options.filter.c_str());
-    }
 }
 
 void TestEngine::registerTests(app::testing::TestAppContext& app) {
@@ -55,6 +59,14 @@ void TestEngine::registerTests(app::testing::TestAppContext& app) {
         return;
     }
     app::testing::registerApplicationTests(m_engine, &app);
+
+    // Queue the tests only after they have been registered, otherwise the
+    // queue would be empty when ImGuiTestEngine_QueueTests() runs.
+    if (m_runTests) {
+        ImGuiTestEngine_QueueTests(m_engine, ImGuiTestGroup_Unknown, m_testFilter.c_str(),
+                                   ImGuiTestRunFlags_RunFromCommandLine);
+        std::fprintf(stdout, "[TEST] Queued tests matching '%s'\n", m_testFilter.c_str());
+    }
 }
 
 void TestEngine::stop() {
@@ -73,7 +85,7 @@ void TestEngine::destroy() {
 }
 
 void TestEngine::renderUi() {
-    if (!m_engine) {
+    if (!m_engine || !m_showEngineUi) {
         return;
     }
     ImGuiTestEngine_ShowTestEngineWindows(m_engine, nullptr);

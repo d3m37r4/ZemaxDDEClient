@@ -179,6 +179,7 @@ if(ZEMAX_ENABLE_TEST_ENGINE)
         ${TE_DIR}/imgui_test_engine/imgui_capture_tool.cpp
         ${SRC_DIR}/test_engine/test_engine.cpp
         ${SRC_DIR}/test_engine/test_cli.cpp
+        ${SRC_DIR}/test_engine/test_capture.cpp
         ${SRC_DIR}/test_engine/test_profile.cpp
         ${SRC_DIR}/test_engine/tests/test_registry.cpp
         ${SRC_DIR}/test_engine/tests/test_smoke.cpp
@@ -220,6 +221,7 @@ if(ZEMAX_ENABLE_TEST_ENGINE)
         ZEMAX_ENABLE_TEST_ENGINE
         IMGUI_ENABLE_TEST_ENGINE
         IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL=1
+        IMGUI_TEST_ENGINE_ENABLE_CAPTURE=1
     )
 endif()
 

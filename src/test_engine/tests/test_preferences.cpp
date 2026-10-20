@@ -8,6 +8,11 @@
 //             like Cancel.
 //
 // These tests drive the real dialog through the real UI.
+//
+// Note: picking a theme radio button applies the theme immediately (live
+// preview) but does not write it to the settings; only "Save" persists it.
+// The tests therefore check the applied theme for the live preview and the
+// persisted mode after saving.
 
 #include "test_engine/tests/test_common.h"
 
@@ -15,27 +20,13 @@ namespace app::testing {
 
 namespace {
 
-const char* kLightRadio = ICON_FA_SUN " Light";
-const char* kDarkRadio  = ICON_FA_MOON " Dark";
-
-app::ThemeMode oppositeTheme(app::ThemeMode current) {
-    switch (current) {
-        case app::ThemeMode::Light: return app::ThemeMode::Dark;
-        case app::ThemeMode::Dark:  return app::ThemeMode::Light;
-        default:                     return app::ThemeMode::Dark;
-    }
-}
-
-// Open the Preferences dialog through the File menu.
-void openPreferences(ImGuiTestContext* ctx) {
-    ctx->ItemClick(menuPath(ICON_FA_FOLDER_OPEN " File", ICON_FA_GEAR " Preferences").c_str());
-    ctx->Yield();
-}
-
-// Pick the theme radio button that differs from the current mode.
-void pickOppositeTheme(ImGuiTestContext* ctx, app::ThemeMode current) {
-    ctx->ItemClick(current == app::ThemeMode::Light ? kDarkRadio : kLightRadio);
-    ctx->Yield();
+// Pick the theme radio button that differs from the currently applied theme
+// and return the mode that was selected.
+app::ThemeMode pickOppositeTheme(ImGuiTestContext* ctx, TestAppContext* app) {
+    const bool isLight = appliedTheme(app) == kThemeNameLight;
+    const app::ThemeMode mode = isLight ? app::ThemeMode::Dark : app::ThemeMode::Light;
+    clickThemeRadio(ctx, mode);
+    return mode;
 }
 
 } // namespace
@@ -46,15 +37,20 @@ void registerPreferencesTests(ImGuiTestEngine* engine, TestAppContext* app) {
     test->UserData = app;
     test->TestFunc = [](ImGuiTestContext* ctx) {
         TestAppContext* a = appContext(ctx);
-        const app::ThemeMode before = a->gui->getSettingsManager().current().appearance.themeMode;
+        const std::string themeBefore = appliedTheme(a);
+        const app::ThemeMode modeBefore = a->gui->getSettingsManager().current().appearance.themeMode;
 
-        openPreferences(ctx);
-        pickOppositeTheme(ctx, before);
+        openAppearanceSection(ctx, a);
+        const app::ThemeMode selected = pickOppositeTheme(ctx, a);
+        IM_CHECK_NE(appliedTheme(a), themeBefore);
 
-        ctx->ItemClick(ICON_FA_XMARK " Cancel");
-        ctx->Yield();
+        clickDialogButton(ctx, "Preferences", ICON_FA_XMARK " Cancel");
 
-        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, before);
+        // The dialog closed and the working copy was discarded.
+        IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
+        IM_CHECK_EQ(appliedTheme(a), themeBefore);
+        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, modeBefore);
+        IM_CHECK_NE(selected, modeBefore);
     };
 
     // X (the close button of the popup) behaves like Cancel.
@@ -62,16 +58,19 @@ void registerPreferencesTests(ImGuiTestEngine* engine, TestAppContext* app) {
     test->UserData = app;
     test->TestFunc = [](ImGuiTestContext* ctx) {
         TestAppContext* a = appContext(ctx);
-        const app::ThemeMode before = a->gui->getSettingsManager().current().appearance.themeMode;
+        const std::string themeBefore = appliedTheme(a);
+        const app::ThemeMode modeBefore = a->gui->getSettingsManager().current().appearance.themeMode;
 
-        openPreferences(ctx);
-        pickOppositeTheme(ctx, before);
+        openAppearanceSection(ctx, a);
+        pickOppositeTheme(ctx, a);
+        IM_CHECK_NE(appliedTheme(a), themeBefore);
 
-        // The X of a modal popup is the item registered under the popup name.
-        ctx->ItemClick("//Preferences/Close");
+        ctx->WindowClose("//Preferences");
         ctx->Yield();
 
-        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, before);
+        IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
+        IM_CHECK_EQ(appliedTheme(a), themeBefore);
+        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, modeBefore);
     };
 
     // Esc dismisses the dialog and discards the changes.
@@ -79,39 +78,43 @@ void registerPreferencesTests(ImGuiTestEngine* engine, TestAppContext* app) {
     test->UserData = app;
     test->TestFunc = [](ImGuiTestContext* ctx) {
         TestAppContext* a = appContext(ctx);
-        const app::ThemeMode before = a->gui->getSettingsManager().current().appearance.themeMode;
+        const std::string themeBefore = appliedTheme(a);
+        const app::ThemeMode modeBefore = a->gui->getSettingsManager().current().appearance.themeMode;
 
-        openPreferences(ctx);
-        pickOppositeTheme(ctx, before);
+        openAppearanceSection(ctx, a);
+        pickOppositeTheme(ctx, a);
+        IM_CHECK_NE(appliedTheme(a), themeBefore);
 
         ctx->KeyPress(ImGuiKey_Escape);
         ctx->Yield();
 
-        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, before);
+        IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
+        IM_CHECK_EQ(appliedTheme(a), themeBefore);
+        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, modeBefore);
     };
 
-    // Save applies the changes.
+    // Save applies and persists the changes.
     test = IM_REGISTER_TEST(engine, test_categories::kPreferences, "preferences_save_applies_changes");
     test->UserData = app;
     test->TestFunc = [](ImGuiTestContext* ctx) {
         TestAppContext* a = appContext(ctx);
-        const app::ThemeMode before = a->gui->getSettingsManager().current().appearance.themeMode;
-        const app::ThemeMode target = oppositeTheme(before);
+        const app::ThemeMode modeBefore = a->gui->getSettingsManager().current().appearance.themeMode;
 
-        openPreferences(ctx);
-        pickOppositeTheme(ctx, before);
+        openAppearanceSection(ctx, a);
+        const app::ThemeMode selected = pickOppositeTheme(ctx, a);
 
-        ctx->ItemClick(ICON_FA_FLOPPY_DISK " Save");
-        ctx->Yield();
+        clickDialogButton(ctx, "Preferences", ICON_FA_FLOPPY_DISK " Save");
 
-        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, target);
+        // The dialog closed and the new mode was persisted.
+        IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
+        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, selected);
+        IM_CHECK_NE(selected, modeBefore);
 
         // Restore the original value so the following tests start clean.
-        openPreferences(ctx);
-        pickOppositeTheme(ctx, target);
-        ctx->ItemClick(ICON_FA_FLOPPY_DISK " Save");
-        ctx->Yield();
-        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, before);
+        openAppearanceSection(ctx, a);
+        clickThemeRadio(ctx, modeBefore);
+        clickDialogButton(ctx, "Preferences", ICON_FA_FLOPPY_DISK " Save");
+        IM_CHECK_EQ(a->gui->getSettingsManager().current().appearance.themeMode, modeBefore);
     };
 }
 

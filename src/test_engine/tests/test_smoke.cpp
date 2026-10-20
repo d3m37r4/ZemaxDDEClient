@@ -65,8 +65,7 @@ void registerSmokeTests(ImGuiTestEngine* engine, TestAppContext* app) {
 
         // Open the Logs panel and make sure its window exists.
         if (!a->windows->IsVisible(WindowID::Logs)) {
-            ctx->ItemClick(menuPath(ICON_FA_EYE " View", "Logs").c_str());
-            ctx->Yield();
+            clickMenuItem(ctx, ICON_FA_EYE " View", "Logs");
         }
         IM_CHECK(a->windows->IsVisible(WindowID::Logs));
 
@@ -84,7 +83,7 @@ void registerSmokeTests(ImGuiTestEngine* engine, TestAppContext* app) {
 
         for (const PanelEntry& panel : kPanels) {
             if (!a->windows->IsVisible(panel.id)) {
-                ctx->ItemClick(menuPath(ICON_FA_EYE " View", panel.name).c_str());
+                clickMenuItem(ctx, ICON_FA_EYE " View", panel.name);
             }
             IM_CHECK(a->windows->IsVisible(panel.id));
             // Give the window a frame to appear.

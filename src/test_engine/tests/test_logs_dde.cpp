@@ -15,12 +15,11 @@ void registerLogsDdeTests(ImGuiTestEngine* engine, TestAppContext* app) {
         TestAppContext* a = appContext(ctx);
 
         if (!a->windows->IsVisible(WindowID::Logs)) {
-            ctx->ItemClick(menuPath(ICON_FA_EYE " View", "Logs").c_str());
-            ctx->Yield();
+            clickMenuItem(ctx, ICON_FA_EYE " View", "Logs");
         }
         IM_CHECK(a->windows->IsVisible(WindowID::Logs));
 
-        // The window exists and has content.
+        // The window exists.
         ImGuiTestItemInfo logs = ctx->WindowInfo("//Logs");
         IM_CHECK(logs.ID != 0);
     };
@@ -32,8 +31,7 @@ void registerLogsDdeTests(ImGuiTestEngine* engine, TestAppContext* app) {
         TestAppContext* a = appContext(ctx);
 
         if (!a->windows->IsVisible(WindowID::DDEStatus)) {
-            ctx->ItemClick(menuPath(ICON_FA_EYE " View", "DDE Status").c_str());
-            ctx->Yield();
+            clickMenuItem(ctx, ICON_FA_EYE " View", "DDE Status");
         }
         IM_CHECK(a->windows->IsVisible(WindowID::DDEStatus));
 
@@ -41,21 +39,24 @@ void registerLogsDdeTests(ImGuiTestEngine* engine, TestAppContext* app) {
         IM_CHECK(status.ID != 0);
     };
 
-    // The DDE menu shows the connect entry.
-    test = IM_REGISTER_TEST(engine, test_categories::kLogsDde, "dde_menu_connect_entry_present");
+    // The DDE menu offers connecting to Zemax; the dialog opens and closes.
+    test = IM_REGISTER_TEST(engine, test_categories::kLogsDde, "dde_connect_dialog_opens_and_closes");
     test->UserData = app;
     test->TestFunc = [](ImGuiTestContext* ctx) {
-        // "Connect to Zemax..." is always available (a free slot exists).
-        ImGuiTestItemInfo connect =
-            ctx->ItemInfo(menuPath(ICON_FA_COMPUTER " DDE", "Connect to Zemax...").c_str());
-        IM_CHECK(connect.ID != 0);
+        TestAppContext* a = appContext(ctx);
 
-        // "Disconnect Active Slot" exists but is not checked while nothing is
-        // connected.
-        ImGuiTestItemInfo disconnect =
-            ctx->ItemInfo(menuPath(ICON_FA_COMPUTER " DDE", "Disconnect Active Slot").c_str());
-        IM_CHECK(disconnect.ID != 0);
-        IM_CHECK((disconnect.StatusFlags & ImGuiItemStatusFlags_Checked) == 0);
+        // The connect popup is rendered by the DDE Status panel, so the panel
+        // has to be visible.
+        if (!a->windows->IsVisible(WindowID::DDEStatus)) {
+            clickMenuItem(ctx, ICON_FA_EYE " View", "DDE Status");
+        }
+
+        clickMenuItem(ctx, ICON_FA_COMPUTER " DDE", "Connect to Zemax...");
+        IM_CHECK(a->gui->isAnyModalOpen());
+
+        ctx->KeyPress(ImGuiKey_Escape);
+        ctx->Yield();
+        IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
     };
 }
 

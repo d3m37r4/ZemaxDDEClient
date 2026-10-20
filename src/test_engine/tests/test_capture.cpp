@@ -1,9 +1,12 @@
 // Screenshot capture of the application panels.
 //
-// The artifacts are meant for the README and for release notes, so they are
-// written to a directory next to the executable (or to the path given with
-// ZEMAX_TEST_SCREENSHOT_DIR). Video recording additionally requires ffmpeg
-// and is therefore optional.
+// The artifacts are meant for the README and for release notes, so each dock
+// panel is captured on its own: the capture tool hides the other windows, which
+// yields a clean image per panel.
+//
+// Files are written to <ZEMAX_TEST_SCREENSHOT_DIR> (or "output/captures" when
+// the variable is not set). Video recording additionally requires ffmpeg and is
+// therefore optional.
 
 #include "test_engine/tests/test_common.h"
 
@@ -21,39 +24,42 @@ std::string screenshotDir() {
             return env;
         }
     }
-    return "test_screenshots";
+    return "output/captures";
 }
 
-void captureScreenshot(ImGuiTestContext* ctx, const char* name) {
-    std::filesystem::path dir(screenshotDir());
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-
+// Capture a single window; the capture tool hides every other window.
+void captureWindow(ImGuiTestContext* ctx, const char* windowName) {
     ctx->CaptureReset();
     ctx->CaptureSetExtension(".png");
-    // Capture the whole application window (all visible panels).
-    ctx->CaptureScreenshot(ImGuiCaptureFlags_IncludeOtherWindows | ImGuiCaptureFlags_IncludePopups);
+    ctx->CaptureScreenshotWindow(windowName);
     ctx->Yield();
 }
 
 } // namespace
 
 void registerCaptureTests(ImGuiTestEngine* engine, TestAppContext* app) {
-    // Capture a screenshot with every dock panel visible.
+    // Capture a screenshot of every dock panel.
     ImGuiTest* test = IM_REGISTER_TEST(engine, test_categories::kCapture, "capture_panels");
     test->UserData = app;
     test->TestFunc = [](ImGuiTestContext* ctx) {
         TestAppContext* a = appContext(ctx);
 
-        // Make all panels visible so the screenshot shows the full UI.
+        std::filesystem::path dir(screenshotDir());
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+
+        // Make all panels visible so that each one can be captured.
         for (const auto& entry : DockableWindows) {
             if (!a->windows->IsVisible(entry.id)) {
-                ctx->ItemClick(menuPath(ICON_FA_EYE " View", entry.name).c_str());
+                clickMenuItem(ctx, ICON_FA_EYE " View", entry.name);
             }
         }
         ctx->Yield();
 
-        captureScreenshot(ctx, "all_panels");
+        for (const auto& entry : DockableWindows) {
+            IM_CHECK(a->windows->IsVisible(entry.id));
+            captureWindow(ctx, entry.name);
+        }
     };
 }
 
