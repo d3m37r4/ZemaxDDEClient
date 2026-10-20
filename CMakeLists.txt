@@ -17,6 +17,7 @@ set(IMPLOT_DIR "${SRC_DIR}/lib/implot")
 set(IMPLOT3D_DIR "${SRC_DIR}/lib/implot3d")
 set(NFD_DIR "${SRC_DIR}/lib/nfd")
 set(JSON_DIR "${SRC_DIR}/lib/json")
+set(TE_DIR "${SRC_DIR}/lib/imgui_test_engine")
 
 # MSYS2 paths (MinGW)
 set(MINGW_ROOT "C:/msys64" CACHE STRING "MSYS2 MinGW root directory")
@@ -159,6 +160,36 @@ list(APPEND SOURCES
     ${CMAKE_BINARY_DIR}/version.rc
 )
 
+# Dear ImGui Test Engine (GUI automation / automated testing).
+# Opt-in: when OFF (the default) the engine sources are not compiled and the
+# IMGUI_ENABLE_TEST_ENGINE define is not set, so the shipped release binary is
+# byte-for-byte identical to a build without this option.
+# Build with: ./build.sh test
+option(ZEMAX_ENABLE_TEST_ENGINE "Compile the Dear ImGui Test Engine into the app" OFF)
+
+if(ZEMAX_ENABLE_TEST_ENGINE)
+    list(APPEND SOURCES
+        ${TE_DIR}/imgui_test_engine/imgui_te_context.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_te_coroutine.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_te_engine.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_te_exporters.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_te_perftool.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_te_ui.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_te_utils.cpp
+        ${TE_DIR}/imgui_test_engine/imgui_capture_tool.cpp
+        ${SRC_DIR}/test_engine/test_engine.cpp
+        ${SRC_DIR}/test_engine/test_cli.cpp
+        ${SRC_DIR}/test_engine/test_profile.cpp
+        ${SRC_DIR}/test_engine/tests/test_registry.cpp
+        ${SRC_DIR}/test_engine/tests/test_smoke.cpp
+        ${SRC_DIR}/test_engine/tests/test_preferences.cpp
+        ${SRC_DIR}/test_engine/tests/test_dialogs.cpp
+        ${SRC_DIR}/test_engine/tests/test_logs_dde.cpp
+        ${SRC_DIR}/test_engine/tests/test_theme.cpp
+        ${SRC_DIR}/test_engine/tests/test_capture.cpp
+    )
+endif()
+
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
@@ -176,6 +207,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${JSON_DIR}/single_include
     ${MINGW_INCLUDE}
 )
+
+if(ZEMAX_ENABLE_TEST_ENGINE)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${TE_DIR}
+        ${TE_DIR}/imgui_test_engine
+    )
+    # IMGUI_ENABLE_TEST_ENGINE must be set for every translation unit that
+    # includes imgui_internal.h (it adds fields to ImGuiContext), otherwise
+    # the structures would disagree between translation units.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        ZEMAX_ENABLE_TEST_ENGINE
+        IMGUI_ENABLE_TEST_ENGINE
+        IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL=1
+    )
+endif()
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE

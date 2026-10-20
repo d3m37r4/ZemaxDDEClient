@@ -15,6 +15,11 @@ namespace {
     std::string windowStatePath;
     std::string settingsJsonPath;
     std::string logFolderPath;
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    // When non-empty, every persisted file lives in this directory instead of
+    // the default location. Set by the GUI test harness (see setConfigDirOverride).
+    std::string configDirOverride;
+#endif
 
     const char* getLocalAppDataPath() {
         static std::string path;
@@ -38,6 +43,11 @@ namespace {
     }
 
     std::string resolvePath(const char* filename) {
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+        if (!configDirOverride.empty()) {
+            return configDirOverride + "\\" + std::string(filename);
+        }
+#endif
         #ifdef APP_PRODUCTION_BUILD
         std::string basePath = getLocalAppDataPath();
         if (!basePath.empty()) {
@@ -51,6 +61,17 @@ namespace {
 }
 
 namespace app {
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    void setConfigDirOverride(const std::string& dir) {
+        configDirOverride = dir;
+        // Drop the cached paths so the override takes effect.
+        imguiIniPath.clear();
+        windowStatePath.clear();
+        settingsJsonPath.clear();
+        logFolderPath.clear();
+    }
+#endif
+
     const char* getImguiIniPath() {
         if (imguiIniPath.empty()) {
             imguiIniPath = resolvePath(IMGUI_INI_FILENAME);
@@ -74,9 +95,16 @@ namespace app {
 
     const char* getLogFolderPath() {
         if (logFolderPath.empty()) {
-            std::string basePath = getLocalAppDataPath();
-            if (!basePath.empty()) {
-                logFolderPath = basePath + "\\logs";
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+            if (!configDirOverride.empty()) {
+                logFolderPath = configDirOverride + "\\logs";
+            } else
+#endif
+            {
+                std::string basePath = getLocalAppDataPath();
+                if (!basePath.empty()) {
+                    logFolderPath = basePath + "\\logs";
+                }
             }
         }
         return logFolderPath.c_str();

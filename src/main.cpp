@@ -6,10 +6,29 @@
 #include "app/app.h"
 #include "gui/dockable_windows_manager.h"
 
-int main() {
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+#include "test_engine/test_cli.h"
+#include "test_engine/test_engine.h"
+#include "test_engine/test_profile.h"
+#endif
+
+int main(int argc, char** argv) {
     Logger logger;
 
     logger.addLog("[APP] Application started");
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    const app::testing::TestCliOptions testOptions = app::testing::parseTestCliOptions(argc, argv);
+    if (testOptions.isTestMode()) {
+        // Redirect every persisted file into a throw-away directory so a test
+        // run cannot touch the user's real profile.
+        if (app::testing::useIsolatedTestProfile()) {
+            logger.addLog("[TEST] Using isolated profile: " + app::testing::isolatedProfilePath());
+        } else {
+            logger.addLog("[TEST] WARNING: could not create an isolated profile, real config files may be modified");
+        }
+    }
+#endif
 
     auto ctx = App::initialize(logger);
     if (!ctx) {
@@ -34,6 +53,20 @@ int main() {
         menuBar->setWindowManager(&wndMgr);
     }
 
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    // The test engine must be started after ImGui::CreateContext() (done
+    // inside GuiManager::initialize()).
+    TestEngine testEngine;
+    if (testOptions.isTestMode()) {
+        testEngine.start(testOptions);
+        app::testing::TestAppContext testAppContext;
+        testAppContext.gui = ctx->gui.get();
+        testAppContext.windows = &wndMgr;
+        testEngine.registerTests(testAppContext);
+        ctx->gui->setTestEngine(&testEngine);
+    }
+#endif
+
     logger.addLog("[APP] Main loop started");
 
     while (!ctx->gui->shouldClose()) {
@@ -41,13 +74,48 @@ int main() {
 
         ctx->gui->handleShortcuts();
         ctx->gui->render();
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+        testEngine.preSwap();
+#endif
         glfwSwapBuffers(ctx->glfwWindow);
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+        testEngine.postSwap();
+
+        // A test run ends by itself once the queue has drained.
+        if (testEngine.isTestRunFinished()) {
+            logger.addLog("[TEST] Test run finished");
+            break;
+        }
+#endif
     }
 
     logger.addLog("[APP] Main loop ended");
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    // Stop the engine before the ImGui context is destroyed, and destroy the
+    // engine context afterwards (the engine flushes its .ini data then).
+    testEngine.stop();
+#endif
+
     ctx->gui->getSettingsManager().saveToFile();
     wndMgr.SaveState();
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    if (testOptions.isTestMode()) {
+        testEngine.printResultSummary();
+    }
+#endif
+
     App::shutdown(*ctx);
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    testEngine.destroy();
+    if (testOptions.isTestMode()) {
+        app::testing::cleanupIsolatedTestProfile();
+        return testEngine.exitCode();
+    }
+#endif
 
     logger.addLog("[APP] Application terminated");
     return 0;

@@ -10,6 +10,10 @@
 #include "windows_dockable/dde_status.h"
 #include "logger/logger.h"
 
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+#include "test_engine/test_engine.h"
+#endif
+
 namespace gui {
     GuiManager::GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger)
 : m_glfwWindow(glfwWindow)
@@ -271,6 +275,14 @@ void GuiManager::render() {
     renderConnectionLostPopup();
 
     m_uiOpMonitor.renderGlobalStatusBar();
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+    // The Test Engine UI must be rendered inside the ImGui frame, after the
+    // application UI and before ImGui::Render().
+    if (m_testEngine) {
+        m_testEngine->renderUi();
+    }
+#endif
 
     m_graphics.endFrame();
 }

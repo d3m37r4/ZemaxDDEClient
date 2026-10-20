@@ -28,6 +28,10 @@ class DockableWindowsManager;
 
 class Logger;
 
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+class TestEngine;
+#endif
+
 namespace gui {
     class GuiManager {
         public:
@@ -77,6 +81,13 @@ namespace gui {
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+            /// Attaches the Dear ImGui Test Engine so its UI is rendered inside
+            /// the application frame. Only available in test-enabled builds.
+            void setTestEngine(TestEngine* engine) { m_testEngine = engine; }
+            TestEngine* getTestEngine() const { return m_testEngine; }
+#endif
+
             template<typename Func>
             void renderToolbarWindow(const char* title, bool* open, Func content) {
                 ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
@@ -121,5 +132,9 @@ namespace gui {
             UiOperationMonitor m_uiOpMonitor;
             unsigned int m_frameCount = 0;
             int m_pendingDisconnectIndex = -1;
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+            TestEngine* m_testEngine = nullptr;
+#endif
     };
 }
