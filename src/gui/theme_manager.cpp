@@ -14,7 +14,7 @@ ThemeData ThemeData::CreateThemeLight() {
     ThemeData t;
     t.name    = std::string{kThemeNameLight};
     t.isLight = true;
-    t.clearColor = col(232, 234, 237);  // #E8EAED (canvas)
+    t.clearColor = col(242, 243, 249);  // #F2F3F9 (canvas)
 
     // The single accent color (dark counterpart of the cyan accent).
     constexpr int kAccentR = 27, kAccentG = 94, kAccentB = 158;   // #1b5e9e
@@ -26,7 +26,7 @@ ThemeData ThemeData::CreateThemeLight() {
     t.semantic.warning = col(138, 90, 0);         // #8a5a00
     t.semantic.danger  = col(179, 57, 46);        // #b3392e
     t.semantic.info    = accent();                 // #1b5e9e (accent)
-    t.semantic.muted   = col(95, 102, 112);       // #5f6670
+    t.semantic.muted   = col(85,  92,  104);       // #555c68
 
     t.semantic.successButton       = col(53, 112, 58);
     t.semantic.successButtonHover  = col(47, 102, 52);
@@ -39,45 +39,47 @@ ThemeData ThemeData::CreateThemeLight() {
     ImVec4* c = t.imguiColors;
 
     // Surface ladder (see DESIGN.md). Every interactive element shares the
-    // "control" color, so the whole theme stays at four neutrals:
-    //   canvas #E8EAED -> surface #FFFFFF -> control #F1F2F4 -> hover #E3E5E9
+    // "control" color, so the whole theme stays at four neutrals. The light
+    // theme follows the reference palette: cool periwinkle greys that get
+    // deeper from the page towards the widgets, no pure white anywhere.
+    //   canvas #F2F3F9 -> surface #E7ECF6 -> control #DFE6F3 -> hover #D3DAEC
     c[ImGuiCol_Text]                 = col(36,  39,  44);   // #24272c
-    c[ImGuiCol_TextDisabled]         = col(95, 102, 112);  // #5f6670
+    c[ImGuiCol_TextDisabled]         = col(85,  92,  104);  // #555c68
 
-    c[ImGuiCol_WindowBg]             = col(232, 234, 237);  // #e8eaed canvas
-    c[ImGuiCol_ChildBg]              = col(255, 255, 255);  // #ffffff surface
-    c[ImGuiCol_PopupBg]              = col(255, 255, 255);  // #ffffff surface
-    c[ImGuiCol_MenuBarBg]            = col(232, 234, 237);  // canvas
+    c[ImGuiCol_WindowBg]             = col(242, 243, 249);  // #f2f3f9 canvas
+    c[ImGuiCol_ChildBg]              = col(231, 236, 246);  // #e7ecf6 surface
+    c[ImGuiCol_PopupBg]              = col(231, 236, 246);  // #e7ecf6 surface
+    c[ImGuiCol_MenuBarBg]            = col(242, 243, 249);  // canvas
 
-    c[ImGuiCol_Border]               = col(210, 214, 219);  // #d2d6db hairline
+    c[ImGuiCol_Border]               = col(201, 210, 228);  // #c9d2e4 hairline
     c[ImGuiCol_BorderShadow]         = col(0,   0,   0,   15);
 
-    c[ImGuiCol_FrameBg]              = col(241, 242, 244);  // #f1f2f4 control
-    c[ImGuiCol_FrameBgHovered]       = col(227, 229, 233);  // #e3e5e9 hover
-    c[ImGuiCol_FrameBgActive]        = col(227, 229, 233);  // #e3e5e9 hover
+    c[ImGuiCol_FrameBg]              = col(223, 230, 243);  // #dfe6f3 control
+    c[ImGuiCol_FrameBgHovered]       = col(211, 218, 236);  // #d3daec hover
+    c[ImGuiCol_FrameBgActive]        = col(211, 218, 236);  // #d3daec hover
 
-    c[ImGuiCol_TitleBg]              = col(232, 234, 237);  // tab strip = canvas
-    c[ImGuiCol_TitleBgActive]        = col(232, 234, 237);
-    c[ImGuiCol_TitleBgCollapsed]     = col(232, 234, 237);  // canvas
+    c[ImGuiCol_TitleBg]              = col(242, 243, 249);  // tab strip = canvas
+    c[ImGuiCol_TitleBgActive]        = col(242, 243, 249);
+    c[ImGuiCol_TitleBgCollapsed]     = col(242, 243, 249);  // canvas
 
     c[ImGuiCol_ScrollbarBg]          = col(0,   0,   0,   0);  // transparent: no gutter
-    c[ImGuiCol_ScrollbarGrab]        = col(193, 198, 204);
-    c[ImGuiCol_ScrollbarGrabHovered] = col(156, 163, 175);
-    c[ImGuiCol_ScrollbarGrabActive]  = col(156, 163, 175);
+    c[ImGuiCol_ScrollbarGrab]        = col(201, 210, 228);  // #c9d2e4 hairline
+    c[ImGuiCol_ScrollbarGrabHovered] = col(169, 181, 206);  // #a9b5ce
+    c[ImGuiCol_ScrollbarGrabActive]  = col(169, 181, 206);
 
     c[ImGuiCol_CheckMark]            = accent();
     c[ImGuiCol_SliderGrab]           = accent();
     c[ImGuiCol_SliderGrabActive]     = accentLight();
     c[ImGuiCol_InputTextCursor]      = accent();
 
-    c[ImGuiCol_Button]               = col(241, 242, 244);  // #f1f2f4 control
-    c[ImGuiCol_ButtonHovered]        = col(227, 229, 233);  // #e3e5e9 hover
-    c[ImGuiCol_ButtonActive]         = col(255, 255, 255);  // surface: pressed sinks
+    c[ImGuiCol_Button]               = col(223, 230, 243);  // #dfe6f3 control
+    c[ImGuiCol_ButtonHovered]        = col(211, 218, 236);  // #d3daec hover
+    c[ImGuiCol_ButtonActive]         = col(242, 243, 249);  // canvas: pressed sinks
 
-    c[ImGuiCol_Header]               = col(241, 242, 244);  // #f1f2f4 control
+    c[ImGuiCol_Header]               = col(223, 230, 243);  // #dfe6f3 control
     c[ImGuiCol_HeaderHovered]        = accent(40);   // accent @16%
     c[ImGuiCol_HeaderActive]         = accent(80);   // accent @31%
-    c[ImGuiCol_Separator]            = col(210, 214, 219);  // #d2d6db hairline
+    c[ImGuiCol_Separator]            = col(201, 210, 228);  // #c9d2e4 hairline
     c[ImGuiCol_SeparatorHovered]     = accent();
     c[ImGuiCol_SeparatorActive]      = accent();
 
@@ -85,16 +87,18 @@ ThemeData ThemeData::CreateThemeLight() {
     c[ImGuiCol_ResizeGripHovered]    = accent(110);
     c[ImGuiCol_ResizeGripActive]     = accent(170);
 
-    c[ImGuiCol_Tab]                  = col(241, 242, 244);  // #f1f2f4 control
-    c[ImGuiCol_TabHovered]           = col(227, 229, 233);  // #e3e5e9 hover
-    c[ImGuiCol_TabSelected]          = col(255, 255, 255);  // #ffffff surface
+    // The active tab carries the accent tint, like the highlighted row of the
+    // reference palette: it reads as selected without a bright white slab.
+    c[ImGuiCol_Tab]                  = col(231, 236, 246);  // #e7ecf6 surface
+    c[ImGuiCol_TabHovered]           = accent(20);   // accent @8%
+    c[ImGuiCol_TabSelected]          = accent(36);   // accent @14%
     c[ImGuiCol_TabSelectedOverline]  = accent();   // accent underline
-    c[ImGuiCol_TabDimmed]            = col(241, 242, 244);  // control
-    c[ImGuiCol_TabDimmedSelected]    = col(255, 255, 255);  // surface
-    c[ImGuiCol_TabDimmedSelectedOverline] = col(95, 102, 112);
+    c[ImGuiCol_TabDimmed]            = col(231, 236, 246);  // surface
+    c[ImGuiCol_TabDimmedSelected]    = accent(30);   // accent @12%
+    c[ImGuiCol_TabDimmedSelectedOverline] = col(85,  92,  104);
 
     c[ImGuiCol_DockingPreview]       = accent(100);
-    c[ImGuiCol_DockingEmptyBg]       = col(241, 242, 244);  // control
+    c[ImGuiCol_DockingEmptyBg]       = col(242, 243, 249);  // canvas
     c[ImGuiCol_DragDropTarget]       = accent();
     c[ImGuiCol_DragDropTargetBg]     = accent(50);
 
@@ -102,28 +106,28 @@ ThemeData ThemeData::CreateThemeLight() {
     c[ImGuiCol_PlotLinesHovered]     = accentLight();
     c[ImGuiCol_PlotHistogram]        = accent(180);
     c[ImGuiCol_PlotHistogramHovered] = accentLight(220);
-    c[ImGuiCol_TableHeaderBg]        = col(241, 242, 244);  // control
-    c[ImGuiCol_TableBorderStrong]    = col(210, 214, 219);  // #d2d6db hairline
-    c[ImGuiCol_TableBorderLight]     = col(210, 214, 219);  // hairline
-    c[ImGuiCol_TableRowBg]           = col(255, 255, 255);  // surface
-    c[ImGuiCol_TableRowBgAlt]        = col(241, 242, 244,  48);  // control @19%
+    c[ImGuiCol_TableHeaderBg]        = col(223, 230, 243);  // control
+    c[ImGuiCol_TableBorderStrong]    = col(201, 210, 228);  // #c9d2e4 hairline
+    c[ImGuiCol_TableBorderLight]     = col(201, 210, 228);  // hairline
+    c[ImGuiCol_TableRowBg]           = col(231, 236, 246);  // surface
+    c[ImGuiCol_TableRowBgAlt]        = col(201, 210, 228,  64);  // hairline @25%
 
     c[ImGuiCol_TextLink]             = accent();
     c[ImGuiCol_TextSelectedBg]       = accent(64);
-    c[ImGuiCol_TreeLines]            = col(210, 214, 219);  // hairline
+    c[ImGuiCol_TreeLines]            = col(201, 210, 228);  // hairline
     c[ImGuiCol_UnsavedMarker]        = accent();
     c[ImGuiCol_NavCursor]            = accent();
-    c[ImGuiCol_NavWindowingHighlight]= col(241, 242, 244);  // control
+    c[ImGuiCol_NavWindowingHighlight]= col(223, 230, 243);  // control
     c[ImGuiCol_NavWindowingDimBg]    = col(0,   0,   0,   100);
     c[ImGuiCol_ModalWindowDimBg]     = col(0,   0,   0,   130);
 
     // ImPlot
     ImVec4* pc = t.implotColors;
     pc[ImPlotCol_FrameBg]       = t.imguiColors[ImGuiCol_FrameBg];
-    pc[ImPlotCol_PlotBg]        = col(255, 255, 255);
-    pc[ImPlotCol_PlotBorder]    = col(210, 214, 219);  // #d2d6db
+    pc[ImPlotCol_PlotBg]        = col(242, 243, 249);  // canvas
+    pc[ImPlotCol_PlotBorder]    = col(201, 210, 228);  // #c9d2e4 hairline
     pc[ImPlotCol_LegendBg]      = t.imguiColors[ImGuiCol_PopupBg];
-    pc[ImPlotCol_LegendBorder]  = col(210, 214, 219);  // #d2d6db
+    pc[ImPlotCol_LegendBorder]  = col(201, 210, 228);  // #c9d2e4 hairline
     pc[ImPlotCol_LegendText]    = t.imguiColors[ImGuiCol_Text];
     pc[ImPlotCol_TitleText]     = t.imguiColors[ImGuiCol_Text];
     pc[ImPlotCol_InlayText]     = t.imguiColors[ImGuiCol_Text];
