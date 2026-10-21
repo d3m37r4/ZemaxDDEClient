@@ -116,14 +116,11 @@ namespace gui {
 
                 ImGui::SameLine();
 
-                ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
-                ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
                 if (ImGui::Button(ICON_FA_TRASH " Clear data")) {
                     m_irregularityMapService->m_nominalSurfaceData.clear();
                 }
-                ImGui::PopStyleColor(4);
+                ImGuiUtils::PopFilledButton();
             } else {
                 int nominalCalcSlot = m_irregularityMapService->getNominalCalcSlot();
                 bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
@@ -214,24 +211,18 @@ namespace gui {
                 if (nominalFrozen || nominalOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
-                    ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
-                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
                     if (ImGui::Button(ICON_FA_XMARK " Cancel")) {
                         m_irregularityMapService->cancelCalculation();
                         m_irregularityMapService->onNominalCalculationComplete = nullptr;
                         m_irregularityMapService->m_nominalSurfaceData.clear();
                     }
-                    ImGui::PopStyleColor(4);
+                    ImGuiUtils::PopFilledButton();
                 } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                     ImGui::BeginDisabled(true);
-                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
-                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
                     ImGui::Button(ICON_FA_DOWNLOAD " Get nominal surface data");
-                    ImGui::PopStyleColor(4);
+                    ImGuiUtils::PopFilledButton();
                     if (ImGui::BeginItemTooltip()) {
                         ImGui::TextUnformatted("Another calculation is in progress on this slot");
                         ImGui::EndTooltip();
@@ -239,10 +230,7 @@ namespace gui {
                     ImGui::EndDisabled();
                 } else {
                     ImGui::BeginDisabled(!isDDEInitialized());
-                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
-                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
                     if (ImGui::Button(ICON_FA_DOWNLOAD " Get nominal surface data")) {
                         if (isDDEInitialized()) {
                             m_irregularityMapService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
@@ -256,7 +244,7 @@ namespace gui {
                             m_irregularityMapService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
                     }
-                    ImGui::PopStyleColor(4);
+                    ImGuiUtils::PopFilledButton();
                     ImGui::EndDisabled();
                 }
             }
@@ -300,10 +288,7 @@ namespace gui {
 
                 ImGui::SameLine();
 
-                ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-                ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
-                ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
                 if (ImGui::Button(ICON_FA_TRASH " Clear data")) {
                     m_irregularityMapService->clearData();
                     m_irregularityMapService->m_showTolerancedSurfaceMap = false;
@@ -312,7 +297,7 @@ namespace gui {
                     m_irregularityMapService->m_showWorstSectionDeviation = false;
                     m_irregularityMapService->m_worstProfileData.clear();
                 }
-                ImGui::PopStyleColor(4);
+                ImGuiUtils::PopFilledButton();
             } else {
                 ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen || mapOnActiveSlot);
 
@@ -403,22 +388,16 @@ namespace gui {
                 if (mapFrozen || mapOnActiveSlot) {
                     ImGuiUtils::SpinnerButton("Processing...", true);
                     ImGui::SameLine();
-                    ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
-                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
                     if (ImGui::Button(ICON_FA_XMARK " Cancel")) {
                         m_irregularityMapService->cancelMapCalculation();
                     }
-                    ImGui::PopStyleColor(4);
+                    ImGuiUtils::PopFilledButton();
                 } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
                     ImGui::BeginDisabled(true);
-                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
-                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
                     ImGui::Button(ICON_FA_CALCULATOR " Calculate Surface Map");
-                    ImGui::PopStyleColor(4);
+                    ImGuiUtils::PopFilledButton();
                     if (ImGui::BeginItemTooltip()) {
                         ImGui::TextUnformatted("Another calculation is in progress on this slot");
                         ImGui::EndTooltip();
@@ -426,17 +405,14 @@ namespace gui {
                     ImGui::EndDisabled();
                 } else {
                     ImGui::BeginDisabled(!isDDEInitialized());
-                    ImGui::PushStyleColor(ImGuiCol_Button, sem.successButton);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.successButtonActive);
-                    ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
                     if (ImGui::Button(ICON_FA_CALCULATOR " Calculate Surface Map")) {
                         if (m_zemaxDDEClient) {
                             m_irregularityMapService->m_frozenMapOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                         }
                         m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
                     }
-                    ImGui::PopStyleColor(4);
+                    ImGuiUtils::PopFilledButton();
                     ImGui::EndDisabled();
                 }
             }
@@ -510,10 +486,7 @@ namespace gui {
 
             ImGui::SameLine();
 
-            ImGui::PushStyleColor(ImGuiCol_Button, sem.dangerButton);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.dangerButtonActive);
-            ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+            ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
             if (ImGui::Button(ICON_FA_TRASH " Clear all")) {
                 m_irregularityMapService->m_nominalSurfaceData.clear();
                 m_irregularityMapService->clearData();
@@ -523,7 +496,7 @@ namespace gui {
                 m_irregularityMapService->m_showWorstSectionDeviation = false;
                 m_irregularityMapService->m_worstProfileData.clear();
             }
-            ImGui::PopStyleColor(4);
+            ImGuiUtils::PopFilledButton();
 
             ImGui::EndDisabled();
         }

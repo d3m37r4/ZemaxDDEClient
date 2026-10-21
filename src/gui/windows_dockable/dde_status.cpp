@@ -170,10 +170,10 @@ namespace gui {
         // so the action remains visually unambiguous regardless of the active theme.
         const auto& sem = m_themeManager->semantic();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, ImGuiUtils::DpiScale(DDE_STATUS_BTN_VPAD)));
-        ImGui::PushStyleColor(ImGuiCol_Button,        connected ? sem.dangerButton        : sem.successButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, connected ? sem.dangerButtonHover   : sem.successButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  connected ? sem.dangerButtonActive  : sem.successButtonActive);
-        ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+        ImGuiUtils::PushFilledButton(connected ? sem.dangerButton : sem.successButton,
+                                     connected ? sem.dangerButtonHover : sem.successButtonHover,
+                                     connected ? sem.dangerButtonActive : sem.successButtonActive,
+                                     sem.onAccent);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
         if (ImGui::Button(connected ? ICON_FA_PLUG_CIRCLE_XMARK " Disconnect from Zemax" : ICON_FA_PLUG " Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
@@ -181,7 +181,7 @@ namespace gui {
         }
 
         ImGui::PopStyleVar();
-        ImGui::PopStyleColor(4);
+        ImGuiUtils::PopFilledButton();
         ImGui::PopStyleVar();
 
         // Tooltip after Pop: it must render in the default text color, not the

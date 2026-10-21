@@ -377,14 +377,11 @@ namespace gui {
         ImGui::TextUnformatted(app::getLogFolderSize().c_str());
         ImGui::SameLine();
         const auto& sem = m_themeManager->semantic();
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
-        ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
+        ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
         if (ImGui::Button(ICON_FA_BROOM " Clean logs")) {
             m_cleanLogsConfirmDialog->open();
         }
-        ImGui::PopStyleColor(4);
+        ImGuiUtils::PopFilledButton();
     }
 
     void PreferencesDialog::renderSectionFiles() {
@@ -435,14 +432,11 @@ namespace gui {
         ImGui::SameLine();
 
         {
-            ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);
-            ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+            ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
             if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save", ImVec2(saveBtnW, 0))) {
                 onSave();
             }
-            ImGui::PopStyleColor(4);
+            ImGuiUtils::PopFilledButton();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Persist the current values to settings.json. Closes the dialog.");

@@ -51,14 +51,11 @@ namespace gui {
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(ICON_FA_TRASH).x - ImGui::GetStyle().FramePadding.x * 2);
 
         const auto& sem = themeManager->semantic();
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
-        ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+        ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
         if (ImGui::Button(ICON_FA_TRASH)) {
             logger.clearLogs();
         }
-        ImGui::PopStyleColor(4);
+        ImGuiUtils::PopFilledButton();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete all log entries");
         ImGui::EndChild();
 

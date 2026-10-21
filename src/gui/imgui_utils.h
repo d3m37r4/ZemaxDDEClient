@@ -292,6 +292,26 @@ namespace ImGuiUtils {
         return clicked;
     }
 
+    /// Pushes the style of a filled (status) button: the fill, its hover and
+    /// active shades, the text color, and a border in the fill color.
+    ///
+    /// The border is what keeps a light theme whose widgets carry a hairline
+    /// frame (the input fields) from putting a grey ring around a colored
+    /// button.
+    inline void PushFilledButton(const ImVec4& fill, const ImVec4& hover,
+                                 const ImVec4& active, const ImVec4& text) {
+        ImGui::PushStyleColor(ImGuiCol_Button, fill);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
+        ImGui::PushStyleColor(ImGuiCol_Border, fill);
+        ImGui::PushStyleColor(ImGuiCol_Text, text);
+    }
+
+    /// Pops what PushFilledButton() pushed.
+    inline void PopFilledButton() {
+        ImGui::PopStyleColor(5);
+    }
+
     /// True while a value clamped at @p clampedAt (ImGui::GetTime()) should keep
     /// its "adjusted" flash. Self-expiring — no flag to clear, no stale states.
     inline bool AdjustedFlashActive(double clampedAt, float windowSec = 3.0f) {

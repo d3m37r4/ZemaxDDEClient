@@ -67,10 +67,7 @@ namespace gui {
         }
 
         const auto& sem = m_themeManager->semantic();
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);
-        ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+        ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
 
         if (ImGui::Button(ICON_FA_PLUG " Connect", ImVec2(connectBtnW, 0))) {
             const auto& wnd = windows[m_selectedWindowIndex];
@@ -84,7 +81,7 @@ namespace gui {
             }
         }
 
-        ImGui::PopStyleColor(4);
+        ImGuiUtils::PopFilledButton();
 
         if (!canConnect) {
             ImGui::EndDisabled();
