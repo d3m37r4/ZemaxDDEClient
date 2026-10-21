@@ -91,6 +91,50 @@ void registerCaptureTests(ImGuiTestEngine* engine, TestAppContext* app) {
             IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
         }
     };
+
+    // Capture the panels in the light theme. The light theme has its own
+    // surface ladder, so it needs its own screenshots. The theme is switched
+    // through the theme manager directly: the dialog route would persist the
+    // theme in the user settings.
+    test = IM_REGISTER_TEST(engine, test_categories::kCapture, "capture_light");
+    test->UserData = app;
+    test->TestFunc = [](ImGuiTestContext* ctx) {
+        TestAppContext* a = appContext(ctx);
+
+        std::filesystem::path dir(screenshotDir());
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+
+        // Make all panels visible so that each one can be captured.
+        for (const auto& entry : DockableWindows) {
+            if (!a->windows->IsVisible(entry.id)) {
+                clickMenuItem(ctx, ICON_FA_EYE " View", entry.name);
+            }
+        }
+        ctx->Yield();
+
+        ThemeManager* themeManager = a->gui->getSettingsManager().getThemeManager();
+        IM_CHECK(themeManager != nullptr);
+        if (!themeManager) return;
+
+        const std::string themeBefore = themeManager->currentThemeName();
+        IM_CHECK(themeManager->apply(std::string{kThemeNameLight}));
+        ctx->Yield();
+
+        for (const auto& entry : DockableWindows) {
+            captureWindow(ctx, entry.name);
+        }
+
+        // The About dialog carries its own surface, so it is captured too.
+        clickMenuItem(ctx, ICON_FA_CIRCLE_QUESTION " Help", "About");
+        IM_CHECK(a->gui->isAnyModalOpen());
+        captureWindow(ctx, "About");
+        clickDialogButton(ctx, "About", "OK");
+        IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
+
+        IM_CHECK(themeManager->apply(themeBefore));
+        ctx->Yield();
+    };
 }
 
 } // namespace app::testing
