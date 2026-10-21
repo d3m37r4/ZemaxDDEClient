@@ -16,7 +16,8 @@
 
 namespace gui {
     void Logs::render(Logger& logger, const ThemeManager* themeManager) {
-        ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY);
+        ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY,
+            ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
         if (ImGui::Button(ICON_FA_FILE_EXPORT)) {
             std::string content;
             for (const auto& entry : logger.getLogs()) {

@@ -44,7 +44,7 @@ namespace gui {
         ImGui::BeginChild("DDE Status Content",
             ImVec2(gui::DDE_STATUS_CONTENT_SIZE.x, gui::DDE_STATUS_CONTENT_SIZE.y),
             ImGuiChildFlags_Borders,
-            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
+            ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
         );
 
         int connectionCount = 0;

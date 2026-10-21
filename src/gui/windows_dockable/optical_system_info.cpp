@@ -97,7 +97,8 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Primary Wave", std::to_string(s.primWave).c_str());
         ImGuiUtils::EndPropertyGrid();
         ImGuiUtils::SpacingY(0.25f);
-        ImGui::BeginChild("##FieldWaveBlock", ImVec2(blockW, 0.0f), ImGuiChildFlags_AutoResizeY);
+        ImGui::BeginChild("##FieldWaveBlock", ImVec2(blockW, 0.0f), ImGuiChildFlags_AutoResizeY,
+            ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
         renderFieldTable();
         renderWaveTable();
         ImGui::EndChild();
