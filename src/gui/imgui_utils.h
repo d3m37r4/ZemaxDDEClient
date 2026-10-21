@@ -102,7 +102,7 @@ namespace ImGuiUtils {
             ImGui::GetColorU32(ImVec4(color.x, color.y, color.z, color.w * 0.5f)), 32, thickness);
         const float a0 = static_cast<float>(ImGui::GetTime()) * speed;
         dl->PathArcTo(center, radius, a0, a0 + 1.5f * std::numbers::pi_v<float>, 32);
-        dl->PathStroke(ImGui::GetColorU32(color), 0, thickness);
+        dl->PathStroke(ImGui::GetColorU32(color), thickness);
     }
 
     /// Disabled button with animated spinner arc (3/4 circle) inside.

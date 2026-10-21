@@ -109,9 +109,8 @@ namespace gui {
             ImVec2 cursorPos = ImGui::GetCursorScreenPos();
             float separatorHeight = ImGui::GetFrameHeight() * 0.8f;
             float separatorY = cursorPos.y + (ImGui::GetFrameHeight() - separatorHeight) * 0.5f;
-            ImGui::GetWindowDrawList()->AddLine(
-                ImVec2(cursorPos.x, separatorY),
-                ImVec2(cursorPos.x, separatorY + separatorHeight),
+            ImGui::GetWindowDrawList()->AddLineV(
+                cursorPos.x, separatorY, separatorY + separatorHeight,
                 ImGui::GetColorU32(ImGuiCol_Separator));
             ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(4.0f));
 
