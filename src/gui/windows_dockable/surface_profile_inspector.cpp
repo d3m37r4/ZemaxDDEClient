@@ -35,11 +35,12 @@ namespace {
             "Switch target (F6) to edit, or Cancel the running calculation.");
     }
 
-    void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor) {
+    void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor,
+                          const ImVec4& color) {
         auto progress = monitor.getTaskProgress(source);
         if (!progress) return;
         int pct = progress->totalSteps > 0 ? (progress->currentStep * 100 / progress->totalSteps) : 0;
-        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "%s — calculation in progress on slot %d: %d%%", label, progress->clientSlot, pct);
+        ImGui::TextColored(color, "%s — calculation in progress on slot %d: %d%%", label, progress->clientSlot, pct);
     }
 }
 
@@ -94,7 +95,7 @@ namespace gui {
                 bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
 
                 ImGui::BeginDisabled(nominalFrozenV);
-                renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);;
                 if (nominalFrozenV) {
                     ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
                         nominalCalcSlotV);
@@ -196,7 +197,7 @@ namespace gui {
                 ImGuiUtils::SpacingY(0.5f);
 
                 if (nominalFrozen) {
-                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);;
                     ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
                         nominalCalcSlot);
                 }
@@ -204,7 +205,7 @@ namespace gui {
                 ImGui::EndDisabled();
 
                 if (nominalOnActiveSlot) {
-                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);;
                 }
 
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalCalculating);
@@ -292,7 +293,7 @@ namespace gui {
                 bool tolerancedFrozenV = tolerancedCalcSlotV >= 0 && tolerancedCalcSlotV != activeIdx;
 
                 ImGui::BeginDisabled(tolerancedFrozenV);
-                renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor, sem.warning);;
                 if (tolerancedFrozenV) {
                     ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
                         tolerancedCalcSlotV);
@@ -394,7 +395,7 @@ namespace gui {
                 ImGuiUtils::SpacingY(0.5f);
 
                 if (tolerancedFrozen) {
-                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor, sem.warning);;
                     ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
                         tolerancedCalcSlot);
                 }
@@ -402,7 +403,7 @@ namespace gui {
                 ImGui::EndDisabled();
 
                 if (tolerancedOnActiveSlot) {
-                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor, sem.warning);;
                 }
 
                 ImGui::BeginDisabled(!isDDEInitialized() || tolerancedCalculating);
