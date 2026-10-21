@@ -42,7 +42,6 @@ namespace gui {
             content += '\n';
         }
         if (ImGuiUtils::CopyButton(ICON_FA_COPY "##logs_copy_all", content.c_str(),
-                                   themeManager->semantic(),
                                    "Copy all log entries to clipboard")) {
             logger.addLog("[GUI] Logs copied to clipboard");
         }

@@ -274,22 +274,17 @@ namespace ImGuiUtils {
         return ImGui::CalcTextSize(ICON_FA_COPY).x + ImGui::GetStyle().FramePadding.x * 2.0f;
     }
 
-    /// Icon-only neutral copy button (neutralButton triad like Preferences
-    /// Reset/Cancel — neutral in both themes, unlike the default Button color
-    /// which is blue in Dark). One click instead of select + Ctrl+C.
+    /// Icon-only copy button. Uses the theme's neutral button color (the
+    /// "control" step of the surface ladder), so it matches every other
+    /// neutral button. One click instead of select + Ctrl+C.
     /// Disabled when text is empty.
     /// @param labelWithId  Visible icon + unique ID, e.g. ICON_FA_COPY "##copy_x".
     /// @return true when clicked.
     inline bool CopyButton(const char* labelWithId, const char* text,
-                           const SemanticPalette& sem,
                            const char* tooltip = "Copy to clipboard") {
-        ImGui::PushStyleColor(ImGuiCol_Button, sem.neutralButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.neutralButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, sem.neutralButtonActive);
         ImGui::BeginDisabled(!text || !*text);
         const bool clicked = ImGui::Button(labelWithId);
         ImGui::EndDisabled();
-        ImGui::PopStyleColor(3);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             ImGui::SetTooltip("%s", tooltip);
         if (clicked && text && *text)

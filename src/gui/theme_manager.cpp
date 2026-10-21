@@ -25,7 +25,7 @@ ThemeData ThemeData::CreateThemeLight() {
     t.semantic.success = col(53, 112, 58);        // #35703a
     t.semantic.warning = col(138, 90, 0);         // #8a5a00
     t.semantic.danger  = col(179, 57, 46);        // #b3392e
-    t.semantic.info    = accent();                 // #0e6e75 (accent)
+    t.semantic.info    = accent();                 // #1b5e9e (accent)
     t.semantic.muted   = col(95, 102, 112);       // #5f6670
 
     t.semantic.successButton       = col(53, 112, 58);
@@ -34,52 +34,50 @@ ThemeData ThemeData::CreateThemeLight() {
     t.semantic.dangerButton        = col(179, 57, 46);
     t.semantic.dangerButtonHover   = col(192, 57, 43);
     t.semantic.dangerButtonActive  = col(153, 47, 38);
-    t.semantic.neutralButton       = col(241, 242, 244); // #F1F2F4
-    t.semantic.neutralButtonHover  = col(227, 229, 233); // #E3E5E9
-    t.semantic.neutralButtonActive = col(216, 219, 224); // #D8DBE0
     t.semantic.onAccent            = col(255, 255, 255);
 
     ImVec4* c = t.imguiColors;
 
-    // Surface layering (see DESIGN.md):
-    //   canvas #E8EAED -> card #FFFFFF -> element #F1F2F4 -> hover #E3E5E9
+    // Surface ladder (see DESIGN.md). Every interactive element shares the
+    // "control" color, so the whole theme stays at four neutrals:
+    //   canvas #E8EAED -> surface #FFFFFF -> control #F1F2F4 -> hover #E3E5E9
     c[ImGuiCol_Text]                 = col(36,  39,  44);   // #24272c
     c[ImGuiCol_TextDisabled]         = col(95, 102, 112);  // #5f6670
 
     c[ImGuiCol_WindowBg]             = col(232, 234, 237);  // #e8eaed canvas
-    c[ImGuiCol_ChildBg]              = col(255, 255, 255);  // #ffffff card
-    c[ImGuiCol_PopupBg]              = col(255, 255, 255, 250);
-    c[ImGuiCol_MenuBarBg]            = col(232, 234, 237);
+    c[ImGuiCol_ChildBg]              = col(255, 255, 255);  // #ffffff surface
+    c[ImGuiCol_PopupBg]              = col(255, 255, 255);  // #ffffff surface
+    c[ImGuiCol_MenuBarBg]            = col(232, 234, 237);  // canvas
 
     c[ImGuiCol_Border]               = col(210, 214, 219);  // #d2d6db hairline
     c[ImGuiCol_BorderShadow]         = col(0,   0,   0,   15);
 
-    c[ImGuiCol_FrameBg]              = col(241, 242, 244);  // #f1f2f4 element
-    c[ImGuiCol_FrameBgHovered]       = col(227, 229, 233);  // #e3e5e9
-    c[ImGuiCol_FrameBgActive]        = col(216, 219, 224);  // #d8dbe0
+    c[ImGuiCol_FrameBg]              = col(241, 242, 244);  // #f1f2f4 control
+    c[ImGuiCol_FrameBgHovered]       = col(227, 229, 233);  // #e3e5e9 hover
+    c[ImGuiCol_FrameBgActive]        = col(227, 229, 233);  // #e3e5e9 hover
 
     c[ImGuiCol_TitleBg]              = col(232, 234, 237);  // tab strip = canvas
     c[ImGuiCol_TitleBgActive]        = col(232, 234, 237);
-    c[ImGuiCol_TitleBgCollapsed]     = col(222, 224, 228);  // #dee0e4
+    c[ImGuiCol_TitleBgCollapsed]     = col(232, 234, 237);  // canvas
 
     c[ImGuiCol_ScrollbarBg]          = col(232, 234, 237);
     c[ImGuiCol_ScrollbarGrab]        = col(193, 198, 204);
     c[ImGuiCol_ScrollbarGrabHovered] = col(156, 163, 175);
-    c[ImGuiCol_ScrollbarGrabActive]  = col(107, 114, 128);
+    c[ImGuiCol_ScrollbarGrabActive]  = col(156, 163, 175);
 
     c[ImGuiCol_CheckMark]            = accent();
     c[ImGuiCol_SliderGrab]           = accent();
     c[ImGuiCol_SliderGrabActive]     = accentLight();
     c[ImGuiCol_InputTextCursor]      = accent();
 
-    c[ImGuiCol_Button]               = col(241, 242, 244);  // #f1f2f4
-    c[ImGuiCol_ButtonHovered]        = col(227, 229, 233);  // #e3e5e9
-    c[ImGuiCol_ButtonActive]         = col(216, 219, 224);  // #d8dbe0
+    c[ImGuiCol_Button]               = col(241, 242, 244);  // #f1f2f4 control
+    c[ImGuiCol_ButtonHovered]        = col(227, 229, 233);  // #e3e5e9 hover
+    c[ImGuiCol_ButtonActive]         = col(255, 255, 255);  // surface: pressed sinks
 
-    c[ImGuiCol_Header]               = col(227, 229, 233);  // #e3e5e9
+    c[ImGuiCol_Header]               = col(241, 242, 244);  // #f1f2f4 control
     c[ImGuiCol_HeaderHovered]        = accent(40);   // accent @16%
     c[ImGuiCol_HeaderActive]         = accent(80);   // accent @31%
-    c[ImGuiCol_Separator]            = col(223, 226, 230);  // #dfe2e6
+    c[ImGuiCol_Separator]            = col(210, 214, 219);  // #d2d6db hairline
     c[ImGuiCol_SeparatorHovered]     = accent();
     c[ImGuiCol_SeparatorActive]      = accent();
 
@@ -87,16 +85,16 @@ ThemeData ThemeData::CreateThemeLight() {
     c[ImGuiCol_ResizeGripHovered]    = accent(110);
     c[ImGuiCol_ResizeGripActive]     = accent(170);
 
-    c[ImGuiCol_Tab]                  = col(241, 242, 244);  // #f1f2f4
-    c[ImGuiCol_TabHovered]           = col(227, 229, 233);  // #e3e5e9
-    c[ImGuiCol_TabSelected]          = col(255, 255, 255);  // #ffffff card
+    c[ImGuiCol_Tab]                  = col(241, 242, 244);  // #f1f2f4 control
+    c[ImGuiCol_TabHovered]           = col(227, 229, 233);  // #e3e5e9 hover
+    c[ImGuiCol_TabSelected]          = col(255, 255, 255);  // #ffffff surface
     c[ImGuiCol_TabSelectedOverline]  = accent();   // accent underline
-    c[ImGuiCol_TabDimmed]            = col(241, 242, 244);
-    c[ImGuiCol_TabDimmedSelected]    = col(255, 255, 255);
+    c[ImGuiCol_TabDimmed]            = col(241, 242, 244);  // control
+    c[ImGuiCol_TabDimmedSelected]    = col(255, 255, 255);  // surface
     c[ImGuiCol_TabDimmedSelectedOverline] = col(95, 102, 112);
 
     c[ImGuiCol_DockingPreview]       = accent(100);
-    c[ImGuiCol_DockingEmptyBg]       = col(241, 242, 244);  // #f1f2f4
+    c[ImGuiCol_DockingEmptyBg]       = col(241, 242, 244);  // control
     c[ImGuiCol_DragDropTarget]       = accent();
     c[ImGuiCol_DragDropTargetBg]     = accent(50);
 
@@ -104,18 +102,18 @@ ThemeData ThemeData::CreateThemeLight() {
     c[ImGuiCol_PlotLinesHovered]     = accentLight();
     c[ImGuiCol_PlotHistogram]        = accent(180);
     c[ImGuiCol_PlotHistogramHovered] = accentLight(220);
-    c[ImGuiCol_TableHeaderBg]        = col(238, 240, 242);  // #eef0f2
-    c[ImGuiCol_TableBorderStrong]    = col(210, 214, 219);  // #d2d6db
-    c[ImGuiCol_TableBorderLight]     = col(228, 230, 233);
-    c[ImGuiCol_TableRowBg]           = col(255, 255, 255);
-    c[ImGuiCol_TableRowBgAlt]        = col(246, 247, 248);
+    c[ImGuiCol_TableHeaderBg]        = col(241, 242, 244);  // control
+    c[ImGuiCol_TableBorderStrong]    = col(210, 214, 219);  // #d2d6db hairline
+    c[ImGuiCol_TableBorderLight]     = col(210, 214, 219);  // hairline
+    c[ImGuiCol_TableRowBg]           = col(255, 255, 255);  // surface
+    c[ImGuiCol_TableRowBgAlt]        = col(241, 242, 244,  48);  // control @19%
 
     c[ImGuiCol_TextLink]             = accent();
     c[ImGuiCol_TextSelectedBg]       = accent(64);
-    c[ImGuiCol_TreeLines]            = col(210, 214, 219);  // #d2d6db
+    c[ImGuiCol_TreeLines]            = col(210, 214, 219);  // hairline
     c[ImGuiCol_UnsavedMarker]        = accent();
     c[ImGuiCol_NavCursor]            = accent();
-    c[ImGuiCol_NavWindowingHighlight]= col(255, 255, 255);
+    c[ImGuiCol_NavWindowingHighlight]= col(241, 242, 244);  // control
     c[ImGuiCol_NavWindowingDimBg]    = col(0,   0,   0,   100);
     c[ImGuiCol_ModalWindowDimBg]     = col(0,   0,   0,   130);
 
@@ -134,7 +132,7 @@ ThemeData ThemeData::CreateThemeLight() {
     pc[ImPlotCol_AxisTick]      = col(36, 39, 44, 60);
     pc[ImPlotCol_AxisBg]        = ImVec4(0, 0, 0, 0);
     pc[ImPlotCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
-    pc[ImPlotCol_AxisBgActive]  = t.imguiColors[ImGuiCol_ButtonActive];
+    pc[ImPlotCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
     pc[ImPlotCol_Selection]     = accent(60);
     pc[ImPlotCol_Crosshairs]    = col(107, 114, 128, 150);
 
@@ -153,7 +151,7 @@ ThemeData ThemeData::CreateThemeLight() {
     p3[ImPlot3DCol_AxisTick]      = pc[ImPlotCol_AxisTick];
     p3[ImPlot3DCol_AxisBg]        = ImVec4(0, 0, 0, 0);
     p3[ImPlot3DCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
-    p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_ButtonActive];
+    p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
     // Rounding of the reference: panels 8px, elements 4px.
     t.geometry.windowRounding = 8.0f;
@@ -183,8 +181,8 @@ ThemeData ThemeData::CreateThemeDark() {
     t.semantic.success = col(118, 187, 117);      // #76bb75 (success green)
     t.semantic.warning = col(201, 162, 39);       // #c9a227
     t.semantic.danger  = col(232, 92, 88);        // #e85c58
-    t.semantic.info    = accent();                 // #4fc3c7 (accent)
-    t.semantic.muted   = col(134, 139, 155);      // #868b9b
+    t.semantic.info    = accent();                 // #4296fa (accent)
+    t.semantic.muted   = col(148, 154, 171);      // #949aab
 
     t.semantic.successButton       = col(53, 112, 58);   // #35703a
     t.semantic.successButtonHover  = col(62, 122, 66);   // #3e7a42
@@ -192,77 +190,75 @@ ThemeData ThemeData::CreateThemeDark() {
     t.semantic.dangerButton        = col(179, 57, 46);   // #b3392e
     t.semantic.dangerButtonHover   = col(192, 57, 43);   // #c0392b
     t.semantic.dangerButtonActive  = col(153, 47, 38);   // #992f26
-    t.semantic.neutralButton       = col(22, 23, 25);    // #161719
-    t.semantic.neutralButtonHover  = col(31, 33, 38);    // #1f2126
-    t.semantic.neutralButtonActive = col(38, 42, 49);    // #262a31
     t.semantic.onAccent            = col(255, 255, 255);
 
     ImVec4* c = t.imguiColors;
 
-    // Surface layering (see DESIGN.md):
-    //   canvas #0F0F0F -> card #141517 -> element #161719 -> hover #1F2126
+    // Surface ladder (see DESIGN.md). Every interactive element shares the
+    // "control" color, so the whole theme stays at four neutrals:
+    //   canvas #0F0F0F -> surface #161719 -> control #1D1F23 -> hover #262A31
     c[ImGuiCol_Text]                 = col(201, 204, 214); // #c9ccd6
-    c[ImGuiCol_TextDisabled]         = col(134, 139, 155); // #868b9b
+    c[ImGuiCol_TextDisabled]         = col(148, 154, 171); // #949aab
     c[ImGuiCol_WindowBg]             = col(15,  15,  15);   // #0f0f0f canvas
-    c[ImGuiCol_ChildBg]              = col(20,  21,  23);   // #141517 card
-    c[ImGuiCol_PopupBg]              = col(20,  21,  23, 250);
-    c[ImGuiCol_MenuBarBg]            = col(15,  15,  15);
+    c[ImGuiCol_ChildBg]              = col(22,  23,  25);   // #161719 surface
+    c[ImGuiCol_PopupBg]              = col(22,  23,  25);   // #161719 surface
+    c[ImGuiCol_MenuBarBg]            = col(15,  15,  15);   // canvas
     c[ImGuiCol_Border]               = col(38,  42,  49);   // #262a31 hairline
     c[ImGuiCol_BorderShadow]         = ImVec4(0, 0, 0, 0);
-    c[ImGuiCol_FrameBg]              = col(22,  23,  25);   // #161719 element
-    c[ImGuiCol_FrameBgHovered]       = col(31,  33,  38);   // #1f2126
-    c[ImGuiCol_FrameBgActive]        = col(38,  42,  49);   // #262a31
+    c[ImGuiCol_FrameBg]              = col(29,  31,  35);   // #1d1f23 control
+    c[ImGuiCol_FrameBgHovered]       = col(38,  42,  49);   // #262a31 hover
+    c[ImGuiCol_FrameBgActive]        = col(38,  42,  49);   // hover
     c[ImGuiCol_TitleBg]              = col(15,  15,  15);   // tab strip = canvas
     c[ImGuiCol_TitleBgActive]        = col(15,  15,  15);
-    c[ImGuiCol_TitleBgCollapsed]     = col(10,  10,  10);   // #0a0a0a
+    c[ImGuiCol_TitleBgCollapsed]     = col(15,  15,  15);   // canvas
     c[ImGuiCol_MenuBarBg]            = col(15,  15,  15);
     c[ImGuiCol_ScrollbarBg]          = col(15,  15,  15);
-    c[ImGuiCol_ScrollbarGrab]        = col(42,  45,  52);   // #2a2d34
-    c[ImGuiCol_ScrollbarGrabHovered] = col(58,  62,  71);   // #3a3e47
-    c[ImGuiCol_ScrollbarGrabActive]  = col(74,  79,  90);   // #4a4f5a
-    // Accent: cyan (single accent, distinct from success green).
+    c[ImGuiCol_ScrollbarGrab]        = col(29,  31,  35);   // #1d1f23 control
+    c[ImGuiCol_ScrollbarGrabHovered] = col(38,  42,  49);   // #262a31 hover
+    c[ImGuiCol_ScrollbarGrabActive]  = col(38,  42,  49);   // hover
+    // Accent: the single blue accent (distinct from success green).
     c[ImGuiCol_CheckMark]            = accent();
     c[ImGuiCol_SliderGrab]           = accent();
     c[ImGuiCol_SliderGrabActive]     = accentLight();
     c[ImGuiCol_InputTextCursor]      = accent();
-    c[ImGuiCol_Button]               = col(22,  23,  25);   // #161719
-    c[ImGuiCol_ButtonHovered]        = col(31,  33,  38);   // #1f2126
-    c[ImGuiCol_ButtonActive]         = col(38,  42,  49);   // #262a31
-    c[ImGuiCol_Header]               = col(31,  33,  38);   // #1f2126
+    c[ImGuiCol_Button]               = col(29,  31,  35);   // #1d1f23 control
+    c[ImGuiCol_ButtonHovered]        = col(38,  42,  49);   // #262a31 hover
+    c[ImGuiCol_ButtonActive]         = col(22,  23,  25);   // #161719 pressed sinks
+    c[ImGuiCol_Header]               = col(29,  31,  35);   // #1d1f23 control
     c[ImGuiCol_HeaderHovered]        = accent(40);   // accent @16%
     c[ImGuiCol_HeaderActive]         = accent(80);   // accent @31%
-    c[ImGuiCol_Separator]            = col(28,  31,  37);   // #1c1f25
+    c[ImGuiCol_Separator]            = col(38,  42,  49);   // #262a31 hairline
     c[ImGuiCol_SeparatorHovered]     = accent();
     c[ImGuiCol_SeparatorActive]      = accent();
     c[ImGuiCol_ResizeGrip]           = accent(40);
     c[ImGuiCol_ResizeGripHovered]    = accent(110);
     c[ImGuiCol_ResizeGripActive]     = accent(170);
-    c[ImGuiCol_TabHovered]           = col(31,  33,  38);   // #1f2126
-    c[ImGuiCol_Tab]                  = col(20,  21,  23);   // #141517
-    c[ImGuiCol_TabSelected]          = col(31,  33,  38);   // #1f2126
+    c[ImGuiCol_TabHovered]           = col(29,  31,  35);   // control
+    c[ImGuiCol_Tab]                  = col(22,  23,  25);   // #161719 surface
+    c[ImGuiCol_TabSelected]          = col(29,  31,  35);   // #1d1f23 control
     c[ImGuiCol_TabSelectedOverline]  = accent();       // accent underline
-    c[ImGuiCol_TabDimmed]            = col(20,  21,  23);
-    c[ImGuiCol_TabDimmedSelected]    = col(31,  33,  38);
-    c[ImGuiCol_TabDimmedSelectedOverline] = col(134, 139, 155);
+    c[ImGuiCol_TabDimmed]            = col(22,  23,  25);   // surface
+    c[ImGuiCol_TabDimmedSelected]    = col(29,  31,  35);   // control
+    c[ImGuiCol_TabDimmedSelectedOverline] = col(148, 154, 171);
     c[ImGuiCol_DockingPreview]       = accent(90);
-    c[ImGuiCol_DockingEmptyBg]       = col(20,  21,  23);   // #141517
+    c[ImGuiCol_DockingEmptyBg]       = col(22,  23,  25);   // surface
     c[ImGuiCol_PlotLines]            = col(155, 160, 172); // #9ba0ac
     c[ImGuiCol_PlotLinesHovered]     = accentLight();
     c[ImGuiCol_PlotHistogram]        = accent(180);
     c[ImGuiCol_PlotHistogramHovered] = accentLight(220);
-    c[ImGuiCol_TableHeaderBg]        = col(24,  26,  30);   // #181a1e
-    c[ImGuiCol_TableBorderStrong]    = col(48,  52,  60);   // #30343c
-    c[ImGuiCol_TableBorderLight]     = col(30,  33,  38);   // #1e2126
-    c[ImGuiCol_TableRowBg]           = col(20,  21,  23);
-    c[ImGuiCol_TableRowBgAlt]        = col(24,  26,  30);
+    c[ImGuiCol_TableHeaderBg]        = col(29,  31,  35);   // control
+    c[ImGuiCol_TableBorderStrong]    = col(38,  42,  49);   // #262a31 hairline
+    c[ImGuiCol_TableBorderLight]     = col(38,  42,  49);   // hairline
+    c[ImGuiCol_TableRowBg]           = col(22,  23,  25);   // surface
+    c[ImGuiCol_TableRowBgAlt]        = col(29,  31,  35,  64);  // control @25%
     c[ImGuiCol_TextLink]             = accent();
     c[ImGuiCol_TextSelectedBg]       = accent(80);
-    c[ImGuiCol_TreeLines]            = col(38,  42,  49);   // #262a31
+    c[ImGuiCol_TreeLines]            = col(38,  42,  49);   // #262a31 hairline
     c[ImGuiCol_DragDropTarget]       = accent();
     c[ImGuiCol_DragDropTargetBg]     = accent(32);
     c[ImGuiCol_UnsavedMarker]        = accent();
     c[ImGuiCol_NavCursor]            = accent();
-    c[ImGuiCol_NavWindowingHighlight]= col(31,  33,  38);
+    c[ImGuiCol_NavWindowingHighlight]= col(29,  31,  35);   // control
     c[ImGuiCol_NavWindowingDimBg]    = col(0,   0,   0,   115);
     c[ImGuiCol_ModalWindowDimBg]     = col(0,   0,   0,   153);
 
@@ -281,7 +277,7 @@ ThemeData ThemeData::CreateThemeDark() {
     pc[ImPlotCol_AxisTick]      = pc[ImPlotCol_AxisGrid];
     pc[ImPlotCol_AxisBg]        = ImVec4(0, 0, 0, 0);
     pc[ImPlotCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
-    pc[ImPlotCol_AxisBgActive]  = t.imguiColors[ImGuiCol_ButtonActive];
+    pc[ImPlotCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
     pc[ImPlotCol_Selection]     = accent(60);
     pc[ImPlotCol_Crosshairs]    = pc[ImPlotCol_PlotBorder];
 
@@ -300,7 +296,7 @@ ThemeData ThemeData::CreateThemeDark() {
     p3[ImPlot3DCol_AxisTick]      = pc[ImPlotCol_AxisGrid];
     p3[ImPlot3DCol_AxisBg]        = ImVec4(0, 0, 0, 0);
     p3[ImPlot3DCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
-    p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_ButtonActive];
+    p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
     // Rounding of the reference: panels 8px, elements 4px.
     t.geometry.windowRounding = 8.0f;

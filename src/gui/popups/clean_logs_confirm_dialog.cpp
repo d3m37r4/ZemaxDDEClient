@@ -45,19 +45,8 @@ namespace gui {
         const float totalW = cancelBtnW + cleanBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
 
-        if (m_themeManager) {
-            const auto& sem = m_themeManager->semantic();
-            ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
-        }
-
         if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             close();
-        }
-
-        if (m_themeManager) {
-            ImGui::PopStyleColor(3);
         }
 
         ImGui::SameLine();

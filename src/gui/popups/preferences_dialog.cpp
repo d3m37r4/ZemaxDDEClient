@@ -398,7 +398,7 @@ namespace gui {
             ImGui::InputText(inputId, const_cast<char*>(path),
                              static_cast<int>(std::strlen(path)), ImGuiInputTextFlags_ReadOnly);
             ImGui::SameLine();
-            ImGuiUtils::CopyButton(copyId, path, sem);
+            ImGuiUtils::CopyButton(copyId, path);
             ImGui::Spacing();
         };
 
@@ -415,10 +415,6 @@ namespace gui {
 
         const auto& sem = m_themeManager->semantic();
 
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
-
         if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
             m_resetConfirmDialog->open();
         }
@@ -426,14 +422,8 @@ namespace gui {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
         }
 
-        ImGui::PopStyleColor(3);
-
         const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
-
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
 
         if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             onCancel();
@@ -441,8 +431,6 @@ namespace gui {
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Discard all changes and revert to the last saved values. Closes the dialog.");
         }
-
-        ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
 
