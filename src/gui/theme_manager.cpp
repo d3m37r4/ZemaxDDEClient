@@ -89,20 +89,16 @@ ThemeData ThemeData::CreateThemeLight() {
 
     // The active tab carries the accent tint, like the highlighted row of the
     // reference palette: it reads as selected without a bright white slab.
-    // The active tab is white on the grey chrome, the way VS Code marks the
-    // open editor: the grey strip makes it read as selected.
-    //
-    // ImGui paints a hovered (or pressed) tab with ImGuiCol_TabHovered, and
-    // that color also applies to the active tab. Setting it to the active
-    // color keeps the active tab stable while the pointer is on it, exactly
-    // as in VS Code; the hovered inactive tab then looks like the one that
-    // would be activated.
-    c[ImGuiCol_Tab]                  = col(248, 248, 248);  // #f8f8f8 canvas
-    c[ImGuiCol_TabHovered]           = col(255, 255, 255);  // #ffffff surface
-    c[ImGuiCol_TabSelected]          = col(255, 255, 255);  // #ffffff surface
+    // The active tab is the color of the chrome, so it continues the panel
+    // content instead of standing out as a white slab; the accent overline
+    // marks it. The inactive tabs are the darker blocks. This mirrors the
+    // dark theme, where the active tab is the lighter one.
+    c[ImGuiCol_Tab]                  = col(236, 236, 236);  // #ececec inactive
+    c[ImGuiCol_TabHovered]           = col(255, 255, 255);  // #ffffff preview
+    c[ImGuiCol_TabSelected]          = col(248, 248, 248);  // #f8f8f8 chrome
     c[ImGuiCol_TabSelectedOverline]  = accent();   // accent underline
-    c[ImGuiCol_TabDimmed]            = col(248, 248, 248);  // canvas
-    c[ImGuiCol_TabDimmedSelected]    = col(240, 240, 240);  // #f0f0f0 unfocused
+    c[ImGuiCol_TabDimmed]            = col(228, 228, 228);  // #e4e4e4 inactive, unfocused
+    c[ImGuiCol_TabDimmedSelected]    = col(248, 248, 248);  // #f8f8f8 chrome, unfocused
     c[ImGuiCol_TabDimmedSelectedOverline] = col(97,  97,  97);
 
     c[ImGuiCol_DockingPreview]       = accent(100);
