@@ -61,6 +61,36 @@ void registerCaptureTests(ImGuiTestEngine* engine, TestAppContext* app) {
             captureWindow(ctx, entry.name);
         }
     };
+
+    // Capture a screenshot of the modal dialogs. They carry their own
+    // surface (popup background + inner child), so they are reviewed
+    // separately from the dock panels.
+    test = IM_REGISTER_TEST(engine, test_categories::kCapture, "capture_dialogs");
+    test->UserData = app;
+    test->TestFunc = [](ImGuiTestContext* ctx) {
+        TestAppContext* a = appContext(ctx);
+
+        std::filesystem::path dir(screenshotDir());
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+
+        struct DialogEntry {
+            const char* label;
+            const char* windowName;
+        };
+        constexpr DialogEntry kDialogs[] = {
+            {"About", "About"},
+            {"Keyboard Shortcuts", "Keyboard Shortcuts"},
+        };
+
+        for (const auto& dialog : kDialogs) {
+            clickMenuItem(ctx, ICON_FA_CIRCLE_QUESTION " Help", dialog.label);
+            IM_CHECK(a->gui->isAnyModalOpen());
+            captureWindow(ctx, dialog.windowName);
+            clickDialogButton(ctx, dialog.windowName, "OK");
+            IM_CHECK_EQ(a->gui->isAnyModalOpen(), false);
+        }
+    };
 }
 
 } // namespace app::testing
