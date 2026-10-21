@@ -53,7 +53,7 @@ namespace gui {
 
         ImGui::BeginChild("##SurfaceProfileContent",
             ImVec2(0.0f, 0.0f),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
