@@ -139,9 +139,19 @@ namespace ImGuiUtils {
         const ImVec2& pos = ImGui::GetItemRectMin();
 
         float disabledAlpha = style.DisabledAlpha;
-        dl->AddRectFilled(pos, ImVec2(pos.x + btnSize.x, pos.y + btnSize.y),
-                          ImGui::GetColorU32(ImGuiCol_Button, disabledAlpha),
+        const ImVec2 btnMax(pos.x + btnSize.x, pos.y + btnSize.y);
+        // A disabled button is drawn by hand, so it needs a fill of its own:
+        // the light theme's button fill is white and would dissolve into the
+        // panel. The inactive tab tone is the muted neutral of both themes.
+        dl->AddRectFilled(pos, btnMax,
+                          ImGui::GetColorU32(ImGuiCol_Tab),
                           style.FrameRounding);
+        // The frame the theme puts on its widgets: without it the button has
+        // no edge at all.
+        if (style.FrameBorderSize > 0.0f) {
+            dl->AddRect(pos, btnMax, ImGui::GetColorU32(ImGuiCol_Border),
+                        style.FrameRounding, style.FrameBorderSize);
+        }
 
         // Legacy arc (replaced by DrawBusyArc above, kept for reference):
         // float angle = ImGui::GetTime() * 5.0f;
