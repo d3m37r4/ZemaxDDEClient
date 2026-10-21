@@ -97,12 +97,17 @@ namespace ImGuiUtils {
     inline void DrawBusyArc(const ImVec2& center, float radius, const ImVec4& color,
                             float speed = 6.0f) {
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        const float thickness = DpiScale(2.0f);
+        // The stroke scales with the radius, so that the small spinner in a
+        // button and the large one in the status bar carry the same weight.
+        // The radius is already in device pixels.
+        const float thickness = std::clamp(radius * 0.22f, 1.5f, 3.0f);
         dl->AddCircle(center, radius,
             ImGui::GetColorU32(ImVec4(color.x, color.y, color.z, color.w * 0.5f)), 32, thickness);
         const float a0 = static_cast<float>(ImGui::GetTime()) * speed;
         dl->PathArcTo(center, radius, a0, a0 + 1.5f * std::numbers::pi_v<float>, 32);
-        dl->PathStroke(ImGui::GetColorU32(color), thickness);
+        // StrokeInside puts the arc on the same circle as the background ring:
+        // paths stroke on the path center by default, closed shapes inside.
+        dl->PathStroke(ImGui::GetColorU32(color), thickness, ImDrawFlags_StrokeInside);
     }
 
     /// Disabled button with animated spinner arc (3/4 circle) inside.
