@@ -60,7 +60,7 @@ ThemeData ThemeData::CreateThemeLight() {
     c[ImGuiCol_TitleBgActive]        = col(232, 234, 237);
     c[ImGuiCol_TitleBgCollapsed]     = col(232, 234, 237);  // canvas
 
-    c[ImGuiCol_ScrollbarBg]          = col(232, 234, 237);
+    c[ImGuiCol_ScrollbarBg]          = col(0,   0,   0,   0);  // transparent: no gutter
     c[ImGuiCol_ScrollbarGrab]        = col(193, 198, 204);
     c[ImGuiCol_ScrollbarGrabHovered] = col(156, 163, 175);
     c[ImGuiCol_ScrollbarGrabActive]  = col(156, 163, 175);
@@ -153,12 +153,16 @@ ThemeData ThemeData::CreateThemeLight() {
     p3[ImPlot3DCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
     p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
-    // Rounding of the reference: panels 8px, elements 4px.
-    t.geometry.windowRounding = 8.0f;
-    t.geometry.childRounding  = 8.0f;
-    t.geometry.popupRounding  = 8.0f;
-    t.geometry.frameRounding  = 4.0f;
-    t.geometry.tabRounding    = 4.0f;
+    // One radius for the whole UI: windows, popups, cards, buttons, frames,
+    // tabs, slider grabs and the scrollbar thumb. The thumb is narrow, so the
+    // renderer clamps its radius to half its width and it reads as a pill.
+    t.geometry.windowRounding    = 4.0f;
+    t.geometry.childRounding     = 4.0f;
+    t.geometry.popupRounding     = 4.0f;
+    t.geometry.frameRounding     = 4.0f;
+    t.geometry.tabRounding       = 4.0f;
+    t.geometry.scrollbarRounding = 4.0f;
+    t.geometry.grabRounding      = 4.0f;
 
     return t;
 }
@@ -212,10 +216,14 @@ ThemeData ThemeData::CreateThemeDark() {
     c[ImGuiCol_TitleBgActive]        = col(15,  15,  15);
     c[ImGuiCol_TitleBgCollapsed]     = col(15,  15,  15);   // canvas
     c[ImGuiCol_MenuBarBg]            = col(15,  15,  15);
-    c[ImGuiCol_ScrollbarBg]          = col(15,  15,  15);
-    c[ImGuiCol_ScrollbarGrab]        = col(29,  31,  35);   // #1d1f23 control
-    c[ImGuiCol_ScrollbarGrabHovered] = col(38,  42,  49);   // #262a31 hover
-    c[ImGuiCol_ScrollbarGrabActive]  = col(38,  42,  49);   // hover
+    // The scrollbar track stays transparent: ImGui paints it with the
+    // window's corner radius, so a filled gutter inside a card ends in a
+    // second arc next to the card's own rounded corner. Only the thumb is
+    // drawn, and it uses the same radius as the card.
+    c[ImGuiCol_ScrollbarBg]          = col(0,   0,   0,   0);  // transparent: no gutter
+    c[ImGuiCol_ScrollbarGrab]        = col(38,  42,  49);   // #262a31
+    c[ImGuiCol_ScrollbarGrabHovered] = col(54,  60,  70);   // #363c46 hover
+    c[ImGuiCol_ScrollbarGrabActive]  = col(54,  60,  70);   // hover
     // Accent: the single blue accent (distinct from success green).
     c[ImGuiCol_CheckMark]            = accent();
     c[ImGuiCol_SliderGrab]           = accent();
@@ -298,12 +306,16 @@ ThemeData ThemeData::CreateThemeDark() {
     p3[ImPlot3DCol_AxisBgHovered] = t.imguiColors[ImGuiCol_ButtonHovered];
     p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
-    // Rounding of the reference: panels 8px, elements 4px.
-    t.geometry.windowRounding = 8.0f;
-    t.geometry.childRounding  = 8.0f;
-    t.geometry.popupRounding  = 8.0f;
-    t.geometry.frameRounding  = 4.0f;
-    t.geometry.tabRounding    = 4.0f;
+    // One radius for the whole UI: windows, popups, cards, buttons, frames,
+    // tabs, slider grabs and the scrollbar thumb. The thumb is narrow, so the
+    // renderer clamps its radius to half its width and it reads as a pill.
+    t.geometry.windowRounding    = 4.0f;
+    t.geometry.childRounding     = 4.0f;
+    t.geometry.popupRounding     = 4.0f;
+    t.geometry.frameRounding     = 4.0f;
+    t.geometry.tabRounding       = 4.0f;
+    t.geometry.scrollbarRounding = 4.0f;
+    t.geometry.grabRounding      = 4.0f;
 
     return t;
 }
