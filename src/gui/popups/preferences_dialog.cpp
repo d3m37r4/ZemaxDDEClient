@@ -247,7 +247,6 @@ namespace gui {
 
         bool changed = false;
 
-        // Optical System Info
         if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Optical System Info");
             ImGui::Spacing();
@@ -261,7 +260,6 @@ namespace gui {
 
         ImGui::Spacing();
 
-        // Surface Profile Inspector
         if (ImGui::BeginChild("##perf_profile", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Profile Inspector");
             ImGui::Spacing();
@@ -272,7 +270,6 @@ namespace gui {
 
         ImGui::Spacing();
 
-        // Surface Irregularity Map
         if (ImGui::BeginChild("##perf_map", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Irregularity Map");
             ImGui::Spacing();

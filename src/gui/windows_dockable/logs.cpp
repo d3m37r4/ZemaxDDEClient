@@ -54,8 +54,9 @@ namespace gui {
             m_jumpToBottom = m_autoscroll;
         }
 
-        // Checkbox завершает строку (курсор у ImGui на новой) — возвращаемся,
-        // иначе «мусорка» уедет на отдельный ряд (ловилось на скриншоте).
+        // The checkbox ends the line (ImGui leaves the cursor on a new one) -
+        // return before placing the trash button, otherwise it lands on its
+        // own row (seen on a screenshot).
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(ICON_FA_TRASH).x - ImGui::GetStyle().FramePadding.x * 2);
 
@@ -70,10 +71,10 @@ namespace gui {
         ImGui::BeginChild("LogsContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
         const auto& logEntries = logger.getLogs();
 
-        // Прилипание к низу: снимаем решение ДО отрисовки — до того, как новый
-        // контент сдвинет скролл. Работает и после clearLogs() (список пуст,
-        // максимум скролла 0 ⇒ «на дне»), и когда пользователь уехал наверх
-        // читать историю — тогда автоскролл молчит, пока не вернётся.
+        // Stick-to-bottom: capture the decision BEFORE rendering, before new
+        // content shifts the scroll. Works after clearLogs() (empty list, max
+        // scroll 0 counts as "at the bottom") and when the user scrolled up
+        // to read history - then autoscroll stays silent until they return.
         const float bottomSlack = ImGuiUtils::DpiScale(4.0f);
         const bool wasAtBottom = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - bottomSlack;
 

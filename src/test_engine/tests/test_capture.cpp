@@ -17,7 +17,6 @@ namespace app::testing {
 
 namespace {
 
-// Directory the screenshots are written to.
 std::string screenshotDir() {
     if (const char* env = std::getenv("ZEMAX_TEST_SCREENSHOT_DIR")) {
         if (env[0]) {

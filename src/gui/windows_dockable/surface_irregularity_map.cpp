@@ -97,8 +97,9 @@ namespace gui {
                     const auto& optSys = nominalFrozen
                         ? m_irregularityMapService->m_frozenNominalOpticalSystem
                         : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenNominalOpticalSystem);
-                    // Без DDE-клиента число поверхностей неизвестно — тогда
-                    // кламп не выполняется вовсе (в инспекторе он уходит в 0).
+                    // Without a DDE client the surface count is unknown, so
+                    // the clamp does not run at all (in the inspector it goes
+                    // to 0).
                     const int maxSurf = m_zemaxDDEClient
                         ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : -1;
 
@@ -218,8 +219,9 @@ namespace gui {
                     const auto& optSys = mapFrozen
                         ? m_irregularityMapService->m_frozenMapOpticalSystem
                         : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenMapOpticalSystem);
-                    // Без DDE-клиента число поверхностей неизвестно — тогда
-                    // кламп не выполняется вовсе (в инспекторе он уходит в 0).
+                    // Without a DDE client the surface count is unknown, so
+                    // the clamp does not run at all (in the inspector it goes
+                    // to 0).
                     const int maxSurf = m_zemaxDDEClient
                         ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : -1;
 

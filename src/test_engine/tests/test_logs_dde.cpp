@@ -19,7 +19,6 @@ void registerLogsDdeTests(ImGuiTestEngine* engine, TestAppContext* app) {
         }
         IM_CHECK(a->windows->IsVisible(WindowID::Logs));
 
-        // The window exists.
         ImGuiTestItemInfo logs = ctx->WindowInfo("//Logs");
         IM_CHECK(logs.ID != 0);
     };

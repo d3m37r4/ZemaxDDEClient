@@ -9,16 +9,16 @@ namespace gui {
         void render(Logger& logger, const ThemeManager* themeManager);
 
     private:
-        /// Панель одна — состояние тумблера живёт в единственном экземпляре.
+        // Single panel - the toggle state lives in one instance.
         bool m_autoscroll = true;
 
-        /// разовый запрос «прыгнуть в самый низ» (включение тумблера);
-        /// исполняется в child контента, т.к. SetScrollY целялся бы в шапку.
+        // One-shot "jump to the very bottom" request (enabling the toggle);
+        // executed in the content child, since SetScrollY would target the header.
         bool m_jumpToBottom = false;
 
-        /// Пользователь запросил очистку лога — модалка подтверждения откроется
-        /// на ближайшем кадре; флаг снимается при закрытии любым способом
-        /// (Cancel / Clear / крестик / Esc).
+        // User requested a log clear - the confirmation modal opens on the
+        // nearest frame; the flag is cleared when the modal closes in any way
+        // (Cancel / Clear / close button / Esc).
         bool m_confirmDelete = false;
     };
 }

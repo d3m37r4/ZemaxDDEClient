@@ -8,10 +8,7 @@
 namespace app {
 namespace {
 
-// ============================================================
-//  Helpers
-// ============================================================
-
+// Helpers
 static std::string tmpPath(const char* name) {
     return std::string(std::tmpnam(nullptr)) + name;
 }
@@ -21,10 +18,7 @@ static void writeFile(const std::string& path, const std::string& content) {
     out << content;
 }
 
-// ============================================================
-//  AppSettings::defaults() / reset()
-// ============================================================
-
+// AppSettings::defaults() / reset()
 TEST(SettingsDefaults, AllFieldsMatchExpected) {
     auto s = AppSettings::defaults();
 
@@ -67,10 +61,7 @@ TEST(SettingsReset, RestoresDefaults) {
     EXPECT_FLOAT_EQ(s.plot.lineWeight, 1.0f);
 }
 
-// ============================================================
-//  Enum roundtrip
-// ============================================================
-
+// Enum roundtrip
 TEST(ThemeModeRoundtrip, LightDarkSystem) {
     EXPECT_EQ(themeModeFromString(themeModeToString(ThemeMode::Light)),  ThemeMode::Light);
     EXPECT_EQ(themeModeFromString(themeModeToString(ThemeMode::Dark)),   ThemeMode::Dark);
@@ -92,10 +83,7 @@ TEST(UpdateChannelFromString, InvalidReturnsStable) {
     EXPECT_EQ(updateChannelFromString(""), UpdateChannel::Stable);
 }
 
-// ============================================================
-//  Load / save roundtrip
-// ============================================================
-
+// Load / save roundtrip
 TEST(SettingsLoadSave, RoundtripPreservesValues) {
     std::string path = tmpPath("_settings_roundtrip.json");
 
@@ -119,10 +107,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
     std::remove(path.c_str());
 }
 
-// ============================================================
-//  Load error cases
-// ============================================================
-
+// Load error cases
 TEST(SettingsLoad, FileMissingReturnsFileMissing) {
     AppSettings s;
     std::string err;
@@ -165,10 +150,7 @@ TEST(SettingsLoad, UnknownVersionResetsAndReturns) {
     std::remove(path.c_str());
 }
 
-// ============================================================
-//  DDE clamp
-// ============================================================
-
+// DDE clamp
 TEST(SettingsClamp, ConnectionTimeoutBelowMin) {
     std::string path = tmpPath("_settings_clamp_min.json");
     writeFile(path, R"({"version": 1, "dde": {"connectionTimeoutMs": 100}})");

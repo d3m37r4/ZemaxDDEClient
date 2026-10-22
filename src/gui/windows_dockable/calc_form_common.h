@@ -1,14 +1,15 @@
 #pragma once
 
-// Общая форма расчёта: поля, валидация, баннер прогресса и кнопки результата.
+// Shared calculation form: fields, validation, progress banner and result
+// buttons.
 //
-// Форма расчёта встречается в четырёх экземплярах (nominal и toleranced в
-// Surface Profile Inspector и Surface Irregularity Map). Все четыре формы
-// устроены одинаково и различаются лишь данными, поэтому подписи, пределы,
-// шаги и тексты подсказок живут здесь, а панели передают только значения.
+// The form appears in four instances (nominal and toleranced in the Surface
+// Profile Inspector, and in the Surface Irregularity Map). All four are
+// shaped alike and differ only in data, so labels, limits, steps and hint
+// texts live here and the panels pass values only.
 //
-// Порядок виджетов внутри формы важен: он определяет раскладку
-// (Text/SameLine/Input) и потому переносится без изменений.
+// The widget order inside the form matters: it defines the layout
+// (Text/SameLine/Input), so the functions below are copied verbatim.
 
 #include <algorithm>
 #include <format>
@@ -27,7 +28,7 @@
 
 namespace gui::forms {
 
-/// Подсказка к полю Sampling (одинакова для всех четырёх форм).
+/// Tooltip for the Sampling field (identical for all four forms).
 inline const char* SamplingTooltip() {
     static const std::string text = std::format(
         "Total number of sample points across the full surface diameter (min={}, max={}).\n"
@@ -37,23 +38,23 @@ inline const char* SamplingTooltip() {
     return text.c_str();
 }
 
-/// Подсказка к полю Angle.
+/// Tooltip for the Angle field.
 inline const char* AngleTooltip() {
     return "Orientation angle in degrees relative to the local x axis.";
 }
 
-/// Подсказка к полю Angle step карты неравномерностей.
+/// Tooltip for the irregularity map Angle step field.
 inline const char* AngleStepTooltip() {
     return "Angular step between cross-section profiles in degrees.\n"
            "Profiles span 180° (each profile gives two opposite radial lines).\n"
            "Smaller step = more sections, smoother 3D surface, slower calculation.";
 }
 
-/// Данные одной формы расчёта: что показать и что делать.
+/// Data of one calculation form: what to show and what to do.
 struct CalcFormContext {
     app::models::TaskSource source = app::models::TaskSource::NominalSurfaceProfile;
     const char*            bannerLabel = nullptr;   // "Nominal Profile"
-    std::string            opticalSystem;            // текст readonly-поля и копии
+    std::string            opticalSystem;            // readonly text and copy source
     const char*            copyId = nullptr;         // "##copy_optical_nominal"
 
     const char*            surfaceId = nullptr;      // "##nominal_surf_num"
@@ -67,22 +68,22 @@ struct CalcFormContext {
     const char*            angleId = nullptr;        // "##nominal_angle"
     double*                angleValue = nullptr;
     double*                angleAdjustedAt = nullptr;
-    /// true ⇒ поле угла — шаг карты неравномерностей (0.01–180), иначе — угол
-    /// профиля (±360).
+    /// true means the angle field is the irregularity map step (0.01-180),
+    /// otherwise it is the profile angle (-+360).
     bool                   angleIsStep = false;
 
-    /// Число поверхностей для клампа. Отрицательное ⇒ число поверхностей не
-    /// клампится вовсе (карта без DDE-клиента), ноль ⇒ клампится в 0
-    /// (инспектор без DDE-клиента).
+    /// Surface count limit for clamping. Negative means the surface count is
+    /// not clamped at all (map without a DDE client), zero clamps it to 0
+    /// (inspector without a DDE client).
     int                    maxSurfaces = 0;
-    bool                   frozen = false;         // форма заморожена на другом слоте
-    bool                   onActiveSlot = false;   // расчёт идёт на активном слоте
+    bool                   frozen = false;         // form frozen on another slot
+    bool                   onActiveSlot = false;   // calculation runs on the active slot
     const char*            actionLabel = nullptr;  // "Get nominal surface data"
     const char*            actionIcon = nullptr;   // ICON_FA_DOWNLOAD
 };
 
-/// Правая подсказка (?) после заголовка секции: показывается, пока форма
-/// заморожена на другом слоте.
+/// Right-side hint (?) after the section title: shown while the form is
+/// frozen on another slot.
 inline void RenderFrozenHint(int calcSlot, int activeSlot) {
     if (calcSlot < 0 || calcSlot == activeSlot) return;
     ImGui::SameLine();
@@ -91,7 +92,7 @@ inline void RenderFrozenHint(int calcSlot, int activeSlot) {
         "Switch target (F6) to edit, or Cancel the running calculation.");
 }
 
-/// Баннер прогресса расчёта.
+/// Calculation progress banner.
 inline void RenderCalcBanner(app::models::TaskSource source, const char* label,
                              gui::UiOperationMonitor& monitor, const ImVec4& color) {
     auto progress = monitor.getTaskProgress(source);
@@ -100,15 +101,15 @@ inline void RenderCalcBanner(app::models::TaskSource source, const char* label,
     ImGui::TextColored(color, "%s — calculation in progress on slot %d: %d%%", label, progress->clientSlot, pct);
 }
 
-/// Баннер прогресса по данным формы.
+/// Progress banner built from the form data.
 inline void RenderCalcBanner(const CalcFormContext& ctx, gui::UiOperationMonitor& monitor,
                              const ImVec4& color) {
     RenderCalcBanner(ctx.source, ctx.bannerLabel, monitor, color);
 }
 
-/// Поле «Surface number:» — целое, пределы 0..maxSurfaces.
-/// @param clampNow  Выполнять ли кламп: число поверхностей клампится, только
-///                  пока форма редактируема и предел известен.
+/// "Surface number:" field - integer, limits 0..maxSurfaces.
+/// @param clampNow  Whether to clamp: the surface count is clamped only
+///                  while the form is editable and the limit is known.
 inline void RenderSurfaceField(const CalcFormContext& ctx, const ImVec4& danger, const ImVec4& warning,
                                 bool clampNow) {
     ImGui::TextUnformatted("Surface number:");
@@ -122,14 +123,14 @@ inline void RenderSurfaceField(const CalcFormContext& ctx, const ImVec4& danger,
         if (app::ClampWithFeedback(*ctx.surfaceValue, 0, ctx.maxSurfaces)) {
             *ctx.surfaceAdjustedAt = ImGui::GetTime();
         }
-        // Подсказка идёт вместе с клампом: у числа поверхностей она
-        // показывается только пока форма редактируема.
+        // The hint travels with the clamp: for the surface count it is shown
+        // only while the form is editable.
         ImGuiUtils::AdjustedHint(flash,
             std::format("Adjusted to 0-{}", ctx.maxSurfaces).c_str(), warning);
     }
 }
 
-/// Поле «Sampling:» — целое, только нечётные значения, пределы MIN/MAX_SAG_SAMPLING.
+/// "Sampling:" field - integer, odd values only, MIN/MAX_SAG_SAMPLING limits.
 inline void RenderSamplingField(const CalcFormContext& ctx, const ImVec4& danger, const ImVec4& warning) {
     ImGui::TextUnformatted("Sampling:");
     ImGui::SameLine();
@@ -154,7 +155,7 @@ inline void RenderSamplingField(const CalcFormContext& ctx, const ImVec4& danger
             app::compute::MIN_SAG_SAMPLING, app::compute::MAX_SAG_SAMPLING).c_str(), warning);
 }
 
-/// Поле угла: «Angle» (±360) для профилей, «Angle step» (0.001–180) для карты.
+/// Angle field: "Angle" (-+360) for profiles, "Angle step" (0.001-180) for the map.
 inline void RenderAngleField(const CalcFormContext& ctx, const ImVec4& danger, const ImVec4& warning) {
     const bool isStep = ctx.angleIsStep;
     const double min = isStep ? app::compute::MIN_ANGLE_STEP_DEG : gui::MIN_ANGLE;
@@ -164,7 +165,8 @@ inline void RenderAngleField(const CalcFormContext& ctx, const ImVec4& danger, c
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
     const bool flash = ImGuiUtils::AdjustedFlashActive(*ctx.angleAdjustedAt);
     const bool tint = ImGuiUtils::BeginAdjustedHighlight(flash, danger);
-    // Шаг карты вводится с тысячными долями градуса, угол профиля — сотыми.
+    // The map step is entered with thousandths of a degree, the profile angle
+    // with hundredths.
     ImGui::InputDouble(ctx.angleId, ctx.angleValue,
                        isStep ? 0.01 : 1.0, isStep ? 0.1 : 10.0,
                        isStep ? "%.3f" : "%.2f");
@@ -174,26 +176,26 @@ inline void RenderAngleField(const CalcFormContext& ctx, const ImVec4& danger, c
     }
     ImGui::SameLine();
     ImGuiUtils::HelpMarker(isStep ? AngleStepTooltip() : AngleTooltip());
-    // Тексты подсказок сохранены в исходном виде.
+    // Hint strings preserved in their original spacing.
     const std::string hint = isStep
         ? std::format("Adjusted to {}-{}", min, max)
         : std::format("Adjusted to {} - {}", min, max);
     ImGuiUtils::AdjustedHint(flash, hint.c_str(), warning);
 }
 
-/// Блок «Optical system / Surface number / Sampling / Angle».
+/// Block "Optical system / Surface number / Sampling / Angle".
 inline void RenderCalcForm(const CalcFormContext& ctx, const ImVec4& danger, const ImVec4& warning) {
     {
-        // Путь есть всегда, пока открыт файл; пусто — значит нет DDE-клиента.
+        // The path always exists while a file is open; empty means no DDE client.
         std::string display = ctx.opticalSystem.empty() ? "Not connected" : ctx.opticalSystem;
         ImGui::TextUnformatted("Optical system:");
         ImGui::SameLine();
-        // Фиксированная ширина (как в Preferences → Files): длинный путь
-        // обрезается внутри поля, его можно прокрутить курсором до конца.
-        // В узкой панели ширина подстраивается, чтобы кнопка копирования не
-        // уехала за пределы окна.
-        // Запас под вертикальный скроллбар: ImGui рисует его поверх края
-        // контент-области, и без резерва кнопка копирования под ним прячется.
+        // Fixed width (as in Preferences -> Files): a long path is clipped
+        // inside the field and can be scrolled with the cursor to the end.
+        // In a narrow panel the width adapts so the copy button stays inside
+        // the window.
+        // Vertical scrollbar allowance: ImGui draws it over the edge of the
+        // content area, and without the reserve the copy button hides under it.
         const float avail = std::max(ImGui::GetContentRegionAvail().x
             - ImGuiUtils::CopyButtonWidth() - ImGui::GetStyle().ItemSpacing.x
             - ImGui::GetStyle().ScrollbarSize, 0.0f);
@@ -205,21 +207,21 @@ inline void RenderCalcForm(const CalcFormContext& ctx, const ImVec4& danger, con
         }
         ImGui::SameLine();
         const std::string copyLabel = std::string{ICON_FA_COPY} + " " + ctx.copyId;
-        // Копируется полный путь, даже если в поле он обрезан.
+        // The full path is copied, even if it is clipped in the field.
         ImGuiUtils::CopyButton(copyLabel.c_str(), ctx.opticalSystem.c_str());
     }
 
-    // Число поверхностей клампится, только пока форма редактируема и предел
-    // известен; Sampling и угол клампятся всегда.
+    // The surface count is clamped only while the form is editable and the
+    // limit is known; Sampling and the angle are clamped always.
     const bool editable = !ctx.frozen && !ctx.onActiveSlot;
     RenderSurfaceField(ctx, danger, warning, editable && ctx.maxSurfaces >= 0);
     RenderSamplingField(ctx, danger, warning);
     RenderAngleField(ctx, danger, warning);
 }
 
-/// Кнопки результата: «Processing…» + Cancel, либо основная кнопка действия.
-/// @param onStart   Запуск расчёта (сервисно-специфично).
-/// @param onCancel  Отмена расчёта (сервисно-специфично).
+/// Result buttons: "Processing..." + Cancel, or the primary action button.
+/// @param onStart   Start the calculation (service-specific).
+/// @param onCancel  Cancel the calculation (service-specific).
 inline void RenderResultActions(const CalcFormContext& ctx, gui::UiOperationMonitor& monitor,
                                 const SemanticPalette& sem, bool ddeInitialized, int activeSlot,
                                 std::function<void()> onStart, std::function<void()> onCancel) {

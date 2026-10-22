@@ -98,10 +98,8 @@ namespace App {
 
         logger.addLog("[APP] Application starting");
 
-        // Create DDE connection manager (manages multi-window connections)
         ctx->ddeConnectionManager = std::make_unique<DDEConnectionManager>(logger);
 
-        // Initialize GUI manager
         ctx->gui = std::make_unique<gui::GuiManager>(ctx->glfwWindow, ctx->ddeConnectionManager.get(), logger);
 
         // Load saved settings (JSON only, no apply) to resolve the correct theme
@@ -167,7 +165,6 @@ namespace App {
             Logger& logger = *ctx->pLogger;
             float newDpiScale = (xScale + yScale) / 2.0f;
 
-            // Update ImGui style
             ctx->gui->updateDpiStyle(newDpiScale);
             ctx->dpiScale = newDpiScale;
 

@@ -105,7 +105,6 @@ namespace ZemaxDDE {
                 int retries = -1,
                 const std::string& serviceId = "");
 
-            // Getters
             [[nodiscard]] const OpticalSystemData& getOpticalSystemData() const noexcept { return m_opticalSystem; }
             [[nodiscard]] OperationMonitor* getOperationMonitor() noexcept { return m_operationMonitor.get(); }
 

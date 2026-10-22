@@ -14,9 +14,9 @@ namespace gui {
     double unitScaleFactor(app::services::DisplayUnit unit);
     const char* displayUnitName(app::services::DisplayUnit unit);
 
-    /// Число с разделителем по тысячам: «12 060 000» читается лучше, чем
-    /// «12060000». Разделители ставятся справа налево, поэтому индекс
-    /// уменьшается на три после каждой вставки.
+    /// Number with thousand separators: "12 060 000" reads better than
+    /// "12060000". Separators are placed right to left, so the index
+    /// decreases by three after each insertion.
     inline std::string formatCount(long long value) {
         const bool negative = value < 0;
         std::string digits = std::to_string(negative ? -value : value);

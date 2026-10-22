@@ -126,7 +126,7 @@ TEST(MapPlan, FinestStepFitsTheBudgetAtTypicalSampling) {
 }
 
 TEST(MapPlan, RaisesFineStepToFitTheRequestBudget) {
-    // 0.001° при 16385 точках — это 2,9 млрд запросов, бюджет не выдержит.
+    // 0.001 deg at 16385 points is 2.9B requests - the budget cannot hold it.
     auto plan = planSurfaceMap(MIN_ANGLE_STEP_DEG, MAX_SAG_SAMPLING);
 
     EXPECT_GT(plan.stepDeg, MIN_ANGLE_STEP_DEG);
@@ -150,7 +150,7 @@ TEST(MapPlan, ClampsSamplingToTheToolLimit) {
 }
 
 TEST(MapPlan, KeepsTheFullToolRangeOfSampling) {
-    // 16 385 точек — предел инструмента Zemax, карта его не режет.
+    // 16385 points is the Zemax tool limit - the plan does not cut it.
     auto plan = planSurfaceMap(1.0, MAX_SAG_SAMPLING);
 
     EXPECT_EQ(plan.sampling, MAX_SAG_SAMPLING);

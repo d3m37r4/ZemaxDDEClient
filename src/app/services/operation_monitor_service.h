@@ -21,8 +21,8 @@ namespace app::services {
             uint64_t ddeOperationId;
             int clientSlot{-1};
             ZemaxDDE::OperationMonitor* boundMonitor{nullptr};
-            /// Момент старта задачи: ETA статус-бара считает по прошествии и
-            /// проценту выполнения. Пустое значение ⇒ ETA не показывается.
+            /// Task start moment: the status bar ETA derives it from the
+            /// elapsed time and percent complete. Empty value means no ETA.
             std::chrono::steady_clock::time_point startedAt{};
         };
 

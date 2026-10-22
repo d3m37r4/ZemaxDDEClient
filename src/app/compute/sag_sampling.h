@@ -2,13 +2,13 @@
 
 namespace app::compute {
 
-    // Пределы числа точек в профиле поверхности — ограничения инструмента
-    // Zemax «Surface Sag Cross Section»: меньше 33 точек сервер не принимает,
-    // больше 16385 — предел самого инструмента. Действуют и для профиля
-    // (Surface Profile Inspector), и для секций карты неравномерностей.
+    // Limits of the surface profile point count - constraints of the Zemax
+    // "Surface Sag Cross Section" tool: fewer than 33 points is rejected by
+    // the server, more than 16385 exceeds the tool itself. Applies both to
+    // the profile (Surface Profile Inspector) and to the map sections.
     //
-    // Сколько запросов это стоит, решает бюджет MAX_MAP_REQUESTS: один профиль
-    // стоит (sampling + 2) запросов, секций — 180° / шаг.
+    // What this costs in requests is decided by the MAX_MAP_REQUESTS budget:
+    // one profile costs (sampling + 2) requests, sections - 180 deg / step.
     constexpr int MIN_SAG_SAMPLING = 33;
     constexpr int MAX_SAG_SAMPLING = 16385;
 

@@ -82,7 +82,6 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     SetWindowLongPtrW(conn.hwndClient, GWLP_USERDATA,
         reinterpret_cast<LONG_PTR>(conn.client.get()));
 
-    // Propagate per-request timeouts to new client.
     conn.client->setGetNameTimeoutMs(m_getNameTimeoutMs);
     conn.client->setGetFileTimeoutMs(m_getFileTimeoutMs);
     conn.client->setGetSystemTimeoutMs(m_getSystemTimeoutMs);
