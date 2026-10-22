@@ -3,54 +3,16 @@
 #include <format>
 #include <vector>
 
+#include "app/compute/surface_map.h"
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
-#include "app/utils.h"
+#include "gui/windows_dockable/calc_form_common.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "logger/logger.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 #include "lib/implot3d/implot3d.h"
-
-namespace {
-    std::string getSamplingTooltip() {
-        return std::format(
-            "Total number of sample points across the full surface diameter (min={}, max={}).\n"
-            "Automatically rounded up to the nearest odd number to ensure a center point at r=0.\n"
-            "Higher values = smoother profile, slower calculation.",
-            gui::MIN_SAMPLING, gui::MAX_SAMPLING
-        );
-    }
-
-    std::string getAngleStepTooltip() {
-        return "Angular step between cross-section profiles in degrees.\n"
-               "Profiles span 180° (each profile gives two opposite radial lines).\n"
-               "Smaller step = more sections, smoother 3D surface, slower calculation.";
-    }
-
-    std::string getAngleTooltip() {
-        return "Orientation angle in degrees relative to the local x axis.";
-    }
-
-    // Right-aligned (?) after a section header, visible only while this
-    // section's calculation source is frozen on another slot.
-    void frozenSectionHelp(int calcSlot, int activeIdx) {
-        if (calcSlot < 0 || calcSlot == activeIdx) return;
-        ImGui::SameLine();
-        ImGuiUtils::HelpMarker(
-            "Frozen form: values were captured from the slot where the calculation started. "
-            "Switch target (F6) to edit, or Cancel the running calculation.");
-    }
-
-    void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor,
-                          const ImVec4& color) {
-        auto progress = monitor.getTaskProgress(source);
-        if (!progress) return;
-        int pct = progress->totalSteps > 0 ? (progress->currentStep * 100 / progress->totalSteps) : 0;
-        ImGui::TextColored(color, "%s — calculation in progress on slot %d: %d%%", label, progress->clientSlot, pct);
-    }
-}
 
 namespace gui {
     void GuiManager::renderSurfaceIrregularityMap() {
@@ -75,7 +37,7 @@ namespace gui {
         maxLabelWidth += cp * 2.0f;
 
         ImGuiUtils::SectionHeader("Nominal surface parameters");
-        frozenSectionHelp(m_irregularityMapService->getNominalCalcSlot(), hdrActiveIdx);
+        forms::RenderFrozenHint(m_irregularityMapService->getNominalCalcSlot(), hdrActiveIdx);
 
         ImGui::BeginChild(
             "NominalSurfaceContent",
@@ -104,9 +66,9 @@ namespace gui {
                 bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
 
                 ImGui::BeginDisabled(nominalFrozenV);
-                renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);;
+                forms::RenderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);
                 if (nominalFrozenV) {
-                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
                         nominalCalcSlotV);
                 }
                 ImGui::EndDisabled();
@@ -130,109 +92,55 @@ namespace gui {
 
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen || nominalOnActiveSlot);
 
+                forms::CalcFormContext form;
                 {
                     const auto& optSys = nominalFrozen
                         ? m_irregularityMapService->m_frozenNominalOpticalSystem
                         : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenNominalOpticalSystem);
-                    auto fileName = optSys.fileName;
-                    ImGui::TextUnformatted("Optical system:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(-(ImGuiUtils::CopyButtonWidth()
-                        + ImGui::GetStyle().ItemSpacing.x));
-                    ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::SameLine();
-                    ImGuiUtils::CopyButton(ICON_FA_COPY "##copy_optical_nominal", fileName.c_str());
+                    // Без DDE-клиента число поверхностей неизвестно — тогда
+                    // кламп не выполняется вовсе (в инспекторе он уходит в 0).
+                    const int maxSurf = m_zemaxDDEClient
+                        ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : -1;
+
+                    form.source             = TaskSource::NominalSurfaceProfile;
+                    form.bannerLabel        = "Nominal Profile";
+                    form.opticalSystem      = optSys.fileName;
+                    form.copyId             = "##copy_optical_nominal";
+                    form.surfaceId          = "##nominal_surf_num";
+                    form.surfaceValue       = &state.nominalSurfaceIndex;
+                    form.surfaceAdjustedAt  = &state.nominalSurfaceAdjustedAt;
+                    form.samplingId         = "##nominal_sampling";
+                    form.samplingValue      = &state.nominalSampling;
+                    form.samplingAdjustedAt = &state.nominalSamplingAdjustedAt;
+                    form.angleId            = "##nominal_angle";
+                    form.angleValue         = &state.nominalAngle;
+                    form.angleAdjustedAt    = &state.nominalAngleAdjustedAt;
+                    form.maxSurfaces        = maxSurf;
+                    form.frozen             = nominalFrozen;
+                    form.onActiveSlot       = nominalOnActiveSlot;
+                    form.actionLabel        = "Get nominal surface data";
+                    form.actionIcon         = ICON_FA_DOWNLOAD;
+
+                    forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
-
-                ImGui::TextUnformatted("Surface number:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool surfFlash = ImGuiUtils::AdjustedFlashActive(
-                    state.nominalSurfaceAdjustedAt);
-                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(surfFlash, sem.danger);
-                ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                if (surfTint) ImGui::PopStyleColor();
-                if (!nominalFrozen && !nominalOnActiveSlot && m_zemaxDDEClient) {
-                    const int maxSurf = m_zemaxDDEClient->getOpticalSystemData().numSurfs;
-                    if (app::ClampWithFeedback(state.nominalSurfaceIndex, 0, maxSurf))
-                        state.nominalSurfaceAdjustedAt = ImGui::GetTime();
-                    ImGuiUtils::AdjustedHint(surfFlash,
-                        std::format("Adjusted to 0-{}", maxSurf).c_str(), sem.warning);
-                }
-
-                ImGui::TextUnformatted("Sampling:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool sampFlash = ImGuiUtils::AdjustedFlashActive(
-                    state.nominalSamplingAdjustedAt);
-                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(sampFlash, sem.danger);
-                ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-                if (sampTint) ImGui::PopStyleColor();
-                if (app::ClampWithFeedback(
-                        state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING))
-                    state.nominalSamplingAdjustedAt = ImGui::GetTime();
-                if (app::SnapOddWithFeedback(state.nominalSampling))
-                    state.nominalSamplingAdjustedAt = ImGui::GetTime();
-                app::ClampWithFeedback(state.nominalSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-                ImGuiUtils::AdjustedHint(sampFlash,
-                    std::format("Adjusted to {}-{} (odd)",
-                        gui::MIN_SAMPLING, gui::MAX_SAMPLING).c_str(), sem.warning);
-
-                ImGui::TextUnformatted("Angle:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool angFlash = ImGuiUtils::AdjustedFlashActive(
-                    state.nominalAngleAdjustedAt);
-                const bool angTint = ImGuiUtils::BeginAdjustedHighlight(angFlash, sem.danger);
-                ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
-                if (angTint) ImGui::PopStyleColor();
-                if (app::ClampWithFeedback(state.nominalAngle, -360.0, 360.0))
-                    state.nominalAngleAdjustedAt = ImGui::GetTime();
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
-                ImGuiUtils::AdjustedHint(angFlash,
-                    "Adjusted to -360 - 360", sem.warning);
 
                 ImGuiUtils::SpacingY(0.5f);
 
                 if (nominalFrozen) {
-                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);;
-                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
                         nominalCalcSlot);
                 }
 
                 ImGui::EndDisabled();
 
                 if (nominalOnActiveSlot) {
-                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);;
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
 
-                if (nominalFrozen || nominalOnActiveSlot) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
-                    if (ImGui::Button(ICON_FA_XMARK " Cancel")) {
-                        m_irregularityMapService->cancelCalculation();
-                        m_irregularityMapService->onNominalCalculationComplete = nullptr;
-                        m_irregularityMapService->m_nominalSurfaceData.clear();
-                    }
-                    ImGuiUtils::PopFilledButton();
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
-                    ImGui::BeginDisabled(true);
-                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
-                    ImGui::Button(ICON_FA_DOWNLOAD " Get nominal surface data");
-                    ImGuiUtils::PopFilledButton();
-                    if (ImGui::BeginItemTooltip()) {
-                        ImGui::TextUnformatted("Another calculation is in progress on this slot");
-                        ImGui::EndTooltip();
-                    }
-                    ImGui::EndDisabled();
-                } else {
-                    ImGui::BeginDisabled(!isDDEInitialized());
-                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
-                    if (ImGui::Button(ICON_FA_DOWNLOAD " Get nominal surface data")) {
+                forms::RenderResultActions(
+                    form, m_uiOpMonitor, sem, isDDEInitialized(), activeIdx,
+                    [&]() {
                         if (isDDEInitialized()) {
                             m_irregularityMapService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                             auto units = m_zemaxDDEClient->getOpticalSystemData().units;
@@ -244,17 +152,19 @@ namespace gui {
                             };
                             m_irregularityMapService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
-                    }
-                    ImGuiUtils::PopFilledButton();
-                    ImGui::EndDisabled();
-                }
+                    },
+                    [&]() {
+                        m_irregularityMapService->cancelCalculation();
+                        m_irregularityMapService->onNominalCalculationComplete = nullptr;
+                        m_irregularityMapService->m_nominalSurfaceData.clear();
+                    });
             }
         }
 
         ImGui::EndChild();
 
         ImGuiUtils::SectionHeader("Toleranced surface parameters");
-        frozenSectionHelp(m_irregularityMapService->getMapCalcSlot(), hdrActiveIdx);
+        forms::RenderFrozenHint(m_irregularityMapService->getMapCalcSlot(), hdrActiveIdx);
 
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
@@ -302,70 +212,38 @@ namespace gui {
             } else {
                 ImGui::BeginDisabled(!isDDEInitialized() || mapFrozen || mapOnActiveSlot);
 
+                forms::CalcFormContext form;
                 {
                     const auto& optSys = mapFrozen
                         ? m_irregularityMapService->m_frozenMapOpticalSystem
                         : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_irregularityMapService->m_frozenMapOpticalSystem);
-                    auto fileName = optSys.fileName;
-                    ImGui::TextUnformatted("Optical system:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(-(ImGuiUtils::CopyButtonWidth()
-                        + ImGui::GetStyle().ItemSpacing.x));
-                    ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
-                    ImGui::SameLine();
-                    ImGuiUtils::CopyButton(ICON_FA_COPY "##copy_optical_map", fileName.c_str());
+                    // Без DDE-клиента число поверхностей неизвестно — тогда
+                    // кламп не выполняется вовсе (в инспекторе он уходит в 0).
+                    const int maxSurf = m_zemaxDDEClient
+                        ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : -1;
+
+                    form.source             = TaskSource::SurfaceIrregularityMap;
+                    form.bannerLabel        = "Surface Map";
+                    form.opticalSystem      = optSys.fileName;
+                    form.copyId             = "##copy_optical_map";
+                    form.surfaceId          = "##toleranced_surf_num";
+                    form.surfaceValue       = &state.tolerancedSurfaceIndex;
+                    form.surfaceAdjustedAt  = &state.tolerancedSurfaceAdjustedAt;
+                    form.samplingId         = "##toleranced_sampling";
+                    form.samplingValue      = &state.tolerancedSampling;
+                    form.samplingAdjustedAt = &state.tolerancedSamplingAdjustedAt;
+                    form.angleId            = "##toleranced_angle_step";
+                    form.angleValue         = &state.tolerancedAngleStep;
+                    form.angleAdjustedAt    = &state.tolerancedAngleStepAdjustedAt;
+                    form.angleIsStep        = true;
+                    form.maxSurfaces        = maxSurf;
+                    form.frozen             = mapFrozen;
+                    form.onActiveSlot       = mapOnActiveSlot;
+                    form.actionLabel        = "Calculate Surface Map";
+                    form.actionIcon         = ICON_FA_CALCULATOR;
+
+                    forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
-
-                ImGui::TextUnformatted("Surface number:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool surfFlash = ImGuiUtils::AdjustedFlashActive(
-                    state.tolerancedSurfaceAdjustedAt);
-                const bool surfTint = ImGuiUtils::BeginAdjustedHighlight(surfFlash, sem.danger);
-                ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-                if (surfTint) ImGui::PopStyleColor();
-                if (!mapFrozen && !mapOnActiveSlot && m_zemaxDDEClient) {
-                    const int maxSurf = m_zemaxDDEClient->getOpticalSystemData().numSurfs;
-                    if (app::ClampWithFeedback(state.tolerancedSurfaceIndex, 0, maxSurf))
-                        state.tolerancedSurfaceAdjustedAt = ImGui::GetTime();
-                    ImGuiUtils::AdjustedHint(surfFlash,
-                        std::format("Adjusted to 0-{}", maxSurf).c_str(), sem.warning);
-                }
-
-                ImGui::TextUnformatted("Sampling:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool sampFlash = ImGuiUtils::AdjustedFlashActive(
-                    state.tolerancedSamplingAdjustedAt);
-                const bool sampTint = ImGuiUtils::BeginAdjustedHighlight(sampFlash, sem.danger);
-                ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-                if (sampTint) ImGui::PopStyleColor();
-                if (app::ClampWithFeedback(
-                        state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING))
-                    state.tolerancedSamplingAdjustedAt = ImGui::GetTime();
-                if (app::SnapOddWithFeedback(state.tolerancedSampling))
-                    state.tolerancedSamplingAdjustedAt = ImGui::GetTime();
-                app::ClampWithFeedback(state.tolerancedSampling, gui::MIN_SAMPLING, gui::MAX_SAMPLING);
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-                ImGuiUtils::AdjustedHint(sampFlash,
-                    std::format("Adjusted to {}-{} (odd)",
-                        gui::MIN_SAMPLING, gui::MAX_SAMPLING).c_str(), sem.warning);
-
-                ImGui::TextUnformatted("Angle step:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                const bool stepFlash = ImGuiUtils::AdjustedFlashActive(
-                    state.tolerancedAngleStepAdjustedAt);
-                const bool stepTint = ImGuiUtils::BeginAdjustedHighlight(stepFlash, sem.danger);
-                ImGui::InputDouble("##toleranced_angle_step", &state.tolerancedAngleStep, 0.1, 1.0, "%.2f");
-                if (stepTint) ImGui::PopStyleColor();
-                if (app::ClampWithFeedback(state.tolerancedAngleStep, 0.01, 180.0))
-                    state.tolerancedAngleStepAdjustedAt = ImGui::GetTime();
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getAngleStepTooltip().c_str());
-                ImGuiUtils::AdjustedHint(stepFlash,
-                    "Adjusted to 0.01-180", sem.warning);
 
                 int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
                 ImGui::TextUnformatted("Number of sections:");
@@ -375,47 +253,28 @@ namespace gui {
                 ImGuiUtils::SpacingY(0.5f);
 
                 if (mapFrozen) {
-                    renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor, sem.warning);;
-                    ImGui::TextDisabled("Frozen on slot %d: switch target (F6) or Cancel below.",
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
                         mapCalcSlot);
                 }
 
                 ImGui::EndDisabled();
 
                 if (mapOnActiveSlot) {
-                    renderCalcBanner(TaskSource::SurfaceIrregularityMap, "Surface Map", m_uiOpMonitor, sem.warning);;
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
 
-                if (mapFrozen || mapOnActiveSlot) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
-                    if (ImGui::Button(ICON_FA_XMARK " Cancel")) {
-                        m_irregularityMapService->cancelMapCalculation();
-                    }
-                    ImGuiUtils::PopFilledButton();
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
-                    ImGui::BeginDisabled(true);
-                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
-                    ImGui::Button(ICON_FA_CALCULATOR " Calculate Surface Map");
-                    ImGuiUtils::PopFilledButton();
-                    if (ImGui::BeginItemTooltip()) {
-                        ImGui::TextUnformatted("Another calculation is in progress on this slot");
-                        ImGui::EndTooltip();
-                    }
-                    ImGui::EndDisabled();
-                } else {
-                    ImGui::BeginDisabled(!isDDEInitialized());
-                    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
-                    if (ImGui::Button(ICON_FA_CALCULATOR " Calculate Surface Map")) {
+                forms::RenderResultActions(
+                    form, m_uiOpMonitor, sem, isDDEInitialized(), activeIdx,
+                    [&]() {
                         if (m_zemaxDDEClient) {
                             m_irregularityMapService->m_frozenMapOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                         }
                         m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
-                    }
-                    ImGuiUtils::PopFilledButton();
-                    ImGui::EndDisabled();
-                }
+                    },
+                    [&]() {
+                        m_irregularityMapService->cancelMapCalculation();
+                    });
             }
         }
 

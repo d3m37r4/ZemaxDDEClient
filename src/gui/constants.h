@@ -16,11 +16,16 @@ namespace gui {
     // Sag analysis window constraints
     inline constexpr ImVec2 SAG_ANALYSIS_WINDOW_MIN_SIZE = ImVec2(200.0f, 160.0f);
 
-    // Sag analysis sampling constraints
-    // Maximum: Zemax tool "Surface Sag Cross Section" limit
-    inline constexpr int MAX_SAMPLING = 16385;
-    // Minimum: Zemax requires at least 33 for valid profile calculation
-    inline constexpr int MIN_SAMPLING = 33;
+    // Sag analysis sampling constraints live in app/compute/sag_sampling.h — the
+    // UI and the map service share them (Zemax tool limits).
+
+    // Sag analysis orientation angle constraints (degrees)
+    inline constexpr double MIN_ANGLE = -360.0;
+    inline constexpr double MAX_ANGLE = 360.0;
+
+    // The angular step of an irregularity map (0.001–180) and the request
+    // budget of a map live in app::compute::surface_map.h — the UI and the
+    // service share them.
 
     // Connect DDE popup constraints
     inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(550.0f, 120.0f);
