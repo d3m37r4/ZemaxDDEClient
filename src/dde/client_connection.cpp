@@ -104,6 +104,28 @@ namespace ZemaxDDE {
         return id;
     }
 
+    void ZemaxDDEClient::cancelPendingRequests(const std::string& serviceId) {
+        std::vector<std::function<void(const std::string&)>> failures;
+
+        // Rebuild the queue without the cancelled service's entries; the error
+        // callbacks are collected and invoked afterwards so a re-entrant
+        // submitRequest (from within a callback) cannot corrupt the iteration.
+        std::deque<DdeRequest> kept;
+        for (auto& req : m_requestQueue) {
+            if (req.serviceId == serviceId) {
+                m_logger.addLog(std::format("[DDE] Request #{} cancelled before dispatch", req.id));
+                if (req.onError) failures.push_back(std::move(req.onError));
+            } else {
+                kept.push_back(std::move(req));
+            }
+        }
+        m_requestQueue = std::move(kept);
+
+        for (auto& onError : failures) {
+            onError("Cancelled");
+        }
+    }
+
     void ZemaxDDEClient::dispatchNext() {
         // Defensive: caller contract is that m_activeRequest is null here.
         // If not, do nothing to avoid overwriting an in-flight request.

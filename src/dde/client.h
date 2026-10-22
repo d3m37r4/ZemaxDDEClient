@@ -105,6 +105,12 @@ namespace ZemaxDDE {
                 int retries = -1,
                 const std::string& serviceId = "");
 
+            /// Drops every queued (not yet dispatched) request of the given
+            /// service and fails it with 'Cancelled'. A request that is already
+            /// dispatched cannot be recalled — the owner must ignore its late
+            /// response on its own (generation/state guards).
+            void cancelPendingRequests(const std::string& serviceId);
+
             [[nodiscard]] const OpticalSystemData& getOpticalSystemData() const noexcept { return m_opticalSystem; }
             [[nodiscard]] OperationMonitor* getOperationMonitor() noexcept { return m_operationMonitor.get(); }
 

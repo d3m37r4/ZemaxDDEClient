@@ -29,6 +29,11 @@ namespace app::compute {
 
             bool isCalculating() const { return m_state == State::FetchingSurfaceData || m_state == State::FetchingSagPoints; }
             bool isCancelled() const;
+            /// UI-monitor task id of the current run (0 = no task). The status
+            /// bar cancel routes by this id: source alone is ambiguous since
+            /// both the profile service and the map service run "Nominal
+            /// Profile"-sourced tasks.
+            uint64_t taskId() const { return m_taskId; }
             const std::string& getError() const { return m_error; }
             const app::models::SurfaceData& getResult() const { return m_result; }
             int getTotalDdeRequests() const { return m_totalDdeRequests; }
@@ -75,6 +80,12 @@ namespace app::compute {
             app::models::SurfaceData m_result;
             int m_totalDdeRequests{0};
             bool m_cancelRequested{false};
+
+            // Unique per-instance DDE service tag. cancel() purges only this
+            // instance's pending requests, so a sibling calculator (nominal vs
+            // toleranced, profile inspector vs map) running concurrently on the
+            // same client is never cancelled by mistake.
+            std::string m_serviceTag;
 
             DWORD m_surfaceDataTimeoutMsOverride = 0;
             DWORD m_sagTimeoutMsOverride = 0;

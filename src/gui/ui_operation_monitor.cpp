@@ -245,7 +245,7 @@ namespace gui {
             ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover,
                                          sem.dangerButtonActive, sem.onAccent);
             if (ImGui::Button(ICON_FA_XMARK "##status_cancel", ImVec2(cancelWidth, 0))) {
-                m_onCancelTask(record->source);
+                m_onCancelTask(record->taskId, record->source);
             }
             ImGuiUtils::PopFilledButton();
             if (ImGui::IsItemHovered()) {

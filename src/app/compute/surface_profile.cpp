@@ -1,5 +1,6 @@
 #include <format>
 #include <cmath>
+#include <atomic>
 
 #include "surface_profile.h"
 #include "app/models/surface_data.h"
@@ -16,6 +17,8 @@ namespace app::compute {
         : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
+        static std::atomic<uint64_t> instanceCounter{1};
+        m_serviceTag = std::format("SurfaceProfileService#{}", instanceCounter.fetch_add(1));
     }
 
     ZemaxDDE::ZemaxDDEClient* SurfaceProfile::getClient() const {
@@ -89,7 +92,7 @@ namespace app::compute {
             [this, generation](const std::string& error) {
                 onError(std::format("GetSurfaceData(TYPE_NAME): {}", error), generation);
             },
-            surfaceDataTimeout, 1, "SurfaceProfileService");
+            surfaceDataTimeout, 1, m_serviceTag);
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
@@ -99,15 +102,34 @@ namespace app::compute {
             [this, generation](const std::string& error) {
                 onError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error), generation);
             },
-            surfaceDataTimeout, 1, "SurfaceProfileService");
+            surfaceDataTimeout, 1, m_serviceTag);
     }
 
     void SurfaceProfile::cancel() {
-        m_cancelRequested = true;
-        m_boundClient = nullptr;
-        if (m_uiOpMonitor && m_taskId > 0) {
-            m_uiOpMonitor->requestCancel(m_taskId);
+        if (!isCalculating()) {
+            m_cancelRequested = true;
+            return;
         }
+
+        // Finalize synchronously at the click instead of waiting for the next
+        // DDE response: the generation bump invalidates every late callback,
+        // and the queue purge stops everything that was submitted but not
+        // dispatched yet. An already-dispatched request cannot be recalled —
+        // its response is dropped by the generation check below.
+        ++m_generation;
+        if (auto* client = getClient()) {
+            client->cancelPendingRequests(m_serviceTag);
+        }
+        m_boundClient = nullptr;
+        m_cancelRequested = true;
+        m_state = State::Failed;
+        m_error = "Cancelled";
+        if (m_uiOpMonitor && m_taskId > 0) {
+            m_uiOpMonitor->failTask(m_taskId, "Cancelled");
+            m_taskId = 0;
+        }
+        m_logger.addLog("[SurfaceProfileService] Cancelled by user");
+        if (onFailed) onFailed();
     }
 
     void SurfaceProfile::onSurfaceDataReceived(
@@ -233,7 +255,7 @@ namespace app::compute {
                     onError(std::format("GetSag failed: {}", error), generation);
                 }
             },
-            sagTimeout, 1, "SurfaceProfileService");
+            sagTimeout, 1, m_serviceTag);
     }
 
     void SurfaceProfile::onSagDataReceived(const std::string& buffer, uint64_t generation) {

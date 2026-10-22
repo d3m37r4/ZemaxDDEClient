@@ -56,6 +56,9 @@ namespace app::services {
         };
         m_nominalCalculator.onFailed = [this]() {
             m_nominalCalcSlot = -1;
+            // Do not publish the aborted run's partial result on cancel; see
+            // SurfaceProfileService::onNominalFailed for the same contract.
+            if (m_nominalCalculator.isCancelled()) return;
             if (onNominalCalculationComplete) onNominalCalculationComplete();
         };
 
@@ -218,6 +221,18 @@ namespace app::services {
             m_currentAngleIndex = 0;
         }
         m_mapCalcSlot = -1;
+    }
+
+    bool SurfaceMapService::cancelTask(uint64_t taskId) {
+        if (m_mapTaskId > 0 && m_mapTaskId == taskId) {
+            cancelMapCalculation();
+            return true;
+        }
+        if (m_nominalCalculator.taskId() == taskId && m_nominalCalculator.isCalculating()) {
+            cancelCalculation();
+            return true;
+        }
+        return false;
     }
 
     void SurfaceMapService::clearData() {

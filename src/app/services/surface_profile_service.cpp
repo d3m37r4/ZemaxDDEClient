@@ -106,7 +106,12 @@ namespace app::services {
 
     void SurfaceProfileService::onNominalFailed() {
         m_nominalCalcSlot = -1;
-        if (onNominalCalculationComplete) onNominalCalculationComplete();
+        // A cancellation must not publish the aborted run's partial result:
+        // the complete callback copies getResult() on any failure. Genuine
+        // errors keep the previous behavior (panel copy is refreshed).
+        if (!m_nominalCalculator.isCancelled() && onNominalCalculationComplete) {
+            onNominalCalculationComplete();
+        }
     }
 
     void SurfaceProfileService::onTolerancedComplete() {
@@ -118,7 +123,10 @@ namespace app::services {
 
     void SurfaceProfileService::onTolerancedFailed() {
         m_tolerancedCalcSlot = -1;
-        if (onTolerancedCalculationComplete) onTolerancedCalculationComplete();
+        // See onNominalFailed: a cancellation must not publish partial data.
+        if (!m_tolerancedCalculator.isCancelled() && onTolerancedCalculationComplete) {
+            onTolerancedCalculationComplete();
+        }
     }
 
     void SurfaceProfileService::cancelCalculation() {
@@ -135,5 +143,17 @@ namespace app::services {
             ? m_nominalCalcSlot : m_tolerancedCalcSlot;
         calc.cancel();
         slot = -1;
+    }
+
+    bool SurfaceProfileService::cancelTask(uint64_t taskId) {
+        if (m_nominalCalculator.taskId() == taskId && m_nominalCalculator.isCalculating()) {
+            cancelCalculation(app::models::TaskSource::NominalSurfaceProfile);
+            return true;
+        }
+        if (m_tolerancedCalculator.taskId() == taskId && m_tolerancedCalculator.isCalculating()) {
+            cancelCalculation(app::models::TaskSource::TolerancedSurfaceProfile);
+            return true;
+        }
+        return false;
     }
 }

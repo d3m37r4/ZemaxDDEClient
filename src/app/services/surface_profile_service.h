@@ -55,6 +55,13 @@ namespace app::services {
             void cancelCalculation();
             void cancelCalculation(app::models::TaskSource source);
 
+            /// Cancels the task that owns the given UI-monitor task id.
+            /// Returns false when none of this service's running tasks match —
+            /// the caller (GuiManager) then tries the next service. Needed
+            /// because TaskSource alone is ambiguous: both this service and
+            /// SurfaceMapService run NominalSurfaceProfile tasks.
+            bool cancelTask(uint64_t taskId);
+
             /// Called when a connection slot is torn down. Cancels any calculation
             /// bound to that slot so its resources are released safely.
             void onClientDisconnected(int index);

@@ -63,6 +63,12 @@ namespace app::services {
 
             void startMapCalculation(int surface, int sampling, double angleStepDeg);
             void cancelMapCalculation();
+
+            /// Cancels the task owning the given UI-monitor task id (map run or
+            /// the nominal reference profile). Returns false when nothing
+            /// matches. See SurfaceProfileService::cancelTask for rationale.
+            bool cancelTask(uint64_t taskId);
+
             void clearData();
 
             /// Called when a connection slot is torn down. Cancels any calculation

@@ -21,15 +21,15 @@ namespace gui {
 
         void setThemeManager(const ThemeManager* tm) noexcept { m_themeManager = tm; }
         void setConnectionManager(const DDEConnectionManager* cm) noexcept { m_connectionManager = cm; }
-        /// Cancel for the selected task: GuiManager dispatches by TaskSource
-        /// to the owning service (profile - cancelCalculation(source), map -
-        /// cancelMapCalculation()). An empty callback hides the Cancel button.
-        void setOnCancelTask(std::function<void(TaskSource)> cb) { m_onCancelTask = std::move(cb); }
+        /// Cancel for the selected task. The callback receives the task id +
+        /// its source; GuiManager routes it to the owning service (see
+        /// cancelTask there). An empty callback hides the Cancel button.
+        void setOnCancelTask(std::function<void(uint64_t taskId, TaskSource source)> cb) { m_onCancelTask = std::move(cb); }
 
     private:
         int m_selectedTaskIndex{0};
         const ThemeManager* m_themeManager = nullptr;
         const DDEConnectionManager* m_connectionManager = nullptr;
-        std::function<void(TaskSource)> m_onCancelTask;
+        std::function<void(uint64_t taskId, TaskSource source)> m_onCancelTask;
     };
 }

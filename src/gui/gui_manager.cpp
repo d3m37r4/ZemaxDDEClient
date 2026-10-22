@@ -28,14 +28,14 @@ namespace gui {
     m_profileService->setUiOperationMonitor(&m_uiOpMonitor);
     m_irregularityMapService->setUiOperationMonitor(&m_uiOpMonitor);
 
-    // Cancel from the status bar: dispatch the selected task to its owner.
-    m_uiOpMonitor.setOnCancelTask([this](app::models::TaskSource source) {
-        if (source == app::models::TaskSource::SurfaceIrregularityMap) {
-            m_irregularityMapService->cancelMapCalculation();
-        } else if (source == app::models::TaskSource::NominalSurfaceProfile ||
-                   source == app::models::TaskSource::TolerancedSurfaceProfile) {
-            m_profileService->cancelCalculation(source);
+    // Cancel from the status bar: route by the task id itself. TaskSource
+    // alone is ambiguous — a NominalSurfaceProfile task can be owned either
+    // by the profile service or by the map service's nominal reference run.
+    m_uiOpMonitor.setOnCancelTask([this](uint64_t taskId, app::models::TaskSource /*source*/) {
+        if (m_profileService->cancelTask(taskId)) {
+            return;
         }
+        (void)m_irregularityMapService->cancelTask(taskId);
     });
 
     // When a connection slot is torn down, drop tasks bound to it so the status
