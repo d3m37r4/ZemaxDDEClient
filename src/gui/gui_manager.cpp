@@ -28,6 +28,16 @@ namespace gui {
     m_profileService->setUiOperationMonitor(&m_uiOpMonitor);
     m_irregularityMapService->setUiOperationMonitor(&m_uiOpMonitor);
 
+    // Cancel from the status bar: dispatch the selected task to its owner.
+    m_uiOpMonitor.setOnCancelTask([this](app::models::TaskSource source) {
+        if (source == app::models::TaskSource::SurfaceIrregularityMap) {
+            m_irregularityMapService->cancelMapCalculation();
+        } else if (source == app::models::TaskSource::NominalSurfaceProfile ||
+                   source == app::models::TaskSource::TolerancedSurfaceProfile) {
+            m_profileService->cancelCalculation(source);
+        }
+    });
+
     // When a connection slot is torn down, drop tasks bound to it so the status
     // bar never dereferences a destroyed OperationMonitor (use-after-free guard).
     if (ddeConnectionManager) {
@@ -107,6 +117,8 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_ddeStatusRenderer->setThemeManager(&themeManager);
     m_ddeStatusRenderer->setLogger(&m_logger);
     m_updateChecker->setThemeManager(&themeManager);
+    m_uiOpMonitor.setThemeManager(&themeManager);
+    m_uiOpMonitor.setConnectionManager(m_ddeConnectionManager);
 }
 
 void GuiManager::render() {

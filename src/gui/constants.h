@@ -107,6 +107,10 @@ namespace gui {
     // (DPI-scaled at the call site)
     inline constexpr float OPERATION_COMBO_BASE_WIDTH = 220.0f;
 
+    // Global status bar (always visible): paddings and the cancel button gap
+    inline constexpr float STATUS_BAR_VPAD         = 4.0f;
+    inline constexpr float STATUS_BAR_ELEMENT_GAP  = 4.0f;
+
     // Default highlight color for worst-section markers
     inline constexpr ImVec4 DEFAULT_WORST_HIGHLIGHT_COLOR{1.0f, 0.0f, 0.0f, 1.0f};
 }

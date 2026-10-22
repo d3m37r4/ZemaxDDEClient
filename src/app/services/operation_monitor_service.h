@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -20,6 +21,9 @@ namespace app::services {
             uint64_t ddeOperationId;
             int clientSlot{-1};
             ZemaxDDE::OperationMonitor* boundMonitor{nullptr};
+            /// Момент старта задачи: ETA статус-бара считает по прошествии и
+            /// проценту выполнения. Пустое значение ⇒ ETA не показывается.
+            std::chrono::steady_clock::time_point startedAt{};
         };
 
         void setMonitor(ZemaxDDE::OperationMonitor* monitor) { m_monitor = monitor; }

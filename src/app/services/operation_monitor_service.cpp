@@ -14,6 +14,7 @@ namespace app::services {
         rec.ddeOperationId = ddeId;
         rec.clientSlot = clientSlot;
         rec.boundMonitor = m_monitor;
+        rec.startedAt = std::chrono::steady_clock::now();
         m_tasks.emplace(rec.taskId, rec);
 
         return rec.taskId;
