@@ -258,9 +258,9 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::TextUnformatted(gui::formatCount(plan.estimatedRequests).c_str());
                 if (plan.adjusted) {
-                    ImGui::TextColored(sem.warning,
-                        "Angle step raised to {:.3f}° to stay within the request budget",
-                        plan.stepDeg);
+                    ImGui::TextColored(sem.warning, "%s",
+                        std::format("Angle step raised to {:.3f}° to stay within the request budget",
+                            plan.stepDeg).c_str());
                 }
 
                 ImGuiUtils::SpacingY(0.5f);
