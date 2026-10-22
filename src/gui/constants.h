@@ -10,6 +10,11 @@ namespace gui {
     // Debug log window constraints
     inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
 
+    // Delete log entries confirmation popup (Logs panel header)
+    inline constexpr const char* DELETE_LOG_CONFIRM_POPUP_NAME = "Delete all log entries?";
+    inline constexpr ImVec2 DELETE_LOG_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(400.0f, 120.0f);
+    inline constexpr ImVec2 DELETE_LOG_CONFIRM_POPUP_MIN_SIZE     = ImVec2(400.0f, 120.0f);
+
     // System info window constraints
     inline constexpr ImVec2 SYSTEM_INFO_WINDOW_MIN_SIZE  = ImVec2(200.0f, 160.0f);
 
@@ -94,6 +99,13 @@ namespace gui {
     // DDE status panel
     inline constexpr float DDE_STATUS_ELEMENT_GAP   = 4.0f;
     inline constexpr float DDE_STATUS_BTN_VPAD      = 4.0f;
+
+    // Default size of a detached plot window (DPI-scaled at call sites)
+    inline constexpr ImVec2 DETACHED_WINDOW_DEFAULT_SIZE = ImVec2(600.0f, 400.0f);
+
+    // Base width of the operation selector combo in the status bar
+    // (DPI-scaled at the call site)
+    inline constexpr float OPERATION_COMBO_BASE_WIDTH = 220.0f;
 
     // Default highlight color for worst-section markers
     inline constexpr ImVec4 DEFAULT_WORST_HIGHLIGHT_COLOR{1.0f, 0.0f, 0.0f, 1.0f};

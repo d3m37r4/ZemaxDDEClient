@@ -1,4 +1,5 @@
 #include "gui/gui.h"
+#include "gui/constants.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "gui/surface_profile_service.h"
@@ -153,8 +154,6 @@ void GuiManager::render() {
         m_pWndMgr->RenderAll();
     }
 
-    const ImVec2 kDetachedWindowSize(600, 400);
-
     auto& profileUnits = m_profileService->m_windowState.units;
     auto& mapUnits = m_irregularityMapService->m_windowState.units;
 
@@ -164,7 +163,7 @@ void GuiManager::render() {
 
         if (m_profileService->m_showTolerancedProfileWindow) {
             if (tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 std::string title = std::format("Toleranced Surface Profile ({}°, {} pts)", tolSurface.angle, tolSurface.sampling);
                 renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
@@ -175,7 +174,7 @@ void GuiManager::render() {
 
         if (m_profileService->m_showNominalProfileWindow) {
             if (nomSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 std::string title = std::format("Nominal Surface Profile ({}°, {} pts)", nomSurface.angle, nomSurface.sampling);
                 renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
@@ -186,7 +185,7 @@ void GuiManager::render() {
 
         if (m_profileService->m_showComparisonProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 renderToolbarWindow("Surface Profile Comparison", &m_profileService->m_showComparisonProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
@@ -196,7 +195,7 @@ void GuiManager::render() {
 
         if (m_profileService->m_showDeviationProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 renderToolbarWindow("Surface Profile Irregularity (PV)", &m_profileService->m_showDeviationProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
@@ -210,7 +209,7 @@ void GuiManager::render() {
 
         if (mapService->m_showTolerancedSurfaceMap) {
             if (mapService->hasData()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 renderToolbarWindow("Surface Irregularity Map 3D", &mapService->m_showTolerancedSurfaceMap, [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapSurface,
@@ -225,7 +224,7 @@ void GuiManager::render() {
 
         if (mapService->m_showDeviationSurfaceMap) {
             if (mapService->hasData() && mapService->m_nominalSurfaceData.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 renderToolbarWindow("Surface Irregularity Map 3D Deviation", &mapService->m_showDeviationSurfaceMap, [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapDeviation,
@@ -240,7 +239,7 @@ void GuiManager::render() {
 
         if (mapService->m_showWorstSectionProfile) {
             if (mapService->m_worstProfileData.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 renderToolbarWindow("Worst Section Profile", &mapService->m_showWorstSectionProfile, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     auto& wp = mapService->m_worstProfileData;
@@ -255,7 +254,7 @@ void GuiManager::render() {
         if (mapService->m_showWorstSectionDeviation) {
             if (mapService->m_worstProfileData.isValid()
                 && mapService->m_nominalSurfaceData.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(kDetachedWindowSize), ImGuiCond_Once);
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 renderToolbarWindow("Worst Section Deviation", &mapService->m_showWorstSectionDeviation, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##WorstDeviation",

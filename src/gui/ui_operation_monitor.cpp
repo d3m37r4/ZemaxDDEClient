@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "imgui.h"
+#include "gui/constants.h"
 #include "gui/imgui_utils.h"
 
 #include "ui_operation_monitor.h"
@@ -83,7 +84,7 @@ namespace gui {
                 }
             }
 
-            float comboWidth = ImGuiUtils::DpiScale(220.0f);
+            float comboWidth = ImGuiUtils::DpiScale(OPERATION_COMBO_BASE_WIDTH);
             ImGui::SetNextItemWidth(comboWidth);
             if (ImGui::BeginCombo("##TaskSelector", comboPreview.c_str())) {
                 for (int i = 0; i < static_cast<int>(activeTasks.size()); ++i) {
