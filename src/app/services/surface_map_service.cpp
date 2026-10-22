@@ -74,25 +74,14 @@ namespace app::services {
             return;
         }
 
-        if (angleStepDeg <= 0.0 || angleStepDeg >= 180.0) {
-            m_logger.addLog("[IrregularityMapService] Invalid angle step, must be in range (0, 180)");
-            return;
+        // The plan clamps the step and the sampling so that the DDE load stays
+        // inside the request budget; the effective values are what the run uses.
+        const app::compute::MapPlan plan = app::compute::planSurfaceMap(angleStepDeg, sampling);
+        if (plan.adjusted) {
+            m_logger.addLog(std::format(
+                "[IrregularityMapService] Adjusted for the request budget: step {:.3f}° -> {:.3f}°, sampling {} -> {}",
+                angleStepDeg, plan.stepDeg, sampling, plan.sampling));
         }
-
-        // Clamp sampling so a pathological UI value cannot create an unbounded
-        // number of DDE requests.
-        if (sampling < 3) sampling = 3;
-        if (sampling > MAX_SAMPLING) sampling = MAX_SAMPLING;
-
-        // Clamp the angle step so the number of sections never exceeds a sane bound.
-        // (0.01° step x 16385 pt sampling would otherwise produce ~295M requests.)
-        double step = angleStepDeg;
-        if (step < MIN_ANGLE_STEP_DEG) {
-            m_logger.addLog(std::format("[IrregularityMapService] Clamping angle step {:.2f}° -> min {:.2f}°", angleStepDeg, MIN_ANGLE_STEP_DEG));
-            step = MIN_ANGLE_STEP_DEG;
-        }
-
-        int totalAngles = static_cast<int>(180.0 / step);
 
         // Guard: if a map is already in flight, cancel it before starting a new one
         // so old async callbacks cannot contaminate the fresh run.
@@ -114,18 +103,17 @@ namespace app::services {
         m_profiles.clear();
         m_maxPVResult.reset();
         m_targetSurface = surface;
-        m_targetSampling = sampling;
-        m_angleStepDeg = step;
-        m_totalAngles = totalAngles;
+        m_targetSampling = plan.sampling;
+        m_angleStepDeg = plan.stepDeg;
+        m_totalAngles = plan.sections;
         m_currentAngleIndex = 0;
         m_centerSagRef = 0.0;
         m_totalDdeRequests = 0;
         m_mapTaskId = 0;
         m_calcStartTime = std::chrono::steady_clock::now();
 
-        int estimatedRequests = m_totalAngles * (sampling + 2);
-        m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, {} sections ({}° step, {} pts each) — estimated {} DDE requests",
-            surface, m_totalAngles, angleStepDeg, sampling, estimatedRequests));
+        m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, {} sections ({:.3f}° step, {} pts each) — estimated {} DDE requests",
+            surface, m_totalAngles, plan.stepDeg, plan.sampling, plan.estimatedRequests));
 
         if (m_uiOpMonitor) {
             int clientSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
@@ -185,7 +173,7 @@ namespace app::services {
                 auto centerIdx = (profile.sagDataPoints.size() - 1) / 2;
                 auto centerSag = profile.sagDataPoints[centerIdx].sag;
                 if (std::abs(centerSag - m_centerSagRef) > 1e-12) {
-                    m_logger.addLog(std::format("[IrregularityMapService] WARNING: centre sag mismatch at {:.2f}°", angle));
+                    m_logger.addLog(std::format("[IrregularityMapService] WARNING: centre sag mismatch at {:.3f}°", angle));
                 }
             }
 
@@ -217,7 +205,7 @@ namespace app::services {
 
         m_mapCalculator.startCalculation(m_targetSurface, m_targetSampling, angle,
             app::models::TaskSource::SurfaceIrregularityMap,
-            std::format("Section {}/{} at {:.1f}°", m_currentAngleIndex + 1, m_totalAngles, angle));
+            std::format("Section {}/{} at {:.3f}°", m_currentAngleIndex + 1, m_totalAngles, angle));
     }
 
     void SurfaceMapService::cancelMapCalculation() {

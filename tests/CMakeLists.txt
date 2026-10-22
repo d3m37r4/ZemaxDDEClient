@@ -14,6 +14,7 @@ set(TEST_SOURCES
     test_surface_map.cpp
     test_shortcuts.cpp
     test_input_validation.cpp
+    test_gui_utils.cpp
 )
 
 set(TEST_LIB_SOURCES

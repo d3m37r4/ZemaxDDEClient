@@ -97,5 +97,72 @@ TEST(SurfaceMapTest, AllSectionsNonFiniteReturnsNullopt) {
     EXPECT_FALSE(map.findMaxPVSection({badA, badB}, nominal).has_value());
 }
 
+TEST(MapPlan, KeepsCoarseStepAndCountsRequests) {
+    auto plan = planSurfaceMap(1.0, 65);
+
+    EXPECT_DOUBLE_EQ(plan.stepDeg, 1.0);
+    EXPECT_EQ(plan.sampling, 65);
+    EXPECT_EQ(plan.sections, 180);
+    EXPECT_EQ(plan.estimatedRequests, 180LL * (65 + 2));
+    EXPECT_FALSE(plan.adjusted);
+}
+
+TEST(MapPlan, KeepsTheCurrentMinimumStepWithinTheBudget) {
+    auto plan = planSurfaceMap(0.05, 65);
+
+    EXPECT_DOUBLE_EQ(plan.stepDeg, 0.05);
+    EXPECT_EQ(plan.sections, 3600);
+    EXPECT_LE(plan.estimatedRequests, MAX_MAP_REQUESTS);
+    EXPECT_FALSE(plan.adjusted);
+}
+
+TEST(MapPlan, FinestStepFitsTheBudgetAtTypicalSampling) {
+    auto plan = planSurfaceMap(MIN_ANGLE_STEP_DEG, 65);
+
+    EXPECT_DOUBLE_EQ(plan.stepDeg, MIN_ANGLE_STEP_DEG);
+    EXPECT_EQ(plan.sections, 180000);
+    EXPECT_LE(plan.estimatedRequests, MAX_MAP_REQUESTS);
+    EXPECT_FALSE(plan.adjusted);
+}
+
+TEST(MapPlan, RaisesFineStepToFitTheRequestBudget) {
+    // 0.001° при 16385 точках — это 2,9 млрд запросов, бюджет не выдержит.
+    auto plan = planSurfaceMap(MIN_ANGLE_STEP_DEG, MAX_SAG_SAMPLING);
+
+    EXPECT_GT(plan.stepDeg, MIN_ANGLE_STEP_DEG);
+    EXPECT_LE(plan.estimatedRequests, MAX_MAP_REQUESTS);
+    EXPECT_TRUE(plan.adjusted);
+}
+
+TEST(MapPlan, RaisesStepBelowTheMinimum) {
+    auto plan = planSurfaceMap(0.0, 65);
+
+    EXPECT_GT(plan.stepDeg, 0.0);
+    EXPECT_LE(plan.estimatedRequests, MAX_MAP_REQUESTS);
+    EXPECT_TRUE(plan.adjusted);
+}
+
+TEST(MapPlan, ClampsSamplingToTheToolLimit) {
+    auto plan = planSurfaceMap(1.0, 100000);
+
+    EXPECT_EQ(plan.sampling, MAX_SAG_SAMPLING);
+    EXPECT_TRUE(plan.adjusted);
+}
+
+TEST(MapPlan, KeepsTheFullToolRangeOfSampling) {
+    // 16 385 точек — предел инструмента Zemax, карта его не режет.
+    auto plan = planSurfaceMap(1.0, MAX_SAG_SAMPLING);
+
+    EXPECT_EQ(plan.sampling, MAX_SAG_SAMPLING);
+    EXPECT_FALSE(plan.adjusted);
+}
+
+TEST(MapPlan, RejectsStepAboveHalfTurn) {
+    auto plan = planSurfaceMap(200.0, 65);
+
+    EXPECT_DOUBLE_EQ(plan.stepDeg, MAX_ANGLE_STEP_DEG);
+    EXPECT_TRUE(plan.adjusted);
+}
+
 } // namespace
 } // namespace app::compute

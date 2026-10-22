@@ -18,10 +18,8 @@ class Logger;
 
 namespace app::services {
 
-    // Guard rails that cap the DDE request load for a surface map so a pathological
-    // UI value cannot spawn an unbounded number of sections/points (~millions).
-    constexpr int    MAX_SAMPLING       = 4096;
-    constexpr double MIN_ANGLE_STEP_DEG = 0.05;
+    // The guard rails of a surface map (step and sampling limits, request budget)
+    // live in app::compute::surface_map.h — the service and the UI share them.
 
     struct MapWindowState {
         int nominalSurfaceIndex = 0;

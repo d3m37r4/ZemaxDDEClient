@@ -182,14 +182,15 @@ namespace gui {
 
             if (m_irregularityMapService->hasData()) {
                 const auto& optSys = m_irregularityMapService->m_frozenMapOpticalSystem;
-                int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
+                const app::compute::MapPlan plan = app::compute::planSurfaceMap(
+                    state.tolerancedAngleStep, state.tolerancedSampling);
 
                 ImGuiUtils::BeginPropertyGrid("##TolerancedData", maxLabelWidth);
                 ImGuiUtils::PropertyGridRow("Optical system", optSys.fileName.c_str());
                 ImGuiUtils::PropertyGridRow("Surface", std::to_string(state.tolerancedSurfaceIndex).c_str());
                 ImGuiUtils::PropertyGridRow("Sampling", std::to_string(state.tolerancedSampling).c_str());
                 ImGuiUtils::PropertyGridRow("Angle step", std::format("{}°", state.tolerancedAngleStep).c_str());
-                ImGuiUtils::PropertyGridRow("Sections", std::to_string(numSections).c_str());
+                ImGuiUtils::PropertyGridRow("Sections", std::to_string(plan.sections).c_str());
                 ImGuiUtils::EndPropertyGrid();
                 ImGuiUtils::SpacingY(0.25f);
 
@@ -245,10 +246,22 @@ namespace gui {
                     forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
 
-                int numSections = state.tolerancedAngleStep > 0.0 ? static_cast<int>(180.0 / state.tolerancedAngleStep) : 0;
+                const app::compute::MapPlan plan = app::compute::planSurfaceMap(
+                    state.tolerancedAngleStep, state.tolerancedSampling);
                 ImGui::TextUnformatted("Number of sections:");
                 ImGui::SameLine();
-                ImGui::TextUnformatted(std::to_string(numSections).c_str());
+                ImGui::TextUnformatted(std::to_string(plan.sections).c_str());
+                ImGui::SameLine();
+                ImGui::TextDisabled("·");
+                ImGui::SameLine();
+                ImGui::TextUnformatted("Estimated DDE requests:");
+                ImGui::SameLine();
+                ImGui::TextUnformatted(gui::formatCount(plan.estimatedRequests).c_str());
+                if (plan.adjusted) {
+                    ImGui::TextColored(sem.warning,
+                        "Angle step raised to {:.3f}° to stay within the request budget",
+                        plan.stepDeg);
+                }
 
                 ImGuiUtils::SpacingY(0.5f);
 

@@ -1,9 +1,48 @@
 #include "surface_map.h"
 
+#include <algorithm>
 #include <cmath>
 #include <optional>
 
 namespace app::compute {
+
+    MapPlan planSurfaceMap(double stepDeg, int sampling) {
+        MapPlan plan;
+
+        int points = sampling;
+        if (points < MIN_SAG_SAMPLING) points = MIN_SAG_SAMPLING;
+        if (points > MAX_SAG_SAMPLING) points = MAX_SAG_SAMPLING;
+        if (points != sampling) plan.adjusted = true;
+
+        double step = stepDeg;
+        if (step < MIN_ANGLE_STEP_DEG) {
+            step = MIN_ANGLE_STEP_DEG;
+            plan.adjusted = true;
+        }
+        if (step > MAX_ANGLE_STEP_DEG) {
+            step = MAX_ANGLE_STEP_DEG;
+            plan.adjusted = true;
+        }
+
+        int sections = std::max(1, static_cast<int>(180.0 / step));
+
+        // One profile costs (sampling + 2) requests: two for the surface data and
+        // one per sag point. Keep the total inside the budget.
+        const long long requestsPerSection = points + 2;
+        const int maxSections = std::max(
+            1, static_cast<int>(MAX_MAP_REQUESTS / requestsPerSection));
+        if (sections > maxSections) {
+            sections = maxSections;
+            step = 180.0 / sections;
+            plan.adjusted = true;
+        }
+
+        plan.stepDeg = step;
+        plan.sampling = points;
+        plan.sections = sections;
+        plan.estimatedRequests = static_cast<long long>(sections) * requestsPerSection;
+        return plan;
+    }
 
     std::optional<app::models::MaxPVResult> SurfaceMap::findMaxPVSection(
         const std::vector<app::models::SurfaceData>& profiles,
