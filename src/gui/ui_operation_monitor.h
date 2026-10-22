@@ -21,9 +21,9 @@ namespace gui {
 
         void setThemeManager(const ThemeManager* tm) noexcept { m_themeManager = tm; }
         void setConnectionManager(const DDEConnectionManager* cm) noexcept { m_connectionManager = cm; }
-        /// Отмена выбранной задачи: GuiManager диспетчеризует по TaskSource к
-        /// сервису-владельцу (профиль — cancelCalculation(source), карта —
-        /// cancelMapCalculation()). Пустой колбэк ⇒ кнопка Cancel скрыта.
+        /// Cancel for the selected task: GuiManager dispatches by TaskSource
+        /// to the owning service (profile - cancelCalculation(source), map -
+        /// cancelMapCalculation()). An empty callback hides the Cancel button.
         void setOnCancelTask(std::function<void(TaskSource)> cb) { m_onCancelTask = std::move(cb); }
 
     private:

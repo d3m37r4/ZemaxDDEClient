@@ -15,7 +15,7 @@
 
 namespace gui {
     namespace {
-        /// Секунды в «m:ss» (часы добавляются сами, когда появятся).
+        /// Seconds to "h:mm:ss" / "m:ss" (hours are appended when they appear).
         std::string formatSeconds(long long totalSec) {
             if (totalSec < 0) totalSec = 0;
             const long long h = totalSec / 3600;
@@ -25,9 +25,9 @@ namespace gui {
             return std::format("{}:{:02d}", m, s);
         }
 
-        /// Сколько секунд осталось у выбранной операции: средний темп шагов
-        /// (elapsed / currentStep) умножается на число оставшихся шагов.
-        /// Недоступно (⇒ -1), пока отметки старта нет или шаг ещё нулевой.
+        /// How many seconds the selected operation has left: the average step
+        /// pace (elapsed / currentStep) times the number of remaining steps.
+        /// Not available (-1) until the start mark exists or the step is zero.
         long long estimateEtaSeconds(const ZemaxDDE::OperationInfo& op,
                                      const app::services::OperationMonitorService::TaskRecord& rec) {
             if (op.currentStep <= 0 || op.currentStep >= op.totalSteps) return -1;
@@ -41,15 +41,14 @@ namespace gui {
     }
 
     float UiOperationMonitor::computeStatusBarHeight() const {
-        // Постоянная высота: бар больше не появляется/исчезает, поэтому док
-        // не дёргается при старте и окончании задач (бэклог п. 17).
+        // Constant height: the bar no longer appears/disappears, so the dock
+        // area does not jump when tasks start or finish.
         float frameH = ImGui::GetFrameHeight();
         float verticalPadding = ImGuiUtils::DpiScale(STATUS_BAR_VPAD);
         return frameH + 2.0f * verticalPadding;
     }
 
     void UiOperationMonitor::renderGlobalStatusBar() {
-        // Collect active tasks
         struct ActiveTask {
             uint64_t id;
             const TaskRecord* record;
@@ -82,8 +81,9 @@ namespace gui {
 
         ImGui::SetNextWindowPos(ImVec2(0.0f, viewport->Size.y - barHeight));
         ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, barHeight));
-        // Тултипы внутри бара наследуют WindowPadding из стека стилей, поэтому
-        // падение до нуля обрезает их текст — исходное значение вернём локально.
+        // Tooltips opened from inside the bar inherit WindowPadding from the
+        // style stack; dropping it to zero cuts off their text, so the theme
+        // value is restored locally where they are created.
         const ImVec2 windowPaddingBackup = ImGui::GetStyle().WindowPadding;
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
         ImGui::Begin("##GlobalStatusBar", nullptr,
@@ -97,70 +97,77 @@ namespace gui {
 
         const float vpad = ImGuiUtils::DpiScale(STATUS_BAR_VPAD);
         const float gap = ImGuiUtils::DpiScale(STATUS_BAR_ELEMENT_GAP);
-        ImGui::SetCursorPosY(vpad);
-        ImGui::SetCursorPosX(gap);
+        const float frameH = ImGui::GetFrameHeight();
 
-        // ---- Слева: состояние DDE-соединения (индикатор, без кликов) --------
+        // The left segment is drawn through the draw list instead of text
+        // widgets: text rows are shorter than frame-height widgets, and
+        // SameLine lining would anchor the widget row to the text top. The
+        // full-height widgets below start their own row at vpad on all paths.
+        const ImVec2 windowPos = ImGui::GetWindowPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImFont* font = ImGui::GetFont();
+        const float fontSize = ImGui::GetFontSize();
+        // Center the text vertically against the widget row it precedes.
+        const float textY = windowPos.y + vpad
+            + (frameH - ImGui::GetTextLineHeight()) * 0.5f;
+        float nextX = windowPos.x + gap;
+
         if (m_connectionManager) {
             const int activeIdx = m_connectionManager->getActiveIndex();
             const bool connectionLost = m_connectionManager->hasConnectionLost();
             const bool connected = (activeIdx >= 0) && !connectionLost;
 
             std::string connectedText;
-            const char* icon;
             const char* value;
             const ImVec4& color = connectionLost ? sem.warning
                                  : connected   ? sem.success
                                                : sem.danger;
             if (connectionLost) {
-                icon = ICON_FA_TRIANGLE_EXCLAMATION;
                 value = "Connection Lost";
             } else if (connected) {
-                icon = ICON_FA_CIRCLE_CHECK;
                 connectedText = std::format("DDE: Connected [Slot {}]", activeIdx);
                 value = connectedText.c_str();
             } else {
-                icon = ICON_FA_CIRCLE_XMARK;
                 value = "DDE: Disconnected";
             }
 
             ImGui::PushStyleColor(ImGuiCol_Text, color);
-            ImGui::TextUnformatted(icon);
-            ImGui::SameLine(0.0f, gap);
-            ImGui::TextUnformatted(value);
+            const ImU32 textColor = ImGui::GetColorU32(ImGuiCol_Text);
+            drawList->AddText(font, fontSize, ImVec2(nextX, textY), textColor, value);
+            nextX += font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, value).x;
             ImGui::PopStyleColor();
         }
 
         if (!hasTasks) {
-            ImGui::SameLine(0.0f, gap);
-            ImGui::TextColored(sem.muted, "Idle");
             ImGui::PopStyleVar();
             ImGui::End();
             return;
         }
 
-        ImGui::SameLine(0.0f, gap);
+        // Widget row starts just past the connection segment (one extra gap
+        // only when the segment was actually drawn).
+        ImGui::SetCursorScreenPos(ImVec2(
+            nextX + (m_connectionManager ? gap : 0.0f), windowPos.y + vpad));
 
         const auto& selected = activeTasks[m_selectedTaskIndex];
         const auto* op = selected.op;
         const auto* record = selected.record;
 
-        // ---- Спиннер --------------------------------------------------------
         ImGuiUtils::BusyArc("##taskbusy", ImGui::GetFrameHeight() * 0.65f,
                              ImGui::GetStyleColorVec4(ImGuiCol_Text), ImGui::GetFrameHeight());
         ImGui::SameLine(0.0f, gap);
 
-        // ---- Комбо выбора задачи --------------------------------------------
         {
             std::string comboPreview = record->label;
             if (record->clientSlot >= 0) {
                 comboPreview += std::format(" [Slot {}]", record->clientSlot);
             }
 
-            // Список комбо — отдельное попап-окно: создаясь внутри бара, оно
-            // наследует его нулевой WindowPadding и рисует пункты без полей.
-            // Строго на время BeginCombo возвращаем нормальный паддинг; сам
-            // превью-виджет уже positioned в окне бара, его это не касается.
+            // The combo list is a separate popup window: created inside the
+            // bar, it inherits the bar's zero WindowPadding and draws its
+            // items without insets. Restore the theme padding strictly for
+            // the BeginCombo scope; the preview widget is already positioned
+            // in the bar window and is not affected.
             float comboWidth = ImGuiUtils::DpiScale(OPERATION_COMBO_BASE_WIDTH);
             ImGui::SetNextItemWidth(comboWidth);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, windowPaddingBackup);
@@ -186,7 +193,6 @@ namespace gui {
 
         ImGui::SameLine(0.0f, gap);
 
-        // ---- Вертикальный разделитель ---------------------------------------
         {
             ImVec2 cursorPos = ImGui::GetCursorScreenPos();
             float separatorHeight = ImGui::GetFrameHeight() * 0.8f;
@@ -197,7 +203,6 @@ namespace gui {
         }
         ImGui::SameLine(0.0f, gap);
 
-        // ---- Прогресс с текстом ----------------------------------------------
         float progress = op->totalSteps > 0
             ? static_cast<float>(op->currentStep) / op->totalSteps
             : 0.0f;
@@ -216,14 +221,13 @@ namespace gui {
             overlay = std::format("DDE {}/{}", op->currentStep, op->totalSteps);
         }
         if (const long long eta = estimateEtaSeconds(*op, *record); eta >= 0) {
-            overlay += std::format(" | ~{} time remaining", formatSeconds(eta));
+            overlay += std::format(" | time remaining ~{}", formatSeconds(eta));
         }
-        // Встроенный overlay ProgressBar в 1.93 центрирует текст по заполненной
-        // части ⇒ надпись прижата к краю на 0% и уезжает вправо по ходу расчёта
-        // (снято на снимках пользователя). Рисуем по центру ВЕСЬ бара вручную.
+        // The built-in ProgressBar overlay of ImGui 1.93 centers its text over
+        // the filled part: the caption hugs the edge at 0% and drifts right as
+        // the calculation progresses (captured on user screenshots). Draw it
+        // centered over the WHOLE bar manually instead.
         ImGui::ProgressBar(progress, barSize, "");
-        ImFont* font = ImGui::GetFont();
-        const float fontSize = ImGui::GetFontSize();
         const ImVec2 textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, overlay.c_str());
         const ImVec2 barMin = ImGui::GetItemRectMin();
         const ImVec2 barMax = ImGui::GetItemRectMax();
@@ -234,7 +238,7 @@ namespace gui {
         ImGui::GetWindowDrawList()->AddText(font, fontSize, textPos,
             ImGui::GetColorU32(ImGuiCol_Text), overlay.c_str());
 
-        // ---- Cancel только у выбранной задачи (бэклог п. 19) ----------------
+        // Cancel is available for the selected task only.
         if (canCancel) {
             ImGui::SameLine(0.0f, 0.0f);
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() - cancelWidth - rightMargin);
@@ -245,7 +249,8 @@ namespace gui {
             }
             ImGuiUtils::PopFilledButton();
             if (ImGui::IsItemHovered()) {
-                // Вернуть нормальный WindowPadding: нулевой из бара обрезает текст тултипа.
+                // Restore the normal WindowPadding: the bar's zero padding
+                // would cut off the tooltip text.
                 ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, windowPaddingBackup);
                 ImGui::SetTooltip("Cancel this calculation");
                 ImGui::PopStyleVar();
