@@ -150,6 +150,10 @@ void GuiManager::render() {
         ImGui::GetIO().DisplaySize.x,
         ImGui::GetIO().DisplaySize.y - navbarHeight - statusBarHeight
     ));
+    // Square corners: the dockspace background drawn with the theme's
+    // windowRounding shows rounded corners against the window edges even
+    // when every dockable panel is hidden.
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::Begin("MainDockSpace", nullptr,
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoCollapse |
@@ -161,6 +165,7 @@ void GuiManager::render() {
     ImGuiID dockSpaceId = ImGui::GetID("MainDockSpace");
     ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_NoCloseButton);
     ImGui::End();
+    ImGui::PopStyleVar();
 
     if (m_pWndMgr) {
         m_pWndMgr->RenderAll();

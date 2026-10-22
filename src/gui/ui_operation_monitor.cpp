@@ -86,6 +86,9 @@ namespace gui {
         // value is restored locally where they are created.
         const ImVec2 windowPaddingBackup = ImGui::GetStyle().WindowPadding;
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        // Square corners against the dockspace edge: the theme's windowRounding
+        // would round them off even though the bar spans the full width.
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::Begin("##GlobalStatusBar", nullptr,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
@@ -139,7 +142,8 @@ namespace gui {
         }
 
         if (!hasTasks) {
-            ImGui::PopStyleVar();
+            // WindowPadding (bar) + WindowRounding pushed before Begin.
+            ImGui::PopStyleVar(2);
             ImGui::End();
             return;
         }
@@ -257,7 +261,8 @@ namespace gui {
             }
         }
 
-        ImGui::PopStyleVar();
+        // WindowPadding (bar) + WindowRounding pushed before Begin.
+        ImGui::PopStyleVar(2);
         ImGui::End();
     }
 }
