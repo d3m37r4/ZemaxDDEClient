@@ -16,6 +16,8 @@
 
 namespace gui {
     void Logs::render(Logger& logger, const ThemeManager* themeManager) {
+        const auto& sem = themeManager->semantic();
+
         ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
         if (ImGui::Button(ICON_FA_FILE_EXPORT)) {
@@ -48,29 +50,92 @@ namespace gui {
 
         ImGui::SameLine();
 
+        if (ImGui::Checkbox("Autoscroll", &m_autoscroll)) {
+            m_jumpToBottom = m_autoscroll;
+        }
+
+        // Checkbox завершает строку (курсор у ImGui на новой) — возвращаемся,
+        // иначе «мусорка» уедет на отдельный ряд (ловилось на скриншоте).
+        ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize(ICON_FA_TRASH).x - ImGui::GetStyle().FramePadding.x * 2);
 
-        const auto& sem = themeManager->semantic();
         ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
         if (ImGui::Button(ICON_FA_TRASH)) {
-            logger.clearLogs();
+            m_confirmDelete = true;
         }
         ImGuiUtils::PopFilledButton();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete all log entries");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Clear all log entries (requires confirmation)");
         ImGui::EndChild();
 
         ImGui::BeginChild("LogsContent", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
-        static size_t lastLogSize = 0;
         const auto& logEntries = logger.getLogs();
+
+        // Прилипание к низу: снимаем решение ДО отрисовки — до того, как новый
+        // контент сдвинет скролл. Работает и после clearLogs() (список пуст,
+        // максимум скролла 0 ⇒ «на дне»), и когда пользователь уехал наверх
+        // читать историю — тогда автоскролл молчит, пока не вернётся.
+        const float bottomSlack = ImGuiUtils::DpiScale(4.0f);
+        const bool wasAtBottom = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - bottomSlack;
 
         for (const auto& entry : logEntries) {
             ImGui::Text(entry.c_str());
         }
 
-        if (logEntries.size() > lastLogSize) {
+        if (m_jumpToBottom) {
             ImGui::SetScrollHereY(1.0f);
-            lastLogSize = logEntries.size();
+            m_jumpToBottom = false;
+        } else if (m_autoscroll && wasAtBottom) {
+            ImGui::SetScrollHereY(1.0f);
         }
         ImGui::EndChild();
+
+        // Confirmation modal for the header "Clear" button. The in-memory log
+        // and the log files on disk are different things, so it does not reuse
+        // CleanLogsConfirmDialog (that one deletes folder files from Preferences).
+        // The popup is owned by the root Logs window: open it here (the same
+        // window that renders the modal), not inside the header child.
+        if (m_confirmDelete && !ImGui::IsPopupOpen(DELETE_LOG_CONFIRM_POPUP_NAME)) {
+            ImGui::OpenPopup(DELETE_LOG_CONFIRM_POPUP_NAME);
+        }
+        ImGuiUtils::CenterNextWindow();
+        ImGuiUtils::SetDpiScaledWindowConstraints(
+            DELETE_LOG_CONFIRM_POPUP_MIN_SIZE.x, DELETE_LOG_CONFIRM_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(DELETE_LOG_CONFIRM_POPUP_DEFAULT_SIZE);
+        if (ImGuiUtils::BeginPopupModalEx(DELETE_LOG_CONFIRM_POPUP_NAME, nullptr,
+                                          ImGuiWindowFlags_NoCollapse)) {
+            ImGui::BeginChild("##delete_log_confirm_body",
+                              ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
+                              ImGuiChildFlags_Borders);
+            ImGui::TextUnformatted("This will clear all entries in the on-screen log.");
+            ImGui::TextUnformatted("Log files on disk are not removed.");
+            ImGui::EndChild();
+
+            const float clearBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float totalW = cancelBtnW + clearBtnW + ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
+
+            if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
+                m_confirmDelete = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+
+            ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover,
+                                         sem.dangerButtonActive, sem.onAccent);
+            if (ImGui::Button(ICON_FA_TRASH " Clear", ImVec2(clearBtnW, 0))) {
+                logger.clearLogs();
+                m_confirmDelete = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGuiUtils::PopFilledButton();
+
+            ImGui::EndPopup();
+        } else if (m_confirmDelete && !ImGui::IsPopupOpen(DELETE_LOG_CONFIRM_POPUP_NAME)) {
+            // Closed through the app-wide close-popup shortcut (Esc) — drop the
+            // pending request so it does not reopen on the next frame.
+            m_confirmDelete = false;
+        }
     }
 }
