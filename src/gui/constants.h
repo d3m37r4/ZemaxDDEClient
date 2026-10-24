@@ -111,6 +111,17 @@ namespace gui {
     inline constexpr float STATUS_BAR_VPAD         = 4.0f;
     inline constexpr float STATUS_BAR_ELEMENT_GAP  = 4.0f;
 
+    // Welcome card (floating helper over the dock area, closable): the card
+    // width comes from the hint wrap width, the height from the measured
+    // rows (GuiManager::welcomeWindowSize). Both DPI-scaled at the call site.
+    inline constexpr float WELCOME_HINT_WRAP_WIDTH = 520.0f;
+    inline constexpr float WELCOME_ROW_GAP         = 8.0f;
+    inline constexpr float WELCOME_ICON_FONT_SCALE = 2.4f;
+
+    // Inner breathing room of the Welcome card so the text does not touch the
+    // borders (DPI-scaled at the call site).
+    inline constexpr ImVec2 WELCOME_CARD_PADDING = ImVec2(24.0f, 24.0f);
+
     // Default highlight color for worst-section markers
     inline constexpr ImVec4 DEFAULT_WORST_HIGHLIGHT_COLOR{1.0f, 0.0f, 0.0f, 1.0f};
 }

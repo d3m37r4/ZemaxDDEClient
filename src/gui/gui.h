@@ -103,10 +103,40 @@ namespace gui {
             void renderSurfaceIrregularityMap();
             void renderLogs();
 
+            /// Body of the Welcome window: accent icon, short hint and the
+            /// primary Connect CTA (same popup as the menu/shortcut path).
+            /// The window itself (pos/size/visibility) is owned by
+            /// DockableWindowsManager, which auto-hides it while connected.
+            /// Window size of the Welcome card: measured content extent +
+            /// card padding + title bar. Given to ImGui before the window
+            /// appears so pivot centering lands exactly on the final size
+            /// (AlwaysAutoResize would settle one frame later).
+            [[nodiscard]] ImVec2 welcomeWindowSize() const;
+
+            void renderWelcomeContent();
+
+            /// Global status bar height, used to center the Welcome window
+            /// over the dock area.
+            [[nodiscard]] float computeStatusBarHeight() const { return m_uiOpMonitor.computeStatusBarHeight(); }
+
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
+            /// Row metrics of the welcome card body at the current DPI.
+            /// Shared by welcomeWindowSize() (window sizing) and
+            /// renderWelcomeContent() (centering) so both stay in sync.
+            struct WelcomeMetrics {
+                ImVec2 icon{};   // drawing extent at the enlarged font
+                ImVec2 title{};
+                ImVec2 hint1{};
+                ImVec2 hint2{};
+                ImVec2 button{}; // filled button incl. frame padding
+                float wrap = 0.0f; // hint wrap width, DPI-scaled
+                float gap = 0.0f;  // row gap, DPI-scaled
+            };
+            void measureWelcome(WelcomeMetrics& m) const;
+
             // Non-owning. Lifetime guaranteed by AppContext (outlives GuiManager).
             GLFWwindow* m_glfwWindow;
             DDEConnectionManager* m_ddeConnectionManager;

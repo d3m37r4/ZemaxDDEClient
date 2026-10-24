@@ -160,6 +160,93 @@ namespace {
         }
     }
 
+    void RenderWelcomeWindow(gui::GuiManager* guiMgr) {
+        if (!guiMgr) return;
+        auto* mgr = guiMgr->getWindowManager();
+        // The card is only meaningful while the DDE link is down. The
+        // visibility flag IS the View menu checkmark: hide the card on connect
+        // (unchecks the menu), restore it when the link goes down again so the
+        // hint re-appears centered (Appearing cond handles the placement).
+        static bool wasConnected = false;
+        if (guiMgr->isDDEInitialized()) {
+            if (mgr->IsVisible(WindowID::Welcome)) {
+                mgr->SetVisible(WindowID::Welcome, false);
+            }
+            wasConnected = true;
+            return;
+        }
+        if (wasConnected) {
+            wasConnected = false;
+            mgr->SetVisible(WindowID::Welcome, true);
+        }
+        // Dock area rect: the centering target and the clamp reference.
+        const float dockTop = ImGui::GetFrameHeight();
+        const float dockHeight = ImGui::GetIO().DisplaySize.y - dockTop - guiMgr->computeStatusBarHeight();
+        const ImVec2 dockAreaMin(0.0f, dockTop);
+        const ImVec2 dockAreaMax(ImGui::GetIO().DisplaySize.x, dockTop + dockHeight);
+        const ImVec2 dockAreaCenter((dockAreaMin.x + dockAreaMax.x) * 0.5f,
+                                    (dockAreaMin.y + dockAreaMax.y) * 0.5f);
+
+        // Visibility may persist across a viewport resize (maximize/restore):
+        // the ini-stored or dragged position then points to a stale rect.
+        // Cached extents from the previous frame reveal that drift; a pixel
+        // slack keeps manual moves fully inside the dock area from flipping.
+        static ImVec2 lastPos(FLT_MAX, FLT_MAX);
+        static ImVec2 lastSize(-1.0f, -1.0f);
+        static bool renderedLastFrame = false;
+        // Stale-but-inside is not caught by the bounds check above: a
+        // maximize/restore monitor swap leaves a manually placed card fully
+        // visible yet off center. So a viewport size change forces a recenter
+        // for that frame (same technique as the popups in CenterNextWindow).
+        static ImVec2 lastViewportSize(-1.0f, -1.0f);
+        const ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+        bool viewportResized = renderedLastFrame &&
+            (viewportSize.x != lastViewportSize.x || viewportSize.y != lastViewportSize.y);
+        constexpr float slack = 1.0f;
+        bool outOfDock = lastSize.x >= 0.0f &&
+            (lastPos.x - slack < dockAreaMin.x || lastPos.y - slack < dockAreaMin.y ||
+             lastPos.x + lastSize.x + slack > dockAreaMax.x ||
+             lastPos.y + lastSize.y + slack > dockAreaMax.y);
+
+        // Recenter at every appearance (app start, View reopen, return after
+        // disconnect) and unconditionally on detected drift or viewport change.
+        ImGui::SetNextWindowPos(dockAreaCenter,
+            (outOfDock || viewportResized) ? ImGuiCond_Always : ImGuiCond_Appearing,
+            ImVec2(0.5f, 0.5f));
+
+        bool isVisible = mgr->IsVisible(WindowID::Welcome);
+        const char* title = mgr->GetName(WindowID::Welcome);
+        // Content-fitted card: no resize, no scrolling. Extra window padding
+        // keeps the text off the borders on both sides.
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGuiUtils::DpiScaleVec2(gui::WELCOME_CARD_PADDING));
+        // Deterministic size: pivot centering is computed from the size given
+        // here - AlwaysAutoResize would settle one frame later and drag the
+        // appearing position off the center (seen as a half-size shift after
+        // maximize/restore or on a move between DPI zones).
+        ImGui::SetNextWindowSize(guiMgr->welcomeWindowSize());
+        // NoDocking: floating helper, not a data panel. NoCollapse: the card
+        // never shrinks to a bare title bar, keeping the geometry math intact.
+        if (ImGui::Begin(title, &isVisible,
+            ImGuiWindowFlags_NoDocking |
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoScrollWithMouse)) {
+            lastPos = ImGui::GetWindowPos();
+            lastSize = ImGui::GetWindowSize();
+            lastViewportSize = viewportSize;
+            renderedLastFrame = true;
+            guiMgr->renderWelcomeContent();
+        } else {
+            renderedLastFrame = false;
+        }
+        ImGui::End();
+        ImGui::PopStyleVar();
+        if (!isVisible) {
+            mgr->SetVisible(WindowID::Welcome, false);
+        }
+    }
+
     std::function<void()> GetRenderFunction(WindowID id, gui::GuiManager* guiMgr) {
         switch (id) {
             case WindowID::DDEStatus:
@@ -172,6 +259,8 @@ namespace {
                 return [guiMgr]() { RenderSurfaceIrregularityMapWindow(guiMgr); };
             case WindowID::Logs:
                 return [guiMgr]() { RenderLogsWindow(guiMgr); };
+            case WindowID::Welcome:
+                return [guiMgr]() { RenderWelcomeWindow(guiMgr); };
             default:
                 return nullptr;
         }

@@ -2,6 +2,8 @@
 #include "gui/constants.h"
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <algorithm>
+#include <cfloat>
 #include "gui/surface_profile_service.h"
 #include "gui/surface_irregularity_map_service.h"
 #include "gui/menu_bar_controller.h"
@@ -16,6 +18,15 @@
 #endif
 
 namespace gui {
+namespace {
+    // Welcome card texts: single source for the metrics helper and the
+    // content renderer.
+    constexpr const char* kWelcomeTitle = "Welcome to ZemaxDDEClient";
+    constexpr const char* kWelcomeHint1 = "Start Zemax, then connect to the DDE server.";
+    constexpr const char* kWelcomeHint2 = "Also in the menu: DDE > Connect to Zemax... (Ctrl+Shift+C).";
+    constexpr const char* kWelcomeButton = ICON_FA_PLUG " Connect to Zemax...";
+} // namespace
+
     GuiManager::GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger)
 : m_glfwWindow(glfwWindow)
 , m_ddeConnectionManager(ddeConnectionManager)
@@ -355,6 +366,96 @@ void GuiManager::renderConnectionLostPopup() {
 
     if (m_connectionLostDialog) {
         m_connectionLostDialog->render();
+    }
+}
+
+ImVec2 GuiManager::welcomeWindowSize() const {
+    WelcomeMetrics m;
+    measureWelcome(m);
+    const float blockW = std::max({m.icon.x, m.title.x, m.hint1.x, m.hint2.x, m.button.x});
+    const float blockH = m.icon.y + m.gap + m.title.y + m.gap + m.hint1.y
+                       + m.gap + m.hint2.y + m.gap + m.button.y;
+    const float padX = ImGuiUtils::DpiScale(WELCOME_CARD_PADDING.x);
+    const float padY = ImGuiUtils::DpiScale(WELCOME_CARD_PADDING.y);
+    // Window chrome on top of the body: card padding, the title bar and the
+    // 1px window border.
+    return ImVec2(blockW + padX * 2.0f + 2.0f,
+                  blockH + padY * 2.0f + ImGui::GetFrameHeight() + 2.0f);
+}
+
+void GuiManager::measureWelcome(WelcomeMetrics& m) const {
+    ImFont* font = ImGui::GetFont();
+    // The base font is already DPI-scaled, so the icon scale stays a plain ratio.
+    const float baseFont = ImGui::GetFontSize();
+    const float iconFont = baseFont * WELCOME_ICON_FONT_SCALE;
+
+    m.wrap = ImGuiUtils::DpiScale(WELCOME_HINT_WRAP_WIDTH);
+    m.gap = ImGuiUtils::DpiScale(WELCOME_ROW_GAP);
+    m.icon = font->CalcTextSizeA(iconFont, FLT_MAX, 0.0f, ICON_FA_PLUG);
+    m.title = font->CalcTextSizeA(baseFont, FLT_MAX, 0.0f, kWelcomeTitle);
+    // Same measurement call chain as the TextUnformatted rendering below
+    // (ImFontCalcTextSizeEx with a wrap width) so the rows center on what is
+    // actually drawn.
+    m.hint1 = ImGui::CalcTextSize(kWelcomeHint1, nullptr, false, m.wrap);
+    m.hint2 = ImGui::CalcTextSize(kWelcomeHint2, nullptr, false, m.wrap);
+    m.button = ImVec2(ImGui::CalcTextSize(kWelcomeButton).x + ImGui::GetStyle().FramePadding.x * 2.0f,
+                      ImGui::GetFrameHeight());
+}
+
+void GuiManager::renderWelcomeContent() {
+    const auto& sem = m_graphics.getThemeManager().semantic();
+    ImFont* font = ImGui::GetFont();
+    // The base font is already DPI-scaled, so the icon scale stays a plain ratio.
+    const float baseFont = ImGui::GetFontSize();
+    const float iconFont = baseFont * WELCOME_ICON_FONT_SCALE;
+
+    // Center within the window's content area, not the dock region: the
+    // window chrome (title bar, padding) belongs to DockableWindowsManager.
+    const ImVec2 contentStart = ImGui::GetCursorStartPos();
+    const ImVec2 winPos = ImGui::GetWindowPos();
+    const ImVec2 areaMin(winPos.x + contentStart.x, winPos.y + contentStart.y);
+    const ImVec2 areaSize = ImGui::GetContentRegionAvail();
+
+    WelcomeMetrics m;
+    measureWelcome(m);
+    const float blockH = m.icon.y + m.gap + m.title.y + m.gap + m.hint1.y + m.gap + m.hint2.y + m.gap + m.button.y;
+    const float centerX = areaMin.x + areaSize.x * 0.5f;
+    float y = areaMin.y + (areaSize.y - blockH) * 0.5f;
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddText(font, iconFont, ImVec2(centerX - m.icon.x * 0.5f, y),
+                      ImGui::GetColorU32(sem.info), ICON_FA_PLUG);
+    y += m.icon.y + m.gap;
+
+    ImGui::SetCursorScreenPos(ImVec2(centerX - m.title.x * 0.5f, y));
+    ImGui::TextUnformatted(kWelcomeTitle);
+    y += m.title.y + m.gap;
+
+    // Hint rows are centered independently (each on the card axis) instead of
+    // one ragged wrapped block: the "Also in the menu" sentence reads better on
+    // its own line. Wrap safety for a narrow card: window-local wrap pos, see
+    // CalcWrapWidthForPos (it shifts the value by window->Pos.x).
+    ImGui::PushStyleColor(ImGuiCol_Text, sem.muted);
+    auto renderHintRow = [&](const char* text, const ImVec2& size) {
+        ImGui::SetCursorScreenPos(ImVec2(centerX - size.x * 0.5f, y));
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + m.wrap);
+        ImGui::TextUnformatted(text);
+        ImGui::PopTextWrapPos();
+        y += size.y + m.gap;
+    };
+    renderHintRow(kWelcomeHint1, m.hint1);
+    renderHintRow(kWelcomeHint2, m.hint2);
+    ImGui::PopStyleColor();
+
+    ImGui::SetCursorScreenPos(ImVec2(centerX - m.button.x * 0.5f, y));
+    ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover,
+                                 sem.successButtonActive, sem.onAccent);
+    if (ImGui::Button(kWelcomeButton, m.button)) {
+        openDdeConnect();
+    }
+    ImGuiUtils::PopFilledButton();
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Open the Connect dialog (Ctrl+Shift+C)");
     }
 }
 
