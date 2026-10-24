@@ -40,10 +40,31 @@ namespace ImGuiUtils {
         }
     }
 
-    /// Centers the next window in the viewport (call every frame; takes effect on appearing).
+    /// Centers the next window in the viewport (call every frame; takes effect
+    /// on appearing). A viewport resize (maximize/restore, monitor change)
+    /// while the window is already open forces an immediate recenter in that
+    /// frame: Appearing-only centering leaves an open dialog stranded.
+    ///
+    /// The resize detection is resolved once per frame: this helper is called
+    /// several times in a frame (one per popup), and the first caller would
+    /// otherwise refresh the cache leaving nothing for the actually-open
+    /// dialog rendered later in the same frame.
     inline void CenterNextWindow() {
-        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        static int lastDetectionFrame = -1;
+        static ImVec2 lastViewportSize(-1.0f, -1.0f);
+        static bool viewportResizedThisFrame = false;
+        const int frame = ImGui::GetFrameCount();
+        if (frame != lastDetectionFrame) {
+            const ImVec2 viewportSize = ImGui::GetMainViewport()->Size;
+            viewportResizedThisFrame = lastViewportSize.x != viewportSize.x ||
+                                       lastViewportSize.y != viewportSize.y;
+            lastViewportSize = viewportSize;
+            lastDetectionFrame = frame;
+        }
+
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(),
+            viewportResizedThisFrame ? ImGuiCond_Always : ImGuiCond_Appearing,
+            ImVec2(0.5f, 0.5f));
     }
 
     /// Begin a two-column property grid (label | value).
