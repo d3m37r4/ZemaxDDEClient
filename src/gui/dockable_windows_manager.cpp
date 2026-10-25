@@ -90,6 +90,7 @@ namespace {
         ImGuiUtils::SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_MIN_SIZE.x, gui::DDE_STATUS_WINDOW_MIN_SIZE.y);
         if (ImGui::Begin(title, &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+            ImGuiUtils::ClampWindowToViewport();
             if (guiMgr->getDDEStatusRenderer()) {
                 guiMgr->getDDEStatusRenderer()->render(guiMgr->getLogger());
             }
@@ -107,6 +108,7 @@ namespace {
         const char* title = mgr->GetName(WindowID::SystemInfo);
         ImGuiUtils::SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_MIN_SIZE.x, gui::SYSTEM_INFO_WINDOW_MIN_SIZE.y);
         if (ImGui::Begin(title, &isVisible)) {
+            ImGuiUtils::ClampWindowToViewport();
             guiMgr->renderOpticalSystemInfo();
         }
         ImGui::End();
@@ -122,6 +124,7 @@ namespace {
         const char* title = mgr->GetName(WindowID::SurfaceProfileInspector);
         ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.x, gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.y);
         if (ImGui::Begin(title, &isVisible)) {
+            ImGuiUtils::ClampWindowToViewport();
             guiMgr->renderSurfaceProfileInspector();
         }
         ImGui::End();
@@ -137,6 +140,7 @@ namespace {
         const char* title = mgr->GetName(WindowID::SurfaceIrregularityMap);
         ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.x, gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.y);
         if (ImGui::Begin(title, &isVisible)) {
+            ImGuiUtils::ClampWindowToViewport();
             guiMgr->renderSurfaceIrregularityMap();
         }
         ImGui::End();
@@ -152,6 +156,7 @@ namespace {
         const char* title = mgr->GetName(WindowID::Logs);
         ImGuiUtils::SetDpiScaledWindowConstraints(gui::LOGS_WINDOW_MIN_SIZE.x, gui::LOGS_WINDOW_MIN_SIZE.y);
         if (ImGui::Begin(title, &isVisible)) {
+            ImGuiUtils::ClampWindowToViewport();
             guiMgr->renderLogs();
         }
         ImGui::End();

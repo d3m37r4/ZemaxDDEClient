@@ -67,6 +67,28 @@ namespace ImGuiUtils {
             ImVec2(0.5f, 0.5f));
     }
 
+    /// Keeps a floating window fully inside the main viewport: after a main
+    /// window shrink (maximize/restore, or a stale ini position the floating
+    /// panel once got on a bigger window), an undocked window keeps its
+    /// absolute position and may end up out of sight. Docked windows live
+    /// inside a dock node and are always visible - never move those. Call
+    /// right after Begin() returned true.
+    inline void ClampWindowToViewport() {
+        if (ImGui::IsWindowDocked()) return;
+        const ImVec2 vpPos = ImGui::GetMainViewport()->Pos;
+        const ImVec2 vpSize = ImGui::GetMainViewport()->Size;
+        const ImVec2 size = ImGui::GetWindowSize();
+        const ImVec2 pos = ImGui::GetWindowPos();
+        // Fully-inside clamp; a window wider/taller than the viewport anchors
+        // to the corresponding edge.
+        ImVec2 target = pos;
+        target.x = (size.x >= vpSize.x) ? vpPos.x
+            : std::min(std::max(pos.x, vpPos.x), vpPos.x + vpSize.x - size.x);
+        target.y = (size.y >= vpSize.y) ? vpPos.y
+            : std::min(std::max(pos.y, vpPos.y), vpPos.y + vpSize.y - size.y);
+        ImGui::SetWindowPos(target, ImGuiCond_Always);
+    }
+
     /// Begin a two-column property grid (label | value).
     inline void BeginPropertyGrid(const char* id, float labelWidth) {
         ImGui::BeginTable(id, 2);

@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include "gui/constants.h"
+#include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
 #include "gui/utils.h"
 #include "gui/surface_profile_service.h"
@@ -92,6 +93,7 @@ namespace gui {
             void renderToolbarWindow(const char* title, bool* open, Func content) {
                 ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
                 if (ImGui::Begin(title, open, ImGuiWindowFlags_MenuBar)) {
+                    ImGuiUtils::ClampWindowToViewport();
                     content();
                 }
                 ImGui::End();
