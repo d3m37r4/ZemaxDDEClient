@@ -100,6 +100,9 @@ namespace app::services {
     void SurfaceProfileService::onNominalComplete() {
         const auto& result = m_nominalCalculator.getResult();
         m_nominalSurfaceData = result;
+        // Stick the slot to the data before it is cleared: detached plot
+        // titles render "[Slot N]" from it.
+        m_nominalSurfaceData.sourceSlot = m_nominalCalcSlot;
         m_nominalCalcSlot = -1;
         if (onNominalCalculationComplete) onNominalCalculationComplete();
     }
@@ -117,6 +120,8 @@ namespace app::services {
     void SurfaceProfileService::onTolerancedComplete() {
         const auto& result = m_tolerancedCalculator.getResult();
         m_tolerancedSurfaceData = result;
+        // See onNominalComplete: the slot travels with the data.
+        m_tolerancedSurfaceData.sourceSlot = m_tolerancedCalcSlot;
         m_tolerancedCalcSlot = -1;
         if (onTolerancedCalculationComplete) onTolerancedCalculationComplete();
     }

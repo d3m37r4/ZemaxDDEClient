@@ -48,6 +48,9 @@ namespace app::services {
 
         m_nominalCalculator.onComplete = [this]() {
             m_nominalSurfaceData = m_nominalCalculator.getResult();
+            // Stick the slot to the data before it is cleared: detached plot
+            // titles render "[Slot N]" from it.
+            m_nominalSurfaceData.sourceSlot = m_nominalCalcSlot;
             m_nominalCalcSlot = -1;
             if (m_nominalSurfaceData.isValid()) {
                 m_logger.addLog("[IrregularityMapService] Nominal surface profile calculated and stored as reference");
@@ -167,8 +170,7 @@ namespace app::services {
         };
 
         m_mapCalculator.onComplete = [this, angle]() {
-            auto& profile = m_mapCalculator.getResult();
-
+            const auto& profile = m_mapCalculator.getResult();
             if (m_currentAngleIndex == 0) {
                 m_centerSagRef = profile.sagDataPoints.empty() ? 0.0
                     : profile.sagDataPoints[(profile.sagDataPoints.size() - 1) / 2].sag;
@@ -180,7 +182,12 @@ namespace app::services {
                 }
             }
 
-            m_profiles.push_back(profile);
+            // Every section of a run comes from the same slot; stamp each
+            // profile so titles resolve after the run ends (m_mapCalcSlot
+            // resets to -1 once the map completes).
+            app::models::SurfaceData completed = profile;
+            completed.sourceSlot = m_mapCalcSlot;
+            m_profiles.push_back(std::move(completed));
             m_totalDdeRequests += m_mapCalculator.getTotalDdeRequests();
             m_currentAngleIndex++;
 

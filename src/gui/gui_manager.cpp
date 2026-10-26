@@ -4,6 +4,8 @@
 #include <imgui_internal.h>
 #include <algorithm>
 #include <cfloat>
+#include <format>
+#include <string>
 #include "gui/surface_profile_service.h"
 #include "gui/surface_irregularity_map_service.h"
 #include "gui/menu_bar_controller.h"
@@ -25,6 +27,16 @@ namespace {
     constexpr const char* kWelcomeHint1 = "Start Zemax, then connect to the DDE server.";
     constexpr const char* kWelcomeHint2 = "Also in the menu: DDE > Connect to Zemax... (Ctrl+Shift+C).";
     constexpr const char* kWelcomeButton = ICON_FA_PLUG " Connect to Zemax...";
+
+    // "[Slot N]" suffix for detached plot titles: which DDE connection slot
+    // supplied the plotted data. Two different contributors sort and join
+    // with "+"; unknown slots (-1) produce no tag.
+    std::string slotTag(int a, int b = -1) {
+        if (a < 0 && b < 0) return {};
+        if (a < 0) return std::format(" [Slot {}]", b);
+        if (b < 0 || b == a) return std::format(" [Slot {}]", a);
+        return std::format(" [Slot {}+{}]", std::min(a, b), std::max(a, b));
+    }
 } // namespace
 
     GuiManager::GuiManager(GLFWwindow* glfwWindow, DDEConnectionManager* ddeConnectionManager, Logger& logger)
@@ -193,7 +205,8 @@ void GuiManager::render() {
             if (tolSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                std::string title = std::format("Toleranced Surface Profile ({}°, {} pts)", tolSurface.angle, tolSurface.sampling);
+                std::string title = std::format("Toleranced Surface Profile ({}°, {} pts){}",
+                    tolSurface.angle, tolSurface.sampling, slotTag(tolSurface.sourceSlot));
                 renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Toleranced", tolSurface, ImVec2(-1, -1));
@@ -205,7 +218,8 @@ void GuiManager::render() {
             if (nomSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                std::string title = std::format("Nominal Surface Profile ({}°, {} pts)", nomSurface.angle, nomSurface.sampling);
+                std::string title = std::format("Nominal Surface Profile ({}°, {} pts){}",
+                    nomSurface.angle, nomSurface.sampling, slotTag(nomSurface.sourceSlot));
                 renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Nominal", nomSurface, ImVec2(-1, -1));
@@ -217,7 +231,9 @@ void GuiManager::render() {
             if (nomSurface.isValid() && tolSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                renderToolbarWindow("Surface Profile Comparison", &m_profileService->m_showComparisonProfileWindow, [&]() {
+                std::string title = std::format("Surface Profile Comparison{}",
+                    slotTag(nomSurface.sourceSlot, tolSurface.sourceSlot));
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showComparisonProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
                 });
@@ -228,7 +244,9 @@ void GuiManager::render() {
             if (nomSurface.isValid() && tolSurface.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                renderToolbarWindow("Surface Profile Irregularity (PV)", &m_profileService->m_showDeviationProfileWindow, [&]() {
+                std::string title = std::format("Surface Profile Irregularity (PV){}",
+                    slotTag(nomSurface.sourceSlot, tolSurface.sourceSlot));
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showDeviationProfileWindow, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
                 });
@@ -243,7 +261,9 @@ void GuiManager::render() {
             if (mapService->hasData()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                renderToolbarWindow("Surface Irregularity Map 3D", &mapService->m_showTolerancedSurfaceMap, [&]() {
+                std::string title = std::format("Surface Irregularity Map 3D{}",
+                    slotTag(mapService->getProfiles().front().sourceSlot));
+                renderToolbarWindow(title.c_str(), &mapService->m_showTolerancedSurfaceMap, [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapSurface,
                         &mapService->m_windowState.highlightWorstSurface,
@@ -259,7 +279,10 @@ void GuiManager::render() {
             if (mapService->hasData() && mapService->m_nominalSurfaceData.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                renderToolbarWindow("Surface Irregularity Map 3D Deviation", &mapService->m_showDeviationSurfaceMap, [&]() {
+                std::string title = std::format("Surface Irregularity Map 3D Deviation{}",
+                    slotTag(mapService->m_nominalSurfaceData.sourceSlot,
+                        mapService->getProfiles().front().sourceSlot));
+                renderToolbarWindow(title.c_str(), &mapService->m_showDeviationSurfaceMap, [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapDeviation,
                         &mapService->m_windowState.highlightWorstDeviation,
@@ -275,7 +298,9 @@ void GuiManager::render() {
             if (mapService->m_worstProfileData.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                renderToolbarWindow("Worst Section Profile", &mapService->m_showWorstSectionProfile, [&]() {
+                std::string title = std::format("Worst Section Profile{}",
+                    slotTag(mapService->m_worstProfileData.sourceSlot));
+                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionProfile, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     auto& wp = mapService->m_worstProfileData;
                     std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
@@ -291,7 +316,10 @@ void GuiManager::render() {
                 && mapService->m_nominalSurfaceData.isValid()) {
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
                 ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
-                renderToolbarWindow("Worst Section Deviation", &mapService->m_showWorstSectionDeviation, [&]() {
+                std::string title = std::format("Worst Section Deviation{}",
+                    slotTag(mapService->m_nominalSurfaceData.sourceSlot,
+                        mapService->m_worstProfileData.sourceSlot));
+                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionDeviation, [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##WorstDeviation",
                         mapService->m_nominalSurfaceData,
