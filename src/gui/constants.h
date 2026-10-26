@@ -103,6 +103,11 @@ namespace gui {
     // Default size of a detached plot window (DPI-scaled at call sites)
     inline constexpr ImVec2 DETACHED_WINDOW_DEFAULT_SIZE = ImVec2(600.0f, 400.0f);
 
+    // Minimum size of a detached plot window: below this the menu bar, the
+    // axes and the outside legend cannot be read reliably
+    // (DPI-scaled at call sites)
+    inline constexpr ImVec2 DETACHED_WINDOW_MIN_SIZE = ImVec2(380.0f, 240.0f);
+
     // Base width of the operation selector combo in the status bar
     // (DPI-scaled at the call site)
     inline constexpr float OPERATION_COMBO_BASE_WIDTH = 220.0f;
