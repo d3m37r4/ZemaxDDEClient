@@ -62,7 +62,12 @@ namespace gui {
         if (!std::isfinite(dpiScale) || dpiScale <= 0.0f) dpiScale = MIN_DPI_SCALE;
         dpiScale = std::clamp(dpiScale, MIN_DPI_SCALE, MAX_DPI_SCALE);
 
-        io.DisplayFramebufferScale = ImVec2(dpiScale, dpiScale);
+        // The GLFW backend recomputes io.DisplayFramebufferScale from the real
+        // framebuffer/client ratio every NewFrame (imgui_impl_glfw.cpp
+        // GetWindowSizeAndFramebufferScale), so seeding it manually is dead
+        // code. Font sizes scale per-viewport through ConfigDpiScaleFonts
+        // (imgui.cpp SetCurrentViewport -> style.FontScaleDpi); the manual
+        // style.FontScaleDpi below is only the pre-first-frame seed.
         io.ConfigDpiScaleFonts = true;
         io.ConfigDpiScaleViewports = true;
 
@@ -125,11 +130,12 @@ namespace gui {
     void GraphicsBackend::updateDpiStyle(float dpiScale) {
         dpiScale = std::clamp(dpiScale, MIN_DPI_SCALE, MAX_DPI_SCALE);
 
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.FontScaleDpi = dpiScale;
-
-        // Re-apply the current theme so geometry tokens (rounding, padding,
-        // spacing, border sizes) are rescaled to the new DPI factor.
+        // style.FontScaleDpi is intentionally NOT set here: with
+        // io.ConfigDpiScaleFonts ImGui assigns it per-viewport on every
+        // viewport switch (imgui.cpp SetCurrentViewport) and a manual write
+        // would only be overwritten (or fight for) the next frame anyway.
+        // This call rescales theme GEOMETRY tokens (rounding, padding,
+        // spacing, border sizes), which ImGui never scales itself.
         m_themeManager.setDpiScale(dpiScale);
         m_themeManager.apply(m_themeManager.currentThemeName());
     }
