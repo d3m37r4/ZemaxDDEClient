@@ -67,16 +67,17 @@ namespace ImGuiUtils {
             ImVec2(0.5f, 0.5f));
     }
 
-    /// Keeps a floating window fully inside the main viewport: after a main
-    /// window shrink (maximize/restore, or a stale ini position the floating
-    /// panel once got on a bigger window), an undocked window keeps its
-    /// absolute position and may end up out of sight. Docked windows live
-    /// inside a dock node and are always visible - never move those. Call
-    /// right after Begin() returned true.
+    /// Keeps a floating window fully inside its viewport: after a main window
+    /// shrink (or a stale ini position), an undocked window keeps its absolute
+    /// position and may end up out of sight. Docked windows live inside a
+    /// dock node and are always visible - never move those. Call right after
+    /// Begin() returned true. The clamp region is the window's OWN viewport,
+    /// which under multi-viewport is the bounds of its platform (OS) window
+    /// and otherwise the main viewport - one formula covers both.
     inline void ClampWindowToViewport() {
         if (ImGui::IsWindowDocked()) return;
-        const ImVec2 vpPos = ImGui::GetMainViewport()->Pos;
-        const ImVec2 vpSize = ImGui::GetMainViewport()->Size;
+        const ImVec2 vpPos = ImGui::GetWindowViewport()->Pos;
+        const ImVec2 vpSize = ImGui::GetWindowViewport()->Size;
         const ImVec2 size = ImGui::GetWindowSize();
         const ImVec2 pos = ImGui::GetWindowPos();
         // Fully-inside clamp; a window wider/taller than the viewport anchors
