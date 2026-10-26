@@ -55,6 +55,7 @@ namespace gui {
 
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         io.IniFilename = app::getImguiIniPath();
 
         float dpiScale = initialDpiScale;
@@ -152,6 +153,16 @@ namespace gui {
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Multi-viewport: floating windows dragged beyond the main window get
+        // rendered into their own GL contexts (ImGui examples contract). The
+        // main context must be restored afterwards - the app loop swaps
+        // buffers on m_window right after endFrame().
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(m_window);
+        }
     }
 
     void GraphicsBackend::updateTitleBarDarkMode(bool isDark) {
