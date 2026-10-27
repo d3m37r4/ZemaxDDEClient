@@ -73,9 +73,11 @@ namespace ImGuiUtils {
     /// dock node and are always visible - never move those. Call right after
     /// Begin() returned true. The clamp region is the window's OWN viewport,
     /// which under multi-viewport is the bounds of its platform (OS) window
-    /// and otherwise the main viewport - one formula covers both.
-    inline void ClampWindowToViewport() {
-        if (ImGui::IsWindowDocked()) return;
+    /// and otherwise the main viewport - one formula covers both. Windows
+    /// with a forced chrome rect (maximized floating panels) pass skip=true:
+    /// their geometry is managed by window_chrome and spans exactly.
+    inline void ClampWindowToViewport(bool skip = false) {
+        if (skip || ImGui::IsWindowDocked()) return;
         const ImVec2 vpPos = ImGui::GetWindowViewport()->Pos;
         const ImVec2 vpSize = ImGui::GetWindowViewport()->Size;
         const ImVec2 size = ImGui::GetWindowSize();

@@ -10,6 +10,7 @@
 
 #include "gui/constants.h"
 #include "gui/theme_manager.h"
+#include "gui/window_chrome.h"
 #include "dde/dde_connection_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 
@@ -42,10 +43,16 @@ namespace gui {
 
     float UiOperationMonitor::computeStatusBarHeight() const {
         // Constant height: the bar no longer appears/disappears, so the dock
-        // area does not jump when tasks start or finish.
+        // area does not jump when tasks start or finish. The minimized-window
+        // shelf sits on top of the bar: whenever tiles exist, they add extra
+        // lines and everything dock-area dependent shifts consistently
+        // (this function is the single height source for dock layout code).
         float frameH = ImGui::GetFrameHeight();
         float verticalPadding = ImGuiUtils::DpiScale(STATUS_BAR_VPAD);
-        return frameH + 2.0f * verticalPadding;
+        const float bar = frameH + 2.0f * verticalPadding;
+        const float total = bar + chrome::currentShelfHeight();
+        chrome::setBottomBlockHeight(total);
+        return total;
     }
 
     void UiOperationMonitor::renderGlobalStatusBar() {
@@ -78,6 +85,11 @@ namespace gui {
 
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         float barHeight = computeStatusBarHeight();
+
+        // Minimized windows shelf: rendered before the bar window so its
+        // tiles exist regardless of the early-return branch below. At this
+        // point all regular windows already pushed their tiles this frame.
+        chrome::renderShelf();
 
         // Multi-viewport: window coords are desktop coords, so anchor the bar
         // to the main viewport's own position and pin it there (otherwise it
