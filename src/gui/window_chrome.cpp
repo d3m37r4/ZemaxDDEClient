@@ -1,5 +1,9 @@
 #include "gui/window_chrome.h"
 
+// Internal API: ButtonBehavior on an explicit rect is the only way to place
+// interactive widgets in the title bar (see titleBarButton comment below).
+#include "imgui_internal.h"
+
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
 
@@ -113,28 +117,39 @@ void drawWindowRects(ImDrawList* dl, const ImVec2& center, float extent, ImU32 c
         ImVec2(center.x + half.x, center.y + half.y), color, 0.0f, 0, thick);
 }
 
-/// Hit-testable square anchored at the title bar; the content cursor is
-/// restored afterwards so the window body keeps its own coordinates.
-bool titleBarButton(const ImVec2& rectMin, const char* id) {
-    const float size = ImGui::GetFrameHeight();
-    const ImVec2 rectMax(rectMin.x + size, rectMin.y + size);
-    const ImVec2 cursorBackup = ImGui::GetCursorScreenPos();
+/// Interactive square in the title bar, replicating the CloseButton pattern
+/// (imgui_widgets.cpp:907). An item submitted here sits above the content
+/// clip, so an InvisibleButton would be culled by ItemAdd -> IsClippedEx and
+/// never react. ButtonBehavior on the explicit rect bypasses that and claims
+/// HoveredId/ActiveId mid-frame, which keeps the end-of-frame window-move
+/// logic (UpdateMouseMovingWindowEndFrame) from turning the click into a
+/// title-bar drag. The ItemAdd result is ignored on purpose - like
+/// close/collapse buttons, ours must react while clipped.
+///
+/// IMPORTANT: must be called inside a window-scope clip pushed by the caller
+/// (PushClipRect over the whole window). IsMouseHoveringRect() - used by
+/// ItemHoverable for the hit test - clips its rect against
+/// CurrentWindow->ClipRect, which after Begin() is the content-only region
+/// below the title bar (PushClipRect(InnerClipRect), imgui.cpp:8888); our
+/// button rects sit above it and would never pass. ImGui's own title-bar
+/// buttons run inside Begin() BEFORE that clip is applied - we recreate
+/// their environment here.
+bool titleBarButton(const ImVec2& pos, const char* str_id, float size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    const ImGuiID id = window->GetID(str_id);
+    const ImRect bb(pos, ImVec2(pos.x + size, pos.y + size));
 
-    ImGui::PushID(id);
-    ImGui::SetCursorScreenPos(rectMin);
-    ImGui::InvisibleButton(id, ImVec2(size, size));
-    const bool hovered = ImGui::IsItemHovered();
-    const bool active = ImGui::IsItemActive();
-    const bool clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
-    ImGui::PopID();
-    ImGui::SetCursorScreenPos(cursorBackup);
-
-    if (hovered || active) {
-        ImGui::GetWindowDrawList()->AddRectFilled(rectMin, rectMax,
-            ImGui::GetColorU32(active ? ImGuiCol_ButtonActive
-                                      : ImGuiCol_ButtonHovered));
+    (void)ImGui::ItemAdd(bb, id);
+    bool hovered = false;
+    bool held = false;
+    const bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held,
+        ImGuiButtonFlags_None);
+    if (hovered || held) {
+        window->DrawList->AddRectFilled(bb.Min, bb.Max,
+            ImGui::GetColorU32(held ? ImGuiCol_ButtonActive
+                                    : ImGuiCol_ButtonHovered));
     }
-    return clicked;
+    return pressed;
 }
 
 /// Cuts the label to the available pixel width with an ellipsis; assumes
@@ -217,42 +232,66 @@ void drawTitleBarButtons(const void* token, bool* open) {
         return;
     }
 
-    const float size = ImGui::GetFrameHeight();
-    const ImVec2 winPos = ImGui::GetWindowPos();
-    const float winW = ImGui::GetWindowSize().x;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const ImRect title = window->TitleBarRect();
+    const float btnSz = ImGui::GetFontSize();
     const ImU32 glyphColor = ImGui::GetColorU32(ImGuiCol_Text);
-    const float extent = size * 0.5f * 0.7f;
+    const float extent = btnSz * 0.5f * 0.7f;
 
-    // The x close button occupies the rightmost title-height square; our
-    // buttons stack leftwards from it, maximize first (Windows order).
-    const float maximizeX = winPos.x + winW - 2.0f * size;
-    const float minimizeX = winPos.x + winW - 3.0f * size;
-    const ImVec2 maximizeCenter(maximizeX + size * 0.5f, winPos.y + size * 0.5f);
-    const ImVec2 minimizeCenter(minimizeX + size * 0.5f, winPos.y + size * 0.5f);
+    // Same layout math as RenderWindowTitleBarContents (imgui.cpp:7865): the
+    // close square is FontSize wide, anchored FramePadding.x from the window
+    // right edge; our buttons reuse its FontSize + ItemInnerSpacing pitch
+    // leftwards, maximize nearest to the close button (Windows order x-□-−).
+    const ImVec2 closePos(title.Max.x - style.FramePadding.x - btnSz,
+        title.Min.y + style.FramePadding.y);
+    const float pitch = btnSz + style.ItemInnerSpacing.x;
+    const ImVec2 maximizePos(closePos.x - pitch, closePos.y);
+    const ImVec2 minimizePos(closePos.x - 2.0f * pitch, closePos.y);
+    const ImVec2 maximizeCenter(maximizePos.x + btnSz * 0.5f,
+        maximizePos.y + btnSz * 0.5f);
+    const ImVec2 minimizeCenter(minimizePos.x + btnSz * 0.5f,
+        minimizePos.y + btnSz * 0.5f);
 
-    if (titleBarButton(ImVec2(maximizeX, winPos.y), "##Maximize")) {
+    // Everything below (buttons + glyphs) lives in the title bar, outside
+    // the window ClipRect the content gets after Begin() — and worse,
+    // IsMouseHoveringRect() shrinks its hit test by exactly that ClipRect,
+    // which is why the buttons would stay dead and the click would fall
+    // through into a title-bar drag. Push a full-window clip to recreate the
+    // environment ImGui's own close button has inside Begin(), pop it before
+    // the content is rendered.
+    const ImVec2 winPos = window->Pos;
+    const ImVec2 winMax(winPos.x + window->SizeFull.x,
+        winPos.y + window->SizeFull.y);
+    ImGui::PushClipRect(winPos, winMax, false);
+
+    if (titleBarButton(maximizePos, "##Maximize", btnSz)) {
         if (!st.maximized) {
-            st.restorePos = winPos;
-            st.restoreSize = ImGui::GetWindowSize();
+            st.restorePos = window->Pos;
+            st.restoreSize = window->Size;
             st.maximized = true;
         } else {
             st.maximized = false;
             st.wantRestoreRect = true;
         }
     }
-    if (titleBarButton(ImVec2(minimizeX, winPos.y), "##Minimize")) {
+    if (titleBarButton(minimizePos, "##Minimize", btnSz)) {
         // Preserve the maximized flag: restore brings the window back into
         // the state it was minimized from (floating rect covers the rest).
         if (!st.maximized) {
-            st.restorePos = winPos;
-            st.restoreSize = ImGui::GetWindowSize();
+            st.restorePos = window->Pos;
+            st.restoreSize = window->Size;
         }
         st.minimized = true;
     }
 
-    ImDrawList* dl = ImGui::GetWindowDrawList();
+    // Glyphs live in the title bar, outside the content clip the window draw
+    // list has after Begin(); the full-window clip pushed above also covers
+    // them.
+    ImDrawList* dl = window->DrawList;
     drawWindowRects(dl, maximizeCenter, extent, glyphColor, st.maximized);
     drawMinimizeGlyph(dl, minimizeCenter, extent, glyphColor);
+    ImGui::PopClipRect();
 }
 
 float currentShelfHeight() {
@@ -272,15 +311,21 @@ float currentShelfHeight() {
 }
 
 void renderShelf() {
+    // Self-sufficient strip height: computeStatusBarHeight() no longer
+    // includes the shelf (it must stay constant for dock-area layout), so the
+    // overlay refreshes pruning and its cached height here.
+    currentShelfHeight();
     auto& items = shelfItems();
     if (items.empty() || storedShelfHeight() <= 0.0f) {
         return;
     }
-    // The strip is invisible on purpose: no frame, no separator, only the
-    // tile buttons themselves. Sits right above the status bar.
+    // The strip is a transparent overlay hovering over the bottom edge of
+    // floating windows, right above the status bar: it never reserves layout
+    // height, so windows under it keep their size (user requirement).
     ImGuiViewport* vp = ImGui::GetMainViewport();
-    const float posBottomBlock = storedBottomBlockHeight();
-    const ImVec2 winPos(vp->Pos.x, vp->Pos.y + vp->Size.y - posBottomBlock);
+    const ImVec2 winPos(vp->Pos.x,
+        vp->Pos.y + vp->Size.y - storedBottomBlockHeight()
+            - storedShelfHeight());
     ImGui::SetNextWindowPos(winPos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(
         ImVec2(vp->Size.x, storedShelfHeight()), ImGuiCond_Always);
@@ -294,6 +339,15 @@ void renderShelf() {
             ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus)) {
         ImGui::End();
         return;
+    }
+    // Render draw order within a viewport is g.Windows display order
+    // (imgui.cpp:6562), NOT submission order: any window the user clicks
+    // gets BringWindowToDisplayFront (imgui.cpp:13925) and starts drawing
+    // on top of this strip, burying the tiles under overlapping floating
+    // window bottoms. Re-assert front placement every frame; yield to an
+    // open modal so dialogs stay above the strip.
+    if (ImGui::GetTopMostAndVisiblePopupModal() == nullptr) {
+        ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
     }
 
     const float gap = ImGuiUtils::DpiScale(SHELF_TILE_GAP);

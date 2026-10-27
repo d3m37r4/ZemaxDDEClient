@@ -44,15 +44,15 @@ namespace gui {
     float UiOperationMonitor::computeStatusBarHeight() const {
         // Constant height: the bar no longer appears/disappears, so the dock
         // area does not jump when tasks start or finish. The minimized-window
-        // shelf sits on top of the bar: whenever tiles exist, they add extra
-        // lines and everything dock-area dependent shifts consistently
-        // (this function is the single height source for dock layout code).
+        // shelf is an OVERLAY on top of floating windows: it does not reserve
+        // layout height, so the dock area keeps the same size whether tiles
+        // exist or not. The bottom-block height reported to chrome is the bar
+        // itself, so a maximized window still ends at the bar top.
         float frameH = ImGui::GetFrameHeight();
         float verticalPadding = ImGuiUtils::DpiScale(STATUS_BAR_VPAD);
         const float bar = frameH + 2.0f * verticalPadding;
-        const float total = bar + chrome::currentShelfHeight();
-        chrome::setBottomBlockHeight(total);
-        return total;
+        chrome::setBottomBlockHeight(bar);
+        return bar;
     }
 
     void UiOperationMonitor::renderGlobalStatusBar() {
@@ -84,7 +84,13 @@ namespace gui {
         }
 
         ImGuiViewport* viewport = ImGui::GetMainViewport();
-        float barHeight = computeStatusBarHeight();
+        // The bar occupies only its own frame; the minimized-windows shelf
+        // (chrome::renderShelf) owns the band between the bar top and the
+        // dock area bottom. Sizing the bar to the full bottom block (the
+        // computeStatusBarHeight() total) would cover the tiles, because the
+        // bar is rendered after the shelf.
+        const float barOnly = ImGui::GetFrameHeight()
+            + 2.0f * ImGuiUtils::DpiScale(STATUS_BAR_VPAD);
 
         // Minimized windows shelf: rendered before the bar window so its
         // tiles exist regardless of the early-return branch below. At this
@@ -95,8 +101,8 @@ namespace gui {
         // to the main viewport's own position and pin it there (otherwise it
         // drifts to the desktop edge and gets its own platform window).
         ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x,
-            viewport->Pos.y + viewport->Size.y - barHeight));
-        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, barHeight));
+            viewport->Pos.y + viewport->Size.y - barOnly));
+        ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, barOnly));
         ImGui::SetNextWindowViewport(viewport->ID);
         // Tooltips opened from inside the bar inherit WindowPadding from the
         // style stack; dropping it to zero cuts off their text, so the theme
