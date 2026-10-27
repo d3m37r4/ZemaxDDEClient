@@ -168,11 +168,17 @@ void GuiManager::render() {
 
     float navbarHeight = ImGui::GetFrameHeight();
     float statusBarHeight = m_uiOpMonitor.computeStatusBarHeight();
-    ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(mainViewport->Pos.x, mainViewport->Pos.y + navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
-        ImGui::GetIO().DisplaySize.x,
-        ImGui::GetIO().DisplaySize.y - navbarHeight - statusBarHeight
+        mainViewport->Size.x,
+        mainViewport->Size.y - navbarHeight - statusBarHeight
     ));
+    // Under multi-viewport ImGui window coords are desktop coords, so an
+    // anchoring SetNextWindowPos(0, ...) would spawn this host window as its
+    // own platform window (seen as a second entry in the task bar). Pin it
+    // to the main viewport so it can never own one.
+    ImGui::SetNextWindowViewport(mainViewport->ID);
     // Square corners: the dockspace background drawn with the theme's
     // windowRounding shows rounded corners against the window edges even
     // when every dockable panel is hidden.

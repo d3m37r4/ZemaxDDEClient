@@ -79,8 +79,13 @@ namespace gui {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         float barHeight = computeStatusBarHeight();
 
-        ImGui::SetNextWindowPos(ImVec2(0.0f, viewport->Size.y - barHeight));
+        // Multi-viewport: window coords are desktop coords, so anchor the bar
+        // to the main viewport's own position and pin it there (otherwise it
+        // drifts to the desktop edge and gets its own platform window).
+        ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x,
+            viewport->Pos.y + viewport->Size.y - barHeight));
         ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, barHeight));
+        ImGui::SetNextWindowViewport(viewport->ID);
         // Tooltips opened from inside the bar inherit WindowPadding from the
         // style stack; dropping it to zero cuts off their text, so the theme
         // value is restored locally where they are created.

@@ -185,10 +185,16 @@ namespace {
             mgr->SetVisible(WindowID::Welcome, true);
         }
         // Dock area rect: the centering target and the clamp reference.
+        // Multi-viewport: window coords are desktop coords, so the dock area
+        // rect must be anchored to the main viewport's own position, not to
+        // a (0,0) origin which now points at the desktop corner.
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         const float dockTop = ImGui::GetFrameHeight();
-        const float dockHeight = ImGui::GetIO().DisplaySize.y - dockTop - guiMgr->computeStatusBarHeight();
-        const ImVec2 dockAreaMin(0.0f, dockTop);
-        const ImVec2 dockAreaMax(ImGui::GetIO().DisplaySize.x, dockTop + dockHeight);
+        const ImVec2 dockAreaMin(mainViewport->Pos.x,
+                                 mainViewport->Pos.y + dockTop);
+        const ImVec2 dockAreaMax(mainViewport->Pos.x + mainViewport->Size.x,
+                                 mainViewport->Pos.y + mainViewport->Size.y -
+                                 guiMgr->computeStatusBarHeight());
         const ImVec2 dockAreaCenter((dockAreaMin.x + dockAreaMax.x) * 0.5f,
                                     (dockAreaMin.y + dockAreaMax.y) * 0.5f);
 
