@@ -33,8 +33,17 @@ namespace gui {
             ImVec4 getClearColor() const { return m_themeManager.getClearColor(); }
 
         private:
+            /// Win32 polish for secondary viewport windows (see .cpp): sets
+            /// GWL_HWNDPARENT ownership on secondary platform windows and
+            /// raises them all when the main window regains focus from
+            /// another application. Call after UpdatePlatformWindows().
+            void syncPlatformWindows();
+
             GLFWwindow* m_window = nullptr;
             Logger* m_logger = nullptr;
             ThemeManager m_themeManager;
+            /// HWND of the last GetForegroundWindow(), kept as void* so the
+            /// header does not need windows.h.
+            void* m_lastForegroundWindow = nullptr;
     };
 }

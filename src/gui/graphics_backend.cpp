@@ -170,9 +170,57 @@ namespace gui {
         // buffers on m_window right after endFrame().
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             ImGui::UpdatePlatformWindows();
+            syncPlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
             glfwMakeContextCurrent(m_window);
         }
+    }
+
+    void GraphicsBackend::syncPlatformWindows() {
+        // Win32-only polish on top of the GLFW multi-viewport support. The
+        // GLFW backend has no notion of window ownership, so a floating panel
+        // is an independent top-level window: it appears separately in the
+        // task bar / Alt-Tab and, once hidden under other applications on
+        // another monitor, can be hard to bring back.
+        const HWND mainHwnd = glfwGetWin32Window(m_window);
+        const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+
+        bool lastForegroundIsOurWindow = false;
+        for (ImGuiViewport* viewport : platformIO.Viewports) {
+            if (viewport->ID == ImGui::GetMainViewport()->ID) continue;
+            auto* hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
+            if (!hwnd) continue;
+            if (hwnd == m_lastForegroundWindow) lastForegroundIsOurWindow = true;
+
+            // Take ownership once: owned windows stay grouped with the main
+            // one (taskbar/Alt-Tab activation, minimize/restore of the main
+            // window treat the app as a single unit). Without it a secondary
+            // window minimized behind an unrelated app is orphaned.
+            const LONG_PTR ownedBy =
+                ::GetWindowLongPtrW(hwnd, GWLP_HWNDPARENT);
+            if (ownedBy != reinterpret_cast<LONG_PTR>(mainHwnd)) {
+                ::SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT,
+                    reinterpret_cast<LONG_PTR>(mainHwnd));
+            }
+        }
+
+        const HWND foreground = ::GetForegroundWindow();
+        // Raise-all trigger (variant "external focus only"): react when the
+        // main window regains focus from another application. Switching focus
+        // between this app's own windows keeps the user-arranged z-order of
+        // the floating panels untouched. SWP_NOACTIVATE raises the windows
+        // without stealing keyboard focus from the main window.
+        if (foreground == mainHwnd && m_lastForegroundWindow &&
+            m_lastForegroundWindow != mainHwnd && !lastForegroundIsOurWindow) {
+            for (ImGuiViewport* viewport : platformIO.Viewports) {
+                if (viewport->ID == ImGui::GetMainViewport()->ID) continue;
+                auto* hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
+                if (!hwnd) continue;
+                ::SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                    SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+            }
+        }
+        m_lastForegroundWindow = foreground;
     }
 
     void GraphicsBackend::updateTitleBarDarkMode(bool isDark) {
