@@ -56,6 +56,10 @@ namespace gui {
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        // Secondary viewports are plot regions, not standalone apps: drop
+        // them from the task bar (the GLFW backend applies this by setting
+        // WS_EX_TOOLWINDOW in Platform_ShowWindow) so Alt-Tab stays clean.
+        io.ConfigViewportsNoTaskBarIcon = true;
         io.IniFilename = app::getImguiIniPath();
 
         float dpiScale = initialDpiScale;
