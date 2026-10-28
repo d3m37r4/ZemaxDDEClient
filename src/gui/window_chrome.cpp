@@ -416,7 +416,7 @@ void renderShelf() {
     // Shelf tile right-edge controls (Windows taskbar style): restore and
     // close squares at the right edge; the label truncation yields that
     // zone. Same FontSize squares and glyph metrics as the title bar.
-    const float ctrlReserve = 2.0f * fontSize + gap;
+    const float ctrlReserve = 3.0f * fontSize + 2.0f * gap;
 
     int index = 0;
     int closedIndex = -1;
@@ -428,10 +428,12 @@ void renderShelf() {
         const ImVec2 tileMin(x, y);
         const ImVec2 tileMax(x + l.tileWidth, y + tileH);
         const ImVec2 absMin(winPos.x + tileMin.x, winPos.y + tileMin.y);
-        // Control squares, vertically centered inside the tile row.
+        // Right-edge control strip (Zemax taskbar order): restore, maximize
+        // and close squares, vertically centered inside the tile row.
         const ImVec2 closeAbs(absMin.x + l.tileWidth - inset - fontSize,
             absMin.y + (tileH - fontSize) * 0.5f);
-        const ImVec2 restoreAbs(closeAbs.x - gap - fontSize, closeAbs.y);
+        const ImVec2 maximizeAbs(closeAbs.x - gap - fontSize, closeAbs.y);
+        const ImVec2 restoreAbs(maximizeAbs.x - gap - fontSize, closeAbs.y);
         // Hits inside the control zone must not fall through to the tile
         // button below, whose behavior runs first in the same frame.
         const bool overControls = ImGui::IsMouseHoveringRect(
@@ -456,8 +458,8 @@ void renderShelf() {
                                                 : ImGuiCol_Button),
             tileRounding);
 
-        // Truncate the label to the tile width minus the control zone; hover
-        // shows the full title.
+        // Truncate the label to the tile width minus the control zone (no
+        // hover tooltip - user request).
         const std::string label = truncateToWidth(font, fontSize,
             l.tileWidth - 2.0f * inset - ctrlReserve, item.title);
         const ImVec2 textSize =
@@ -473,6 +475,17 @@ void renderShelf() {
             State& st = state(item.token);
             st.minimized = false;
             st.wantRestoreRect = true;
+        }
+        ImGui::PopID();
+
+        ImGui::PushID("##tileMaximize");
+        ImGui::SetCursorScreenPos(maximizeAbs);
+        ImGui::InvisibleButton("##btn", ImVec2(fontSize, fontSize));
+        const bool maximizeHovered = ImGui::IsItemHovered();
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            State& st = state(item.token);
+            st.minimized = false;
+            st.maximized = true;
         }
         ImGui::PopID();
 
@@ -500,9 +513,25 @@ void renderShelf() {
                 ImVec2(restoreAbs.x + fontSize, restoreAbs.y + fontSize),
                 ImGui::GetColorU32(ImGuiCol_ButtonHovered));
         }
+        // Restore glyph is the Windows double square; plain square = maximize.
+        // The back square shifts up-right by extent*0.35, so the combined
+        // glyph box is offset by half that shift; compensate the center
+        // down-left to keep the two squares visually centered in the button.
+        {
+            const float shift = glyphExtent * 0.35f;
+            drawWindowRects(dl,
+                ImVec2(restoreAbs.x + (fontSize - shift) * 0.5f,
+                    restoreAbs.y + (fontSize + shift) * 0.5f),
+                glyphExtent, ImGui::GetColorU32(ImGuiCol_Text), true);
+        }
+        if (maximizeHovered) {
+            dl->AddRectFilled(maximizeAbs,
+                ImVec2(maximizeAbs.x + fontSize, maximizeAbs.y + fontSize),
+                ImGui::GetColorU32(ImGuiCol_ButtonHovered));
+        }
         drawWindowRects(dl,
-            ImVec2(restoreAbs.x + fontSize * 0.5f,
-                restoreAbs.y + fontSize * 0.5f),
+            ImVec2(maximizeAbs.x + fontSize * 0.5f,
+                maximizeAbs.y + fontSize * 0.5f),
             glyphExtent, ImGui::GetColorU32(ImGuiCol_Text), false);
         if (closeHovered) {
             dl->AddRectFilled(closeAbs,
@@ -513,9 +542,7 @@ void renderShelf() {
             ImVec2(closeAbs.x + fontSize * 0.5f, closeAbs.y + fontSize * 0.5f),
             glyphExtent, ImGui::GetColorU32(ImGuiCol_Text));
 
-        if (hovered && !overControls) {
-            ImGui::SetTooltip("%s", item.title.c_str());
-        }
+        // No tooltips on the tile at all (title-bar parity, user request).
         if (clicked && !overControls) {
             State& st = state(item.token);
             st.minimized = false;
