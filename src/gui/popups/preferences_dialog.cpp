@@ -167,6 +167,12 @@ namespace gui {
         ImGuiUtils::SectionHeader("General", "These options take effect on the next application start.");
 
         ImGui::Checkbox("Restore window layout on startup", &m_working.general.restoreWindowLayout);
+        // The flag gates full restore of the previous session's window layout
+        // (panel visibility + minimized state + floating rects); when off, only
+        // the dedicated "Show logs window on startup" preference is applied.
+        ImGui::TextDisabled(
+            "When enabled, windows and their minimized states from the previous session "
+            "are restored on the next start; when disabled, the layout starts fresh.");
     }
 
     void PreferencesDialog::renderSectionAppearance() {
