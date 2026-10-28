@@ -112,6 +112,9 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         chrome::setPersistentKey(
             chromeToken(WindowID::DDEStatus), chromePersistKey(WindowID::DDEStatus));
+        // Tile x closes the panel like the View-menu toggle.
+        chrome::setCloseHandler(chromeToken(WindowID::DDEStatus),
+            [mgr] { mgr->SetVisible(WindowID::DDEStatus, false); });
         if (chrome::minimizedAndShelved(chromeToken(WindowID::DDEStatus), mgr->GetName(WindowID::DDEStatus))) return;
         bool isVisible = mgr->IsVisible(WindowID::DDEStatus);
         const char* title = mgr->GetName(WindowID::DDEStatus);
@@ -136,6 +139,8 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         chrome::setPersistentKey(
             chromeToken(WindowID::SystemInfo), chromePersistKey(WindowID::SystemInfo));
+        chrome::setCloseHandler(chromeToken(WindowID::SystemInfo),
+            [mgr] { mgr->SetVisible(WindowID::SystemInfo, false); });
         if (chrome::minimizedAndShelved(chromeToken(WindowID::SystemInfo), mgr->GetName(WindowID::SystemInfo))) return;
         bool isVisible = mgr->IsVisible(WindowID::SystemInfo);
         const char* title = mgr->GetName(WindowID::SystemInfo);
@@ -157,6 +162,8 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         chrome::setPersistentKey(chromeToken(WindowID::SurfaceProfileInspector),
             chromePersistKey(WindowID::SurfaceProfileInspector));
+        chrome::setCloseHandler(chromeToken(WindowID::SurfaceProfileInspector),
+            [mgr] { mgr->SetVisible(WindowID::SurfaceProfileInspector, false); });
         if (chrome::minimizedAndShelved(chromeToken(WindowID::SurfaceProfileInspector), mgr->GetName(WindowID::SurfaceProfileInspector))) return;
         bool isVisible = mgr->IsVisible(WindowID::SurfaceProfileInspector);
         const char* title = mgr->GetName(WindowID::SurfaceProfileInspector);
@@ -178,6 +185,8 @@ namespace {
         auto* mgr = guiMgr->getWindowManager();
         chrome::setPersistentKey(chromeToken(WindowID::SurfaceIrregularityMap),
             chromePersistKey(WindowID::SurfaceIrregularityMap));
+        chrome::setCloseHandler(chromeToken(WindowID::SurfaceIrregularityMap),
+            [mgr] { mgr->SetVisible(WindowID::SurfaceIrregularityMap, false); });
         if (chrome::minimizedAndShelved(chromeToken(WindowID::SurfaceIrregularityMap), mgr->GetName(WindowID::SurfaceIrregularityMap))) return;
         bool isVisible = mgr->IsVisible(WindowID::SurfaceIrregularityMap);
         const char* title = mgr->GetName(WindowID::SurfaceIrregularityMap);
@@ -198,6 +207,8 @@ namespace {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
         chrome::setPersistentKey(chromeToken(WindowID::Logs), chromePersistKey(WindowID::Logs));
+        chrome::setCloseHandler(chromeToken(WindowID::Logs),
+            [mgr] { mgr->SetVisible(WindowID::Logs, false); });
         if (chrome::minimizedAndShelved(chromeToken(WindowID::Logs), mgr->GetName(WindowID::Logs))) return;
         bool isVisible = mgr->IsVisible(WindowID::Logs);
         const char* title = mgr->GetName(WindowID::Logs);

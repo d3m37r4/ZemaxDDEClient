@@ -96,6 +96,8 @@ namespace gui {
                 // Minimized windows skip rendering entirely; the shelf tile
                 // (pushed inside the call) is their only visible presence.
                 chrome::setPersistentKey(open, persistId);
+                // Tile x closes the detached window like the title-bar x.
+                chrome::setCloseHandler(open, [open] { *open = false; });
                 if (chrome::minimizedAndShelved(open, title)) {
                     return;
                 }

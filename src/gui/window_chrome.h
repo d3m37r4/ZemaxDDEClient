@@ -16,6 +16,7 @@
 
 #include "imgui.h"
 
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -35,6 +36,13 @@ struct State {
 /// Call first, before any SetNextWindow* of this window, so pending data
 /// cannot leak into the next one; prunes stale tiles automatically.
 bool minimizedAndShelved(const void* token, std::string_view title);
+
+/// Close action for the shelf tile's x button; invoked instead of the
+/// caller's render path. Plots flip their own open flag, panels drop their
+/// View-menu visibility. Without a handler the tile x hides the window the
+/// same way (clears the chrome state) but skips the caller-side close.
+/// Re-registers every frame, alongside setPersistentKey.
+void setCloseHandler(const void* token, std::function<void()> onClose);
 
 /// Forces the window rect while maximized (dock area, below the menu bar,
 /// above the status bar + shelf) and once after un-minimize/un-maximize

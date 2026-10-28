@@ -77,6 +77,11 @@ std::unordered_map<std::string, State>& pendingLoaded() {
     return map;
 }
 
+std::unordered_map<const void*, std::function<void()>>& closeHandlers() {
+    static std::unordered_map<const void*, std::function<void()>> map;
+    return map;
+}
+
 void pruneShelf() {
     const unsigned now = ImGui::GetFrameCount();
     auto& items = shelfItems();
@@ -124,6 +129,15 @@ void drawMinimizeGlyph(ImDrawList* dl, const ImVec2& center, float extent, ImU32
     // Slightly narrower than the glyph box, mirroring the Windows dash look.
     dl->AddLine(ImVec2(center.x - extent * 0.9f, center.y),
         ImVec2(center.x + extent * 0.9f, center.y), color, glyphThickness());
+}
+
+/// The CloseButton cross (imgui_widgets.cpp:936-938), drawn with the same
+/// metrics for the shelf tile controls.
+void drawCloseGlyph(ImDrawList* dl, const ImVec2& center, float extent, ImU32 color) {
+    dl->AddLine(ImVec2(center.x + extent, center.y + extent),
+        ImVec2(center.x - extent, center.y - extent), color, glyphThickness());
+    dl->AddLine(ImVec2(center.x + extent, center.y - extent),
+        ImVec2(center.x - extent, center.y + extent), color, glyphThickness());
 }
 
 /// Square outline, the Windows "maximize" glyph; with a square shifted
@@ -194,6 +208,10 @@ std::string truncateToWidth(ImFont* font, float fontSize, float avail,
 }
 
 } // namespace
+
+void setCloseHandler(const void* token, std::function<void()> onClose) {
+    closeHandlers()[token] = std::move(onClose);
+}
 
 bool minimizedAndShelved(const void* token, std::string_view title) {
     State& st = state(token);
@@ -390,8 +408,18 @@ void renderShelf() {
     ImFont* font = ImGui::GetFont();
     const float fontSize = ImGui::GetFontSize();
     const float rowStep = tileH + rowGap;
+    // Theme rounding on every tile fill: tiles read as app-styled pills,
+    // matching the global window/tab rounding (already DPI-scaled by
+    // ScaleAllSizes).
+    const float tileRounding = ImGui::GetStyle().WindowRounding;
+    const float glyphExtent = fontSize * 0.5f * 0.7071f - 1.0f;
+    // Shelf tile right-edge controls (Windows taskbar style): restore and
+    // close squares at the right edge; the label truncation yields that
+    // zone. Same FontSize squares and glyph metrics as the title bar.
+    const float ctrlReserve = 2.0f * fontSize + gap;
 
     int index = 0;
+    int closedIndex = -1;
     for (auto& item : items) {
         const int rowFromBottom = index / l.perRow;
         const float x = gap + float(index % l.perRow) * (l.tileWidth + gap);
@@ -400,40 +428,106 @@ void renderShelf() {
         const ImVec2 tileMin(x, y);
         const ImVec2 tileMax(x + l.tileWidth, y + tileH);
         const ImVec2 absMin(winPos.x + tileMin.x, winPos.y + tileMin.y);
+        // Control squares, vertically centered inside the tile row.
+        const ImVec2 closeAbs(absMin.x + l.tileWidth - inset - fontSize,
+            absMin.y + (tileH - fontSize) * 0.5f);
+        const ImVec2 restoreAbs(closeAbs.x - gap - fontSize, closeAbs.y);
+        // Hits inside the control zone must not fall through to the tile
+        // button below, whose behavior runs first in the same frame.
+        const bool overControls = ImGui::IsMouseHoveringRect(
+            ImVec2(restoreAbs.x, absMin.y),
+            ImVec2(closeAbs.x + fontSize, absMin.y + tileH));
 
         ImGui::PushID(item.token);
         ImGui::SetCursorScreenPos(
             ImVec2(winPos.x + tileMin.x, winPos.y + tileMin.y));
+        // Overlapping mini-buttons must take the hover instead of the tile.
+        ImGui::SetNextItemAllowOverlap();
         ImGui::InvisibleButton("##tile", ImVec2(l.tileWidth, tileH));
         const bool hovered = ImGui::IsItemHovered();
         const bool active = ImGui::IsItemActive();
         const bool clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
-        ImGui::PopID();
 
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddRectFilled(absMin,
             ImVec2(absMin.x + l.tileWidth, absMin.y + tileH),
             ImGui::GetColorU32(active ? ImGuiCol_ButtonActive
                                       : hovered ? ImGuiCol_ButtonHovered
-                                                : ImGuiCol_Button));
+                                                : ImGuiCol_Button),
+            tileRounding);
 
-        // Truncate the label to the tile width; hover shows the full title.
+        // Truncate the label to the tile width minus the control zone; hover
+        // shows the full title.
         const std::string label = truncateToWidth(font, fontSize,
-            l.tileWidth - 2.0f * inset, item.title);
+            l.tileWidth - 2.0f * inset - ctrlReserve, item.title);
         const ImVec2 textSize =
             font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, label.c_str());
         dl->AddText(ImVec2(absMin.x + inset, absMin.y + (tileH - textSize.y) * 0.5f),
             ImGui::GetColorU32(ImGuiCol_Text), label.c_str());
 
-        if (hovered) {
-            ImGui::SetTooltip("%s", item.title.c_str());
-        }
-        if (clicked) {
+        ImGui::PushID("##tileRestore");
+        ImGui::SetCursorScreenPos(restoreAbs);
+        ImGui::InvisibleButton("##btn", ImVec2(fontSize, fontSize));
+        const bool restoreHovered = ImGui::IsItemHovered();
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
             State& st = state(item.token);
             st.minimized = false;
             st.wantRestoreRect = true;
         }
+        ImGui::PopID();
+
+        ImGui::PushID("##tileClose");
+        ImGui::SetCursorScreenPos(closeAbs);
+        ImGui::InvisibleButton("##btn", ImVec2(fontSize, fontSize));
+        const bool closeHovered = ImGui::IsItemHovered();
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            if (auto fn = closeHandlers().find(item.token);
+                    fn != closeHandlers().end()) {
+                fn->second();
+            }
+            // A closed window must not resurrect as a shelf tile on the next
+            // session: drop the chrome state together with the tile.
+            registry().erase(item.token);
+            closedIndex = index;
+        }
+        ImGui::PopID();
+
+        // Mini-control fills and glyphs draw on top of the tile fill.
+        if (restoreHovered) {
+            // Square hover fill, matching the title-bar buttons (CloseButton
+            // has no rounding) — only the tile body is rounded.
+            dl->AddRectFilled(restoreAbs,
+                ImVec2(restoreAbs.x + fontSize, restoreAbs.y + fontSize),
+                ImGui::GetColorU32(ImGuiCol_ButtonHovered));
+        }
+        drawWindowRects(dl,
+            ImVec2(restoreAbs.x + fontSize * 0.5f,
+                restoreAbs.y + fontSize * 0.5f),
+            glyphExtent, ImGui::GetColorU32(ImGuiCol_Text), false);
+        if (closeHovered) {
+            dl->AddRectFilled(closeAbs,
+                ImVec2(closeAbs.x + fontSize, closeAbs.y + fontSize),
+                ImGui::GetColorU32(ImGuiCol_ButtonHovered));
+        }
+        drawCloseGlyph(dl,
+            ImVec2(closeAbs.x + fontSize * 0.5f, closeAbs.y + fontSize * 0.5f),
+            glyphExtent, ImGui::GetColorU32(ImGuiCol_Text));
+
+        if (hovered && !overControls) {
+            ImGui::SetTooltip("%s", item.title.c_str());
+        }
+        if (clicked && !overControls) {
+            State& st = state(item.token);
+            st.minimized = false;
+            st.wantRestoreRect = true;
+        }
+        // The token scope covers every item of this tile: mini-button ids are
+        // token-scoped and cannot conflict between tiles.
+        ImGui::PopID();
         ++index;
+    }
+    if (closedIndex >= 0) {
+        items.erase(items.begin() + closedIndex);
     }
 
     ImGui::End();
