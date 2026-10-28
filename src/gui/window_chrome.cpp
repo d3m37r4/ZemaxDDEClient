@@ -112,25 +112,34 @@ ShelfLayout shelfLayout(int count) {
     return l;
 }
 
-void drawMinimizeGlyph(ImDrawList* dl, const ImVec2& center, float extent, ImU32 color) {
-    dl->AddLine(ImVec2(center.x - extent, center.y),
-        ImVec2(center.x + extent, center.y), color, ImGuiUtils::DpiScale(1.4f));
+/// Stroke width for the title-bar glyphs: identical to CloseButton's cross
+/// (imgui_widgets.cpp:937) so all three buttons share one visual weight.
+/// _MainScale is the same DPR factor CloseButton inherits, hence the access
+/// despite the upstream "do not use" note.
+float glyphThickness() {
+    return 1.0f * static_cast<float>(static_cast<int>(ImGui::GetStyle()._MainScale));
 }
 
-/// Overlapping square outlines, the Windows "restore" glyph: the back
-/// square shifted up-right behind the front one.
+void drawMinimizeGlyph(ImDrawList* dl, const ImVec2& center, float extent, ImU32 color) {
+    // Slightly narrower than the glyph box, mirroring the Windows dash look.
+    dl->AddLine(ImVec2(center.x - extent * 0.9f, center.y),
+        ImVec2(center.x + extent * 0.9f, center.y), color, glyphThickness());
+}
+
+/// Square outline, the Windows "maximize" glyph; with a square shifted
+/// up-right behind it when the window is maximized ("restore" glyph).
 void drawWindowRects(ImDrawList* dl, const ImVec2& center, float extent, ImU32 color,
                      bool withBackSquare) {
-    const ImVec2 half(extent * 0.85f, extent * 0.65f);
-    const float thick = ImGuiUtils::DpiScale(1.4f);
     if (withBackSquare) {
-        const ImVec2 shift(ImGuiUtils::DpiScale(2.5f), -ImGuiUtils::DpiScale(2.5f));
-        dl->AddRect(ImVec2(center.x + shift.x - half.x, center.y + shift.y - half.y),
-            ImVec2(center.x + shift.x + half.x, center.y + shift.y + half.y),
-            color, 0.0f, 0, ImGuiUtils::DpiScale(1.2f));
+        // Windows restore: the back square sits up-right of the front one.
+        const float shift = extent * 0.35f;
+        dl->AddRect(ImVec2(center.x + shift - extent, center.y - shift - extent),
+            ImVec2(center.x + shift + extent, center.y - shift + extent),
+            color, 0.0f, 0, glyphThickness());
     }
-    dl->AddRect(ImVec2(center.x - half.x, center.y - half.y),
-        ImVec2(center.x + half.x, center.y + half.y), color, 0.0f, 0, thick);
+    dl->AddRect(ImVec2(center.x - extent, center.y - extent),
+        ImVec2(center.x + extent, center.y + extent), color, 0.0f, 0,
+        glyphThickness());
 }
 
 /// Interactive square in the title bar, replicating the CloseButton pattern
@@ -253,7 +262,9 @@ void drawTitleBarButtons(const void* token, bool* open) {
     const ImRect title = window->TitleBarRect();
     const float btnSz = ImGui::GetFontSize();
     const ImU32 glyphColor = ImGui::GetColorU32(ImGuiCol_Text);
-    const float extent = btnSz * 0.5f * 0.7f;
+    // Glyph extent identical to CloseButton's cross_extent
+    // (imgui_widgets.cpp:936): all three buttons share one in-glyph box.
+    const float extent = btnSz * 0.5f * 0.7071f - 1.0f;
 
     // Same layout math as RenderWindowTitleBarContents (imgui.cpp:7865): the
     // close square is FontSize wide, anchored FramePadding.x from the window
