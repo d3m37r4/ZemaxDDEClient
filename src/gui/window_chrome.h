@@ -57,6 +57,23 @@ bool isMaximized(const void* token);
 /// rect; the status bar reports it every frame via setBottomBlockHeight().
 void setBottomBlockHeight(float height);
 
+/// Associates the token with a stable, restart-persistent key ("panel:<id>",
+/// "plot:<flag>"). On the first association for a token, any state persisted
+/// under the same key by the previous session is merged in (minimized flag +
+/// floating restore rect; maximized is intentionally not persisted, its rect
+/// is recomputed from the current dock geometry). Call once per token, right
+/// before minimizedAndShelved() for the same token in the same frame.
+void setPersistentKey(const void* token, std::string_view key);
+
+/// Reads chrome_state.json into a pending map that setPersistentKey merges
+/// from. Call once early at startup; keys stored by saveState() must match.
+void loadState();
+
+/// Serializes the state of every token that has a persistent key to
+/// chrome_state.json. Call once at shutdown, the registry still holds the
+/// last-frame states then.
+void saveState();
+
 /// Height of the shelf strip (0 when no window is minimized). Prunes shelf
 /// entries for windows that stopped minimizing over small frame gaps, so
 /// paused/hidden windows disappear from the shelf without explicit hooks.

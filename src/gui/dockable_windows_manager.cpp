@@ -16,6 +16,19 @@ namespace {
 inline const void* chromeToken(WindowID id) {
     return reinterpret_cast<const void*>(static_cast<std::uintptr_t>(id));
 }
+
+// The same identity as a string, for the restart-persistent chrome_state.json
+// (paired with chromeToken() at every chrome call site for the same window).
+inline const char* chromePersistKey(WindowID id) {
+    switch (id) {
+        case WindowID::DDEStatus: return "panel:DDEStatus";
+        case WindowID::SystemInfo: return "panel:SystemInfo";
+        case WindowID::SurfaceProfileInspector: return "panel:SurfaceProfileInspector";
+        case WindowID::SurfaceIrregularityMap: return "panel:SurfaceIrregularityMap";
+        case WindowID::Logs: return "panel:Logs";
+        default: return nullptr;
+    }
+}
 namespace chrome = gui::chrome;
 }
 
@@ -97,6 +110,8 @@ namespace {
     void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(
+            chromeToken(WindowID::DDEStatus), chromePersistKey(WindowID::DDEStatus));
         if (chrome::minimizedAndShelved(chromeToken(WindowID::DDEStatus), mgr->GetName(WindowID::DDEStatus))) return;
         bool isVisible = mgr->IsVisible(WindowID::DDEStatus);
         const char* title = mgr->GetName(WindowID::DDEStatus);
@@ -119,6 +134,8 @@ namespace {
     void RenderSystemInfoWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(
+            chromeToken(WindowID::SystemInfo), chromePersistKey(WindowID::SystemInfo));
         if (chrome::minimizedAndShelved(chromeToken(WindowID::SystemInfo), mgr->GetName(WindowID::SystemInfo))) return;
         bool isVisible = mgr->IsVisible(WindowID::SystemInfo);
         const char* title = mgr->GetName(WindowID::SystemInfo);
@@ -138,6 +155,8 @@ namespace {
     void RenderSurfaceProfileInspectorWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(chromeToken(WindowID::SurfaceProfileInspector),
+            chromePersistKey(WindowID::SurfaceProfileInspector));
         if (chrome::minimizedAndShelved(chromeToken(WindowID::SurfaceProfileInspector), mgr->GetName(WindowID::SurfaceProfileInspector))) return;
         bool isVisible = mgr->IsVisible(WindowID::SurfaceProfileInspector);
         const char* title = mgr->GetName(WindowID::SurfaceProfileInspector);
@@ -157,6 +176,8 @@ namespace {
     void RenderSurfaceIrregularityMapWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(chromeToken(WindowID::SurfaceIrregularityMap),
+            chromePersistKey(WindowID::SurfaceIrregularityMap));
         if (chrome::minimizedAndShelved(chromeToken(WindowID::SurfaceIrregularityMap), mgr->GetName(WindowID::SurfaceIrregularityMap))) return;
         bool isVisible = mgr->IsVisible(WindowID::SurfaceIrregularityMap);
         const char* title = mgr->GetName(WindowID::SurfaceIrregularityMap);
@@ -176,6 +197,7 @@ namespace {
     void RenderLogsWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(chromeToken(WindowID::Logs), chromePersistKey(WindowID::Logs));
         if (chrome::minimizedAndShelved(chromeToken(WindowID::Logs), mgr->GetName(WindowID::Logs))) return;
         bool isVisible = mgr->IsVisible(WindowID::Logs);
         const char* title = mgr->GetName(WindowID::Logs);

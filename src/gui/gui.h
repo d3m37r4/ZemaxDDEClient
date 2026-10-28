@@ -91,9 +91,11 @@ namespace gui {
 #endif
 
             template<typename Func>
-            void renderToolbarWindow(const char* title, bool* open, Func content) {
+            void renderToolbarWindow(
+                const char* title, bool* open, const char* persistId, Func content) {
                 // Minimized windows skip rendering entirely; the shelf tile
                 // (pushed inside the call) is their only visible presence.
+                chrome::setPersistentKey(open, persistId);
                 if (chrome::minimizedAndShelved(open, title)) {
                     return;
                 }

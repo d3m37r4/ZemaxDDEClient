@@ -6,8 +6,12 @@
 
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "app/config_path.h"
+
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <fstream>
 #include <unordered_map>
 #include <vector>
 
@@ -21,12 +25,14 @@ namespace {
 // instead of requiring explicit removal hooks.
 constexpr unsigned kStaleFrameGap = 3;
 
-// Layout of the "adaptive taskbar": a fixed share of the dock-area width is
-// split evenly between the existing tiles, narrowing them as new ones are
-// added; once the minimum width is reached, tiles wrap to extra lines.
+// Layout of the "adaptive taskbar": nearly the whole window width is avail-
+// able to the tiles (a small right margin keeps the strip clear of the
+// status bar's right-side controls); they split it evenly, narrowing as new
+// ones are added; once the minimum width is reached, tiles wrap to extra
+// lines.
 constexpr float SHELF_TILE_MIN_WIDTH = 90.0f;
 constexpr float SHELF_TILE_MAX_WIDTH = 220.0f;
-constexpr float SHELF_MAX_WIDTH_RATIO = 0.5f;
+constexpr float SHELF_MAX_WIDTH_RATIO = 0.9f;
 constexpr float SHELF_TILE_GAP = 4.0f;
 constexpr float SHELF_ROW_GAP = 2.0f;
 constexpr float SHELF_TILE_TEXT_INSET = 8.0f;
@@ -59,6 +65,16 @@ float& storedBottomBlockHeight() {
 
 State& state(const void* token) {
     return registry()[token];
+}
+
+std::unordered_map<const void*, std::string>& persistentKeys() {
+    static std::unordered_map<const void*, std::string> map;
+    return map;
+}
+
+std::unordered_map<std::string, State>& pendingLoaded() {
+    static std::unordered_map<std::string, State> map;
+    return map;
 }
 
 void pruneShelf() {
@@ -356,15 +372,22 @@ void renderShelf() {
     const float inset = ImGuiUtils::DpiScale(SHELF_TILE_TEXT_INSET);
     const ShelfLayout l = shelfLayout(int(items.size()));
 
-    float cursorY = rowGap;
-    int indexInRow = 0;
+    // Rows stack from the status bar upward: the bottom row (adjacent to
+    // the bar) is filled first with the first-minimized tiles, overflow
+    // rows go above, so the last (partial) row always ends up on top and
+    // the strip visually grows away from the bar.
     ImFont* font = ImGui::GetFont();
     const float fontSize = ImGui::GetFontSize();
+    const float rowStep = tileH + rowGap;
 
+    int index = 0;
     for (auto& item : items) {
-        const float x = gap + float(indexInRow) * (l.tileWidth + gap);
-        const ImVec2 tileMin(x, cursorY);
-        const ImVec2 tileMax(x + l.tileWidth, cursorY + tileH);
+        const int rowFromBottom = index / l.perRow;
+        const float x = gap + float(index % l.perRow) * (l.tileWidth + gap);
+        const float y = rowGap
+            + float(l.rows - 1 - rowFromBottom) * rowStep;
+        const ImVec2 tileMin(x, y);
+        const ImVec2 tileMax(x + l.tileWidth, y + tileH);
         const ImVec2 absMin(winPos.x + tileMin.x, winPos.y + tileMin.y);
 
         ImGui::PushID(item.token);
@@ -399,15 +422,101 @@ void renderShelf() {
             st.minimized = false;
             st.wantRestoreRect = true;
         }
-
-        ++indexInRow;
-        if (indexInRow >= l.perRow) {
-            indexInRow = 0;
-            cursorY += tileH + rowGap;
-        }
+        ++index;
     }
 
     ImGui::End();
+}
+
+// --- Session persistence (chrome_state.json) ---------------------------- //
+
+nlohmann::json stateToJson(const State& st) {
+    return {
+        {"minimized", st.minimized},
+        {"restorePos", {st.restorePos.x, st.restorePos.y}},
+        {"restoreSize", {st.restoreSize.x, st.restoreSize.y}},
+    };
+}
+
+State stateFromJson(const nlohmann::json& j) {
+    State st;
+    st.minimized = j.value("minimized", false);
+    if (j.contains("restorePos") && j["restorePos"].is_array()
+        && j["restorePos"].size() == 2) {
+        st.restorePos.x = j["restorePos"][0].get<float>();
+        st.restorePos.y = j["restorePos"][1].get<float>();
+    }
+    if (j.contains("restoreSize") && j["restoreSize"].is_array()
+        && j["restoreSize"].size() == 2) {
+        st.restoreSize.x = j["restoreSize"][0].get<float>();
+        st.restoreSize.y = j["restoreSize"][1].get<float>();
+    }
+    return st;
+}
+
+void setPersistentKey(const void* token, std::string_view key) {
+    if (key.empty()) {
+        return;
+    }
+    auto& keyFor = persistentKeys();
+    auto it = keyFor.find(token);
+    if (it != keyFor.end()) {
+        if (it->second == key) {
+            return; // Same key, same frame: reassociation is a no-op.
+        }
+        return; // Already bound once; drifting keys would desync the file.
+    }
+    keyFor.emplace(token, std::string(key));
+
+    const std::string str(key);
+    auto& pending = pendingLoaded();
+    auto loaded = pending.find(str);
+    if (loaded == pending.end()) {
+        return;
+    }
+    State& st = state(token);
+    st.minimized = loaded->second.minimized;
+    st.restorePos = loaded->second.restorePos;
+    st.restoreSize = loaded->second.restoreSize;
+    pending.erase(loaded);
+}
+
+void loadState() {
+    std::ifstream in(app::getChromeStatePath());
+    if (!in) {
+        return;
+    }
+    try {
+        nlohmann::json j;
+        in >> j;
+        if (!j.is_object()) {
+            return;
+        }
+        auto& pending = pendingLoaded();
+        for (auto& el : j.items()) {
+            pending[el.key()] = stateFromJson(el.value());
+        }
+    } catch (const std::exception&) {
+        // Corrupt or foreign file: default to session-only chrome state
+        // instead of failing startup.
+    }
+}
+
+void saveState() {
+    const auto& keyFor = persistentKeys();
+    if (keyFor.empty()) {
+        return;
+    }
+    nlohmann::json j;
+    const auto& reg = registry();
+    for (const auto& [token, key] : keyFor) {
+        auto st = reg.find(token);
+        if (st != reg.end()) {
+            j[key] = stateToJson(st->second);
+        }
+    }
+    std::ofstream out(app::getChromeStatePath());
+    out << j.dump(4);
 }
 
 } // namespace gui::chrome

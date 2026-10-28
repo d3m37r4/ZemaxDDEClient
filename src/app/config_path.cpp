@@ -9,10 +9,12 @@
 namespace {
     inline constexpr const char* IMGUI_INI_FILENAME = "imgui.ini";
     inline constexpr const char* WINDOW_STATE_FILENAME = "windows.json";
+    inline constexpr const char* CHROME_STATE_FILENAME = "chrome_state.json";
     inline constexpr const char* SETTINGS_JSON_FILENAME = "settings.json";
 
     std::string imguiIniPath;
     std::string windowStatePath;
+    std::string chromeStatePath;
     std::string settingsJsonPath;
     std::string logFolderPath;
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
@@ -67,6 +69,7 @@ namespace app {
         // Drop the cached paths so the override takes effect.
         imguiIniPath.clear();
         windowStatePath.clear();
+        chromeStatePath.clear();
         settingsJsonPath.clear();
         logFolderPath.clear();
     }
@@ -84,6 +87,13 @@ namespace app {
             windowStatePath = resolvePath(WINDOW_STATE_FILENAME);
         }
         return windowStatePath.c_str();
+    }
+
+    const char* getChromeStatePath() {
+        if (chromeStatePath.empty()) {
+            chromeStatePath = resolvePath(CHROME_STATE_FILENAME);
+        }
+        return chromeStatePath.c_str();
     }
 
     const char* getSettingsJsonPath() {

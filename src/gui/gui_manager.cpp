@@ -211,7 +211,7 @@ void GuiManager::render() {
             if (tolSurface.isValid()) {
                 std::string title = std::format("Toleranced Surface Profile ({}°, {} pts){}",
                     tolSurface.angle, tolSurface.sampling, slotTag(tolSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, "plot:ShowTolerancedProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Toleranced", tolSurface, ImVec2(-1, -1));
                 });
@@ -222,7 +222,7 @@ void GuiManager::render() {
             if (nomSurface.isValid()) {
                 std::string title = std::format("Nominal Surface Profile ({}°, {} pts){}",
                     nomSurface.angle, nomSurface.sampling, slotTag(nomSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, "plot:ShowNominalProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Nominal", nomSurface, ImVec2(-1, -1));
                 });
@@ -233,7 +233,7 @@ void GuiManager::render() {
             if (nomSurface.isValid() && tolSurface.isValid()) {
                 std::string title = std::format("Surface Profile Comparison{}",
                     slotTag(nomSurface.sourceSlot, tolSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showComparisonProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showComparisonProfileWindow, "plot:ShowComparisonProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
                 });
@@ -244,7 +244,7 @@ void GuiManager::render() {
             if (nomSurface.isValid() && tolSurface.isValid()) {
                 std::string title = std::format("Surface Profile Irregularity (PV){}",
                     slotTag(nomSurface.sourceSlot, tolSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showDeviationProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showDeviationProfileWindow, "plot:ShowDeviationProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
                 });
@@ -259,7 +259,7 @@ void GuiManager::render() {
             if (mapService->hasData()) {
                 std::string title = std::format("Surface Irregularity Map 3D{}",
                     slotTag(mapService->getProfiles().front().sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showTolerancedSurfaceMap, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showTolerancedSurfaceMap, "plot:ShowTolerancedSurfaceMap", [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapSurface,
                         &mapService->m_windowState.highlightWorstSurface,
@@ -276,7 +276,7 @@ void GuiManager::render() {
                 std::string title = std::format("Surface Irregularity Map 3D Deviation{}",
                     slotTag(mapService->m_nominalSurfaceData.sourceSlot,
                         mapService->getProfiles().front().sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showDeviationSurfaceMap, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showDeviationSurfaceMap, "plot:ShowDeviationSurfaceMap", [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapDeviation,
                         &mapService->m_windowState.highlightWorstDeviation,
@@ -292,7 +292,7 @@ void GuiManager::render() {
             if (mapService->m_worstProfileData.isValid()) {
                 std::string title = std::format("Worst Section Profile{}",
                     slotTag(mapService->m_worstProfileData.sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionProfile, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionProfile, "plot:ShowWorstSectionProfile", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     auto& wp = mapService->m_worstProfileData;
                     std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
@@ -309,7 +309,7 @@ void GuiManager::render() {
                 std::string title = std::format("Worst Section Deviation{}",
                     slotTag(mapService->m_nominalSurfaceData.sourceSlot,
                         mapService->m_worstProfileData.sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionDeviation, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionDeviation, "plot:ShowWorstSectionDeviation", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##WorstDeviation",
                         mapService->m_nominalSurfaceData,

@@ -4,13 +4,15 @@
 
 #include "logger/logger.h"
 #include "app/app.h"
+#include "gui/gui.h"
 #include "gui/dockable_windows_manager.h"
-
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
 #include "test_engine/test_cli.h"
 #include "test_engine/test_engine.h"
 #include "test_engine/test_profile.h"
 #endif
+
+namespace chrome = gui::chrome;
 
 int main(int argc, char** argv) {
     Logger logger;
@@ -43,8 +45,15 @@ int main(int argc, char** argv) {
     const auto& logging = ctx->gui->getSettingsManager().current().logging;
     if (general.restoreWindowLayout) {
         wndMgr.LoadState();
+        // Minimized-window chrome state (tiles + floating rects) restores
+        // under the same user opt-out as the rest of the window layout.
+        chrome::loadState();
+        // LoadState() has already restored the persisted Logs visibility
+        // from windows.json; overriding it here would resurrect a window the
+        // user closed via the View menu on the previous session.
+    } else {
+        wndMgr.SetVisible(WindowID::Logs, logging.showLogsOnStartup);
     }
-    wndMgr.SetVisible(WindowID::Logs, logging.showLogsOnStartup);
 
     ctx->gui->setWindowManager(&wndMgr);
 
@@ -100,6 +109,11 @@ int main(int argc, char** argv) {
 
     ctx->gui->getSettingsManager().saveToFile();
     wndMgr.SaveState();
+    if (general.restoreWindowLayout) {
+        // Keep the file consistent with the same user opt-out used on load;
+        // an unchecked save would accumulate state that never restores.
+        chrome::saveState();
+    }
 
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
     if (testOptions.isTestMode()) {
