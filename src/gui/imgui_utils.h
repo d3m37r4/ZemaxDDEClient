@@ -111,6 +111,18 @@ namespace ImGuiUtils {
         ImGui::TextUnformatted(value);
     }
 
+    /// Width of the title-bar chrome strip (menu, minimize, maximize and
+    /// close squares with pitch), computed from the live style - used as a
+    /// floor so any theme/DPI keeps the text clear of the buttons
+    /// (DESIGN.md rules).
+    inline float ChromeTitleBarStripWidth() {
+        const ImGuiStyle& s = ImGui::GetStyle();
+        const float b = ImGui::GetFontSize();
+        return s.FramePadding.x * 2.0f     // edge pads
+            + 4.0f * b                     // menu, −, □, ✕ squares
+            + 3.0f * s.ItemInnerSpacing.x; // button pitch
+    }
+
     /// Applies DPI-aware min-size constraints to the next window.
     inline void SetDpiScaledWindowConstraints(float minWidth, float minHeight) {
         float dpiScale = ImGui::GetWindowDpiScale();
@@ -118,6 +130,13 @@ namespace ImGuiUtils {
             ImVec2(minWidth * dpiScale, minHeight * dpiScale),
             ImVec2(FLT_MAX, FLT_MAX)
         );
+    }
+
+    /// Min-size constraint for chrome windows:
+    /// width = max(per-window content constant, title-bar strip).
+    inline void SetChromeWindowConstraints(float minWidth, float minHeight) {
+        SetDpiScaledWindowConstraints(
+            std::max(minWidth, ChromeTitleBarStripWidth()), minHeight);
     }
 
     /// Sets DPI-scaled window size for the next window.

@@ -3,23 +3,26 @@
 #include "lib/imgui/imgui.h"
 
 namespace gui {
-    // DDE status window constraints
-    inline constexpr ImVec2 DDE_STATUS_WINDOW_MIN_SIZE   = ImVec2(220.0f, 100.0f);
+    // DDE Status panel window constraints
+    inline constexpr ImVec2 DDE_STATUS_WINDOW_MIN_SIZE   = ImVec2(260.0f, 140.0f);
     inline constexpr ImVec2 DDE_STATUS_CONTENT_SIZE      = ImVec2(0.0f, 0.0f);   // Automatic size
 
-    // Debug log window constraints
-    inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
+    // Logs panel window constraints
+    inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(260.0f, 140.0f);
 
     // Delete log entries confirmation popup (Logs panel header)
     inline constexpr const char* DELETE_LOG_CONFIRM_POPUP_NAME = "Delete all log entries?";
     inline constexpr ImVec2 DELETE_LOG_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(400.0f, 120.0f);
     inline constexpr ImVec2 DELETE_LOG_CONFIRM_POPUP_MIN_SIZE     = ImVec2(400.0f, 120.0f);
 
-    // System info window constraints
-    inline constexpr ImVec2 SYSTEM_INFO_WINDOW_MIN_SIZE  = ImVec2(200.0f, 160.0f);
+    // Optical System Information panel window constraints
+    inline constexpr ImVec2 OPTICAL_SYSTEM_INFO_WINDOW_MIN_SIZE = ImVec2(380.0f, 100.0f);
 
-    // Sag analysis window constraints
-    inline constexpr ImVec2 SAG_ANALYSIS_WINDOW_MIN_SIZE = ImVec2(200.0f, 160.0f);
+    // Surface Profile Inspector panel window constraints
+    inline constexpr ImVec2 SURFACE_PROFILE_INSPECTOR_WINDOW_MIN_SIZE = ImVec2(380.0f, 160.0f);
+
+    // Surface Irregularity Map panel window constraints
+    inline constexpr ImVec2 SURFACE_IRREGULARITY_MAP_WINDOW_MIN_SIZE = ImVec2(380.0f, 160.0f);
 
     // Sag analysis sampling constraints live in app/compute/sag_sampling.h — the
     // UI and the map service share them (Zemax tool limits).
@@ -33,8 +36,8 @@ namespace gui {
     // service share them.
 
     // Connect DDE popup constraints
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(550.0f, 120.0f);
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(550.0f, 120.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(580.0f, 180.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(580.0f, 180.0f);
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;

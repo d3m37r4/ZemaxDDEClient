@@ -105,7 +105,10 @@ namespace gui {
                 // rect overrides (maximized, restore) queue last with Always
                 // and therefore win.
                 ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
+                // Chrome buttons must stay clear of the title text at any
+                // min width; width = max(constant, chrome strip).
+                ImGuiUtils::SetChromeWindowConstraints(
+                    DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 chrome::applyFrameRect(open);
                 ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
                 if (ImGui::Begin(title, open, ImGuiWindowFlags_MenuBar)) {
