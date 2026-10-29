@@ -44,7 +44,6 @@ namespace gui {
             throw std::runtime_error("Invalid GLFW window");
         }
 
-        // Register built-in themes
         m_themeManager.registerTheme(ThemeData::CreateThemeLight());
         m_themeManager.registerTheme(ThemeData::CreateThemeDark());
 
@@ -96,7 +95,7 @@ namespace gui {
             }
         }
 
-        // Merge Font Awesome 6 Regular (icons)
+        // Merge mode: Font Awesome Regular is grafted onto the base font
         {
             ImFontConfig faCfg;
             faCfg.MergeMode = true;
@@ -119,7 +118,6 @@ namespace gui {
         // before the first frame (ImGui::GetWindowDpiScale() is 0 until then).
         m_themeManager.setDpiScale(dpiScale);
 
-        // Apply initial theme
         if (isLightTheme) {
             m_themeManager.apply(std::string{kThemeNameLight});
         } else {

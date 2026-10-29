@@ -8,7 +8,6 @@
 #include <GLFW/glfw3native.h>
 
 namespace App {
-    // Base window dimensions and system DPI constant
     constexpr int BASE_WIDTH = 800;
     constexpr int BASE_HEIGHT = 600;
 
@@ -25,7 +24,6 @@ namespace App {
 
         ctx->pLogger = &logger;
 
-        // Enable DPI awareness for proper scaling on high-DPI displays
         // Dynamically load SetProcessDpiAwarenessContext to avoid MinGW header issues
         HMODULE user32 = LoadLibraryW(L"user32.dll");
         if (user32) {
@@ -46,7 +44,6 @@ namespace App {
             logger.addLog("[APP] DPI Awareness set to legacy mode (user32 load failed)");
         }
 
-        // Initialize GLFW
         if (!glfwInit()) {
             logger.addLog("[APP] Failed to initialize GLFW");
             return nullptr;
@@ -54,7 +51,7 @@ namespace App {
 
         logger.addLog("[APP] GLFW initialized");
 
-        // Initialize Native File Dialog Extended (after framework init, per NFDe docs)
+        // Per NFDe docs, the dialog framework is initialized after the frameworks
         if (NFD_Init() != NFD_OKAY) {
             logger.addLog("[APP] Failed to initialize NFD");
             glfwTerminate();
@@ -80,7 +77,6 @@ namespace App {
         glfwMakeContextCurrent(ctx->glfwWindow);
         glfwSwapInterval(1);
 
-        // Detect system theme via registry (Windows 10/11)
         bool isDarkMode = false;
         HKEY hKey = nullptr;
         LONG regResult = RegOpenKeyExW(HKEY_CURRENT_USER,
@@ -113,7 +109,6 @@ namespace App {
             case app::ThemeMode::System: default: useDark = isDarkMode; break;
         }
 
-        // Apply resolved theme to title bar (Windows 10/11)
         #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
         #define DWMWA_USE_IMMERSIVE_DARK_MODE 19
         #endif
@@ -157,7 +152,6 @@ namespace App {
         // Store context pointer for callback access (must be before callback registration)
         glfwSetWindowUserPointer(ctx->glfwWindow, ctx.get());
 
-        // Set up DPI change callback for dynamic scaling
         glfwSetWindowContentScaleCallback(ctx->glfwWindow, [](GLFWwindow* window, float xScale, float yScale) {
             AppContext* ctx = static_cast<AppContext*>(glfwGetWindowUserPointer(window));
             if (!ctx || !ctx->pLogger) return;
@@ -178,7 +172,6 @@ namespace App {
         // GUI depends on DDE connection manager and GLFW
         ctx.gui.reset();
 
-        // DDE connection manager cleanup (disconnects all clients, destroys windows)
         ctx.ddeConnectionManager.reset();
 
         if (ctx.glfwWindow) {

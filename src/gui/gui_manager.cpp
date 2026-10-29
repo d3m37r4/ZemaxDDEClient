@@ -122,7 +122,6 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_profileService->setSettingsManager(m_settingsManager.get());
     m_irregularityMapService->setSettingsManager(m_settingsManager.get());
 
-    // Initialize 3D map colormaps from saved settings
     const auto& mapSettings = m_settingsManager->current().map;
     m_irregularityMapService->m_windowState.selectedColormapSurface = mapSettings.defaultColormapSurface;
     m_irregularityMapService->m_windowState.selectedColormapDeviation = mapSettings.defaultColormapDeviation;
@@ -145,17 +144,14 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
 }
 
 void GuiManager::render() {
-    // Refresh active DDE client in case connection changed via DDE Status UI
     m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
     m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
 
-    // Process DDE timeouts and check connection health
     if (m_ddeConnectionManager) {
         m_ddeConnectionManager->processAllTimeouts();
         m_ddeConnectionManager->checkAllConnectionHealth();
     }
 
-    // Check system theme change every 60 frames (once per second at 60 FPS)
     constexpr unsigned int kThemeCheckInterval = 60;
     if (++m_frameCount % kThemeCheckInterval == 0) {
         m_settingsManager->checkAndApplySystemTheme();
