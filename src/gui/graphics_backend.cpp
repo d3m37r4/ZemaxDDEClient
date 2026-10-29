@@ -154,7 +154,7 @@ namespace gui {
         ImGui::NewFrame();
     }
 
-    void GraphicsBackend::endFrame() {
+    void GraphicsBackend::endFrame(bool anyModalOpen) {
         ImVec4 bg = m_themeManager.getClearColor();
         glClearColor(bg.x, bg.y, bg.z, bg.w);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -168,13 +168,13 @@ namespace gui {
         // buffers on m_window right after endFrame().
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             ImGui::UpdatePlatformWindows();
-            syncPlatformWindows();
+            syncPlatformWindows(anyModalOpen);
             ImGui::RenderPlatformWindowsDefault();
             glfwMakeContextCurrent(m_window);
         }
     }
 
-    void GraphicsBackend::syncPlatformWindows() {
+    void GraphicsBackend::syncPlatformWindows(bool anyModalOpen) {
         // Win32-only polish on top of the GLFW multi-viewport support. The
         // GLFW backend has no notion of window ownership, so a floating panel
         // is an independent top-level window: it appears separately in the
@@ -183,22 +183,70 @@ namespace gui {
         const HWND mainHwnd = glfwGetWin32Window(m_window);
         const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
 
-        bool lastForegroundIsOurWindow = false;
+        std::vector<HWND> secondaryPanels;
         for (ImGuiViewport* viewport : platformIO.Viewports) {
             if (viewport->ID == ImGui::GetMainViewport()->ID) continue;
             auto* hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
-            if (!hwnd) continue;
+            if (hwnd) secondaryPanels.push_back(hwnd);
+        }
+
+        // Band contract: our windows live directly around the main window and
+        // never cross the z-order of unrelated applications. While a modal
+        // dialog is open, a popup rendered into the main window's framebuffer
+        // must cover the panels: the ownership is released (owned windows sit
+        // above their owner unconditionally) and the panels sink just below
+        // the main window. On close the ownership returns (the regular check
+        // below) and the panels are inserted back just above the main window,
+        // still beneath whatever foreign window sits above it.
+        if (anyModalOpen && !m_modalOwnershipActive) {
+            // Rising edge: capture our panels' current z-order (top to
+            // bottom) so both directions restore the user's arrangement.
+            m_modalOwnershipActive = true;
+            m_modalPanelOrder.clear();
+            for (HWND w = ::GetWindow(mainHwnd, GW_HWNDPREV); w;
+                 w = ::GetWindow(w, GW_HWNDPREV)) {
+                if (std::find(secondaryPanels.begin(), secondaryPanels.end(), w)
+                    != secondaryPanels.end()) {
+                    m_modalPanelOrder.push_back(w);
+                }
+            }
+        }
+        if (anyModalOpen) {
+            // Sink the captured panels directly below the main window,
+            // preserving their order. Idempotent: a window already in its
+            // slot is skipped, so repeated calls do not reshuffle anything.
+            HWND belowAnchor = mainHwnd;
+            for (void* entry : m_modalPanelOrder) {
+                auto* hwnd = static_cast<HWND>(entry);
+                if (!::IsWindow(hwnd)) continue;
+                if (::GetWindow(belowAnchor, GW_HWNDNEXT) != hwnd) {
+                    ::SetWindowPos(hwnd, belowAnchor, 0, 0, 0, 0,
+                        SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+                }
+                belowAnchor = hwnd;
+            }
+        } else if (m_modalOwnershipActive) {
+            // Falling edge: place the panels just above the main window,
+            // beneath whatever foreign window happens to sit above it.
+            for (void* entry : m_modalPanelOrder) {
+                auto* hwnd = static_cast<HWND>(entry);
+                if (!::IsWindow(hwnd)) continue;
+                ::SetWindowPos(hwnd, ::GetWindow(mainHwnd, GW_HWNDPREV),
+                    0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+            }
+            m_modalOwnershipActive = false;
+            m_modalPanelOrder.clear();
+        }
+
+        bool lastForegroundIsOurWindow = false;
+        for (HWND hwnd : secondaryPanels) {
             if (hwnd == m_lastForegroundWindow) lastForegroundIsOurWindow = true;
 
-            // Take ownership once: owned windows stay grouped with the main
-            // one (taskbar/Alt-Tab activation, minimize/restore of the main
-            // window treat the app as a single unit). Without it a secondary
-            // window minimized behind an unrelated app is orphaned.
-            const LONG_PTR ownedBy =
-                ::GetWindowLongPtrW(hwnd, GWLP_HWNDPARENT);
-            if (ownedBy != reinterpret_cast<LONG_PTR>(mainHwnd)) {
-                ::SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT,
-                    reinterpret_cast<LONG_PTR>(mainHwnd));
+            const LONG_PTR ownedBy = ::GetWindowLongPtrW(hwnd, GWLP_HWNDPARENT);
+            const LONG_PTR wantedParent = anyModalOpen
+                ? 0 : reinterpret_cast<LONG_PTR>(mainHwnd);
+            if (ownedBy != wantedParent) {
+                ::SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, wantedParent);
             }
         }
 
@@ -207,13 +255,11 @@ namespace gui {
         // main window regains focus from another application. Switching focus
         // between this app's own windows keeps the user-arranged z-order of
         // the floating panels untouched. SWP_NOACTIVATE raises the windows
-        // without stealing keyboard focus from the main window.
-        if (foreground == mainHwnd && m_lastForegroundWindow &&
+        // without stealing keyboard focus from the main window. Skipped while
+        // a modal is open: the panels must stay below the popup.
+        if (foreground == mainHwnd && !anyModalOpen && m_lastForegroundWindow &&
             m_lastForegroundWindow != mainHwnd && !lastForegroundIsOurWindow) {
-            for (ImGuiViewport* viewport : platformIO.Viewports) {
-                if (viewport->ID == ImGui::GetMainViewport()->ID) continue;
-                auto* hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
-                if (!hwnd) continue;
+            for (HWND hwnd : secondaryPanels) {
                 ::SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                     SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
             }

@@ -336,7 +336,7 @@ void GuiManager::render() {
     }
 #endif
 
-    m_graphics.endFrame();
+    m_graphics.endFrame(isAnyModalOpen());
 }
 
 void GuiManager::updateDpiStyle(float dpiScale) {
