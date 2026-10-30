@@ -4,6 +4,7 @@
 
 #include "surface_irregularity_map_service.h"
 #include "gui/imgui_utils.h"
+#include "gui/plot_image_exporter.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
 #include "lib/implot3d/implot3d.h"
@@ -87,10 +88,16 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("Z ({})", unitZ).c_str());
+            ImGuiUtils::SetPlotFrameSize(ImPlot3D::GetPlotRectSize());
             if (plotRequest == ImGuiUtils::kPlotRequestReset) {
                 resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
                                -semiDiameter * scaleY, semiDiameter * scaleY,
                                sagMin, sagMax);
+            }
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "map", m_nominalSurfaceData,
+                                         ImGui::GetWindowDrawList(),
+                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize());
             }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
@@ -189,10 +196,16 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("ΔSag ({})", unitZ).c_str());
+            ImGuiUtils::SetPlotFrameSize(ImPlot3D::GetPlotRectSize());
             if (plotRequest == ImGuiUtils::kPlotRequestReset) {
                 resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
                                -semiDiameter * scaleY, semiDiameter * scaleY,
                                devMin, devMax);
+            }
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "devmap", m_nominalSurfaceData,
+                                         ImGui::GetWindowDrawList(),
+                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize());
             }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 

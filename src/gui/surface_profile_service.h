@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include <string>
 
 #include "app/services/surface_profile_service.h"
@@ -30,13 +29,6 @@ namespace gui {
             app::models::OpticalSystemData m_frozenTolerancedOpticalSystem;
 
         private:
-            /// Native save dialog; the format follows the chosen extension and
-            /// the path falls back to .png when the dialog returns none.
-            std::optional<std::string> choosePlotImagePath(const std::string& defaultName);
-            /// Queues the current plot draw list for the offscreen export pass
-            /// that runs in GraphicsBackend::endFrame().
-            void requestPlotImageSave(const char* kind, const app::models::SurfaceData& surface);
-
             SettingsManager* m_settingsManager = nullptr;
     };
 }

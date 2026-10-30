@@ -1,10 +1,12 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include "lib/imgui/imgui.h"
 
 class Logger;
+namespace app::models { struct SurfaceData; }
 
 namespace gui::plot_export {
 
@@ -30,5 +32,19 @@ namespace gui::plot_export {
     /// resolution, reads it back and writes it to job.targetPath. Must run
     /// after ImGui::Render() with the main GL context current.
     void renderPendingJob();
+
+    /// Default save-dialog name: "<kind>_surf<id>_<angle>deg[_slot<N>]".
+    /// Trailing zeros of the angle are trimmed (0.00 -> 0, 22.50 -> 22.5);
+    /// the slot suffix is dropped when the data has no DDE slot (-1).
+    std::string defaultImageName(const char* kind, const app::models::SurfaceData& surface);
+
+    /// Native save dialog (PNG / JPEG / BMP by extension). Returns false when
+    /// the user cancelled; a dialog error is logged.
+    bool chooseSavePath(Logger& logger, const std::string& defaultName, std::string& outPath);
+
+    /// Full toolbar flow for one plot: asks for a path with the current
+    /// export resolution from the window storage, then queues the capture.
+    void requestSave(Logger& logger, const char* kind, const app::models::SurfaceData& surface,
+                     ImDrawList* drawList, const ImVec2& plotPos, const ImVec2& plotSize);
 
 }

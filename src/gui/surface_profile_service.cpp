@@ -1,10 +1,8 @@
 #include <format>
 #include <cmath>
-#include <exception>
 
 #include <windows.h>
 #include <shellapi.h>
-#include <nfd.h>
 
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
@@ -50,22 +48,6 @@ namespace gui {
                 csv += '\n';
             }
             return csv;
-        }
-
-        // Default save-dialog name: "<kind>_surf<id>_<angle>deg[_slot<N>]".
-        // Trailing zeros of the angle are trimmed (0.00 -> 0, 22.50 -> 22.5);
-        // the slot suffix is dropped when the data has no DDE slot (-1).
-        std::string plotImageName(const char* kind, const app::models::SurfaceData& surface) {
-            std::string angle = std::format("{:.2f}", surface.angle);
-            if (angle.find('.') != std::string::npos) {
-                while (angle.back() == '0') angle.pop_back();
-                if (angle.back() == '.') angle.pop_back();
-            }
-            std::string name = std::format("{}_surf{}_{}deg", kind, surface.id, angle);
-            if (surface.sourceSlot >= 0) {
-                name += std::format("_slot{}", surface.sourceSlot);
-            }
-            return name;
         }
 
         const char* kDisplayUnitNames[] = { "mm", "μm" };
@@ -159,69 +141,9 @@ namespace gui {
 
         ImGuiUtils::ResetZoomMenuItem();
         ImGuiUtils::CopyDataMenuItem();
-        // Image export renders the 2D plot draw list only.
-        if (!is3D) {
-            ImGuiUtils::SaveImageMenu();
-        }
+        ImGuiUtils::SaveImageMenu();
 
         ImGui::EndMenuBar();
-    }
-
-    std::optional<std::string> SurfaceProfileService::choosePlotImagePath(const std::string& defaultName) {
-        static const nfdu8filteritem_t kFormats[] = {
-            {"PNG image", "png"},
-            {"JPEG image", "jpg,jpeg"},
-            {"Windows Bitmap", "bmp"},
-        };
-        const nfdsavedialogu8args_t args = {
-            kFormats, static_cast<nfdfiltersize_t>(IM_ARRAYSIZE(kFormats)),
-            nullptr, defaultName.c_str(), {}, nullptr, nullptr, nullptr};
-        nfdu8char_t* outPath = nullptr;
-        const nfdresult_t result = NFD_SaveDialogU8_With(&outPath, &args);
-        if (result == NFD_CANCEL) {
-            return std::nullopt;
-        }
-        if (result == NFD_ERROR || !outPath) {
-            m_logger.addLog(std::format("[GUI] Save dialog failed: {}",
-                                        NFD_GetError() ? NFD_GetError() : "unknown NFD error"));
-            return std::nullopt;
-        }
-        std::string path = reinterpret_cast<const char*>(outPath);
-        NFD_FreePathU8(outPath);
-
-        // The dialog may return an extensionless path (file type set via the
-        // filter dropdown); fall back to PNG, the encoder follows the
-        // extension resolved in the exporter.
-        const size_t slashPos = path.find_last_of("/\\");
-        const size_t dotPos = path.find_last_of('.');
-        const bool hasExtension = dotPos != std::string::npos &&
-                                  (slashPos == std::string::npos || dotPos > slashPos);
-        if (!hasExtension) {
-            path += ".png";
-        }
-        return path;
-    }
-
-    void SurfaceProfileService::requestPlotImageSave(const char* kind,
-                                                     const app::models::SurfaceData& surface) {
-        try {
-            const ImVec2 resolution = ImGuiUtils::PlotExportResolution();
-            std::optional<std::string> path = choosePlotImagePath(plotImageName(kind, surface));
-            if (!path) {
-                return;
-            }
-            gui::plot_export::Job job;
-            job.drawList = ImGui::GetWindowDrawList();
-            job.displayPos = ImPlot::GetPlotPos();
-            job.displaySize = ImPlot::GetPlotSize();
-            job.targetWidth = static_cast<int>(resolution.x);
-            job.targetHeight = static_cast<int>(resolution.y);
-            job.targetPath = std::move(*path);
-            job.logger = &m_logger;
-            gui::plot_export::queueJob(job);
-        } catch (const std::exception& ex) {
-            m_logger.addLog(std::format("[GUI] Plot image save threw: {}", ex.what()));
-        }
     }
 
     void SurfaceProfileService::renderSurfaceProfilePlot(const char* plotLabel, const app::models::SurfaceData& surface, const ImVec2& size) {
@@ -265,7 +187,8 @@ namespace gui {
             // the 1x baseline for resolution and aspect lock.
             ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
-                requestPlotImageSave("sag", surface);
+                plot_export::requestSave(m_logger, "sag", surface, ImGui::GetWindowDrawList(),
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize());
             }
             ImPlot::PlotLine("Surface", x_scaled.data(), y_scaled.data(), x_scaled.size(),
                              buildLineSpec(lineWeight, markerSize));
@@ -314,7 +237,8 @@ namespace gui {
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
             ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
-                requestPlotImageSave("compare", nominal);
+                plot_export::requestSave(m_logger, "compare", nominal, ImGui::GetWindowDrawList(),
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize());
             }
             ImPlot::PlotLine("Nominal", x_nom_s.data(), y_nom_s.data(), x_nom_s.size(),
                              buildLineSpec(lineWeight, markerSize));
@@ -366,7 +290,8 @@ namespace gui {
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
             ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
-                requestPlotImageSave("dev", nominal);
+                plot_export::requestSave(m_logger, "dev", nominal, ImGui::GetWindowDrawList(),
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize());
             }
             ImPlot::PlotLine("Deviation", x_s.data(), y_s.data(), x_s.size(),
                              buildLineSpec(lineWeight, markerSize));

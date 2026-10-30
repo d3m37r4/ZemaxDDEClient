@@ -1,8 +1,11 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <exception>
 #include <format>
 #include <vector>
+
+#include <nfd.h>
 
 #include "lib/imgui/imgui.h"
 #include "lib/imgui/backends/imgui_impl_opengl3.h"
@@ -15,6 +18,8 @@
 #include "lib/imgui_test_engine/imgui_test_engine/thirdparty/stb/imstb_image_write.h"
 
 #include "gui/plot_image_exporter.h"
+#include "gui/imgui_utils.h"
+#include "app/models/surface_data.h"
 #include "logger/logger.h"
 
 // Framebuffer enums/entry points are absent from the vendored loader (it is
@@ -240,5 +245,75 @@ namespace gui::plot_export {
             return;
         }
         log(std::format("[GUI] Plot image saved to {} ({}x{})", job.targetPath, width, height));
+    }
+
+    std::string defaultImageName(const char* kind, const app::models::SurfaceData& surface) {
+        std::string angle = std::format("{:.2f}", surface.angle);
+        if (angle.find('.') != std::string::npos) {
+            while (angle.back() == '0') angle.pop_back();
+            if (angle.back() == '.') angle.pop_back();
+        }
+        std::string name = std::format("{}_surf{}_{}deg", kind, surface.id, angle);
+        if (surface.sourceSlot >= 0) {
+            name += std::format("_slot{}", surface.sourceSlot);
+        }
+        return name;
+    }
+
+    bool chooseSavePath(Logger& logger, const std::string& defaultName, std::string& outPath) {
+        static const nfdu8filteritem_t kFormats[] = {
+            {"PNG image", "png"},
+            {"JPEG image", "jpg,jpeg"},
+            {"Windows Bitmap", "bmp"},
+        };
+        const nfdsavedialogu8args_t args = {
+            kFormats, static_cast<nfdfiltersize_t>(IM_ARRAYSIZE(kFormats)),
+            nullptr, defaultName.c_str(), {}, nullptr, nullptr, nullptr};
+        nfdu8char_t* path = nullptr;
+        const nfdresult_t result = NFD_SaveDialogU8_With(&path, &args);
+        if (result == NFD_CANCEL) {
+            return false;
+        }
+        if (result == NFD_ERROR || !path) {
+            logger.addLog(std::format("[GUI] Save dialog failed: {}",
+                                      NFD_GetError() ? NFD_GetError() : "unknown NFD error"));
+            return false;
+        }
+        outPath = reinterpret_cast<const char*>(path);
+        NFD_FreePathU8(path);
+
+        // The dialog may return an extensionless path (file type set via the
+        // filter dropdown); fall back to PNG, the encoder follows the
+        // extension resolved in writeImage().
+        const size_t slashPos = outPath.find_last_of("/\\");
+        const size_t dotPos = outPath.find_last_of('.');
+        const bool hasExtension = dotPos != std::string::npos &&
+                                  (slashPos == std::string::npos || dotPos > slashPos);
+        if (!hasExtension) {
+            outPath += ".png";
+        }
+        return true;
+    }
+
+    void requestSave(Logger& logger, const char* kind, const app::models::SurfaceData& surface,
+                     ImDrawList* drawList, const ImVec2& plotPos, const ImVec2& plotSize) {
+        try {
+            const ImVec2 resolution = ImGuiUtils::PlotExportResolution();
+            std::string path;
+            if (!chooseSavePath(logger, defaultImageName(kind, surface), path)) {
+                return;
+            }
+            Job job;
+            job.drawList = drawList;
+            job.displayPos = plotPos;
+            job.displaySize = plotSize;
+            job.targetWidth = static_cast<int>(resolution.x);
+            job.targetHeight = static_cast<int>(resolution.y);
+            job.targetPath = std::move(path);
+            job.logger = &logger;
+            queueJob(job);
+        } catch (const std::exception& ex) {
+            logger.addLog(std::format("[GUI] Plot image save threw: {}", ex.what()));
+        }
     }
 }
