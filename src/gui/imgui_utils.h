@@ -41,41 +41,49 @@ namespace ImGuiUtils {
         }
     }
 
-    inline constexpr const char* kPlotFitRequestId = "PlotFitPending";
+    /// One-shot plot request slot (window state storage; key via ImHashStr so
+    /// it matches the scope the toolbar menu writes from and the plot consumer
+    /// reads at window scope - GetID() would hash into two different IDs).
+    /// kPlotRequestReset (1) -> refit the axes on the click frame;
+    /// kPlotRequestCopy (2) -> copy the plot series to the clipboard as CSV.
+    inline constexpr int kPlotRequestReset = 1;
+    inline constexpr int kPlotRequestCopy = 2;
 
-    /// Stack-independent storage key: the toolbar button writes from inside
-    /// the menu bar (BeginMenuBar pushes its ##MenuBar into the ID stack),
-    /// the plot consumer reads at window scope - GetID() would hash into two
-    /// different IDs and the request would never be seen.
-    inline ImGuiID PlotFitRequestFlagId() {
-        return ImHashStr(kPlotFitRequestId);
+    inline ImGuiID PlotRequestFlagId() {
+        return ImHashStr("PlotRequest");
+    }
+
+    inline void SetPlotRequest(int value) {
+        ImGui::GetStateStorage()->SetInt(PlotRequestFlagId(), value);
+    }
+
+    inline int ConsumePlotRequest() {
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        const ImGuiID flagId = PlotRequestFlagId();
+        const int value = storage->GetInt(flagId, 0);
+        storage->SetInt(flagId, 0);
+        return value;
     }
 
     /// Menu-bar item "Reset Zoom" for the detached-plot toolbar; records a
     /// one-shot fit request for the current window. The toolbar and the
     /// detached plot render into one ImGui window even though they belong to
     /// different service classes, so the window state storage carries the
-    /// request without flag plumbing. The same-frame consumer is
-    /// ConsumeResetZoom(); apply its result to the first plot the window
-    /// creates (ImPlot::SetNextAxesToFit before 2D BeginPlot, Always-cond
-    /// Setup calls inside 3D BeginPlot).
+    /// request without flag plumbing. The same-frame consumer applies the
+    /// result to the first plot the window creates (ImPlot::SetNextAxesToFit
+    /// before 2D BeginPlot, Always-cond Setup calls inside 3D BeginPlot).
     inline void ResetZoomMenuItem() {
         if (ImGui::MenuItem(ICON_FA_EXPAND " Reset Zoom")) {
-            ImGui::GetStateStorage()->SetBool(PlotFitRequestFlagId(), true);
+            SetPlotRequest(kPlotRequestReset);
         }
     }
 
-    /// One-shot counterpart of ResetZoomButton: true exactly on the frame the
-    /// click landed, then the request is cleared. Must be called every frame
-    /// by the plot consumer so a stale request never refits later zooms.
-    inline bool ConsumeResetZoom() {
-        ImGuiStorage* storage = ImGui::GetStateStorage();
-        const ImGuiID flagId = PlotFitRequestFlagId();
-        if (!storage->GetBool(flagId, false)) {
-            return false;
+    /// Menu-bar item "Copy Data" for the detached-plot toolbar; records a
+    /// one-shot copy request. The plot consumer turns it into clipboard text.
+    inline void CopyDataMenuItem() {
+        if (ImGui::MenuItem(ICON_FA_COPY " Copy Data")) {
+            SetPlotRequest(kPlotRequestCopy);
         }
-        storage->SetBool(flagId, false);
-        return true;
     }
 
     /// Centers the next window in the viewport (call every frame; takes effect

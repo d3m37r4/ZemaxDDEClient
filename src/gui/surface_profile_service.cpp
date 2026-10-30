@@ -22,6 +22,30 @@ namespace gui {
                               ImPlotProp_MarkerSize, markerSize);
         }
 
+        std::string surfaceSeriesCsv(const std::vector<double>& x, const std::vector<double>& y) {
+            std::string csv;
+            for (size_t i = 0; i < x.size(); ++i) {
+                csv += std::to_string(x[i]);
+                csv += ',';
+                csv += std::to_string(y[i]);
+                csv += '\n';
+            }
+            return csv;
+        }
+
+        std::string labelledSeriesCsv(const std::string& label, const std::vector<double>& x, const std::vector<double>& y) {
+            std::string csv;
+            for (size_t i = 0; i < x.size(); ++i) {
+                csv += label;
+                csv += ',';
+                csv += std::to_string(x[i]);
+                csv += ',';
+                csv += std::to_string(y[i]);
+                csv += '\n';
+            }
+            return csv;
+        }
+
         const char* kDisplayUnitNames[] = { "mm", "μm" };
 
         int displayUnitCombo(const char* label, app::services::DisplayUnit& unit) {
@@ -112,6 +136,7 @@ namespace gui {
         }
 
         ImGuiUtils::ResetZoomMenuItem();
+        ImGuiUtils::CopyDataMenuItem();
 
         ImGui::EndMenuBar();
     }
@@ -134,10 +159,15 @@ namespace gui {
             y_scaled[i] = y_vals[i] * scaleY;
         }
 
-        // The fit request of this window's toolbar button is one-shot: apply
-        // it only on the click frame, or it would refit away every zoom.
-        if (ImGuiUtils::ConsumeResetZoom()) {
+        // The toolbar may issue a one-shot plot request (reset zoom / copy
+        // data). Apply it only on the click frame, so it never refits or
+        // re-copies away later zooms.
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
+        if (plotRequest == ImGuiUtils::kPlotRequestReset) {
             ImPlot::SetNextAxesToFit();
+        }
+        if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
+            ImGui::SetClipboardText(surfaceSeriesCsv(x_scaled, y_scaled).c_str());
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
@@ -175,8 +205,14 @@ namespace gui {
             y_tol_s[i] = y_tol[i] * scaleY;
         }
 
-        if (ImGuiUtils::ConsumeResetZoom()) {
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
+        if (plotRequest == ImGuiUtils::kPlotRequestReset) {
             ImPlot::SetNextAxesToFit();
+        }
+        if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
+            std::string csv = labelledSeriesCsv("Nominal", x_nom_s, y_nom_s)
+                            + labelledSeriesCsv("Toleranced", x_tol_s, y_tol_s);
+            ImGui::SetClipboardText(csv.c_str());
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
@@ -219,8 +255,12 @@ namespace gui {
             y_s[i] = y_dev[i] * scaleY;
         }
 
-        if (ImGuiUtils::ConsumeResetZoom()) {
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
+        if (plotRequest == ImGuiUtils::kPlotRequestReset) {
             ImPlot::SetNextAxesToFit();
+        }
+        if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
+            ImGui::SetClipboardText(labelledSeriesCsv("Deviation", x_s, y_s).c_str());
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {

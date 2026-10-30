@@ -78,9 +78,7 @@ namespace gui {
         float sagRange = sagMax - sagMin;
         if (sagRange < 1e-12f) sagRange = 1.0f;
 
-        // Capture before BeginPlot: the request is stored at the window scope,
-        // which is the same stack level the toolbar click wrote it at.
-        const bool resetView = ImGuiUtils::ConsumeResetZoom();
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
         if (ImPlot3D::BeginPlot("##Surface3D_Lines", size, ImPlot3DFlags_NoLegend)) {
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
@@ -89,7 +87,7 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("Z ({})", unitZ).c_str());
-            if (resetView) {
+            if (plotRequest == ImGuiUtils::kPlotRequestReset) {
                 resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
                                -semiDiameter * scaleY, semiDiameter * scaleY,
                                sagMin, sagMax);
@@ -182,7 +180,7 @@ namespace gui {
         float devRange = devMax - devMin;
         if (devRange < 1e-12f) devRange = 1.0f;
 
-        const bool resetView = ImGuiUtils::ConsumeResetZoom();
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
         if (ImPlot3D::BeginPlot("##Deviation3D_Lines", size, ImPlot3DFlags_NoLegend)) {
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
@@ -191,7 +189,7 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("ΔSag ({})", unitZ).c_str());
-            if (resetView) {
+            if (plotRequest == ImGuiUtils::kPlotRequestReset) {
                 resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
                                -semiDiameter * scaleY, semiDiameter * scaleY,
                                devMin, devMax);
