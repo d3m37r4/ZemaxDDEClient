@@ -11,6 +11,7 @@
 #include "gui/menu_bar_controller.h"
 #include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
+#include "gui/shortcuts.h"
 #include "dde/dde_connection_manager.h"
 #include "windows_dockable/dde_status.h"
 #include "logger/logger.h"
@@ -480,7 +481,7 @@ void GuiManager::renderWelcomeContent() {
     }
     ImGuiUtils::PopFilledButton();
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Open the Connect dialog (Ctrl+Shift+C)");
+        ImGui::SetTooltip("%s", shortcuts::tooltipFor("dde-connect").c_str());
     }
 }
 

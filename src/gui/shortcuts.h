@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+
 // Central registry of global keyboard shortcuts.
 //
 // This header is intentionally ImGui-free: it only *describes* chords
@@ -64,5 +67,18 @@ inline constexpr Entry kEntries[] = {
 };
 
 inline constexpr int kEntryCount = sizeof(kEntries) / sizeof(kEntries[0]);
+
+/// "<action> (<hint>)" tooltip text of a shortcut id, e.g.
+/// "Connect to Zemax... (Ctrl+Shift+C)". The registry is the single
+/// wording source shared by the menu, the help dialog and button
+/// tooltips; empty string for an unknown id.
+inline std::string tooltipFor(std::string_view id) {
+    for (const Entry& e : kEntries) {
+        if (e.id == id) {
+            return std::string(e.action) + " (" + e.hint + ")";
+        }
+    }
+    return {};
+}
 
 } // namespace gui::shortcuts
