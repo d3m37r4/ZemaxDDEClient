@@ -3,11 +3,28 @@
 #include <numbers>
 
 #include "surface_irregularity_map_service.h"
+#include "gui/imgui_utils.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
 #include "lib/implot3d/implot3d.h"
 
 namespace {
+    // ImPlot3D has no public fit request, so a "reset zoom" in the toolbar
+    // reproduces the as-created view for one Always-cond frame: the ImPlot3D
+    // default InitialRotation quaternion (implot3d_internal.h) and the data
+    // extents the plot fit when it was just created.
+    const ImPlot3DQuat kDefaultBoxRotation(-0.513269, -0.212596, -0.318184, 0.76819);
+
+    // One Always-cond setup frame; BeginPlot resets RangeCond and RotationCond
+    // to None before it, so the lock never outlives the reset frame.
+    void resetViewSetup(double xMin, double xMax, double yMin, double yMax,
+                        double zMin, double zMax) {
+        ImPlot3D::SetupBoxRotation(kDefaultBoxRotation, false, ImPlot3DCond_Always);
+        ImPlot3D::SetupAxisLimits(ImAxis3D_X, xMin, xMax, ImPlot3DCond_Always);
+        ImPlot3D::SetupAxisLimits(ImAxis3D_Y, yMin, yMax, ImPlot3DCond_Always);
+        ImPlot3D::SetupAxisLimits(ImAxis3D_Z, zMin, zMax, ImPlot3DCond_Always);
+    }
+
     ImVec4 imcol(int r, int g, int b) {
         return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
     }
@@ -61,6 +78,10 @@ namespace gui {
         float sagRange = sagMax - sagMin;
         if (sagRange < 1e-12f) sagRange = 1.0f;
 
+        // Capture before BeginPlot: the request is stored at the window scope,
+        // which is the same stack level the toolbar click wrote it at.
+        const bool resetView = ImGuiUtils::ConsumeResetZoom();
+
         if (ImPlot3D::BeginPlot("##Surface3D_Lines", size, ImPlot3DFlags_NoLegend)) {
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
             const char* unitY = gui::displayUnitName(m_windowState.units.y);
@@ -68,6 +89,11 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("Z ({})", unitZ).c_str());
+            if (resetView) {
+                resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
+                               -semiDiameter * scaleY, semiDiameter * scaleY,
+                               sagMin, sagMax);
+            }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
             constexpr int SEGMENT_SIZE = 3;
@@ -156,6 +182,8 @@ namespace gui {
         float devRange = devMax - devMin;
         if (devRange < 1e-12f) devRange = 1.0f;
 
+        const bool resetView = ImGuiUtils::ConsumeResetZoom();
+
         if (ImPlot3D::BeginPlot("##Deviation3D_Lines", size, ImPlot3DFlags_NoLegend)) {
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
             const char* unitY = gui::displayUnitName(m_windowState.units.y);
@@ -163,6 +191,11 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("ΔSag ({})", unitZ).c_str());
+            if (resetView) {
+                resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
+                               -semiDiameter * scaleY, semiDiameter * scaleY,
+                               devMin, devMax);
+            }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 
             constexpr int SEGMENT_SIZE = 3;

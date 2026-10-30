@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numbers>
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 
@@ -38,6 +39,43 @@ namespace ImGuiUtils {
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
+    }
+
+    inline constexpr const char* kPlotFitRequestId = "PlotFitPending";
+
+    /// Stack-independent storage key: the toolbar button writes from inside
+    /// the menu bar (BeginMenuBar pushes its ##MenuBar into the ID stack),
+    /// the plot consumer reads at window scope - GetID() would hash into two
+    /// different IDs and the request would never be seen.
+    inline ImGuiID PlotFitRequestFlagId() {
+        return ImHashStr(kPlotFitRequestId);
+    }
+
+    /// Menu-bar item "Reset Zoom" for the detached-plot toolbar; records a
+    /// one-shot fit request for the current window. The toolbar and the
+    /// detached plot render into one ImGui window even though they belong to
+    /// different service classes, so the window state storage carries the
+    /// request without flag plumbing. The same-frame consumer is
+    /// ConsumeResetZoom(); apply its result to the first plot the window
+    /// creates (ImPlot::SetNextAxesToFit before 2D BeginPlot, Always-cond
+    /// Setup calls inside 3D BeginPlot).
+    inline void ResetZoomMenuItem() {
+        if (ImGui::MenuItem(ICON_FA_EXPAND " Reset Zoom")) {
+            ImGui::GetStateStorage()->SetBool(PlotFitRequestFlagId(), true);
+        }
+    }
+
+    /// One-shot counterpart of ResetZoomButton: true exactly on the frame the
+    /// click landed, then the request is cleared. Must be called every frame
+    /// by the plot consumer so a stale request never refits later zooms.
+    inline bool ConsumeResetZoom() {
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        const ImGuiID flagId = PlotFitRequestFlagId();
+        if (!storage->GetBool(flagId, false)) {
+            return false;
+        }
+        storage->SetBool(flagId, false);
+        return true;
     }
 
     /// Centers the next window in the viewport (call every frame; takes effect

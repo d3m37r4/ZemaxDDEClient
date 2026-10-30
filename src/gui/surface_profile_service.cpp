@@ -6,6 +6,7 @@
 #include "lib/implot/implot.h"
 
 #include "gui/surface_profile_service.h"
+#include "gui/imgui_utils.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
 #include "logger/logger.h"
@@ -110,6 +111,8 @@ namespace gui {
             }
         }
 
+        ImGuiUtils::ResetZoomMenuItem();
+
         ImGui::EndMenuBar();
     }
 
@@ -129,6 +132,12 @@ namespace gui {
         for (size_t i = 0; i < x_vals.size(); ++i) {
             x_scaled[i] = x_vals[i] * scaleX;
             y_scaled[i] = y_vals[i] * scaleY;
+        }
+
+        // The fit request of this window's toolbar button is one-shot: apply
+        // it only on the click frame, or it would refit away every zoom.
+        if (ImGuiUtils::ConsumeResetZoom()) {
+            ImPlot::SetNextAxesToFit();
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
@@ -164,6 +173,10 @@ namespace gui {
         for (size_t i = 0; i < x_tol.size(); ++i) {
             x_tol_s[i] = x_tol[i] * scaleX;
             y_tol_s[i] = y_tol[i] * scaleY;
+        }
+
+        if (ImGuiUtils::ConsumeResetZoom()) {
+            ImPlot::SetNextAxesToFit();
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
@@ -204,6 +217,10 @@ namespace gui {
         for (size_t i = 0; i < x_nom.size(); ++i) {
             x_s[i] = x_nom[i] * scaleX;
             y_s[i] = y_dev[i] * scaleY;
+        }
+
+        if (ImGuiUtils::ConsumeResetZoom()) {
+            ImPlot::SetNextAxesToFit();
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
