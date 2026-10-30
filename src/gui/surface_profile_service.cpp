@@ -1,9 +1,22 @@
 #include <format>
 #include <cmath>
+#include <filesystem>
+#include <cstring>
+#include <exception>
+#include <algorithm>
+#include <cctype>
+
+#include <windows.h>
+#include <shellapi.h>
+#include <nfd.h>
 
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
+#include "lib/imgui/backends/imgui_impl_opengl3.h"
+#include <GLFW/glfw3.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "lib/imgui_test_engine/imgui_test_engine/thirdparty/stb/imstb_image_write.h"
 
 #include "gui/surface_profile_service.h"
 #include "gui/imgui_utils.h"
@@ -44,6 +57,79 @@ namespace gui {
                 csv += '\n';
             }
             return csv;
+        }
+
+        // Default save-dialog name: "<kind>_surf<id>_<angle>deg[_slot<N>]".
+        // Trailing zeros of the angle are trimmed (0.00 -> 0, 22.50 -> 22.5);
+        // the slot suffix is dropped when the data has no DDE slot (-1).
+        std::string plotImageName(const char* kind, const app::models::SurfaceData& surface) {
+            std::string angle = std::format("{:.2f}", surface.angle);
+            if (angle.find('.') != std::string::npos) {
+                while (angle.back() == '0') angle.pop_back();
+                if (angle.back() == '.') angle.pop_back();
+            }
+            std::string name = std::format("{}_surf{}_{}deg", kind, surface.id, angle);
+            if (surface.sourceSlot >= 0) {
+                name += std::format("_slot{}", surface.sourceSlot);
+            }
+            return name;
+        }
+
+        // Captures the plot frame (RGBA8, rows top-first) via the current
+        // viewport's GL context; same contract as the test-engine capture in
+        // imgui_test_engine/test_capture.cpp. ImPlot positions come in the
+        // ImGui virtual-desktop space (a detached window's plot rect carries
+        // its on-screen position), while glReadPixels addresses the client
+        // area of the viewport's own OS window - hence the viewport->Pos
+        // translation, scaled to physical pixels via FramebufferScale.
+        bool capturePlotFrame(const ImVec2& frameMin, const ImVec2& frameSize,
+                              std::vector<unsigned char>& pixels, std::string& error) {
+            ImGuiViewport* viewport = ImGui::GetCurrentContext()->CurrentViewport;
+            if (!viewport) {
+                error = "no current ImGui viewport";
+                return false;
+            }
+            GLFWwindow* ctxWindow = static_cast<GLFWwindow*>(viewport->PlatformHandle);
+            if (!ctxWindow) {
+                error = "viewport PlatformHandle is null";
+                return false;
+            }
+            const float scaleX = viewport->FramebufferScale.x > 0.0f ? viewport->FramebufferScale.x : 1.0f;
+            const float scaleY = viewport->FramebufferScale.y > 0.0f ? viewport->FramebufferScale.y : 1.0f;
+            const int fbW = static_cast<int>(viewport->Size.x * scaleX);
+            const int fbH = static_cast<int>(viewport->Size.y * scaleY);
+            const int w = static_cast<int>(frameSize.x * scaleX);
+            const int h = static_cast<int>(frameSize.y * scaleY);
+            const int x = static_cast<int>((frameMin.x - viewport->Pos.x) * scaleX);
+            const int glY = fbH - (static_cast<int>((frameMin.y - viewport->Pos.y) * scaleY) + h);
+            if (w <= 0 || h <= 0 || x < 0 || glY < 0 ||
+                x + w > fbW || glY + h > fbH) {
+                error = std::format("capture region {}x{} at ({},{}) exceeds framebuffer {}x{}",
+                                    w, h, x, glY, fbW, fbH);
+                return false;
+            }
+
+            GLFWwindow* previous = glfwGetCurrentContext();
+            const bool switched = (ctxWindow != previous);
+            if (switched) {
+                glfwMakeContextCurrent(ctxWindow);
+            }
+            pixels.assign(static_cast<size_t>(w) * h * 4, 0);
+            glReadPixels(x, glY, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+            std::vector<unsigned char> lineTmp(static_cast<size_t>(w) * 4, 0);
+            unsigned char* lineA = pixels.data();
+            unsigned char* lineB = pixels.data() + static_cast<size_t>(w) * 4 * (h - 1);
+            for (size_t i = 0; i < static_cast<size_t>(h) / 2; ++i) {
+                std::memcpy(lineTmp.data(), lineA, static_cast<size_t>(w) * 4);
+                std::memcpy(lineA, lineB, static_cast<size_t>(w) * 4);
+                std::memcpy(lineB, lineTmp.data(), static_cast<size_t>(w) * 4);
+                lineA += static_cast<size_t>(w) * 4;
+                lineB -= static_cast<size_t>(w) * 4;
+            }
+            if (switched) {
+                glfwMakeContextCurrent(previous);
+            }
+            return true;
         }
 
         const char* kDisplayUnitNames[] = { "mm", "μm" };
@@ -137,8 +223,78 @@ namespace gui {
 
         ImGuiUtils::ResetZoomMenuItem();
         ImGuiUtils::CopyDataMenuItem();
+        ImGuiUtils::SaveImageMenuItem();
 
         ImGui::EndMenuBar();
+    }
+
+    bool SurfaceProfileService::savePlotImage(const ImVec2& frameMin, const ImVec2& frameSize, const std::string& defaultName) {
+        try {
+            std::vector<unsigned char> pixels;
+            std::string error;
+            if (!capturePlotFrame(frameMin, frameSize, pixels, error)) {
+                m_logger.addLog(std::format("[GUI] Plot image capture failed: {}", error));
+                return false;
+            }
+
+            static const nfdu8filteritem_t kFormats[] = {
+                {"PNG image", "png"},
+                {"JPEG image", "jpg/jpeg"},
+                {"Windows Bitmap", "bmp"},
+            };
+            const nfdsavedialogu8args_t args = {
+                kFormats, static_cast<nfdfiltersize_t>(IM_ARRAYSIZE(kFormats)),
+                nullptr, defaultName.c_str(), {}, nullptr, nullptr, nullptr};
+            nfdu8char_t* outPath = nullptr;
+            const nfdresult_t result = NFD_SaveDialogU8_With(&outPath, &args);
+            if (result == NFD_CANCEL) {
+                return false;
+            }
+            if (result == NFD_ERROR || !outPath) {
+                m_logger.addLog(std::format("[GUI] Save dialog failed: {}",
+                                            NFD_GetError() ? NFD_GetError() : "unknown NFD error"));
+                return false;
+            }
+            const std::string chosenPath = reinterpret_cast<const char*>(outPath);
+            NFD_FreePathU8(outPath);
+
+            // The dialog may return an extensionless path (file type set via
+            // the filter dropdown); fall back to PNG and pick the encoder by
+            // the final extension.
+            std::string path = chosenPath;
+            const size_t slashPos = path.find_last_of("/\\");
+            if (path.find_last_of('.', slashPos + 1) == std::string::npos) {
+                path += ".png";
+            }
+            std::string ext = path.substr(path.find_last_of('.') + 1);
+            std::transform(ext.begin(), ext.end(), ext.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+            const int w = static_cast<int>(frameSize.x);
+            const int h = static_cast<int>(frameSize.y);
+            const size_t rowBytes = pixels.size() / static_cast<size_t>(h);
+            int written = 0;
+            if (ext == "png") {
+                written = stbi_write_png(path.c_str(), w, h, 4, pixels.data(),
+                                         static_cast<int>(rowBytes));
+            } else if (ext == "jpg" || ext == "jpeg") {
+                written = stbi_write_jpg(path.c_str(), w, h, 4, pixels.data(), 90);
+            } else if (ext == "bmp") {
+                written = stbi_write_bmp(path.c_str(), w, h, 4, pixels.data());
+            } else {
+                m_logger.addLog(std::format("[GUI] Unsupported plot image format '.{}'", ext));
+                return false;
+            }
+            if (written != 1) {
+                m_logger.addLog(std::format("[GUI] Failed to write plot image to {}", path));
+                return false;
+            }
+            m_logger.addLog(std::format("[GUI] Plot image saved to {}", path));
+            return true;
+        } catch (const std::exception& ex) {
+            m_logger.addLog(std::format("[GUI] Plot image save threw: {}", ex.what()));
+            return false;
+        }
     }
 
     void SurfaceProfileService::renderSurfaceProfilePlot(const char* plotLabel, const app::models::SurfaceData& surface, const ImVec2& size) {
@@ -177,6 +333,9 @@ namespace gui {
                               std::format("Sag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                savePlotImage(ImPlot::GetPlotPos(), ImPlot::GetPlotSize(), plotImageName("sag", surface));
+            }
             ImPlot::PlotLine("Surface", x_scaled.data(), y_scaled.data(), x_scaled.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
@@ -222,6 +381,9 @@ namespace gui {
                               std::format("Sag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                savePlotImage(ImPlot::GetPlotPos(), ImPlot::GetPlotSize(), plotImageName("compare", nominal));
+            }
             ImPlot::PlotLine("Nominal", x_nom_s.data(), y_nom_s.data(), x_nom_s.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::PlotLine("Toleranced", x_tol_s.data(), y_tol_s.data(), x_tol_s.size(),
@@ -270,6 +432,9 @@ namespace gui {
                               std::format("ΔSag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                savePlotImage(ImPlot::GetPlotPos(), ImPlot::GetPlotSize(), plotImageName("dev", nominal));
+            }
             ImPlot::PlotLine("Deviation", x_s.data(), y_s.data(), x_s.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();

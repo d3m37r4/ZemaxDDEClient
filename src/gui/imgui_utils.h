@@ -46,8 +46,10 @@ namespace ImGuiUtils {
     /// reads at window scope - GetID() would hash into two different IDs).
     /// kPlotRequestReset (1) -> refit the axes on the click frame;
     /// kPlotRequestCopy (2) -> copy the plot series to the clipboard as CSV.
+    /// kPlotRequestSaveImage (3) -> open a save dialog for the plot frame.
     inline constexpr int kPlotRequestReset = 1;
     inline constexpr int kPlotRequestCopy = 2;
+    inline constexpr int kPlotRequestSaveImage = 3;
 
     inline ImGuiID PlotRequestFlagId() {
         return ImHashStr("PlotRequest");
@@ -83,6 +85,14 @@ namespace ImGuiUtils {
     inline void CopyDataMenuItem() {
         if (ImGui::MenuItem(ICON_FA_COPY " Copy Data")) {
             SetPlotRequest(kPlotRequestCopy);
+        }
+    }
+
+    /// Menu-bar item "Save Image" for the detached-plot toolbar; records a
+    /// one-shot save request (plot frame -> GL capture -> native save dialog).
+    inline void SaveImageMenuItem() {
+        if (ImGui::MenuItem(ICON_FA_IMAGE " Save Image")) {
+            SetPlotRequest(kPlotRequestSaveImage);
         }
     }
 
