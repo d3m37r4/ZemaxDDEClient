@@ -17,6 +17,7 @@
 
 #include "gui/graphics_backend.h"
 #include "gui/constants.h"
+#include "gui/plot_image_exporter.h"
 #include "app/settings.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "assets/icons/fa/fa_compressed.h"
@@ -214,6 +215,11 @@ namespace gui {
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Plot image export renders a captured draw list into an offscreen FBO:
+        // the frame's draw lists are final only after Render(), and the main
+        // context must still be current here.
+        plot_export::renderPendingJob();
 
         // Multi-viewport: floating windows dragged beyond the main window get
         // rendered into their own GL contexts (ImGui examples contract). The

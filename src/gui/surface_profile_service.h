@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+#include <string>
+
 #include "app/services/surface_profile_service.h"
 #include "app/models/optical_system.h"
 #include "lib/imgui/imgui.h"
@@ -20,8 +23,6 @@ namespace gui {
             void renderProfileComparisonPlot(const char* plotLabel, const app::models::SurfaceData& nominal, const app::models::SurfaceData& toleranced, const ImVec2& size);
             void renderProfileDeviationPlot(const char* plotLabel, const app::models::SurfaceData& nominal, const app::models::SurfaceData& toleranced, const ImVec2& size);
 
-            bool savePlotImage(const ImVec2& frameMin, const ImVec2& frameSize, const std::string& defaultName);
-
             void renderToolbar(app::services::AxisUnits& units, bool is3D,
                                int* colormapIdx = nullptr, bool* showWorst = nullptr, float* worstColor = nullptr);
 
@@ -29,6 +30,13 @@ namespace gui {
             app::models::OpticalSystemData m_frozenTolerancedOpticalSystem;
 
         private:
+            /// Native save dialog; the format follows the chosen extension and
+            /// the path falls back to .png when the dialog returns none.
+            std::optional<std::string> choosePlotImagePath(const std::string& defaultName);
+            /// Queues the current plot draw list for the offscreen export pass
+            /// that runs in GraphicsBackend::endFrame().
+            void requestPlotImageSave(const char* kind, const app::models::SurfaceData& surface);
+
             SettingsManager* m_settingsManager = nullptr;
     };
 }

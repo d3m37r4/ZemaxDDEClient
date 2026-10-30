@@ -88,12 +88,99 @@ namespace ImGuiUtils {
         }
     }
 
-    /// Menu-bar item "Save Image" for the detached-plot toolbar; records a
-    /// one-shot save request (plot frame -> GL capture -> native save dialog).
-    inline void SaveImageMenuItem() {
-        if (ImGui::MenuItem(ICON_FA_IMAGE " Save Image")) {
-            SetPlotRequest(kPlotRequestSaveImage);
+    /// Storage keys are hashed rather than taken from GetID(): the toolbar
+    /// writes from inside BeginMenuBar/BeginMenu (which push their own IDs)
+    /// while the plot consumer reads at window scope. The frame size mirrors
+    /// the last rendered plot so the resolution fields of the Save Image menu
+    /// can default to "1x" (as on screen).
+    inline ImGuiID PlotStorageKey(const char* key) {
+        return ImHashStr(key);
+    }
+
+    inline void SetPlotFrameSize(const ImVec2& size) {
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        storage->SetFloat(PlotStorageKey("PlotFrameWidth"), size.x);
+        storage->SetFloat(PlotStorageKey("PlotFrameHeight"), size.y);
+    }
+
+    /// Effective export resolution: the values the user set in the Save Image
+    /// menu, falling back to the on-screen plot size and then to 1280x720.
+    inline ImVec2 PlotExportResolution() {
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        int width = storage->GetInt(PlotStorageKey("PlotExportWidth"), 0);
+        int height = storage->GetInt(PlotStorageKey("PlotExportHeight"), 0);
+        if (width <= 0) width = static_cast<int>(storage->GetFloat(PlotStorageKey("PlotFrameWidth"), 0.0f));
+        if (height <= 0) height = static_cast<int>(storage->GetFloat(PlotStorageKey("PlotFrameHeight"), 0.0f));
+        if (width <= 0) width = 1280;
+        if (height <= 0) height = 720;
+        return ImVec2(static_cast<float>(width), static_cast<float>(height));
+    }
+
+    /// Menu "Save Image" for the detached-plot toolbar: export resolution only
+    /// (the file format is picked in the native save dialog). Width/height
+    /// default to the plot size; "Lock aspect" keeps the on-screen ratio.
+    ///
+    /// Every key targets the HOST window's storage, captured before
+    /// BeginMenu(): a menu is a popup window with its own ImGuiStorage, so
+    /// ImGui::GetStateStorage() inside it would never reach the plot consumer.
+    inline void SaveImageMenu() {
+        ImGuiStorage* storage = &ImGui::GetCurrentWindow()->StateStorage;
+        const float frameWidth = storage->GetFloat(PlotStorageKey("PlotFrameWidth"), 0.0f);
+        const float frameHeight = storage->GetFloat(PlotStorageKey("PlotFrameHeight"), 0.0f);
+        const int fallbackWidth = frameWidth > 0.0f ? static_cast<int>(frameWidth) : 1280;
+        const int fallbackHeight = frameHeight > 0.0f ? static_cast<int>(frameHeight) : 720;
+
+        if (!ImGui::BeginMenu(ICON_FA_IMAGE " Save Image")) return;
+
+        int width = storage->GetInt(PlotStorageKey("PlotExportWidth"), fallbackWidth);
+        int height = storage->GetInt(PlotStorageKey("PlotExportHeight"), fallbackHeight);
+        bool lockAspect = storage->GetBool(PlotStorageKey("PlotExportLockAspect"), true);
+
+        // Step buttons are hidden (0,0) so the digits get the full field width
+        // and any value can be typed directly; the width fits five digits
+        // (the clamp ceiling is 16384).
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float fieldWidth = ImGui::CalcTextSize("16384").x + style.FramePadding.x * 2.0f +
+                                 style.ItemInnerSpacing.x;
+        ImGui::TextUnformatted("Resolution");
+        ImGui::SetNextItemWidth(fieldWidth);
+        const bool widthEdited = ImGui::InputInt("##ExportWidth", &width, 0, 0);
+        ImGui::SameLine();
+        ImGui::TextUnformatted("x");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(fieldWidth);
+        const bool heightEdited = ImGui::InputInt("##ExportHeight", &height, 0, 0);
+        ImGui::SameLine();
+        ImGui::TextUnformatted("px");
+
+        width = std::clamp(width, 16, 16384);
+        height = std::clamp(height, 16, 16384);
+        if (lockAspect && frameWidth > 0.0f && frameHeight > 0.0f) {
+            if (widthEdited) {
+                height = std::clamp(static_cast<int>(std::lround(
+                    static_cast<double>(width) * frameHeight / frameWidth)), 16, 16384);
+            } else if (heightEdited) {
+                width = std::clamp(static_cast<int>(std::lround(
+                    static_cast<double>(height) * frameWidth / frameHeight)), 16, 16384);
+            }
         }
+        ImGui::Checkbox("Lock aspect", &lockAspect);
+
+        storage->SetInt(PlotStorageKey("PlotExportWidth"), width);
+        storage->SetInt(PlotStorageKey("PlotExportHeight"), height);
+        storage->SetBool(PlotStorageKey("PlotExportLockAspect"), lockAspect);
+
+        if (ImGui::Selectable("Reset to plot size", false,
+                              ImGuiSelectableFlags_DontClosePopups)) {
+            storage->SetInt(PlotStorageKey("PlotExportWidth"), fallbackWidth);
+            storage->SetInt(PlotStorageKey("PlotExportHeight"), fallbackHeight);
+        }
+
+        ImGui::Separator();
+        if (ImGui::MenuItem("Save image as...")) {
+            storage->SetInt(PlotRequestFlagId(), kPlotRequestSaveImage);
+        }
+        ImGui::EndMenu();
     }
 
     /// Centers the next window in the viewport (call every frame; takes effect
