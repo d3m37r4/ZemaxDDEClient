@@ -560,7 +560,7 @@ void renderShelf() {
     ImGui::End();
 }
 
-// --- Session persistence (chrome_state.json) ---------------------------- //
+// chrome_state.json: shelf layout serialization
 
 nlohmann::json stateToJson(const State& st) {
     return {

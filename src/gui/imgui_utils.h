@@ -218,13 +218,6 @@ namespace ImGuiUtils {
                         style.FrameRounding, style.FrameBorderSize);
         }
 
-        // Legacy arc (replaced by DrawBusyArc above, kept for reference):
-        // float angle = ImGui::GetTime() * 5.0f;
-        // ImVec2 spinnerCenter(pos.x + style.FramePadding.x + spinnerRadius,
-        //                      pos.y + btnSize.y * 0.5f);
-        // dl->PathArcTo(spinnerCenter, spinnerRadius, angle,
-        //               angle + static_cast<float>(std::numbers::pi) * 1.5f, 32);
-        // dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, DpiScale(2.0f));
         ImVec4 spinCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
         spinCol.w *= disabledAlpha;
         DrawBusyArc(ImVec2(pos.x + style.FramePadding.x + spinnerRadius,
