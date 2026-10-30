@@ -25,6 +25,53 @@
 #include "logger/logger.h"
 
 namespace gui {
+
+    namespace {
+        // Runtime-bound DWM attribute call (same pattern as
+        // updateTitleBarDarkMode): dwmapi.dll is not linked directly, and
+        // unsupported attributes (older systems) fail harmlessly.
+        #ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+        #define DWMWA_WINDOW_CORNER_PREFERENCE 33
+        #endif
+        #ifndef DWMWCP_ROUNDSMALL
+        #define DWMWCP_ROUNDSMALL 3
+        #endif
+        void dwmSetWindowAttribute(HWND hwnd, DWORD attribute,
+            const void* value, DWORD size) {
+            HMODULE dwmApi = ::LoadLibraryW(L"dwmapi.dll");
+            if (!dwmApi) {
+                return;
+            }
+            using DwmSetWindowAttributeFunc = HRESULT (WINAPI*)(
+                HWND, DWORD, LPCVOID, DWORD);
+            auto* dwmFunc = reinterpret_cast<DwmSetWindowAttributeFunc>(
+                reinterpret_cast<void*>(::GetProcAddress(dwmApi,
+                    "DwmSetWindowAttribute")));
+            if (dwmFunc) {
+                dwmFunc(hwnd, attribute, value, size);
+            }
+            ::FreeLibrary(dwmApi);
+        }
+
+        // Renderer_RenderWindow replacement for secondary viewports. The
+        // vendored backend (imgui_impl_opengl3.cpp:1207) clears secondary
+        // framebuffer with opaque black; a rounded window drawn there then
+        // shows black corner slivers (and translucent layers composite on
+        // black), while the main window composites on the theme canvas.
+        // Clear with the same getClearColor() used for the main window so
+        // the backdrop behind a floating panel matches the main window's
+        // (imgui_impl_opengl3's public RenderDrawData renders the content).
+        void renderViewportWindow(ImGuiViewport* viewport, void* userData) {
+            if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear) && userData) {
+                auto* self = static_cast<GraphicsBackend*>(userData);
+                const ImVec4 clear = self->getClearColor();
+                glClearColor(clear.x, clear.y, clear.z, clear.w);
+                glClear(GL_COLOR_BUFFER_BIT);
+            }
+            ImGui_ImplOpenGL3_RenderDrawData(viewport->DrawData);
+        }
+    } // namespace
+
     GraphicsBackend::~GraphicsBackend() {
         if (m_window) {
             ImGui_ImplOpenGL3_DestroyDeviceObjects();
@@ -113,6 +160,12 @@ namespace gui {
         ImGui_ImplOpenGL3_Init("#version 130");
         ImGui_ImplOpenGL3_CreateDeviceObjects();
 
+        // After Init: Init installs ImGui_ImplOpenGL3_RenderWindow (black
+        // clear on secondary viewports), we replace it with the canvas
+        // clear (renderViewportWindow). RenderPlatformWindowsDefault passes
+        // the user data through below.
+        ImGui::GetPlatformIO().Renderer_RenderWindow = &renderViewportWindow;
+
         // Geometry tokens are scaled by the DPI factor stored in ThemeManager.
         // Must be set before apply() so rounding/padding scale correctly even
         // before the first frame (ImGui::GetWindowDpiScale() is 0 until then).
@@ -169,7 +222,10 @@ namespace gui {
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
             ImGui::UpdatePlatformWindows();
             syncPlatformWindows(anyModalOpen);
-            ImGui::RenderPlatformWindowsDefault();
+            // nullptr here: the GLFW platform callbacks ignore it. `this`
+            // flows into renderViewportWindow, which needs the theme's
+            // clear color for the secondary viewport backdrops.
+            ImGui::RenderPlatformWindowsDefault(nullptr, this);
             glfwMakeContextCurrent(m_window);
         }
     }
@@ -247,6 +303,18 @@ namespace gui {
                 ? 0 : reinterpret_cast<LONG_PTR>(mainHwnd);
             if (ownedBy != wantedParent) {
                 ::SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, wantedParent);
+                // Win11: borderless (WS_POPUP) secondary windows get no DWM
+                // corner rounding by default, so their silhouette reads as a
+                // square while windows inside the main viewport show ImGui's
+                // rounding. Opt in on ownership assignments (transitions
+                // only, not per frame); the call is idempotent and older
+                // hosts just reject the attribute. ROUNDSMALL (the OS's
+                // menus/aux radius, 4 DIP) matches the theme design radius
+                // DPI-scaled; the LARGE radius (8 DIP) would be twice as
+                // round as every window we draw.
+                const INT cornerPref = DWMWCP_ROUNDSMALL;
+                dwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
+                    &cornerPref, sizeof(cornerPref));
             }
         }
 

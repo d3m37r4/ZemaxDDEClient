@@ -19,8 +19,11 @@ inline constexpr std::string_view kThemeNameDark  = "Dark Theme";
 struct ThemeGeometry {
     // One radius for the whole UI (px, before DPI scaling): windows, popups,
     // cards, buttons, frames, tabs, slider grabs and the scrollbar thumb.
-    // The scrollbar thumb is narrow, so the renderer clamps its radius to
-    // half its width and it reads as a pill.
+    // Floating viewport windows opt the OS into DWMWCP_ROUNDSMALL, whose
+    // radius equals this design radius DPI-scaled, so the OS clip matches
+    // the ImGui-drawn arc without increasing the radius. The scrollbar
+    // thumb is narrow, so the renderer clamps its radius to half its width
+    // and it reads as a pill.
     float windowRounding    = 4.0f;
     float childRounding     = 4.0f;
     float frameRounding     = 4.0f;

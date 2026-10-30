@@ -162,8 +162,10 @@ ThemeData ThemeData::CreateThemeLight() {
     p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
     // One radius for the whole UI: windows, popups, cards, buttons, frames,
-    // tabs, slider grabs and the scrollbar thumb. The thumb is narrow, so the
-    // renderer clamps its radius to half its width and it reads as a pill.
+    // tabs, slider grabs and the scrollbar thumb. Floating viewport windows
+    // opt into DWMWCP_ROUNDSMALL, so the OS clip matches this radius DPI-
+    // scaled. The thumb is narrow, so the renderer clamps its radius to
+    // half its width and it reads as a pill.
     t.geometry.windowRounding    = 4.0f;
     t.geometry.childRounding     = 4.0f;
     t.geometry.popupRounding     = 4.0f;
@@ -320,8 +322,10 @@ ThemeData ThemeData::CreateThemeDark() {
     p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
     // One radius for the whole UI: windows, popups, cards, buttons, frames,
-    // tabs, slider grabs and the scrollbar thumb. The thumb is narrow, so the
-    // renderer clamps its radius to half its width and it reads as a pill.
+    // tabs, slider grabs and the scrollbar thumb. Floating viewport windows
+    // opt into DWMWCP_ROUNDSMALL, so the OS clip matches this radius DPI-
+    // scaled. The thumb is narrow, so the renderer clamps its radius to
+    // half its width and it reads as a pill.
     t.geometry.windowRounding    = 4.0f;
     t.geometry.childRounding     = 4.0f;
     t.geometry.popupRounding     = 4.0f;
