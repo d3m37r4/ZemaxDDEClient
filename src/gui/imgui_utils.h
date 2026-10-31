@@ -144,10 +144,10 @@ namespace ImGuiUtils {
         bool lockAspect = storage->GetBool(PlotStorageKey("PlotExportLockAspect"), true);
 
         // Step buttons are hidden (0,0) so the digits get the full field width
-        // and any value can be typed directly; the width fits five digits
-        // (the clamp ceiling is 16384).
+        // and any value can be typed directly; the width fits four digits
+        // (the clamp ceiling is 8192).
         const ImGuiStyle& style = ImGui::GetStyle();
-        const float fieldWidth = ImGui::CalcTextSize("16384").x + style.FramePadding.x * 2.0f +
+        const float fieldWidth = ImGui::CalcTextSize("8192").x + style.FramePadding.x * 2.0f +
                                  style.ItemInnerSpacing.x;
         ImGui::TextUnformatted("Resolution");
         ImGui::SetNextItemWidth(fieldWidth);
@@ -160,15 +160,15 @@ namespace ImGuiUtils {
         ImGui::SameLine();
         ImGui::TextUnformatted("px");
 
-        width = std::clamp(width, 16, 16384);
-        height = std::clamp(height, 16, 16384);
+        width = std::clamp(width, 16, 8192);
+        height = std::clamp(height, 16, 8192);
         if (lockAspect && frameWidth > 0.0f && frameHeight > 0.0f) {
             if (widthEdited) {
                 height = std::clamp(static_cast<int>(std::lround(
-                    static_cast<double>(width) * frameHeight / frameWidth)), 16, 16384);
+                    static_cast<double>(width) * frameHeight / frameWidth)), 16, 8192);
             } else if (heightEdited) {
                 width = std::clamp(static_cast<int>(std::lround(
-                    static_cast<double>(height) * frameWidth / frameHeight)), 16, 16384);
+                    static_cast<double>(height) * frameWidth / frameHeight)), 16, 8192);
             }
         }
         ImGui::Checkbox("Lock aspect", &lockAspect);

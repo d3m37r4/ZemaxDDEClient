@@ -44,9 +44,9 @@
 namespace gui::plot_export {
     namespace {
         constexpr int kMinExportSide = 16;
-        constexpr int kMaxExportSide = 16384;
-        // 64 MP keeps a single RGBA readback buffer under 256 MB.
-        constexpr long long kMaxExportPixels = 64LL * 1024 * 1024;
+        // 8K per side is the ceiling: the side clamp alone bounds one capture
+        // at 8192^2 pixels (256 MB RGBA readback).
+        constexpr int kMaxExportSide = 8192;
 
         using GenFramebuffersFn = void (APIENTRY*)(GLsizei, GLuint*);
         using BindFramebufferFn = void (APIENTRY*)(GLenum, GLuint);
@@ -190,11 +190,6 @@ namespace gui::plot_export {
         }
         const int width = std::clamp(job.targetWidth, kMinExportSide, kMaxExportSide);
         const int height = std::clamp(job.targetHeight, kMinExportSide, kMaxExportSide);
-        if (static_cast<long long>(width) * height > kMaxExportPixels) {
-            log(std::format("[GUI] Plot image export skipped: {}x{} exceeds the pixel budget",
-                            width, height));
-            return;
-        }
         GLint maxTextureSize = 0;
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
         if (maxTextureSize > 0 && (width > maxTextureSize || height > maxTextureSize)) {
