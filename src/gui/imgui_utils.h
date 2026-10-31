@@ -55,12 +55,19 @@ namespace ImGuiUtils {
         return ImHashStr("PlotRequest");
     }
 
+    /// Storage of the current window, which owns every plot-toolbar key. A
+    /// menu is a popup window with its own ImGuiStorage, so callers inside
+    /// BeginMenu must capture this pointer BEFORE the menu opens.
+    inline ImGuiStorage* PlotStorage() {
+        return &ImGui::GetCurrentWindow()->StateStorage;
+    }
+
     inline void SetPlotRequest(int value) {
-        ImGui::GetStateStorage()->SetInt(PlotRequestFlagId(), value);
+        PlotStorage()->SetInt(PlotRequestFlagId(), value);
     }
 
     inline int ConsumePlotRequest() {
-        ImGuiStorage* storage = ImGui::GetStateStorage();
+        ImGuiStorage* storage = PlotStorage();
         const ImGuiID flagId = PlotRequestFlagId();
         const int value = storage->GetInt(flagId, 0);
         storage->SetInt(flagId, 0);
@@ -98,7 +105,7 @@ namespace ImGuiUtils {
     }
 
     inline void SetPlotFrameSize(const ImVec2& size) {
-        ImGuiStorage* storage = ImGui::GetStateStorage();
+        ImGuiStorage* storage = PlotStorage();
         storage->SetFloat(PlotStorageKey("PlotFrameWidth"), size.x);
         storage->SetFloat(PlotStorageKey("PlotFrameHeight"), size.y);
     }
@@ -106,7 +113,7 @@ namespace ImGuiUtils {
     /// Effective export resolution: the values the user set in the Save Image
     /// menu, falling back to the on-screen plot size and then to 1280x720.
     inline ImVec2 PlotExportResolution() {
-        ImGuiStorage* storage = ImGui::GetStateStorage();
+        ImGuiStorage* storage = PlotStorage();
         int width = storage->GetInt(PlotStorageKey("PlotExportWidth"), 0);
         int height = storage->GetInt(PlotStorageKey("PlotExportHeight"), 0);
         if (width <= 0) width = static_cast<int>(storage->GetFloat(PlotStorageKey("PlotFrameWidth"), 0.0f));
@@ -124,7 +131,7 @@ namespace ImGuiUtils {
     /// BeginMenu(): a menu is a popup window with its own ImGuiStorage, so
     /// ImGui::GetStateStorage() inside it would never reach the plot consumer.
     inline void SaveImageMenu() {
-        ImGuiStorage* storage = &ImGui::GetCurrentWindow()->StateStorage;
+        ImGuiStorage* storage = PlotStorage();
         const float frameWidth = storage->GetFloat(PlotStorageKey("PlotFrameWidth"), 0.0f);
         const float frameHeight = storage->GetFloat(PlotStorageKey("PlotFrameHeight"), 0.0f);
         const int fallbackWidth = frameWidth > 0.0f ? static_cast<int>(frameWidth) : 1280;

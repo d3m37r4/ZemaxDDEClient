@@ -33,18 +33,17 @@ namespace gui::plot_export {
     /// after ImGui::Render() with the main GL context current.
     void renderPendingJob();
 
-    /// Default save-dialog name: "<kind>_surf<id>_<angle>deg[_slot<N>]".
-    /// Trailing zeros of the angle are trimmed (0.00 -> 0, 22.50 -> 22.5);
-    /// the slot suffix is dropped when the data has no DDE slot (-1).
-    std::string defaultImageName(const char* kind, const app::models::SurfaceData& surface);
+    /// Releases the offscreen target; call before the GL context is destroyed.
+    void shutdown();
 
     /// Native save dialog (PNG / JPEG / BMP by extension). Returns false when
     /// the user cancelled; a dialog error is logged.
     bool chooseSavePath(Logger& logger, const std::string& defaultName, std::string& outPath);
 
-    /// Full toolbar flow for one plot: asks for a path with the current
-    /// export resolution from the window storage, then queues the capture.
+    /// Full toolbar flow for one plot: asks for a path with the given export
+    /// resolution, then queues the capture of the plot rect.
     void requestSave(Logger& logger, const char* kind, const app::models::SurfaceData& surface,
-                     ImDrawList* drawList, const ImVec2& plotPos, const ImVec2& plotSize);
+                     ImDrawList* drawList, const ImVec2& plotPos, const ImVec2& plotSize,
+                     const ImVec2& resolution);
 
 }

@@ -1,6 +1,4 @@
 #include <algorithm>
-#include <cctype>
-#include <cstring>
 #include <exception>
 #include <format>
 #include <vector>
@@ -18,8 +16,7 @@
 #include "lib/imgui_test_engine/imgui_test_engine/thirdparty/stb/imstb_image_write.h"
 
 #include "gui/plot_image_exporter.h"
-#include "gui/imgui_utils.h"
-#include "app/models/surface_data.h"
+#include "gui/plot_image_export_util.h"
 #include "logger/logger.h"
 
 // Framebuffer enums/entry points are absent from the vendored loader (it is
@@ -137,40 +134,29 @@ namespace gui::plot_export {
         }
 
         // glReadPixels returns bottom-up rows; the encoders expect top-down.
-        void flipRows(std::vector<unsigned char>& pixels, int width, int height) {
-            const size_t stride = static_cast<size_t>(width) * 4;
-            std::vector<unsigned char> line(stride, 0);
-            unsigned char* top = pixels.data();
-            unsigned char* bottom = pixels.data() + stride * static_cast<size_t>(height - 1);
-            for (int i = 0; i < height / 2; ++i) {
-                std::memcpy(line.data(), top, stride);
-                std::memcpy(top, bottom, stride);
-                std::memcpy(bottom, line.data(), stride);
-                top += stride;
-                bottom -= stride;
-            }
-        }
-
+        // The encoder follows the path extension; BMP is written as 24-bit
+        // because 32-bit BMP is not handled by every viewer.
         bool writeImage(const std::string& path, int width, int height,
                         const std::vector<unsigned char>& pixels) {
-            const size_t dotPos = path.find_last_of('.');
-            const size_t slashPos = path.find_last_of("/\\");
-            std::string ext;
-            if (dotPos != std::string::npos && (slashPos == std::string::npos || dotPos > slashPos)) {
-                ext = path.substr(dotPos + 1);
-            }
-            std::transform(ext.begin(), ext.end(), ext.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-
             const int stride = width * 4;
-            if (ext == "png") {
-                return stbi_write_png(path.c_str(), width, height, 4, pixels.data(), stride) == 1;
-            }
-            if (ext == "jpg" || ext == "jpeg") {
-                return stbi_write_jpg(path.c_str(), width, height, 4, pixels.data(), 90) == 1;
-            }
-            if (ext == "bmp") {
-                return stbi_write_bmp(path.c_str(), width, height, 4, pixels.data()) == 1;
+            switch (imageFormatFromPath(path)) {
+                case ImageFormat::Png:
+                    return stbi_write_png(path.c_str(), width, height, 4,
+                                          pixels.data(), stride) == 1;
+                case ImageFormat::Jpeg:
+                    return stbi_write_jpg(path.c_str(), width, height, 4,
+                                          pixels.data(), 90) == 1;
+                case ImageFormat::Bmp: {
+                    std::vector<unsigned char> rgb(static_cast<size_t>(width) * height * 3);
+                    for (size_t i = 0, j = 0; j < rgb.size(); i += 4, j += 3) {
+                        rgb[j] = pixels[i];
+                        rgb[j + 1] = pixels[i + 1];
+                        rgb[j + 2] = pixels[i + 2];
+                    }
+                    return stbi_write_bmp(path.c_str(), width, height, 3, rgb.data()) == 1;
+                }
+                case ImageFormat::Unknown:
+                    return false;
             }
             return false;
         }
@@ -209,6 +195,18 @@ namespace gui::plot_export {
                             width, height));
             return;
         }
+        GLint maxTextureSize = 0;
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+        if (maxTextureSize > 0 && (width > maxTextureSize || height > maxTextureSize)) {
+            log(std::format("[GUI] Plot image export skipped: {}x{} exceeds the GPU limit of {} px",
+                            width, height, maxTextureSize));
+            return;
+        }
+        if (imageFormatFromPath(job.targetPath) == ImageFormat::Unknown) {
+            log(std::format("[GUI] Plot image export skipped: unsupported file type '{}'",
+                            job.targetPath));
+            return;
+        }
         if (!ensureTarget(width, height)) {
             log(std::format("[GUI] Plot image export failed: cannot create {}x{} offscreen target",
                             width, height));
@@ -216,7 +214,9 @@ namespace gui::plot_export {
         }
 
         GLint previousFbo = 0;
+        GLint previousViewport[4] = {0, 0, 0, 0};
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFbo);
+        glGetIntegerv(GL_VIEWPORT, previousViewport);
         framebufferApi().bind(GL_FRAMEBUFFER, g_fbo);
         glViewport(0, 0, width, height);
         const ImVec4 background = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
@@ -238,6 +238,8 @@ namespace gui::plot_export {
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
         framebufferApi().bind(GL_FRAMEBUFFER, static_cast<GLuint>(previousFbo));
+        glViewport(previousViewport[0], previousViewport[1],
+                   previousViewport[2], previousViewport[3]);
         flipRows(pixels, width, height);
 
         if (!writeImage(job.targetPath, width, height, pixels)) {
@@ -247,17 +249,8 @@ namespace gui::plot_export {
         log(std::format("[GUI] Plot image saved to {} ({}x{})", job.targetPath, width, height));
     }
 
-    std::string defaultImageName(const char* kind, const app::models::SurfaceData& surface) {
-        std::string angle = std::format("{:.2f}", surface.angle);
-        if (angle.find('.') != std::string::npos) {
-            while (angle.back() == '0') angle.pop_back();
-            if (angle.back() == '.') angle.pop_back();
-        }
-        std::string name = std::format("{}_surf{}_{}deg", kind, surface.id, angle);
-        if (surface.sourceSlot >= 0) {
-            name += std::format("_slot{}", surface.sourceSlot);
-        }
-        return name;
+    void shutdown() {
+        destroyTarget();
     }
 
     bool chooseSavePath(Logger& logger, const std::string& defaultName, std::string& outPath) {
@@ -296,9 +289,9 @@ namespace gui::plot_export {
     }
 
     void requestSave(Logger& logger, const char* kind, const app::models::SurfaceData& surface,
-                     ImDrawList* drawList, const ImVec2& plotPos, const ImVec2& plotSize) {
+                     ImDrawList* drawList, const ImVec2& plotPos, const ImVec2& plotSize,
+                     const ImVec2& resolution) {
         try {
-            const ImVec2 resolution = ImGuiUtils::PlotExportResolution();
             std::string path;
             if (!chooseSavePath(logger, defaultImageName(kind, surface), path)) {
                 return;

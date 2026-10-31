@@ -109,6 +109,7 @@ set(SOURCES
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
     ${SRC_DIR}/gui/plot_image_exporter.cpp
+    ${SRC_DIR}/gui/plot_image_export_util.cpp
     ${SRC_DIR}/app/services/surface_profile_service.cpp
     ${SRC_DIR}/app/services/surface_map_service.cpp
     ${SRC_DIR}/gui/surface_profile_service.cpp

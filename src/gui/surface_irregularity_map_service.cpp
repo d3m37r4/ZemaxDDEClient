@@ -97,7 +97,8 @@ namespace gui {
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
                 plot_export::requestSave(m_logger, "map", m_nominalSurfaceData,
                                          ImGui::GetWindowDrawList(),
-                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize());
+                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize(),
+                                         ImGuiUtils::PlotExportResolution());
             }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
@@ -205,7 +206,8 @@ namespace gui {
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
                 plot_export::requestSave(m_logger, "devmap", m_nominalSurfaceData,
                                          ImGui::GetWindowDrawList(),
-                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize());
+                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize(),
+                                         ImGuiUtils::PlotExportResolution());
             }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 

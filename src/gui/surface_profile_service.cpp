@@ -188,7 +188,8 @@ namespace gui {
             ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
                 plot_export::requestSave(m_logger, "sag", surface, ImGui::GetWindowDrawList(),
-                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize());
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize(),
+                                         ImGuiUtils::PlotExportResolution());
             }
             ImPlot::PlotLine("Surface", x_scaled.data(), y_scaled.data(), x_scaled.size(),
                              buildLineSpec(lineWeight, markerSize));
@@ -238,7 +239,8 @@ namespace gui {
             ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
                 plot_export::requestSave(m_logger, "compare", nominal, ImGui::GetWindowDrawList(),
-                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize());
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize(),
+                                         ImGuiUtils::PlotExportResolution());
             }
             ImPlot::PlotLine("Nominal", x_nom_s.data(), y_nom_s.data(), x_nom_s.size(),
                              buildLineSpec(lineWeight, markerSize));
@@ -291,7 +293,8 @@ namespace gui {
             ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
             if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
                 plot_export::requestSave(m_logger, "dev", nominal, ImGui::GetWindowDrawList(),
-                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize());
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize(),
+                                         ImGuiUtils::PlotExportResolution());
             }
             ImPlot::PlotLine("Deviation", x_s.data(), y_s.data(), x_s.size(),
                              buildLineSpec(lineWeight, markerSize));

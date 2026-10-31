@@ -75,6 +75,8 @@ namespace gui {
 
     GraphicsBackend::~GraphicsBackend() {
         if (m_window) {
+            // FBO/texture of the plot image exporter belong to this context.
+            plot_export::shutdown();
             ImGui_ImplOpenGL3_DestroyDeviceObjects();
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplGlfw_Shutdown();
