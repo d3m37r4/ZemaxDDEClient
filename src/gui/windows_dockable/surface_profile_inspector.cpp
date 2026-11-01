@@ -153,8 +153,6 @@ namespace gui {
                     [&]() {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
-                            nominal.units = m_zemaxDDEClient->getOpticalSystemData().units;
-                            nominal.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
                             m_profileService->onNominalCalculationComplete = [this, &nominal]() {
                                 const auto& result = m_profileService->getResult(TaskSource::NominalSurfaceProfile);
@@ -296,8 +294,6 @@ namespace gui {
                     [&]() {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenTolerancedOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
-                            toleranced.units = m_zemaxDDEClient->getOpticalSystemData().units;
-                            toleranced.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
                             m_profileService->onTolerancedCalculationComplete = [this, &toleranced]() {
                                 const auto& result = m_profileService->getResult(TaskSource::TolerancedSurfaceProfile);
