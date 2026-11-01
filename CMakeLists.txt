@@ -171,6 +171,12 @@ list(APPEND SOURCES
 option(ZEMAX_ENABLE_TEST_ENGINE "Compile the Dear ImGui Test Engine into the app" OFF)
 
 if(ZEMAX_ENABLE_TEST_ENGINE)
+    # The vendored capture tool embeds its own stb_image_write implementation,
+    # while the app's plot exporter provides one for the whole binary. Disable
+    # the tool's copy so the link has a single definition.
+    set_source_files_properties(
+        ${TE_DIR}/imgui_test_engine/imgui_capture_tool.cpp
+        PROPERTIES COMPILE_DEFINITIONS IMGUI_DISABLE_STB_IMAGE_WRITE_IMPLEMENTATION)
     list(APPEND SOURCES
         ${TE_DIR}/imgui_test_engine/imgui_te_context.cpp
         ${TE_DIR}/imgui_test_engine/imgui_te_coroutine.cpp
