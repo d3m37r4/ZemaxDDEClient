@@ -69,6 +69,7 @@ namespace app {
         version = kCurrentVersion;
 
         general.restoreWindowLayout = true;
+        general.showWelcomeOnStartup = true;
 
         appearance.themeMode = ThemeMode::System;
         appearance.fontScale = kDefaultFontScale;
@@ -151,6 +152,8 @@ namespace app {
             const auto& g = j["general"];
             if (g.contains("restoreWindowLayout") && g["restoreWindowLayout"].is_boolean())
                 general.restoreWindowLayout = g["restoreWindowLayout"].get<bool>();
+            if (g.contains("showWelcomeOnStartup") && g["showWelcomeOnStartup"].is_boolean())
+                general.showWelcomeOnStartup = g["showWelcomeOnStartup"].get<bool>();
         }
 
         // Appearance
@@ -307,6 +310,7 @@ namespace app {
         j["version"] = version;
 
         j["general"]["restoreWindowLayout"]   = general.restoreWindowLayout;
+        j["general"]["showWelcomeOnStartup"]  = general.showWelcomeOnStartup;
 
         j["appearance"]["themeMode"]      = std::string{themeModeToString(appearance.themeMode)};
         j["appearance"]["fontScale"]      = appearance.fontScale;

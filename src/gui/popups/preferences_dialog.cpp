@@ -173,6 +173,11 @@ namespace gui {
         ImGui::TextDisabled(
             "When enabled, windows and their minimized states from the previous session "
             "are restored on the next start; when disabled, the layout starts fresh.");
+
+        ImGui::Checkbox("Show Welcome window on startup", &m_working.general.showWelcomeOnStartup);
+        ImGui::TextDisabled(
+            "The card appears only at application start. Closing it hides it for the rest "
+            "of the session; it is not listed in the View menu.");
     }
 
     void PreferencesDialog::renderSectionAppearance() {

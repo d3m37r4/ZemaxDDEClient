@@ -125,7 +125,6 @@ namespace gui {
                     const char* hint;
                 };
                 static constexpr ViewEntry kViewPanels[] = {
-                    {WindowID::Welcome, nullptr},
                     {WindowID::DDEStatus, "Ctrl+1"},
                     {WindowID::SystemInfo, "Ctrl+2"},
                     {WindowID::SurfaceProfileInspector, "Ctrl+3"},

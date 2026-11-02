@@ -24,6 +24,7 @@ TEST(SettingsDefaults, AllFieldsMatchExpected) {
 
     EXPECT_EQ(s.version, AppSettings::kCurrentVersion);
     EXPECT_TRUE(s.general.restoreWindowLayout);
+    EXPECT_TRUE(s.general.showWelcomeOnStartup);
     EXPECT_TRUE(s.logging.showLogsOnStartup);
     EXPECT_EQ(s.appearance.themeMode, ThemeMode::System);
     EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
@@ -93,6 +94,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
     s.appearance.fontScale = 1.25f;
     s.plot.lineWeight = 2.0f;
     s.updates.channel = UpdateChannel::Beta;
+    s.general.showWelcomeOnStartup = false;
     ASSERT_TRUE(s.saveToFile(path));
 
     AppSettings loaded;
@@ -103,6 +105,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
     EXPECT_FLOAT_EQ(loaded.appearance.fontScale, 1.25f);
     EXPECT_FLOAT_EQ(loaded.plot.lineWeight, 2.0f);
     EXPECT_EQ(loaded.updates.channel, UpdateChannel::Beta);
+    EXPECT_FALSE(loaded.general.showWelcomeOnStartup);
 
     std::remove(path.c_str());
 }

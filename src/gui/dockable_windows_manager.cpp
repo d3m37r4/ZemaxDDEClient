@@ -228,21 +228,12 @@ namespace {
     void RenderWelcomeWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
-        // The card is only meaningful while the DDE link is down. The
-        // visibility flag IS the View menu checkmark: hide the card on connect
-        // (unchecks the menu), restore it when the link goes down again so the
-        // hint re-appears centered (Appearing cond handles the placement).
-        static bool wasConnected = false;
+        // The card is only meaningful while the DDE link is down.
         if (guiMgr->isDDEInitialized()) {
             if (mgr->IsVisible(WindowID::Welcome)) {
                 mgr->SetVisible(WindowID::Welcome, false);
             }
-            wasConnected = true;
             return;
-        }
-        if (wasConnected) {
-            wasConnected = false;
-            mgr->SetVisible(WindowID::Welcome, true);
         }
         // Dock area rect: the centering target and the clamp reference.
         // Multi-viewport: window coords are desktop coords, so the dock area

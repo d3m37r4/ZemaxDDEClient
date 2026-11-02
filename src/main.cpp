@@ -54,6 +54,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     } else {
         wndMgr.SetVisible(WindowID::Logs, logging.showLogsOnStartup);
     }
+    // The Welcome card is startup-only and has no View menu entry: the
+    // preference wins over whatever the restored layout had for it.
+    wndMgr.SetVisible(WindowID::Welcome, general.showWelcomeOnStartup);
 
     ctx->gui->setWindowManager(&wndMgr);
 
