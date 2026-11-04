@@ -186,7 +186,8 @@ namespace gui {
             ImGui::InputTextWithHint("##to", "dd.mm.yyyy - HH:MM:SS", m_toText.data(), m_toText.size());
 
             ImGui::Spacing();
-            ImGui::TextDisabled("Quick range");
+            ImGui::TextUnformatted("Quick range");
+            ImGui::SameLine();
             auto presetButton = [this](const char* label, logs::TimePreset preset) -> bool {
                 if (!ImGui::Button(label)) {
                     return false;
