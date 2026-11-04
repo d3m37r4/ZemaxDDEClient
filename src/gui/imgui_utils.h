@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <vector>
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "gui/theme_manager.h"
@@ -243,22 +244,88 @@ namespace ImGuiUtils {
     }
 
     /// Begin a two-column property grid (label | value).
+    /// Rows are collected so PropertyGridRow can recognise its index and the
+    /// grid owner; both are needed for the selectable value cell.
+    namespace detail {
+        struct PropertyGridFrame {
+            ImGuiID id;
+            int nextRow = 0;
+        };
+
+        inline std::vector<PropertyGridFrame>& propertyGridStack() {
+            static std::vector<PropertyGridFrame> stack;
+            return stack;
+        }
+
+        inline ImGuiID propertyGridSelectionId() { return ImHashStr("PropertyGridSelection"); }
+    }
+
     inline void BeginPropertyGrid(const char* id, float labelWidth) {
+        const ImGuiID gridId = ImGui::GetID(id);
         ImGui::BeginTable(id, 2);
         ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, labelWidth);
         ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
+        detail::propertyGridStack().push_back({gridId, 0});
     }
 
     inline void EndPropertyGrid() {
         ImGui::EndTable();
+        if (!detail::propertyGridStack().empty()) {
+            detail::propertyGridStack().pop_back();
+        }
     }
 
+    /// Two-column row whose value cell is selectable: a click selects it,
+    /// double-click or Ctrl+C (while selected) copies the visible value.
+    /// The value text is drawn over an empty Selectable so the highlight spans
+    /// the whole cell, matching the rest of the UI.
     inline void PropertyGridRow(const char* label, const char* value) {
+        auto& stack = detail::propertyGridStack();
+        const ImGuiID gridId = stack.empty() ? 0u : stack.back().id;
+        const int rowIndex = stack.empty() ? 0 : stack.back().nextRow++;
+
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::TextUnformatted(label);
         ImGui::TableSetColumnIndex(1);
-        ImGui::TextUnformatted(value);
+
+        const char* text = value ? value : "";
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        const ImGuiID selectionId = detail::propertyGridSelectionId();
+        const bool selected = gridId != 0 &&
+            storage->GetInt(selectionId, -1) == static_cast<int>(gridId) &&
+            storage->GetInt(selectionId + 1, -1) == rowIndex;
+
+        ImGui::PushID(rowIndex);
+        if (ImGui::Selectable("##value", selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+            storage->SetInt(selectionId, static_cast<int>(gridId));
+            storage->SetInt(selectionId + 1, rowIndex);
+        }
+        const ImVec2 cellMin = ImGui::GetItemRectMin();
+        const ImVec2 cellMax = ImGui::GetItemRectMax();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        const float textHeight = ImGui::GetTextLineHeight();
+        const float padX = ImGui::GetStyle().FramePadding.x;
+        const ImVec2 textPos(cellMin.x + padX,
+                             cellMin.y + (cellMax.y - cellMin.y - textHeight) * 0.5f);
+        drawList->PushClipRect(cellMin, cellMax, true);
+        drawList->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), text);
+        drawList->PopClipRect();
+
+        const bool hovered = ImGui::IsItemHovered();
+        const bool clipped = ImGui::CalcTextSize(text).x > cellMax.x - cellMin.x - padX * 2.0f;
+        if (hovered && clipped) {
+            ImGui::SetTooltip("%s", text);
+        }
+        if (hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && *text) {
+            ImGui::SetClipboardText(text);
+            ImGui::SetTooltip("Copied");
+        }
+        if (selected && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C) && *text) {
+            ImGui::SetClipboardText(text);
+        }
+        ImGui::PopID();
     }
 
     /// Width of the title-bar chrome strip (menu, minimize, maximize and
