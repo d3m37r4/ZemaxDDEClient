@@ -56,7 +56,9 @@ namespace gui {
             for (const auto& row : section.rows) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::TextUnformatted(row.action);
+                // Wrap instead of clipping: at the minimum window width long
+                // actions must stay readable; the row grows in height.
+                ImGui::TextWrapped("%s", row.action);
                 ImGui::TableSetColumnIndex(1);
                 const float textWidth = ImGui::CalcTextSize(row.hint.c_str()).x;
                 const float available = ImGui::GetContentRegionAvail().x;
