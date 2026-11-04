@@ -63,6 +63,9 @@ namespace app::services {
 
             void startMapCalculation(int surface, int sampling, double angleStepDeg);
             void cancelMapCalculation();
+            /// Fired on the UI thread when the last section of the map arrives,
+            /// so the GUI can report completion without polling.
+            std::function<void()> onMapCalculationComplete;
 
             /// Cancels the task owning the given UI-monitor task id (map run or
             /// the nominal reference profile). Returns false when nothing

@@ -7,6 +7,7 @@
 #include "gui/gui.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "gui/notifications.h"
 #include "gui/windows_dockable/calc_form_common.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "logger/logger.h"
@@ -150,6 +151,7 @@ namespace gui {
                             m_irregularityMapService->onNominalCalculationComplete = [this, units, fileName]() {
                                 m_irregularityMapService->m_nominalSurfaceData.units = units;
                                 m_irregularityMapService->m_nominalSurfaceData.fileName = fileName;
+                                notify::success("Nominal surface data ready");
                             };
                             m_irregularityMapService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
@@ -285,10 +287,16 @@ namespace gui {
                         if (m_zemaxDDEClient) {
                             m_irregularityMapService->m_frozenMapOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
                         }
+                        m_irregularityMapService->onMapCalculationComplete = [this]() {
+                            notify::success(std::format("Surface map ready: {} sections",
+                                m_irregularityMapService->getProfiles().size()));
+                        };
                         m_irregularityMapService->startMapCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngleStep);
                     },
                     [&]() {
                         m_irregularityMapService->cancelMapCalculation();
+                        m_irregularityMapService->onMapCalculationComplete = nullptr;
+                        notify::info("Surface map calculation cancelled");
                     });
             }
         }
