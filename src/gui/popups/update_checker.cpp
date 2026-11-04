@@ -2,6 +2,7 @@
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "lib/imgui/imgui.h"
 #include "version.h"
 #include "app/app.h"
@@ -270,6 +271,27 @@ namespace gui {
                 m_errorMessage.clear();
             }
         }
+
+        // Completion toast: the worker thread only flips flags, the message is
+        // built here on the UI thread.
+        static bool wasCheckComplete = false;
+        if (m_isCheckComplete && !wasCheckComplete) {
+            UpdateInfo info;
+            std::string err;
+            {
+                std::lock_guard<std::mutex> lock(m_dataMutex);
+                info = m_updateInfo;
+                err = m_errorMessage;
+            }
+            if (!err.empty()) {
+                notify::error("Update check failed: " + err);
+            } else if (info.hasUpdate) {
+                notify::info(std::format("Update available: {}", info.version));
+            } else {
+                notify::success("You are up to date");
+            }
+        }
+        wasCheckComplete = m_isCheckComplete;
 
         ImGui::EndPopup();
     }

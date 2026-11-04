@@ -5,6 +5,7 @@
 #include "dde/utils.h"
 #include "gui/utils.h"
 #include "gui/imgui_utils.h"
+#include "gui/notifications.h"
 #include "gui/constants.h"
 #include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
@@ -56,6 +57,7 @@ namespace gui {
             if (connectedSlot >= 0) {
                 m_connectionManager->setActiveConnection(connectedSlot);
                 m_logger->addLog(std::format("[DDE] Activated connected window on slot {}", connectedSlot));
+                notify::info(std::format("Switched to slot {}", connectedSlot));
                 m_open = false;
                 m_selectedHwnd = nullptr;
                 return;
@@ -65,8 +67,9 @@ namespace gui {
                 m_open = false;
                 m_selectedHwnd = nullptr;
             } else {
-                m_logger->addLog(std::format("[DDE] Failed to connect to: {}",
-                                             ZemaxDDE::wstring_to_utf8(wnd.title)));
+                const std::string title = ZemaxDDE::wstring_to_utf8(wnd.title);
+                m_logger->addLog(std::format("[DDE] Failed to connect to: {}", title));
+                notify::error(std::format("Failed to connect to \"{}\"", title));
             }
         };
 

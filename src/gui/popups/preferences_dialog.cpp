@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <format>
 
 #include "app/config_path.h"
 #include "gui/constants.h"
@@ -10,6 +11,7 @@
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
@@ -470,9 +472,14 @@ namespace gui {
     void PreferencesDialog::onSave() {
         m_settings.apply(m_working);
         m_loaded = m_working;
-        m_settings.saveToFile();
+        const bool saved = m_settings.saveToFile();
         m_closedByAction = true;
         close();
+        if (saved) {
+            notify::success("Settings saved");
+        } else {
+            notify::error("Settings applied, but the file could not be written");
+        }
     }
 
     void PreferencesDialog::onCancel() {
@@ -489,12 +496,18 @@ namespace gui {
     void PreferencesDialog::onReset() {
         m_working = app::AppSettings::defaults();
         m_settings.apply(m_working);
+        notify::info("Preferences reset to defaults");
     }
 
     void PreferencesDialog::onCleanLogs() {
         size_t deleted = app::cleanLogFolder(m_activeLogPath);
         if (m_logger) {
             m_logger->addLog("[APP] Cleaned log folder: " + std::to_string(deleted) + " file(s) deleted");
+        }
+        if (deleted > 0) {
+            notify::success(std::format("Log folder cleaned: {} file(s) deleted", deleted));
+        } else {
+            notify::info("No log files to clean");
         }
     }
 

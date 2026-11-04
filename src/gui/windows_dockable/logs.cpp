@@ -8,6 +8,7 @@
 
 #include "gui/constants.h"
 #include "gui/utils.h"
+#include "gui/notifications.h"
 #include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
@@ -30,8 +31,10 @@ namespace gui {
             if (tempPathOpt) {
                 ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
                 logger.addLog(std::format("[GUI] Log exported to {}", tempPathOpt->string()));
+                gui::notify::success("Logs exported to a temporary file");
             } else {
                 logger.addLog("[GUI] Failed to create temporary file for log export");
+                gui::notify::error("Log export failed");
             }
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Export logs to a temporary text file and open it");
@@ -129,6 +132,7 @@ namespace gui {
                 logger.clearLogs();
                 m_confirmDelete = false;
                 ImGui::CloseCurrentPopup();
+                gui::notify::success("Log entries cleared");
             }
             ImGuiUtils::PopFilledButton();
 
