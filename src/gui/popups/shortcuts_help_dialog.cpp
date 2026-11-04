@@ -36,10 +36,24 @@ namespace gui {
         const char* currentSection = nullptr;
         bool tableOpen = false;
         int tableIndex = 0;
+        // Mouse gestures of a section are rendered after its keyboard rows.
+        auto renderSectionHints = [](const char* section) {
+            for (int h = 0; h < shortcuts::kHintRowCount; ++h) {
+                if (std::string_view(shortcuts::kHintRows[h].section) != section) {
+                    continue;
+                }
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::TextUnformatted(shortcuts::kHintRows[h].action);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextUnformatted(shortcuts::kHintRows[h].hint);
+            }
+        };
         for (int i = 0; i < shortcuts::kEntryCount; ++i) {
             const auto& entry = shortcuts::kEntries[i];
             if (currentSection == nullptr || std::string_view(currentSection) != entry.section) {
                 if (tableOpen) {
+                    renderSectionHints(currentSection);
                     ImGui::EndTable();
                     tableOpen = false;
                 }
@@ -66,6 +80,7 @@ namespace gui {
             ImGui::TextUnformatted(hint.c_str());
         }
         if (tableOpen) {
+            renderSectionHints(currentSection);
             ImGui::EndTable();
         }
         ImGui::EndChild();

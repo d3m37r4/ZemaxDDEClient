@@ -8,6 +8,8 @@ namespace {
 
 using gui::shortcuts::kEntries;
 using gui::shortcuts::kEntryCount;
+using gui::shortcuts::kHintRowCount;
+using gui::shortcuts::kHintRows;
 
 TEST(ShortcutsTable, ChordsAreUnique) {
     for (int i = 0; i < kEntryCount; ++i) {
@@ -25,6 +27,20 @@ TEST(ShortcutsTable, IdsHintsAndActionsAreNonEmpty) {
         EXPECT_FALSE(std::string_view(kEntries[i].section).empty()) << "Empty section at index " << i;
         EXPECT_FALSE(std::string_view(kEntries[i].hint).empty()) << "Empty hint at index " << i;
         EXPECT_FALSE(std::string_view(kEntries[i].action).empty()) << "Empty action at index " << i;
+    }
+}
+
+TEST(ShortcutsTable, MouseHintsAreWellFormed) {
+    for (int i = 0; i < kHintRowCount; ++i) {
+        EXPECT_FALSE(std::string_view(kHintRows[i].section).empty());
+        EXPECT_FALSE(std::string_view(kHintRows[i].action).empty());
+        EXPECT_FALSE(std::string_view(kHintRows[i].hint).empty());
+        for (int j = i + 1; j < kHintRowCount; ++j) {
+            const bool same = std::string_view(kHintRows[i].section) == kHintRows[j].section &&
+                              std::string_view(kHintRows[i].action) == kHintRows[j].action &&
+                              std::string_view(kHintRows[i].hint) == kHintRows[j].hint;
+            EXPECT_FALSE(same) << "Duplicate hint row at " << i << " and " << j;
+        }
     }
 }
 

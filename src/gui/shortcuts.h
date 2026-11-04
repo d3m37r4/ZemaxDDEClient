@@ -69,6 +69,24 @@ inline constexpr Entry kEntries[] = {
 
 inline constexpr int kEntryCount = sizeof(kEntries) / sizeof(kEntries[0]);
 
+/// Mouse gestures shown in the help dialog next to the keyboard shortcuts.
+/// They live outside kEntries because handleShortcuts() dispatches chords
+/// only; the entries just describe wording for the dialog.
+struct HintRow {
+    const char* section; // same groups as Entry::section
+    const char* action;
+    const char* hint;
+};
+
+inline constexpr HintRow kHintRows[] = {
+    {"Logs", "Select a log line", "Click"},
+    {"Logs", "Add or remove a line", "Ctrl+Click"},
+    {"Logs", "Select a range", "Shift+Click"},
+    {"Logs", "Open the copy menu", "Right-click"},
+};
+
+inline constexpr int kHintRowCount = sizeof(kHintRows) / sizeof(kHintRows[0]);
+
 /// "<action> (<hint>)" tooltip text of a shortcut id, e.g.
 /// "Connect to Zemax... (Ctrl+Shift+C)". The registry is the single
 /// wording source shared by the menu, the help dialog and button
