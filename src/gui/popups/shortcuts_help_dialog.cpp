@@ -1,8 +1,10 @@
 #include "gui/popups/shortcuts_help_dialog.h"
 
+#include <algorithm>
 #include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
@@ -33,54 +35,35 @@ namespace gui {
 
         ImGui::BeginChild("##shortcuts_body", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), ImGuiChildFlags_Borders);
 
-        const char* currentSection = nullptr;
-        bool tableOpen = false;
+        const auto sections = shortcuts::buildDisplaySections();
+
+        float maxHintWidth = 0.0f;
+        for (const auto& section : sections) {
+            for (const auto& row : section.rows) {
+                maxHintWidth = std::max(maxHintWidth, ImGui::CalcTextSize(row.hint.c_str()).x);
+            }
+        }
+        const float hintColumnWidth =
+            maxHintWidth + ImGui::GetStyle().FramePadding.x * 2.0f;
+
         int tableIndex = 0;
-        // Mouse gestures of a section are rendered after its keyboard rows.
-        auto renderSectionHints = [](const char* section) {
-            for (int h = 0; h < shortcuts::kHintRowCount; ++h) {
-                if (std::string_view(shortcuts::kHintRows[h].section) != section) {
-                    continue;
-                }
+        for (const auto& section : sections) {
+            ImGuiUtils::SectionHeader(section.name);
+            ImGui::BeginTable(std::format("##shortcuts_table_{}", tableIndex++).c_str(), 2,
+                              ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoBordersInBody);
+            ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed, hintColumnWidth);
+            for (const auto& row : section.rows) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::TextUnformatted(shortcuts::kHintRows[h].action);
+                ImGui::TextUnformatted(row.action);
                 ImGui::TableSetColumnIndex(1);
-                ImGui::TextUnformatted(shortcuts::kHintRows[h].hint);
+                const float textWidth = ImGui::CalcTextSize(row.hint.c_str()).x;
+                const float available = ImGui::GetContentRegionAvail().x;
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
+                                     std::max(0.0f, available - textWidth));
+                ImGui::TextUnformatted(row.hint.c_str());
             }
-        };
-        for (int i = 0; i < shortcuts::kEntryCount; ++i) {
-            const auto& entry = shortcuts::kEntries[i];
-            if (currentSection == nullptr || std::string_view(currentSection) != entry.section) {
-                if (tableOpen) {
-                    renderSectionHints(currentSection);
-                    ImGui::EndTable();
-                    tableOpen = false;
-                }
-                currentSection = entry.section;
-                ImGuiUtils::SectionHeader(currentSection);
-                ImGui::BeginTable(std::format("##shortcuts_table_{}", tableIndex++).c_str(), 2,
-                                  ImGuiTableFlags_SizingStretchProp);
-                ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed);
-                tableOpen = true;
-            }
-            // Merge consecutive rows with the same action (F1 + Ctrl+/).
-            std::string hint = entry.hint;
-            while (i + 1 < shortcuts::kEntryCount
-                   && std::string_view(shortcuts::kEntries[i + 1].section) == currentSection
-                   && std::string_view(shortcuts::kEntries[i + 1].action) == entry.action) {
-                hint += " / ";
-                hint += shortcuts::kEntries[++i].hint;
-            }
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::TextUnformatted(entry.action);
-            ImGui::TableSetColumnIndex(1);
-            ImGui::TextUnformatted(hint.c_str());
-        }
-        if (tableOpen) {
-            renderSectionHints(currentSection);
             ImGui::EndTable();
         }
         ImGui::EndChild();

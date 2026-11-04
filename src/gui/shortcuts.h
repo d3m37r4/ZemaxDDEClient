@@ -2,6 +2,8 @@
 
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 // Central registry of global keyboard shortcuts.
 //
@@ -86,6 +88,54 @@ inline constexpr HintRow kHintRows[] = {
 };
 
 inline constexpr int kHintRowCount = sizeof(kHintRows) / sizeof(kHintRows[0]);
+
+/// Row of the help dialog: an action and its shortcut/gesture text.
+struct DisplayRow {
+    const char* action;
+    std::string hint;
+};
+
+/// A group of rows shown under one section header.
+struct DisplaySection {
+    const char* name;
+    std::vector<DisplayRow> rows;
+};
+
+/// Builds the help-dialog contents once: sections in registry order, repeated
+/// actions merged ("F1 / Ctrl+/") and mouse hints appended to their section.
+/// Pure (no ImGui) so the grouping rules are unit-testable.
+inline std::vector<DisplaySection> buildDisplaySections() {
+    std::vector<DisplaySection> sections;
+    auto appendHints = [](DisplaySection& section) {
+        for (int h = 0; h < kHintRowCount; ++h) {
+            if (std::string_view(kHintRows[h].section) == section.name) {
+                section.rows.push_back({kHintRows[h].action, kHintRows[h].hint});
+            }
+        }
+    };
+
+    for (int i = 0; i < kEntryCount; ++i) {
+        const Entry& entry = kEntries[i];
+        if (sections.empty() || std::string_view(sections.back().name) != entry.section) {
+            if (!sections.empty()) {
+                appendHints(sections.back());
+            }
+            sections.push_back({entry.section, {}});
+        }
+        std::string hint = entry.hint;
+        while (i + 1 < kEntryCount
+               && std::string_view(kEntries[i + 1].section) == entry.section
+               && std::string_view(kEntries[i + 1].action) == entry.action) {
+            hint += " / ";
+            hint += kEntries[++i].hint;
+        }
+        sections.back().rows.push_back({entry.action, std::move(hint)});
+    }
+    if (!sections.empty()) {
+        appendHints(sections.back());
+    }
+    return sections;
+}
 
 /// "<action> (<hint>)" tooltip text of a shortcut id, e.g.
 /// "Connect to Zemax... (Ctrl+Shift+C)". The registry is the single

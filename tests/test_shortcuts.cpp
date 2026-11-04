@@ -10,6 +10,7 @@ using gui::shortcuts::kEntries;
 using gui::shortcuts::kEntryCount;
 using gui::shortcuts::kHintRowCount;
 using gui::shortcuts::kHintRows;
+using gui::shortcuts::buildDisplaySections;
 
 TEST(ShortcutsTable, ChordsAreUnique) {
     for (int i = 0; i < kEntryCount; ++i) {
@@ -27,6 +28,46 @@ TEST(ShortcutsTable, IdsHintsAndActionsAreNonEmpty) {
         EXPECT_FALSE(std::string_view(kEntries[i].section).empty()) << "Empty section at index " << i;
         EXPECT_FALSE(std::string_view(kEntries[i].hint).empty()) << "Empty hint at index " << i;
         EXPECT_FALSE(std::string_view(kEntries[i].action).empty()) << "Empty action at index " << i;
+    }
+}
+
+TEST(ShortcutsDisplay, SectionsAreUniqueAndNonEmpty) {
+    const auto sections = buildDisplaySections();
+    ASSERT_FALSE(sections.empty());
+    EXPECT_EQ(std::string_view(sections.front().name), "File");
+    for (size_t i = 0; i < sections.size(); ++i) {
+        EXPECT_FALSE(std::string_view(sections[i].name).empty());
+        EXPECT_FALSE(sections[i].rows.empty()) << sections[i].name;
+        for (size_t j = i + 1; j < sections.size(); ++j) {
+            EXPECT_NE(std::string_view(sections[i].name), std::string_view(sections[j].name));
+        }
+    }
+}
+
+TEST(ShortcutsDisplay, RepeatedActionsAreMerged) {
+    const auto sections = buildDisplaySections();
+    int hits = 0;
+    for (const auto& section : sections) {
+        for (const auto& row : section.rows) {
+            if (std::string_view(row.action) == "Keyboard shortcuts help") {
+                ++hits;
+                EXPECT_EQ(row.hint, "F1 / Ctrl+/");
+            }
+        }
+    }
+    EXPECT_EQ(hits, 1);
+}
+
+TEST(ShortcutsDisplay, LogsSectionEndsWithMouseHints) {
+    const auto sections = buildDisplaySections();
+    ASSERT_FALSE(sections.empty());
+    const auto& logs = sections.back();
+    EXPECT_EQ(std::string_view(logs.name), "Logs");
+    ASSERT_GE(logs.rows.size(), static_cast<size_t>(kHintRowCount));
+    for (int h = 0; h < kHintRowCount; ++h) {
+        const auto& row = logs.rows[logs.rows.size() - static_cast<size_t>(kHintRowCount) + h];
+        EXPECT_EQ(std::string_view(row.action), std::string_view(kHintRows[h].action));
+        EXPECT_EQ(row.hint, std::string(kHintRows[h].hint));
     }
 }
 
