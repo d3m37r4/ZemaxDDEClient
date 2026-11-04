@@ -30,12 +30,12 @@ TEST(ShortcutsTable, IdsHintsAndActionsAreNonEmpty) {
 
 TEST(ShortcutsTable, SectionsAreContiguous) {
     std::string_view last;
-    bool seen[5] = {};
-    const std::string_view known[] = {"File", "View", "Info", "DDE", "Dialogs"};
+    bool seen[6] = {};
+    const std::string_view known[] = {"File", "View", "Info", "DDE", "Dialogs", "Logs"};
     for (int i = 0; i < kEntryCount; ++i) {
         const std::string_view section(kEntries[i].section);
         int knownIdx = -1;
-        for (int k = 0; k < 5; ++k) {
+        for (int k = 0; k < 6; ++k) {
             if (section == known[k]) {
                 knownIdx = k;
                 break;

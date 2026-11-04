@@ -64,6 +64,7 @@ inline constexpr Entry kEntries[] = {
     {"target-slot-0", "DDE", Key::Digit1, Mod_Alt, "Alt+1", "Select DDE target [0]"},
     {"target-slot-1", "DDE", Key::Digit2, Mod_Alt, "Alt+2", "Select DDE target [1]"},
     {"close-popup", "Dialogs", Key::Escape, Mod_None, "Esc", "Close topmost dialog"},
+    {"logs-copy-selection", "Logs", Key::C, Mod_Ctrl, "Ctrl+C", "Copy the selected log lines (Logs panel focused)"},
 };
 
 inline constexpr int kEntryCount = sizeof(kEntries) / sizeof(kEntries[0]);

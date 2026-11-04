@@ -162,8 +162,18 @@ namespace gui {
             ImGui::TextDisabled("%s · %zu / %zu", chipText, visibleCount, entries.size());
         }
 
+        ImGui::SameLine();
+        ImGuiUtils::HelpMarker(
+            "Selecting log lines:\n"
+            "Click - select a line\n"
+            "Ctrl+Click - add or remove a line\n"
+            "Shift+Click - select a range\n"
+            "Ctrl+C - copy the selection\n"
+            "Right-click - copy menu");
+
         if (ImGui::BeginPopup("##logs_filter_popup")) {
-            const float labelW = ImGuiUtils::DpiScale(40.0f);
+            const float labelW = ImGui::CalcTextSize("From").x +
+                                 ImGui::GetStyle().ItemInnerSpacing.x * 2.0f;
             const float fieldW = ImGuiUtils::DpiScale(170.0f);
 
             ImGui::TextUnformatted("From");
@@ -251,6 +261,7 @@ namespace gui {
             ImGui::EndPopup();
         }
 
+        ImGui::SameLine();
         if (ImGui::Checkbox("Autoscroll", &m_autoscroll)) {
             m_jumpToBottom = m_autoscroll;
         }
@@ -346,6 +357,8 @@ namespace gui {
                 if (ImGui::MenuItem("Clear selection", nullptr, false, !m_selected.empty())) {
                     clearSelection();
                 }
+                ImGui::Separator();
+                ImGui::TextDisabled("Click selects · Ctrl/Shift+Click extends · Ctrl+C copies");
                 ImGui::EndPopup();
             }
             ImGui::PopID();
