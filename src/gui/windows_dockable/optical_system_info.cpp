@@ -1,6 +1,7 @@
 #include <format>
 
 #include "gui/gui.h"
+#include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
 
@@ -72,7 +73,7 @@ namespace gui {
         float maxLabelWidth = 0.0f;
         for (auto* l : allLabels)
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
-        maxLabelWidth += ImGuiUtils::DpiScale(8.0f);
+        maxLabelWidth += ImGuiUtils::DpiScale(PROPERTY_GRID_LABEL_SLACK);
 
         ImGuiUtils::SectionHeader("File");
         ImGuiUtils::BeginPropertyGrid("##File", maxLabelWidth);

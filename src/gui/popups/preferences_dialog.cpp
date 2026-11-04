@@ -204,7 +204,7 @@ namespace gui {
                 current = i;
             }
         }
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##font_scale", &current, kScaleLabels, kScaleCount)) {
             m_working.appearance.fontScale = kScaleValues[current];
             applyWorkingTheme();
@@ -216,8 +216,8 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
@@ -226,8 +226,8 @@ namespace gui {
 
         auto inputInt = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             return ImGui::InputInt(id, value, 0, 0);
         };
 
@@ -248,8 +248,8 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(200.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
@@ -314,7 +314,7 @@ namespace gui {
         constexpr const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
         ImGui::TextUnformatted("Surface Irregularity Map");
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_surface", &m_working.map.defaultColormapSurface, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();
         }
@@ -330,7 +330,7 @@ namespace gui {
         ImGui::Spacing();
 
         ImGui::TextUnformatted("Deviation Map");
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_deviation", &m_working.map.defaultColormapDeviation, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();
         }
@@ -369,19 +369,19 @@ namespace gui {
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Max log file size (MB)");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFileSizeMB", &m_working.logging.logFileSizeMB, 0, 0);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Log folder size warning threshold (MB)");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFolderThresholdMB", &m_working.logging.logFolderSizeThresholdMB, 0, 0);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Current log folder size");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
         ImGui::TextUnformatted(app::getLogFolderSize().c_str());
         ImGui::SameLine();
         const auto& sem = m_themeManager->semantic();

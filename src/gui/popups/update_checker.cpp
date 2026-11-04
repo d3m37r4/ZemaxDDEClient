@@ -235,7 +235,7 @@ namespace gui {
         float okBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (!m_isChecking) {
-            float actionBtnW = ImGuiUtils::DpiScale(180.0f);
+            float actionBtnW = ImGuiUtils::DpiScale(UPDATE_ACTION_BUTTON_WIDTH);
             float totalW = actionBtnW + spacing + okBtnW;
             ImGui::SetCursorPosX((windowWidth - totalW) * 0.5f);
 

@@ -75,7 +75,7 @@ namespace gui {
         // content shifts the scroll. Works after clearLogs() (empty list, max
         // scroll 0 counts as "at the bottom") and when the user scrolled up
         // to read history - then autoscroll stays silent until they return.
-        const float bottomSlack = ImGuiUtils::DpiScale(4.0f);
+        const float bottomSlack = ImGuiUtils::DpiScale(LOGS_AUTOSCROLL_SLACK);
         const bool wasAtBottom = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - bottomSlack;
 
         for (const auto& entry : logEntries) {

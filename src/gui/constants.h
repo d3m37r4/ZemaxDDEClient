@@ -98,6 +98,21 @@ namespace gui {
     inline constexpr float PREFS_SIDEBAR_MIN_WIDTH  = 60.0f;
     inline constexpr float PREFS_SIDEBAR_EXTRA_PAD  = 20.0f;
     inline constexpr float PREFS_RIGHT_MARGIN       = 100.0f;
+    // Label/field grid of the settings sections (DPI-scaled at call sites):
+    // same-line offset for the label column and the fixed input widths.
+    inline constexpr float PREFS_LABEL_COLUMN       = 250.0f;
+    inline constexpr float PREFS_FIELD_WIDTH        = 120.0f;
+    inline constexpr float PREFS_COMBO_WIDTH        = 200.0f;
+
+    // Update dialog: secondary action button (DPI-scaled at the call site)
+    inline constexpr float UPDATE_ACTION_BUTTON_WIDTH = 180.0f;
+
+    // Logs panel: tolerance for the "stuck to the bottom" scroll check
+    // (DPI-scaled at the call site)
+    inline constexpr float LOGS_AUTOSCROLL_SLACK    = 4.0f;
+
+    // Property grids: extra slack after the widest label (DPI-scaled)
+    inline constexpr float PROPERTY_GRID_LABEL_SLACK = 8.0f;
 
     // DDE status panel
     inline constexpr float DDE_STATUS_ELEMENT_GAP   = 4.0f;
