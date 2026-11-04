@@ -7,6 +7,7 @@
 #include "gui/constants.h"
 #include "gui/surface_profile_service.h"
 #include "gui/imgui_utils.h"
+#include "gui/notifications.h"
 #include "gui/windows_dockable/calc_form_common.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
@@ -163,6 +164,8 @@ namespace gui {
                                 nominal.sampling = result.sampling;
                                 nominal.angle = result.angle;
                                 nominal.sagDataPoints = result.sagDataPoints;
+                                notify::success(std::format("Nominal profile ready: {} points",
+                                                            nominal.sagDataPoints.size()));
                             };
                             m_profileService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
@@ -304,6 +307,8 @@ namespace gui {
                                 toleranced.sampling = result.sampling;
                                 toleranced.angle = result.angle;
                                 toleranced.sagDataPoints = result.sagDataPoints;
+                                notify::success(std::format("Toleranced profile ready: {} points",
+                                                            toleranced.sagDataPoints.size()));
                             };
                             m_profileService->startCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
                         }

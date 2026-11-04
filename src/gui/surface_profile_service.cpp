@@ -10,6 +10,7 @@
 
 #include "gui/surface_profile_service.h"
 #include "gui/imgui_utils.h"
+#include "gui/notifications.h"
 #include "gui/plot_image_exporter.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
@@ -173,6 +174,7 @@ namespace gui {
         }
         if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
             ImGui::SetClipboardText(surfaceSeriesCsv(x_scaled, y_scaled).c_str());
+            notify::copied("surface profile data (CSV)");
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
@@ -227,6 +229,7 @@ namespace gui {
             std::string csv = labelledSeriesCsv("Nominal", x_nom_s, y_nom_s)
                             + labelledSeriesCsv("Toleranced", x_tol_s, y_tol_s);
             ImGui::SetClipboardText(csv.c_str());
+            notify::copied("profile comparison data (CSV)");
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {
@@ -281,6 +284,7 @@ namespace gui {
         }
         if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
             ImGui::SetClipboardText(labelledSeriesCsv("Deviation", x_s, y_s).c_str());
+            notify::copied("deviation data (CSV)");
         }
 
         if (ImPlot::BeginPlot(plotLabel, size)) {

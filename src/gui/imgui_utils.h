@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 
 namespace ImGuiUtils {
@@ -297,7 +298,11 @@ namespace ImGuiUtils {
             storage->GetInt(selectionId + 1, -1) == rowIndex;
 
         ImGui::PushID(rowIndex);
-        if (ImGui::Selectable("##value", selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+        const float textWidth = ImGui::CalcTextSize(text).x;
+        const float padX = ImGui::GetStyle().FramePadding.x;
+        const float cellWidth = ImGui::GetContentRegionAvail().x;
+        if (ImGui::Selectable("##value", selected, ImGuiSelectableFlags_AllowDoubleClick,
+                              ImVec2(textWidth + padX * 2.0f, 0.0f))) {
             storage->SetInt(selectionId, static_cast<int>(gridId));
             storage->SetInt(selectionId + 1, rowIndex);
         }
@@ -305,7 +310,6 @@ namespace ImGuiUtils {
         const ImVec2 cellMax = ImGui::GetItemRectMax();
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         const float textHeight = ImGui::GetTextLineHeight();
-        const float padX = ImGui::GetStyle().FramePadding.x;
         const ImVec2 textPos(cellMin.x + padX,
                              cellMin.y + (cellMax.y - cellMin.y - textHeight) * 0.5f);
         drawList->PushClipRect(cellMin, cellMax, true);
@@ -313,17 +317,19 @@ namespace ImGuiUtils {
         drawList->PopClipRect();
 
         const bool hovered = ImGui::IsItemHovered();
-        const bool clipped = ImGui::CalcTextSize(text).x > cellMax.x - cellMin.x - padX * 2.0f;
+        const bool clipped = textWidth > cellWidth - padX * 2.0f;
         if (hovered && clipped) {
             ImGui::SetTooltip("%s", text);
         }
         if (hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && *text) {
             ImGui::SetClipboardText(text);
             ImGui::SetTooltip("Copied");
+            gui::notify::copied(label);
         }
         if (selected && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
             ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C) && *text) {
             ImGui::SetClipboardText(text);
+            gui::notify::copied(label);
         }
         ImGui::PopID();
     }
@@ -577,8 +583,10 @@ namespace ImGuiUtils {
         ImGui::EndDisabled();
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             ImGui::SetTooltip("%s", tooltip);
-        if (clicked && text && *text)
+        if (clicked && text && *text) {
             ImGui::SetClipboardText(text);
+            gui::notify::info("Copied to clipboard");
+        }
         return clicked;
     }
 

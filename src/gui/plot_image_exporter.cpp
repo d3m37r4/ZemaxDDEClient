@@ -17,6 +17,7 @@
 
 #include "gui/plot_image_exporter.h"
 #include "gui/plot_image_export_util.h"
+#include "gui/notifications.h"
 #include "logger/logger.h"
 
 // Framebuffer enums/entry points are absent from the vendored loader (it is
@@ -242,6 +243,9 @@ namespace gui::plot_export {
             return;
         }
         log(std::format("[GUI] Plot image saved to {} ({}x{})", job.targetPath, width, height));
+        const size_t slash = job.targetPath.find_last_of("/\\");
+        notify::success(std::format("Image saved: {}",
+            slash == std::string::npos ? job.targetPath : job.targetPath.substr(slash + 1)));
     }
 
     void shutdown() {

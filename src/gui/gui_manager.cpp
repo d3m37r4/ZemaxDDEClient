@@ -12,7 +12,9 @@
 #include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
 #include "gui/shortcuts.h"
+#include "gui/notifications.h"
 #include "dde/dde_connection_manager.h"
+#include "dde/utils.h"
 #include "windows_dockable/dde_status.h"
 #include "logger/logger.h"
 
@@ -328,6 +330,40 @@ void GuiManager::render() {
     renderConnectionLostPopup();
 
     m_uiOpMonitor.renderGlobalStatusBar();
+
+    // DDE transitions: one toast per state change; the log stays the detailed
+    // source of truth. The active slot's window title makes the toast concrete.
+    static bool wasConnected = false;
+    static bool wasConnectionLost = false;
+    const bool connected = isDDEInitialized();
+    if (connected != wasConnected) {
+        wasConnected = connected;
+        if (connected) {
+            std::string title;
+            if (m_ddeConnectionManager) {
+                const int slot = m_ddeConnectionManager->getActiveIndex();
+                if (const DDEConnection* conn = m_ddeConnectionManager->getConnection(slot);
+                    conn && !conn->serverTitle.empty()) {
+                    title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
+                }
+            }
+            notify::success(title.empty() ? "Connected to Zemax"
+                                          : std::format("Connected to \"{}\"", title));
+        } else {
+            notify::warning("Disconnected from Zemax");
+        }
+    }
+    const bool connectionLost =
+        m_ddeConnectionManager && m_ddeConnectionManager->hasConnectionLost();
+    if (connectionLost && !wasConnectionLost) {
+        notify::error(std::format("Connection lost: {}",
+            m_ddeConnectionManager->getConnectionLostReason()));
+    }
+    wasConnectionLost = connectionLost;
+
+    // Toasts inherit the active theme (window background, rounding, border) and
+    // are drawn above every window by ImGuiNotify.
+    ImGui::RenderNotifications();
 
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
     // The Test Engine UI must be rendered inside the ImGui frame, after the
