@@ -15,6 +15,13 @@ TEST(LogTimeFilter, ParsesLoggerFormat) {
     EXPECT_EQ(*timestamp, expected);
 }
 
+TEST(LogTimeFilter, ParsesPlainFilterInput) {
+    const auto expected = sys_days{year{2026} / November / day{4}} + hours{23} + minutes{18};
+    EXPECT_EQ(parseLogTimestamp("04.11.2026 - 23:18:00"), expected);
+    EXPECT_EQ(parseLogTimestamp("  04.11.2026 - 23:18:00  "), expected);
+    EXPECT_FALSE(parseLogTimestamp("04.11.2026 - 23:18:00 extra"));
+}
+
 TEST(LogTimeFilter, RejectsMalformedEntries) {
     EXPECT_FALSE(parseLogTimestamp(""));
     EXPECT_FALSE(parseLogTimestamp("no timestamp at all"));
