@@ -67,6 +67,7 @@ namespace gui {
     void SurfaceProfileService::saveCrossSectionToFile(const app::models::SurfaceData& surface) {
         if (surface.sagDataPoints.empty()) {
             m_logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
+            notify::warning("No cross-section data to export");
             return;
         }
 
@@ -87,11 +88,13 @@ namespace gui {
         auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_SagCrossSection_Temp.txt", content);
         if (!tempPathOpt) {
             m_logger.addLog("[GUI] Failed to create temporary file for Surface Sag Cross Section export");
+            notify::error("Cross-section export failed");
             return;
         }
 
         ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
         m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
+        notify::success("Cross section exported to a temporary file");
     }
 
     static constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
