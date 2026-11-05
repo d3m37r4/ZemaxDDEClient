@@ -59,5 +59,9 @@ namespace gui {
             /// (HWNDs as void* so the header does not need windows.h).
             bool m_modalOwnershipActive = false;
             std::vector<void*> m_modalPanelOrder;
+            /// Secondary viewports already given the Win32 polish (tool-window
+            /// style + DWM rounding). Stored as void* per the header rule about
+            /// not including windows.h here.
+            std::vector<void*> m_preparedViewports;
     };
 }

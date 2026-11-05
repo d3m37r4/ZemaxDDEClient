@@ -306,6 +306,26 @@ namespace gui {
         for (HWND hwnd : secondaryPanels) {
             if (hwnd == m_lastForegroundWindow) lastForegroundIsOurWindow = true;
 
+            // Taskbar/Alt-Tab hygiene for every secondary viewport: Dear ImGui
+            // deliberately leaves modals out of the NoTaskBarIcon viewport flag,
+            // so a modal that ends up in its own OS window would add a second
+            // task-bar entry. A tool window never shows up there.
+            const LONG_PTR exStyle = ::GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            if (!(exStyle & WS_EX_TOOLWINDOW) || (exStyle & WS_EX_APPWINDOW)) {
+                ::SetWindowLongPtrW(hwnd, GWL_EXSTYLE,
+                    (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
+            }
+            // DWM rounding is otherwise applied only on ownership transitions;
+            // a modal viewport may never transition (it is created unowned), so
+            // prepare each window once on first sight.
+            if (std::find(m_preparedViewports.begin(), m_preparedViewports.end(), hwnd) ==
+                m_preparedViewports.end()) {
+                m_preparedViewports.push_back(hwnd);
+                const INT cornerPref = DWMWCP_ROUNDSMALL;
+                dwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
+                    &cornerPref, sizeof(cornerPref));
+            }
+
             const LONG_PTR ownedBy = ::GetWindowLongPtrW(hwnd, GWLP_HWNDPARENT);
             const LONG_PTR wantedParent = anyModalOpen
                 ? 0 : reinterpret_cast<LONG_PTR>(mainHwnd);
@@ -325,6 +345,11 @@ namespace gui {
                     &cornerPref, sizeof(cornerPref));
             }
         }
+
+        // Drop destroyed windows from the prepared list (handles are reused by
+        // the OS, so a stale entry could skip the polish for a new window).
+        std::erase_if(m_preparedViewports,
+                      [](void* entry) { return !::IsWindow(static_cast<HWND>(entry)); });
 
         const HWND foreground = ::GetForegroundWindow();
         // Raise-all trigger (variant "external focus only"): react when the
