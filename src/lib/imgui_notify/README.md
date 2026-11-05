@@ -12,6 +12,8 @@
 2. Toast window name uses portable `std::snprintf` — MinGW has no `sprintf_s`.
 3. Notification paddings are multiplied by the main viewport `DpiScale`, so the
    stack keeps its visual inset at any DPI (the library works in raw pixels).
+4. `mainWindowSize` is marked `[[maybe_unused]]` - it is only read in the
+   "render inside the main window" mode, which the app does not use.
 
 Do not update the header blindly: re-apply the three patches and re-check
 compatibility with the vendored Dear ImGui (docking + multi-viewport).

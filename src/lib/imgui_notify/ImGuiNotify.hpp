@@ -495,7 +495,8 @@ namespace ImGui
      */
     inline void RenderNotifications()
     {
-        const ImVec2 mainWindowSize = GetMainViewport()->Size;
+        // patched: only the "inside the main window" mode reads this size.
+        [[maybe_unused]] const ImVec2 mainWindowSize = GetMainViewport()->Size;
         // patched: the library works in raw pixels; scale the paddings so the
         // stack keeps its visual inset at any DPI (Windows: coords = pixels).
         const float dpi = GetMainViewport()->DpiScale > 0.0f ? GetMainViewport()->DpiScale : 1.0f;
