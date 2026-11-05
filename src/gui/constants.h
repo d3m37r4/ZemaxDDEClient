@@ -10,10 +10,10 @@ namespace gui {
     // Logs panel window constraints
     inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(260.0f, 140.0f);
 
-    // Delete log entries confirmation popup (Logs panel header)
-    inline constexpr const char* DELETE_LOG_CONFIRM_POPUP_NAME = "Delete all log entries?";
-    inline constexpr ImVec2 DELETE_LOG_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(400.0f, 120.0f);
-    inline constexpr ImVec2 DELETE_LOG_CONFIRM_POPUP_MIN_SIZE     = ImVec2(400.0f, 120.0f);
+    // Logs panel header: clears the on-screen log entries (not the files).
+    inline constexpr const char* DELETE_LOG_ENTRIES_CONFIRM_POPUP_NAME = "Delete all log entries?";
+    inline constexpr ImVec2 DELETE_LOG_ENTRIES_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(320.0f, 154.0f);
+    inline constexpr ImVec2 DELETE_LOG_ENTRIES_CONFIRM_POPUP_MIN_SIZE     = ImVec2(320.0f, 154.0f);
 
     // Optical System Information panel window constraints
     inline constexpr ImVec2 OPTICAL_SYSTEM_INFO_WINDOW_MIN_SIZE = ImVec2(380.0f, 100.0f);
@@ -86,9 +86,10 @@ namespace gui {
     inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 154.0f);
     inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 154.0f);
 
-    inline constexpr const char* CLEAN_LOGS_CONFIRM_POPUP_NAME = "Clean Logs";
-    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(372.0f, 140.0f);
-    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE     = ImVec2(372.0f, 140.0f);
+    // Preferences: deletes log files on disk (the active log is kept).
+    inline constexpr const char* CLEAN_LOG_FILES_CONFIRM_POPUP_NAME = "Clean Logs";
+    inline constexpr ImVec2 CLEAN_LOG_FILES_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(386.0f, 132.0f);
+    inline constexpr ImVec2 CLEAN_LOG_FILES_CONFIRM_POPUP_MIN_SIZE     = ImVec2(386.0f, 132.0f);
 
     // Preferences popup
     inline constexpr ImVec2 PREFERENCES_POPUP_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);

@@ -21,15 +21,15 @@ namespace gui {
     void CleanLogsConfirmDialog::render() {
         if (!m_confirm) return;
 
-        if (m_open && !ImGui::IsPopupOpen(CLEAN_LOGS_CONFIRM_POPUP_NAME)) {
-            ImGui::OpenPopup(CLEAN_LOGS_CONFIRM_POPUP_NAME);
+        if (m_open && !ImGui::IsPopupOpen(CLEAN_LOG_FILES_CONFIRM_POPUP_NAME)) {
+            ImGui::OpenPopup(CLEAN_LOG_FILES_CONFIRM_POPUP_NAME);
         }
 
         ImGuiUtils::CenterNextWindow();
-        ImGuiUtils::SetDpiScaledWindowConstraints(CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE.x, CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE.y);
-        ImGuiUtils::SetDpiScaledWindowSize(CLEAN_LOGS_CONFIRM_POPUP_DEFAULT_SIZE);
+        ImGuiUtils::SetDpiScaledWindowConstraints(CLEAN_LOG_FILES_CONFIRM_POPUP_MIN_SIZE.x, CLEAN_LOG_FILES_CONFIRM_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(CLEAN_LOG_FILES_CONFIRM_POPUP_DEFAULT_SIZE);
 
-        if (!ImGuiUtils::BeginPopupModalEx(CLEAN_LOGS_CONFIRM_POPUP_NAME, &m_confirm,
+        if (!ImGuiUtils::BeginPopupModalEx(CLEAN_LOG_FILES_CONFIRM_POPUP_NAME, &m_confirm,
                                     ImGuiWindowFlags_NoCollapse)) {
             return;
         }

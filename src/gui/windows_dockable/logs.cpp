@@ -69,6 +69,14 @@ namespace gui {
         }
     }
 
+    bool Logs::cancelDeleteConfirm() noexcept {
+        if (!m_confirmDelete) {
+            return false;
+        }
+        m_confirmDelete = false;
+        return true;
+    }
+
     void Logs::render(Logger& logger, const ThemeManager* themeManager) {
         const auto& sem = themeManager->semantic();
         const std::vector<std::string> entries = logger.getLogs();
@@ -492,14 +500,15 @@ namespace gui {
         // CleanLogsConfirmDialog (that one deletes folder files from Preferences).
         // The popup is owned by the root Logs window: open it here (the same
         // window that renders the modal), not inside the header child.
-        if (m_confirmDelete && !ImGui::IsPopupOpen(DELETE_LOG_CONFIRM_POPUP_NAME)) {
-            ImGui::OpenPopup(DELETE_LOG_CONFIRM_POPUP_NAME);
+        if (m_confirmDelete && !ImGui::IsPopupOpen(DELETE_LOG_ENTRIES_CONFIRM_POPUP_NAME)) {
+            ImGui::OpenPopup(DELETE_LOG_ENTRIES_CONFIRM_POPUP_NAME);
         }
         ImGuiUtils::CenterNextWindow();
         ImGuiUtils::SetDpiScaledWindowConstraints(
-            DELETE_LOG_CONFIRM_POPUP_MIN_SIZE.x, DELETE_LOG_CONFIRM_POPUP_MIN_SIZE.y);
-        ImGuiUtils::SetDpiScaledWindowSize(DELETE_LOG_CONFIRM_POPUP_DEFAULT_SIZE);
-        if (ImGuiUtils::BeginPopupModalEx(DELETE_LOG_CONFIRM_POPUP_NAME, nullptr,
+            DELETE_LOG_ENTRIES_CONFIRM_POPUP_MIN_SIZE.x, DELETE_LOG_ENTRIES_CONFIRM_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(DELETE_LOG_ENTRIES_CONFIRM_POPUP_DEFAULT_SIZE);
+        // &m_confirmDelete: the title-bar X closes the dialog like Cancel.
+        if (ImGuiUtils::BeginPopupModalEx(DELETE_LOG_ENTRIES_CONFIRM_POPUP_NAME, &m_confirmDelete,
                                           ImGuiWindowFlags_NoCollapse)) {
             ImGui::BeginChild("##delete_log_confirm_body",
                               ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
@@ -532,7 +541,7 @@ namespace gui {
             ImGuiUtils::PopFilledButton();
 
             ImGui::EndPopup();
-        } else if (m_confirmDelete && !ImGui::IsPopupOpen(DELETE_LOG_CONFIRM_POPUP_NAME)) {
+        } else if (m_confirmDelete && !ImGui::IsPopupOpen(DELETE_LOG_ENTRIES_CONFIRM_POPUP_NAME)) {
             // Closed through the app-wide close-popup shortcut (Esc) — drop the
             // pending request so it does not reopen on the next frame.
             m_confirmDelete = false;

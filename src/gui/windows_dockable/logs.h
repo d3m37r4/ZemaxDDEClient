@@ -18,6 +18,10 @@ namespace gui {
     public:
         void render(Logger& logger, const ThemeManager* themeManager);
 
+        /// Cancels the pending "delete log entries" confirmation (Esc).
+        /// Returns true when a dialog was actually open.
+        bool cancelDeleteConfirm() noexcept;
+
     private:
         // Single panel - the toggle state lives in one instance.
         bool m_autoscroll = true;
