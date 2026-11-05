@@ -36,8 +36,8 @@ namespace gui {
     // service share them.
 
     // Connect DDE popup constraints
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(580.0f, 180.0f);
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(580.0f, 180.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(600.0f, 152.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(600.0f, 152.0f);
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;
@@ -66,8 +66,8 @@ namespace gui {
     inline constexpr const char* GITHUB_COMMIT_URL_FMT = "https://github.com/d3m37r4/ZemaxDDEClient/commit/{}";
 
     // About popup
-    inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(428.0f, 242.0f);
-    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(428.0f, 242.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(460.0f, 310.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(460.0f, 310.0f);
 
     // Keyboard shortcuts help popup
     inline constexpr const char* SHORTCUTS_POPUP_NAME = "Keyboard Shortcuts";
@@ -75,20 +75,20 @@ namespace gui {
     inline constexpr ImVec2 SHORTCUTS_POPUP_MIN_SIZE     = ImVec2(420.0f, 300.0f);
 
     // Check for Updates popup
-    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(340.0f, 120.0f);
-    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(325.0f, 160.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(325.0f, 160.0f);
 
     // Connection Lost popup
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_DEFAULT_SIZE = ImVec2(380.0f, 140.0f);
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_MIN_SIZE     = ImVec2(380.0f, 140.0f);
 
     // Reset Preferences popup
-    inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 120.0f);
-    inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 120.0f);
+    inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 154.0f);
+    inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 154.0f);
 
     inline constexpr const char* CLEAN_LOGS_CONFIRM_POPUP_NAME = "Clean Logs";
-    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(364.0f, 100.0f);
-    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE     = ImVec2(364.0f, 100.0f);
+    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(372.0f, 140.0f);
+    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE     = ImVec2(372.0f, 140.0f);
 
     // Preferences popup
     inline constexpr ImVec2 PREFERENCES_POPUP_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
