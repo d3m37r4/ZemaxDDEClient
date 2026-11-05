@@ -154,6 +154,10 @@ namespace gui {
         float connectBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
         float cancelBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
+        // Buttons centered like the other modal dialogs.
+        const float buttonsWidth = connectBtnW + cancelBtnW + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - buttonsWidth) * 0.5f);
+
         if (!canConnect) {
             ImGui::BeginDisabled();
         }
