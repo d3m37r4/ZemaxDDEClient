@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "gui/log_time_filter.h"
+#include "gui/log_filter_util.h"
 
 class Logger;
 class ThemeManager;
@@ -39,10 +40,25 @@ namespace gui {
         std::optional<std::chrono::system_clock::time_point> m_customTo;
         std::string m_filterError;
 
-        // Parsed timestamps cache; rebuilt only when the log size changes, so
-        // filtering per frame stays a cheap range check.
-        std::vector<std::optional<std::chrono::system_clock::time_point>> m_times;
-        size_t m_timesSize = static_cast<size_t>(-1);
+        // Free-text search (case-insensitive, whole line). Shown in its own
+        // popup; the text survives closing it so the filter stays visible.
+        std::array<char, 128> m_searchText{};
+
+        // Level groups of the filter popup.
+        bool m_showApp = true;
+        bool m_showDde = true;
+        bool m_showGui = true;
+        bool m_showService = true;
+        bool m_showOther = true;
+
+        // Parsed metadata cache; rebuilt only when the log size changes so the
+        // per-frame filtering stays a set of cheap checks.
+        struct CacheEntry {
+            std::optional<std::chrono::system_clock::time_point> time;
+            logs::LogLevel level = logs::LogLevel::Unknown;
+        };
+        std::vector<CacheEntry> m_cache;
+        size_t m_cacheSize = static_cast<size_t>(-1);
 
         // Multi-selection over visible entries, stored by original index.
         std::set<size_t> m_selected;

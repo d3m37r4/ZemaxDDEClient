@@ -73,11 +73,12 @@ namespace gui {
         const auto& sem = themeManager->semantic();
         const std::vector<std::string> entries = logger.getLogs();
 
-        // Timestamp cache: parse once per log-size change, not every frame.
-        if (m_times.size() != entries.size()) {
-            m_times.resize(entries.size());
+        // Metadata cache: parsed once per log-size change, not every frame.
+        if (m_cache.size() != entries.size()) {
+            m_cache.resize(entries.size());
             for (size_t i = 0; i < entries.size(); ++i) {
-                m_times[i] = logs::parseLogTimestamp(entries[i]);
+                m_cache[i].time = logs::parseLogTimestamp(entries[i]);
+                m_cache[i].level = logs::levelOf(entries[i]);
             }
         }
 
@@ -89,13 +90,30 @@ namespace gui {
         } else {
             rangeFrom = presetFrom(m_preset, Clock::now());
         }
-        const bool filtering = rangeFrom.has_value() || rangeTo.has_value();
+        const bool timeFiltering = rangeFrom.has_value() || rangeTo.has_value();
+
+        const std::string_view search(m_searchText.data());
+        const bool searchActive = !search.empty();
+        const bool levelFiltering = !(m_showApp && m_showDde && m_showGui && m_showService && m_showOther);
+        auto levelVisible = [this](logs::LogLevel level) {
+            switch (level) {
+                case logs::LogLevel::App:     return m_showApp;
+                case logs::LogLevel::Dde:     return m_showDde;
+                case logs::LogLevel::Gui:     return m_showGui;
+                case logs::LogLevel::Service: return m_showService;
+                case logs::LogLevel::Unknown: return m_showOther;
+            }
+            return true;
+        };
 
         std::vector<bool> visible(entries.size(), true);
         std::vector<size_t> visibleIndices;
         for (size_t i = 0; i < entries.size(); ++i) {
-            const bool shown = !filtering ||
-                (m_times[i] && logs::inTimeRange(*m_times[i], rangeFrom, rangeTo));
+            const bool timeOk = !timeFiltering ||
+                (m_cache[i].time && logs::inTimeRange(*m_cache[i].time, rangeFrom, rangeTo));
+            const bool shown = timeOk &&
+                levelVisible(m_cache[i].level) &&
+                (!searchActive || logs::containsNoCase(entries[i], search));
             visible[i] = shown;
             if (shown) {
                 visibleIndices.push_back(i);
@@ -109,6 +127,7 @@ namespace gui {
             }
         }
         const size_t visibleCount = visibleIndices.size();
+        const bool filtering = timeFiltering || levelFiltering || searchActive;
 
         ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
@@ -138,28 +157,74 @@ namespace gui {
 
         ImGui::SameLine();
 
-        if (filtering) {
+        if (searchActive) {
+            ImGui::PushStyleColor(ImGuiCol_Text, sem.info);
+        }
+        if (ImGui::Button(ICON_FA_MAGNIFYING_GLASS "##logs_search")) {
+            ImGui::OpenPopup("##logs_search_popup");
+        }
+        if (searchActive) {
+            ImGui::PopStyleColor();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Search log entries");
+
+        if (ImGui::BeginPopup("##logs_search_popup")) {
+            if (ImGui::IsWindowAppearing()) {
+                ImGui::SetKeyboardFocusHere();
+            }
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(220.0f));
+            ImGui::InputTextWithHint("##logs_search_text", "Search log entries...",
+                                     m_searchText.data(), m_searchText.size());
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_XMARK "##logs_search_clear")) {
+                m_searchText.fill('\0');
+            }
+            ImGui::TextDisabled("%zu / %zu entries", visibleCount, entries.size());
+            ImGui::EndPopup();
+        }
+
+        ImGui::SameLine();
+
+        const bool filterButtonActive = timeFiltering || levelFiltering;
+        if (filterButtonActive) {
             ImGui::PushStyleColor(ImGuiCol_Text, sem.info);
         }
         if (ImGui::Button(ICON_FA_FILTER "##logs_filter")) {
             ImGui::OpenPopup("##logs_filter_popup");
         }
-        if (filtering) {
+        if (filterButtonActive) {
             ImGui::PopStyleColor();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filter entries by time");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Filter entries by time and level");
 
         if (filtering) {
             ImGui::SameLine();
-            const char* chipText = "custom range";
-            switch (m_preset) {
-                case logs::TimePreset::Last5Min:    chipText = "last 5 min"; break;
-                case logs::TimePreset::Last15Min:   chipText = "last 15 min"; break;
-                case logs::TimePreset::LastHour:    chipText = "last hour"; break;
-                case logs::TimePreset::Last24Hours: chipText = "last 24 h"; break;
-                default: break;
+            std::string chip;
+            if (timeFiltering) {
+                switch (m_preset) {
+                    case logs::TimePreset::Last5Min:    chip = "last 5 min"; break;
+                    case logs::TimePreset::Last15Min:   chip = "last 15 min"; break;
+                    case logs::TimePreset::LastHour:    chip = "last hour"; break;
+                    case logs::TimePreset::Last24Hours: chip = "last 24 h"; break;
+                    default:                            chip = "custom range"; break;
+                }
             }
-            ImGui::TextDisabled("%s · %zu / %zu", chipText, visibleCount, entries.size());
+            if (levelFiltering) {
+                if (!chip.empty()) {
+                    chip += " · ";
+                }
+                const int enabled = static_cast<int>(m_showApp) + static_cast<int>(m_showDde) +
+                                    static_cast<int>(m_showGui) + static_cast<int>(m_showService) +
+                                    static_cast<int>(m_showOther);
+                chip += std::format("levels {}/5", enabled);
+            }
+            if (searchActive) {
+                if (!chip.empty()) {
+                    chip += " · ";
+                }
+                chip += std::format("\"{}\"", std::string(search));
+            }
+            ImGui::TextDisabled("%s · %zu / %zu", chip.c_str(), visibleCount, entries.size());
         }
 
         ImGui::SameLine();
@@ -169,7 +234,8 @@ namespace gui {
             "Ctrl+Click - add or remove a line\n"
             "Shift+Click - select a range\n"
             "Ctrl+C - copy the selection\n"
-            "Right-click - copy menu");
+            "Right-click - copy menu\n\n"
+            "Row colors: DDE - blue, GUI/service - muted, error/timeout - red.");
 
         if (ImGui::BeginPopup("##logs_filter_popup")) {
             const float labelW = ImGui::CalcTextSize("From").x +
@@ -218,6 +284,19 @@ namespace gui {
             ImGui::SameLine();
             presetButton("24 h", logs::TimePreset::Last24Hours);
 
+            ImGui::Spacing();
+            ImGui::TextUnformatted("Levels");
+            ImGui::SameLine();
+            ImGui::Checkbox("APP", &m_showApp);
+            ImGui::SameLine();
+            ImGui::Checkbox("DDE", &m_showDde);
+            ImGui::SameLine();
+            ImGui::Checkbox("GUI", &m_showGui);
+            ImGui::SameLine();
+            ImGui::Checkbox("Services", &m_showService);
+            ImGui::SameLine();
+            ImGui::Checkbox("Other", &m_showOther);
+
             if (!m_filterError.empty()) {
                 ImGui::TextColored(sem.danger, "%s", m_filterError.c_str());
             }
@@ -255,6 +334,8 @@ namespace gui {
                 m_filterError.clear();
                 m_fromText.fill('\0');
                 m_toText.fill('\0');
+                m_showApp = m_showDde = m_showGui = m_showService = m_showOther = true;
+                m_searchText.fill('\0');
                 m_selected.clear();
                 m_hasSelectionAnchor = false;
                 ImGui::CloseCurrentPopup();
@@ -323,9 +404,20 @@ namespace gui {
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             const float textY = rowMin.y +
                 (rowMax.y - rowMin.y - ImGui::GetTextLineHeight()) * 0.5f;
+            ImU32 textColor = ImGui::GetColorU32(ImGuiCol_Text);
+            if (logs::looksLikeProblem(entries[index])) {
+                textColor = ImGui::GetColorU32(sem.danger);
+            } else {
+                switch (m_cache[index].level) {
+                    case logs::LogLevel::Dde:     textColor = ImGui::GetColorU32(sem.info); break;
+                    case logs::LogLevel::Gui:
+                    case logs::LogLevel::Service: textColor = ImGui::GetColorU32(sem.muted); break;
+                    default: break;
+                }
+            }
             drawList->PushClipRect(rowMin, rowMax, true);
             drawList->AddText(ImVec2(rowMin.x + ImGui::GetStyle().FramePadding.x, textY),
-                              ImGui::GetColorU32(ImGuiCol_Text), entries[index].c_str());
+                              textColor, entries[index].c_str());
             drawList->PopClipRect();
 
             if (clicked) {
@@ -374,6 +466,8 @@ namespace gui {
                     m_customTo.reset();
                     m_fromText.fill('\0');
                     m_toText.fill('\0');
+                    m_showApp = m_showDde = m_showGui = m_showService = m_showOther = true;
+                    m_searchText.fill('\0');
                     clearSelection();
                 }
             }
