@@ -240,7 +240,7 @@ namespace gui {
             "Shift+Click - select a range\n"
             "Ctrl+C - copy the selection\n"
             "Right-click - copy menu\n\n"
-            "Row colors: DDE - blue, GUI/service - muted, error/timeout - red.");
+            "Colors: green - completed actions, red - errors/timeouts.");
 
         if (ImGui::BeginPopup("##logs_filter_popup")) {
             const float labelW = ImGui::CalcTextSize("From").x +
@@ -412,13 +412,8 @@ namespace gui {
             ImU32 textColor = ImGui::GetColorU32(ImGuiCol_Text);
             if (logs::looksLikeProblem(entries[index])) {
                 textColor = ImGui::GetColorU32(sem.danger);
-            } else {
-                switch (m_cache[index].level) {
-                    case logs::LogLevel::Dde:     textColor = ImGui::GetColorU32(sem.info); break;
-                    case logs::LogLevel::Gui:
-                    case logs::LogLevel::Service: textColor = ImGui::GetColorU32(sem.muted); break;
-                    default: break;
-                }
+            } else if (logs::looksLikeSuccess(entries[index])) {
+                textColor = ImGui::GetColorU32(sem.success);
             }
             drawList->PushClipRect(rowMin, rowMax, true);
             drawList->AddText(ImVec2(rowMin.x + ImGui::GetStyle().FramePadding.x, textY),

@@ -31,5 +31,25 @@ TEST(LogFilter, ProblemWordsAreDetected) {
     EXPECT_TRUE(gui::logs::looksLikeProblem("[DDE] Request failed: timeout"));
     EXPECT_TRUE(gui::logs::looksLikeProblem("[GUI] ERROR while saving"));
     EXPECT_TRUE(gui::logs::looksLikeProblem("[APP] Task cancelled"));
+    EXPECT_TRUE(gui::logs::looksLikeProblem("[DDE] request timeout after 1000 ms"));
     EXPECT_FALSE(gui::logs::looksLikeProblem("[DDE] Sent request #73"));
+}
+
+TEST(LogFilter, KeyValueParametersAreNotProblems) {
+    // Regression: timeout=2000ms is a request parameter, not a failure.
+    EXPECT_FALSE(gui::logs::looksLikeProblem(
+        "[05.11.2026 - 18:39:17] [DDE] Submitted request #6: 'GetWave,0' "
+        "(svc=InitialDataLoad, timeout=2000ms, retries=1)"));
+    EXPECT_FALSE(gui::logs::looksLikeProblem("[APP] errorCode=0"));
+    EXPECT_FALSE(gui::logs::looksLikeProblem("[APP] cancelPendingRequests: 0"));
+}
+
+TEST(LogFilter, SuccessWordsAreDetected) {
+    EXPECT_TRUE(gui::logs::looksLikeSuccess("[APP] Data load completed: 1 fields"));
+    EXPECT_TRUE(gui::logs::looksLikeSuccess("[DDE] Connected slot 0: 'LENS.ZMX'"));
+    EXPECT_TRUE(gui::logs::looksLikeSuccess("[GUI] Settings saved"));
+    EXPECT_TRUE(gui::logs::looksLikeSuccess("[APP] Main loop started"));
+    EXPECT_FALSE(gui::logs::looksLikeSuccess("[DDE] Sent request #73"));
+    // "Disconnected" must not be read as "connected": word start is required.
+    EXPECT_FALSE(gui::logs::looksLikeSuccess("[GUI] Disconnected from Zemax"));
 }

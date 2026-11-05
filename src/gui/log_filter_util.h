@@ -19,4 +19,9 @@ namespace gui::logs {
     /// True for lines worth highlighting: error/failed/timeout/cancel words.
     bool looksLikeProblem(std::string_view line);
 
+    /// True for lines that report a completed action (completed, connected,
+    /// saved, ready, ...). Check the problem words first: a failed line may
+    /// still contain a success word ("failed to load").
+    bool looksLikeSuccess(std::string_view line);
+
 }
