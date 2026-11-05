@@ -176,8 +176,13 @@ namespace gui {
             ImGui::InputTextWithHint("##logs_search_text", "Search log entries...",
                                      m_searchText.data(), m_searchText.size());
             ImGui::SameLine();
-            if (ImGui::Button(ICON_FA_XMARK "##logs_search_clear")) {
+            ImGui::BeginDisabled(m_searchText[0] == '\0');
+            if (ImGui::Button(ICON_FA_XMARK " Clear")) {
                 m_searchText.fill('\0');
+            }
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                ImGui::SetTooltip("Clear the search query");
             }
             ImGui::TextDisabled("%zu / %zu entries", visibleCount, entries.size());
             ImGui::EndPopup();
