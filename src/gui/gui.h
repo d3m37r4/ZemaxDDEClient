@@ -78,7 +78,7 @@ namespace gui {
             UpdateChecker* getUpdateChecker() const noexcept { return m_updateChecker.get(); }
 
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
-            void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
+            void setWindowManager(DockableWindowsManager* wndMgr);
             DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }

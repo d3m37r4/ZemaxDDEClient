@@ -11,8 +11,10 @@
 #include "gui/menu_bar_controller.h"
 #include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
+#include "gui/layout_presets.h"
 #include "gui/shortcuts.h"
 #include "gui/notifications.h"
+#include "app/config_path.h"
 #include "dde/dde_connection_manager.h"
 #include "dde/utils.h"
 #include "windows_dockable/dde_status.h"
@@ -374,6 +376,32 @@ void GuiManager::render() {
 #endif
 
     m_graphics.endFrame(isAnyModalOpen());
+}
+
+void GuiManager::setWindowManager(DockableWindowsManager* wndMgr) {
+    m_pWndMgr = wndMgr;
+    if (!m_preferencesDialog || !wndMgr) {
+        return;
+    }
+    const std::string layoutPath = app::getDefaultLayoutPath();
+    m_preferencesDialog->setLayoutActions(
+        [this, layoutPath]() {
+            if (!m_pWndMgr) {
+                return;
+            }
+            if (gui::layout::saveDefaultLayout(layoutPath, *m_pWndMgr)) {
+                notify::success("Default layout saved");
+            } else {
+                notify::error("Failed to save the default layout");
+            }
+        },
+        [this]() {
+            if (!m_pWndMgr) {
+                return;
+            }
+            gui::layout::resetToFactoryLayout(*m_pWndMgr);
+            notify::info("Layout reset to factory defaults");
+        });
 }
 
 void GuiManager::updateDpiStyle(float dpiScale) {

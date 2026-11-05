@@ -74,8 +74,15 @@ void DockableWindowsManager::RenderAll() {
 void DockableWindowsManager::LoadState() {
     std::ifstream in(app::getWindowStatePath());
     if (!in) return;
+    std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    LoadStateFromString(data);
+}
+
+void DockableWindowsManager::LoadStateFromString(std::string_view json) {
+    if (json.empty()) return;
     try {
-        nlohmann::json j; in >> j;
+        const nlohmann::json j = nlohmann::json::parse(json.begin(), json.end());
+        if (!j.is_object()) return;
         for (auto& el : j.items()) {
             const std::string& name = el.key();
             bool visible = el.value().get<bool>();
@@ -91,12 +98,27 @@ void DockableWindowsManager::LoadState() {
 }
 
 void DockableWindowsManager::SaveState() {
+    std::ofstream out(app::getWindowStatePath());
+    out << SaveStateToString();
+}
+
+std::string DockableWindowsManager::SaveStateToString() const {
     nlohmann::json j;
     for (const auto& w : windows_) {
         j[w.name] = w.isVisible;
     }
-    std::ofstream out(app::getWindowStatePath());
-    out << j.dump(4);
+    return j.dump(4);
+}
+
+void DockableWindowsManager::ResetVisibilityToDefaults() {
+    for (auto& w : windows_) {
+        for (const auto& def : DockableWindows) {
+            if (def.id == w.id) {
+                w.isVisible = def.isVisible;
+                break;
+            }
+        }
+    }
 }
 
 const char* DockableWindowsManager::GetName(WindowID id) const {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -37,6 +38,11 @@ namespace gui {
             void setActiveLogPath(const std::string& path) { m_activeLogPath = path; }
             void setLogger(Logger* logger) noexcept { m_logger = logger; }
             void setThemeManager(ThemeManager* tm) noexcept;
+
+            /// Layout actions owned by GuiManager (it holds the window manager):
+            /// save the current layout as the default and reset to factory.
+            void setLayoutActions(std::function<void()> saveDefault,
+                                  std::function<void()> resetToFactory);
 
         private:
             enum class Section : int {
@@ -93,6 +99,9 @@ namespace gui {
             std::string m_activeLogPath;
             Logger* m_logger = nullptr;
             ThemeManager* m_themeManager = nullptr;
+            std::function<void()> m_onSaveLayout;
+            std::function<void()> m_onResetLayout;
+            bool m_confirmResetLayout = false;
     };
 
 } // namespace gui

@@ -54,6 +54,7 @@ namespace gui {
     inline constexpr const char* UPDATE_POPUP_NAME       = "Check for Updates";
     inline constexpr const char* PREFERENCES_POPUP_NAME  = "Preferences";
     inline constexpr const char* RESET_CONFIRM_POPUP_NAME = "Reset Preferences?";
+    inline constexpr const char* LAYOUT_RESET_POPUP_NAME = "Reset layout?";
     inline constexpr const char* CONNECT_DDE_POPUP_NAME  = "Connect to Zemax \xe2\x80\x93 select a window";
 
     // GitHub links (used by About dialog)

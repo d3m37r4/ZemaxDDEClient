@@ -46,11 +46,16 @@ namespace gui {
 
     void PreferencesDialog::close() noexcept {
         m_open = false;
+        m_confirmResetLayout = false;
         m_resetConfirmDialog->close();
         m_cleanLogsConfirmDialog->close();
     }
 
     bool PreferencesDialog::closeTopmost() {
+        if (m_confirmResetLayout) {
+            m_confirmResetLayout = false;
+            return true;
+        }
         if (m_resetConfirmDialog->isOpen()) {
             m_resetConfirmDialog->close();
             return true;
@@ -61,6 +66,12 @@ namespace gui {
         }
         close();
         return true;
+    }
+
+    void PreferencesDialog::setLayoutActions(std::function<void()> saveDefault,
+                                             std::function<void()> resetToFactory) {
+        m_onSaveLayout = std::move(saveDefault);
+        m_onResetLayout = std::move(resetToFactory);
     }
 
     void PreferencesDialog::render() {
@@ -128,6 +139,44 @@ namespace gui {
         m_resetConfirmDialog->render();
         m_cleanLogsConfirmDialog->render();
 
+        // Layout factory reset confirmation (nested inside Preferences).
+        if (m_confirmResetLayout && !ImGui::IsPopupOpen(LAYOUT_RESET_POPUP_NAME)) {
+            ImGui::OpenPopup(LAYOUT_RESET_POPUP_NAME);
+        }
+        ImGuiUtils::CenterNextWindow();
+        ImGuiUtils::SetDpiScaledWindowConstraints(RESET_CONFIRM_POPUP_MIN_SIZE.x,
+                                                  RESET_CONFIRM_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(RESET_CONFIRM_POPUP_DEFAULT_SIZE);
+        if (ImGuiUtils::BeginPopupModalEx(LAYOUT_RESET_POPUP_NAME, nullptr,
+                                          ImGuiWindowFlags_NoCollapse)) {
+            ImGui::BeginChild("##reset_layout_body", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
+                              ImGuiChildFlags_Borders);
+            ImGui::TextUnformatted("This resets the window layout to the factory default.");
+            ImGui::TextUnformatted("Your saved default layout (if any) is kept.");
+            ImGui::EndChild();
+
+            const float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float resetBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
+            if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
+                m_confirmResetLayout = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
+                m_confirmResetLayout = false;
+                if (m_onResetLayout) {
+                    m_onResetLayout();
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        } else if (m_confirmResetLayout && !ImGui::IsPopupOpen(LAYOUT_RESET_POPUP_NAME)) {
+            // Closed via Esc: drop the pending request so it does not reopen.
+            m_confirmResetLayout = false;
+        }
+
         ImGui::EndPopup();
     }
 
@@ -180,6 +229,33 @@ namespace gui {
         ImGui::TextDisabled(
             "The card appears only at application start. Closing it hides it for the rest "
             "of the session; it is not listed in the View menu.");
+
+        ImGuiUtils::SpacedSeparator(0.5f, 0.5f);
+        ImGuiUtils::SectionHeader("Default layout",
+                                  "Save the current window arrangement and reuse it later.");
+        ImGui::Checkbox("Apply the saved default layout on startup",
+                        &m_working.general.applyDefaultLayoutOnStartup);
+        ImGui::SameLine();
+        ImGuiUtils::HelpMarker(
+            "When enabled, the application starts with your saved layout instead of "
+            "restoring the previous session's layout.");
+
+        ImGui::BeginDisabled(!m_onSaveLayout);
+        if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save current layout as default")) {
+            m_onSaveLayout();
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+
+        ImGui::BeginDisabled(!m_onResetLayout);
+        if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset layout to factory...")) {
+            m_confirmResetLayout = true;
+        }
+        ImGui::EndDisabled();
+        ImGui::TextDisabled(
+            "Reset restores the factory docking and panel visibility; the saved default "
+            "layout is kept.");
     }
 
     void PreferencesDialog::renderSectionAppearance() {

@@ -6,6 +6,7 @@ namespace app {
     const char* getImguiIniPath();
     const char* getWindowStatePath();
     const char* getChromeStatePath();
+    const char* getDefaultLayoutPath();
     const char* getSettingsJsonPath();
     const char* getLogFolderPath();
     std::string getLogFolderSize();

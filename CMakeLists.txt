@@ -112,6 +112,8 @@ set(SOURCES
     ${SRC_DIR}/gui/plot_image_export_util.cpp
     ${SRC_DIR}/gui/log_time_filter.cpp
     ${SRC_DIR}/gui/log_filter_util.cpp
+    ${SRC_DIR}/gui/layout_snapshot.cpp
+    ${SRC_DIR}/gui/layout_presets.cpp
     ${SRC_DIR}/app/services/surface_profile_service.cpp
     ${SRC_DIR}/app/services/surface_map_service.cpp
     ${SRC_DIR}/gui/surface_profile_service.cpp

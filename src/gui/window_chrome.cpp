@@ -613,14 +613,12 @@ void setPersistentKey(const void* token, std::string_view key) {
     pending.erase(loaded);
 }
 
-void loadState() {
-    std::ifstream in(app::getChromeStatePath());
-    if (!in) {
+void loadStateFromString(std::string_view json) {
+    if (json.empty()) {
         return;
     }
     try {
-        nlohmann::json j;
-        in >> j;
+        const nlohmann::json j = nlohmann::json::parse(json.begin(), json.end());
         if (!j.is_object()) {
             return;
         }
@@ -629,17 +627,26 @@ void loadState() {
             pending[el.key()] = stateFromJson(el.value());
         }
     } catch (const std::exception&) {
-        // Corrupt or foreign file: default to session-only chrome state
+        // Corrupt or foreign data: default to session-only chrome state
         // instead of failing startup.
     }
 }
 
-void saveState() {
-    const auto& keyFor = persistentKeys();
-    if (keyFor.empty()) {
+void loadState() {
+    std::ifstream in(app::getChromeStatePath());
+    if (!in) {
         return;
     }
-    nlohmann::json j;
+    std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    loadStateFromString(data);
+}
+
+std::string saveStateToString() {
+    const auto& keyFor = persistentKeys();
+    nlohmann::json j = nlohmann::json::object();
+    if (keyFor.empty()) {
+        return j.dump(4);
+    }
     const auto& reg = registry();
     for (const auto& [token, key] : keyFor) {
         auto st = reg.find(token);
@@ -647,8 +654,22 @@ void saveState() {
             j[key] = stateToJson(st->second);
         }
     }
+    return j.dump(4);
+}
+
+void saveState() {
+    if (persistentKeys().empty()) {
+        return;
+    }
     std::ofstream out(app::getChromeStatePath());
-    out << j.dump(4);
+    out << saveStateToString();
+}
+
+void resetState() {
+    registry().clear();
+    pendingLoaded().clear();
+    shelfItems().clear();
+    storedShelfHeight() = 0.0f;
 }
 
 } // namespace gui::chrome

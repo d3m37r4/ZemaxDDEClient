@@ -55,6 +55,13 @@ class DockableWindowsManager {
         void LoadState();
         void SaveState();
 
+        /// In-memory variants used by the layout snapshot (no file access).
+        [[nodiscard]] std::string SaveStateToString() const;
+        void LoadStateFromString(std::string_view json);
+
+        /// Puts every window back to the visibility from the registry table.
+        void ResetVisibilityToDefaults();
+
         const char* GetName(WindowID id) const;
 
         void RegisterDockableWindows(gui::GuiManager* guiMgr);

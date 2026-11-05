@@ -76,11 +76,20 @@ void setPersistentKey(const void* token, std::string_view key);
 /// Reads chrome_state.json into a pending map that setPersistentKey merges
 /// from. Call once early at startup; keys stored by saveState() must match.
 void loadState();
+/// In-memory variant for the layout snapshot.
+void loadStateFromString(std::string_view json);
 
 /// Serializes the state of every token that has a persistent key to
 /// chrome_state.json. Call once at shutdown, the registry still holds the
 /// last-frame states then.
 void saveState();
+/// In-memory variant for the layout snapshot.
+[[nodiscard]] std::string saveStateToString();
+
+/// Drops every tracked chrome state (minimized tiles, floating rects, pending
+/// loaded data) so windows fall back to their defaults - used by the layout
+/// factory reset.
+void resetState();
 
 /// Height of the shelf strip (0 when no window is minimized). Prunes shelf
 /// entries for windows that stopped minimizing over small frame gaps, so

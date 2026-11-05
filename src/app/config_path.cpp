@@ -10,11 +10,13 @@ namespace {
     inline constexpr const char* IMGUI_INI_FILENAME = "imgui.ini";
     inline constexpr const char* WINDOW_STATE_FILENAME = "windows.json";
     inline constexpr const char* CHROME_STATE_FILENAME = "chrome_state.json";
+    inline constexpr const char* DEFAULT_LAYOUT_FILENAME = "default_layout.json";
     inline constexpr const char* SETTINGS_JSON_FILENAME = "settings.json";
 
     std::string imguiIniPath;
     std::string windowStatePath;
     std::string chromeStatePath;
+    std::string defaultLayoutPath;
     std::string settingsJsonPath;
     std::string logFolderPath;
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
@@ -70,6 +72,7 @@ namespace app {
         imguiIniPath.clear();
         windowStatePath.clear();
         chromeStatePath.clear();
+        defaultLayoutPath.clear();
         settingsJsonPath.clear();
         logFolderPath.clear();
     }
@@ -94,6 +97,13 @@ namespace app {
             chromeStatePath = resolvePath(CHROME_STATE_FILENAME);
         }
         return chromeStatePath.c_str();
+    }
+
+    const char* getDefaultLayoutPath() {
+        if (defaultLayoutPath.empty()) {
+            defaultLayoutPath = resolvePath(DEFAULT_LAYOUT_FILENAME);
+        }
+        return defaultLayoutPath.c_str();
     }
 
     const char* getSettingsJsonPath() {
