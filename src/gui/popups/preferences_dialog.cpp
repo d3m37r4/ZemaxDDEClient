@@ -221,12 +221,12 @@ namespace gui {
         // The flag gates full restore of the previous session's window layout
         // (panel visibility + minimized state + floating rects); when off, only
         // the dedicated "Show logs window on startup" preference is applied.
-        ImGui::TextDisabled(
+        ImGuiUtils::HintText(
             "When enabled, windows and their minimized states from the previous session "
             "are restored on the next start; when disabled, the layout starts fresh.");
 
         ImGui::Checkbox("Show Welcome window on startup", &m_working.general.showWelcomeOnStartup);
-        ImGui::TextDisabled(
+        ImGuiUtils::HintText(
             "The card appears only at application start. Closing it hides it for the rest "
             "of the session; it is not listed in the View menu.");
 
@@ -253,7 +253,7 @@ namespace gui {
             m_confirmResetLayout = true;
         }
         ImGui::EndDisabled();
-        ImGui::TextDisabled(
+        ImGuiUtils::HintText(
             "Reset restores the factory docking and panel visibility; the saved default "
             "layout is kept.");
     }

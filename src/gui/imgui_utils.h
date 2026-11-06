@@ -506,9 +506,18 @@ namespace ImGuiUtils {
     inline void SectionHeader(const char* title, const char* description = nullptr) {
         ImGui::SeparatorText(title);
         if (description) {
-            ImGui::TextDisabled(description);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextWrapped("%s", description);
+            ImGui::PopStyleColor();
             ImGui::Spacing();
         }
+    }
+
+    /// Disabled hint paragraph that wraps at the current content width.
+    inline void HintText(const char* text) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("%s", text);
+        ImGui::PopStyleColor();
     }
 
     /// Pushes a danger-tinted FrameBg while the field holds a value that was

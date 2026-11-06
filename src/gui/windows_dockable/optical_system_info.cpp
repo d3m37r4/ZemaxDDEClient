@@ -8,7 +8,7 @@
 namespace gui {
     void GuiManager::renderOpticalSystemInfo() {
         if (!isDDEInitialized()) {
-            ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+            ImGui::TextWrapped("%s", "To get data, initialize a DDE connection with Zemax server.");
             return;
         }
 

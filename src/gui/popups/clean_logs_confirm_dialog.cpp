@@ -37,7 +37,7 @@ namespace gui {
         ImGui::BeginChild("##clean_logs_confirm_body",
                           ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
                           ImGuiChildFlags_Borders);
-        ImGui::TextUnformatted("This will delete all log files except the currently active log.");
+        ImGui::TextWrapped("%s", "This will delete all log files except the currently active log.");
         ImGui::EndChild();
 
         float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
