@@ -162,8 +162,10 @@ ThemeData ThemeData::CreateThemeLight() {
     p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
     // One radius for the whole UI: windows, popups, cards, buttons, frames,
-    // tabs, slider grabs and the scrollbar thumb. The thumb is narrow, so the
-    // renderer clamps its radius to half its width and it reads as a pill.
+    // tabs, slider grabs and the scrollbar thumb. Floating viewport windows
+    // opt into DWMWCP_ROUNDSMALL, so the OS clip matches this radius DPI-
+    // scaled. The thumb is narrow, so the renderer clamps its radius to
+    // half its width and it reads as a pill.
     t.geometry.windowRounding    = 4.0f;
     t.geometry.childRounding     = 4.0f;
     t.geometry.popupRounding     = 4.0f;
@@ -320,8 +322,10 @@ ThemeData ThemeData::CreateThemeDark() {
     p3[ImPlot3DCol_AxisBgActive]  = t.imguiColors[ImGuiCol_Button];
 
     // One radius for the whole UI: windows, popups, cards, buttons, frames,
-    // tabs, slider grabs and the scrollbar thumb. The thumb is narrow, so the
-    // renderer clamps its radius to half its width and it reads as a pill.
+    // tabs, slider grabs and the scrollbar thumb. Floating viewport windows
+    // opt into DWMWCP_ROUNDSMALL, so the OS clip matches this radius DPI-
+    // scaled. The thumb is narrow, so the renderer clamps its radius to
+    // half its width and it reads as a pill.
     t.geometry.windowRounding    = 4.0f;
     t.geometry.childRounding     = 4.0f;
     t.geometry.popupRounding     = 4.0f;
@@ -334,7 +338,6 @@ ThemeData ThemeData::CreateThemeDark() {
     return t;
 }
 
-// ThemeManager methods
 void ThemeManager::registerTheme(const ThemeData& theme) {
     m_themes.push_back(theme);
 }
@@ -394,19 +397,16 @@ const SemanticPalette& ThemeManager::semantic() const {
 void ThemeManager::applyThemeData(const ThemeData& data) {
     applyGeometryData(data.geometry);
 
-    // ImGui colors
     ImGuiStyle& style = ImGui::GetStyle();
     for (int i = 0; i < ImGuiCol_COUNT; ++i) {
         style.Colors[i] = data.imguiColors[i];
     }
 
-    // ImPlot colors
     ImPlotStyle& plotStyle = ImPlot::GetStyle();
     for (int i = 0; i < ImPlotCol_COUNT; ++i) {
         plotStyle.Colors[i] = data.implotColors[i];
     }
 
-    // ImPlot3D colors
     ImPlot3DStyle& plot3dStyle = ImPlot3D::GetStyle();
     for (int i = 0; i < ImPlot3DCol_COUNT; ++i) {
         plot3dStyle.Colors[i] = data.implot3dColors[i];

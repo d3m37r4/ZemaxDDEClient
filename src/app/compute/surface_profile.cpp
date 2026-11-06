@@ -73,6 +73,12 @@ namespace app::compute {
         m_result = {};
         m_result.id = surface;
         m_result.sagDataPoints.clear();
+        // System metadata travels with the result: the service replaces the
+        // whole SurfaceData on completion, so anything seeded only by the UI
+        // would be lost.
+        const auto& system = client->getOpticalSystemData();
+        m_result.fileName = system.fileName;
+        m_result.units = system.units;
         m_surfaceRequestsRemaining = 2;
 
         int estimatedRequests = sampling + 2;

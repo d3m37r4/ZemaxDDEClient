@@ -11,7 +11,12 @@
 #include "gui/menu_bar_controller.h"
 #include "gui/imgui_utils.h"
 #include "gui/dockable_windows_manager.h"
+#include "gui/layout_presets.h"
+#include "gui/shortcuts.h"
+#include "gui/notifications.h"
+#include "app/config_path.h"
 #include "dde/dde_connection_manager.h"
+#include "dde/utils.h"
 #include "windows_dockable/dde_status.h"
 #include "logger/logger.h"
 
@@ -122,7 +127,6 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_profileService->setSettingsManager(m_settingsManager.get());
     m_irregularityMapService->setSettingsManager(m_settingsManager.get());
 
-    // Initialize 3D map colormaps from saved settings
     const auto& mapSettings = m_settingsManager->current().map;
     m_irregularityMapService->m_windowState.selectedColormapSurface = mapSettings.defaultColormapSurface;
     m_irregularityMapService->m_windowState.selectedColormapDeviation = mapSettings.defaultColormapDeviation;
@@ -145,17 +149,14 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
 }
 
 void GuiManager::render() {
-    // Refresh active DDE client in case connection changed via DDE Status UI
     m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
     m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
 
-    // Process DDE timeouts and check connection health
     if (m_ddeConnectionManager) {
         m_ddeConnectionManager->processAllTimeouts();
         m_ddeConnectionManager->checkAllConnectionHealth();
     }
 
-    // Check system theme change every 60 frames (once per second at 60 FPS)
     constexpr unsigned int kThemeCheckInterval = 60;
     if (++m_frameCount % kThemeCheckInterval == 0) {
         m_settingsManager->checkAndApplySystemTheme();
@@ -168,15 +169,24 @@ void GuiManager::render() {
 
     float navbarHeight = ImGui::GetFrameHeight();
     float statusBarHeight = m_uiOpMonitor.computeStatusBarHeight();
-    ImGui::SetNextWindowPos(ImVec2(0.0f, navbarHeight));
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(mainViewport->Pos.x, mainViewport->Pos.y + navbarHeight));
     ImGui::SetNextWindowSize(ImVec2(
-        ImGui::GetIO().DisplaySize.x,
-        ImGui::GetIO().DisplaySize.y - navbarHeight - statusBarHeight
+        mainViewport->Size.x,
+        mainViewport->Size.y - navbarHeight - statusBarHeight
     ));
+    // Under multi-viewport ImGui window coords are desktop coords, so an
+    // anchoring SetNextWindowPos(0, ...) would spawn this host window as its
+    // own platform window (seen as a second entry in the task bar). Pin it
+    // to the main viewport so it can never own one.
+    ImGui::SetNextWindowViewport(mainViewport->ID);
     // Square corners: the dockspace background drawn with the theme's
     // windowRounding shows rounded corners against the window edges even
-    // when every dockable panel is hidden.
+    // when every dockable panel is hidden. The theme window padding is
+    // applied explicitly so the host keeps it regardless of any style
+    // stack pushed by outer callers.
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().WindowPadding);
     ImGui::Begin("MainDockSpace", nullptr,
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoCollapse |
@@ -188,7 +198,7 @@ void GuiManager::render() {
     ImGuiID dockSpaceId = ImGui::GetID("MainDockSpace");
     ImGui::DockSpace(dockSpaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_NoCloseButton);
     ImGui::End();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
 
     if (m_pWndMgr) {
         m_pWndMgr->RenderAll();
@@ -203,11 +213,9 @@ void GuiManager::render() {
 
         if (m_profileService->m_showTolerancedProfileWindow) {
             if (tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Toleranced Surface Profile ({}°, {} pts){}",
                     tolSurface.angle, tolSurface.sampling, slotTag(tolSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showTolerancedProfileWindow, "plot:ShowTolerancedProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Toleranced", tolSurface, ImVec2(-1, -1));
                 });
@@ -216,11 +224,9 @@ void GuiManager::render() {
 
         if (m_profileService->m_showNominalProfileWindow) {
             if (nomSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Nominal Surface Profile ({}°, {} pts){}",
                     nomSurface.angle, nomSurface.sampling, slotTag(nomSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showNominalProfileWindow, "plot:ShowNominalProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderSurfaceProfilePlot("Nominal", nomSurface, ImVec2(-1, -1));
                 });
@@ -229,11 +235,9 @@ void GuiManager::render() {
 
         if (m_profileService->m_showComparisonProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Surface Profile Comparison{}",
                     slotTag(nomSurface.sourceSlot, tolSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showComparisonProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showComparisonProfileWindow, "plot:ShowComparisonProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileComparisonPlot("##DetachedProfiles", nomSurface, tolSurface, ImVec2(-1, -1));
                 });
@@ -242,11 +246,9 @@ void GuiManager::render() {
 
         if (m_profileService->m_showDeviationProfileWindow) {
             if (nomSurface.isValid() && tolSurface.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Surface Profile Irregularity (PV){}",
                     slotTag(nomSurface.sourceSlot, tolSurface.sourceSlot));
-                renderToolbarWindow(title.c_str(), &m_profileService->m_showDeviationProfileWindow, [&]() {
+                renderToolbarWindow(title.c_str(), &m_profileService->m_showDeviationProfileWindow, "plot:ShowDeviationProfileWindow", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##DetachedDeviation", nomSurface, tolSurface, ImVec2(-1, -1));
                 });
@@ -259,11 +261,9 @@ void GuiManager::render() {
 
         if (mapService->m_showTolerancedSurfaceMap) {
             if (mapService->hasData()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Surface Irregularity Map 3D{}",
                     slotTag(mapService->getProfiles().front().sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showTolerancedSurfaceMap, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showTolerancedSurfaceMap, "plot:ShowTolerancedSurfaceMap", [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapSurface,
                         &mapService->m_windowState.highlightWorstSurface,
@@ -277,12 +277,10 @@ void GuiManager::render() {
 
         if (mapService->m_showDeviationSurfaceMap) {
             if (mapService->hasData() && mapService->m_nominalSurfaceData.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Surface Irregularity Map 3D Deviation{}",
                     slotTag(mapService->m_nominalSurfaceData.sourceSlot,
                         mapService->getProfiles().front().sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showDeviationSurfaceMap, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showDeviationSurfaceMap, "plot:ShowDeviationSurfaceMap", [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapDeviation,
                         &mapService->m_windowState.highlightWorstDeviation,
@@ -296,11 +294,9 @@ void GuiManager::render() {
 
         if (mapService->m_showWorstSectionProfile) {
             if (mapService->m_worstProfileData.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Worst Section Profile{}",
                     slotTag(mapService->m_worstProfileData.sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionProfile, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionProfile, "plot:ShowWorstSectionProfile", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     auto& wp = mapService->m_worstProfileData;
                     std::string title = std::format("Worst Section ({}°, {} pts)", wp.angle, wp.sampling);
@@ -314,12 +310,10 @@ void GuiManager::render() {
         if (mapService->m_showWorstSectionDeviation) {
             if (mapService->m_worstProfileData.isValid()
                 && mapService->m_nominalSurfaceData.isValid()) {
-                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
-                ImGuiUtils::SetDpiScaledWindowConstraints(DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
                 std::string title = std::format("Worst Section Deviation{}",
                     slotTag(mapService->m_nominalSurfaceData.sourceSlot,
                         mapService->m_worstProfileData.sourceSlot));
-                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionDeviation, [&]() {
+                renderToolbarWindow(title.c_str(), &mapService->m_showWorstSectionDeviation, "plot:ShowWorstSectionDeviation", [&]() {
                     m_profileService->renderToolbar(profileUnits, false);
                     m_profileService->renderProfileDeviationPlot("##WorstDeviation",
                         mapService->m_nominalSurfaceData,
@@ -339,6 +333,40 @@ void GuiManager::render() {
 
     m_uiOpMonitor.renderGlobalStatusBar();
 
+    // DDE transitions: one toast per state change; the log stays the detailed
+    // source of truth. The active slot's window title makes the toast concrete.
+    static bool wasConnected = false;
+    static bool wasConnectionLost = false;
+    const bool connected = isDDEInitialized();
+    if (connected != wasConnected) {
+        wasConnected = connected;
+        if (connected) {
+            std::string title;
+            if (m_ddeConnectionManager) {
+                const int slot = m_ddeConnectionManager->getActiveIndex();
+                if (const DDEConnection* conn = m_ddeConnectionManager->getConnection(slot);
+                    conn && !conn->serverTitle.empty()) {
+                    title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
+                }
+            }
+            notify::success(title.empty() ? "Connected to Zemax"
+                                          : std::format("Connected to \"{}\"", title));
+        } else {
+            notify::warning("Disconnected from Zemax");
+        }
+    }
+    const bool connectionLost =
+        m_ddeConnectionManager && m_ddeConnectionManager->hasConnectionLost();
+    if (connectionLost && !wasConnectionLost) {
+        notify::error(std::format("Connection lost: {}",
+            m_ddeConnectionManager->getConnectionLostReason()));
+    }
+    wasConnectionLost = connectionLost;
+
+    // Toasts inherit the active theme (window background, rounding, border) and
+    // are drawn above every window by ImGuiNotify.
+    ImGui::RenderNotifications();
+
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
     // The Test Engine UI must be rendered inside the ImGui frame, after the
     // application UI and before ImGui::Render().
@@ -347,7 +375,33 @@ void GuiManager::render() {
     }
 #endif
 
-    m_graphics.endFrame();
+    m_graphics.endFrame(isAnyModalOpen());
+}
+
+void GuiManager::setWindowManager(DockableWindowsManager* wndMgr) {
+    m_pWndMgr = wndMgr;
+    if (!m_preferencesDialog || !wndMgr) {
+        return;
+    }
+    const std::string layoutPath = app::getDefaultLayoutPath();
+    m_preferencesDialog->setLayoutActions(
+        [this, layoutPath]() {
+            if (!m_pWndMgr) {
+                return;
+            }
+            if (gui::layout::saveDefaultLayout(layoutPath, *m_pWndMgr)) {
+                notify::success("Default layout saved");
+            } else {
+                notify::error("Failed to save the default layout");
+            }
+        },
+        [this]() {
+            if (!m_pWndMgr) {
+                return;
+            }
+            gui::layout::resetToFactoryLayout(*m_pWndMgr);
+            notify::info("Layout reset to factory defaults");
+        });
 }
 
 void GuiManager::updateDpiStyle(float dpiScale) {
@@ -491,7 +545,7 @@ void GuiManager::renderWelcomeContent() {
     }
     ImGuiUtils::PopFilledButton();
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Open the Connect dialog (Ctrl+Shift+C)");
+        ImGui::SetTooltip("%s", shortcuts::tooltipFor("dde-connect").c_str());
     }
 }
 

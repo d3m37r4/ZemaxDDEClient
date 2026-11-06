@@ -2,10 +2,35 @@
 #include "gui.h"
 #include "gui/utils.h"
 #include "gui/imgui_utils.h"
+#include "gui/window_chrome.h"
 #include "app/config_path.h"
+#include <cstdint>
 #include <fstream>
 #include <algorithm>
 #include <nlohmann/json.hpp>
+
+namespace {
+// Chrome state per panel is keyed by the WindowID value itself: the local
+// `isVisible` bool seen by the render helpers lives on the stack, its
+// address changes every frame and cannot key persistent state.
+inline const void* chromeToken(WindowID id) {
+    return reinterpret_cast<const void*>(static_cast<std::uintptr_t>(id));
+}
+
+// The same identity as a string, for the restart-persistent chrome_state.json
+// (paired with chromeToken() at every chrome call site for the same window).
+inline const char* chromePersistKey(WindowID id) {
+    switch (id) {
+        case WindowID::DDEStatus: return "panel:DDEStatus";
+        case WindowID::SystemInfo: return "panel:SystemInfo";
+        case WindowID::SurfaceProfileInspector: return "panel:SurfaceProfileInspector";
+        case WindowID::SurfaceIrregularityMap: return "panel:SurfaceIrregularityMap";
+        case WindowID::Logs: return "panel:Logs";
+        default: return nullptr;
+    }
+}
+namespace chrome = gui::chrome;
+}
 
 DockableWindowsManager::DockableWindowsManager() = default;
 DockableWindowsManager::~DockableWindowsManager() = default;
@@ -49,8 +74,15 @@ void DockableWindowsManager::RenderAll() {
 void DockableWindowsManager::LoadState() {
     std::ifstream in(app::getWindowStatePath());
     if (!in) return;
+    std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    LoadStateFromString(data);
+}
+
+void DockableWindowsManager::LoadStateFromString(std::string_view json) {
+    if (json.empty()) return;
     try {
-        nlohmann::json j; in >> j;
+        const nlohmann::json j = nlohmann::json::parse(json.begin(), json.end());
+        if (!j.is_object()) return;
         for (auto& el : j.items()) {
             const std::string& name = el.key();
             bool visible = el.value().get<bool>();
@@ -66,12 +98,27 @@ void DockableWindowsManager::LoadState() {
 }
 
 void DockableWindowsManager::SaveState() {
+    std::ofstream out(app::getWindowStatePath());
+    out << SaveStateToString();
+}
+
+std::string DockableWindowsManager::SaveStateToString() const {
     nlohmann::json j;
     for (const auto& w : windows_) {
         j[w.name] = w.isVisible;
     }
-    std::ofstream out(app::getWindowStatePath());
-    out << j.dump(4);
+    return j.dump(4);
+}
+
+void DockableWindowsManager::ResetVisibilityToDefaults() {
+    for (auto& w : windows_) {
+        for (const auto& def : DockableWindows) {
+            if (def.id == w.id) {
+                w.isVisible = def.isVisible;
+                break;
+            }
+        }
+    }
 }
 
 const char* DockableWindowsManager::GetName(WindowID id) const {
@@ -85,12 +132,20 @@ namespace {
     void RenderDDEStatusWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(
+            chromeToken(WindowID::DDEStatus), chromePersistKey(WindowID::DDEStatus));
+        // Tile x closes the panel like the View-menu toggle.
+        chrome::setCloseHandler(chromeToken(WindowID::DDEStatus),
+            [mgr] { mgr->SetVisible(WindowID::DDEStatus, false); });
+        if (chrome::minimizedAndShelved(chromeToken(WindowID::DDEStatus), mgr->GetName(WindowID::DDEStatus))) return;
         bool isVisible = mgr->IsVisible(WindowID::DDEStatus);
         const char* title = mgr->GetName(WindowID::DDEStatus);
-        ImGuiUtils::SetDpiScaledWindowConstraints(gui::DDE_STATUS_WINDOW_MIN_SIZE.x, gui::DDE_STATUS_WINDOW_MIN_SIZE.y);
+        ImGuiUtils::SetChromeWindowConstraints(gui::DDE_STATUS_WINDOW_MIN_SIZE.x, gui::DDE_STATUS_WINDOW_MIN_SIZE.y);
+        chrome::applyFrameRect(chromeToken(WindowID::DDEStatus));
         if (ImGui::Begin(title, &isVisible,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-            ImGuiUtils::ClampWindowToViewport();
+            ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(chromeToken(WindowID::DDEStatus)));
+            chrome::drawTitleBarButtons(chromeToken(WindowID::DDEStatus), &isVisible);
             if (guiMgr->getDDEStatusRenderer()) {
                 guiMgr->getDDEStatusRenderer()->render(guiMgr->getLogger());
             }
@@ -104,11 +159,18 @@ namespace {
     void RenderSystemInfoWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(
+            chromeToken(WindowID::SystemInfo), chromePersistKey(WindowID::SystemInfo));
+        chrome::setCloseHandler(chromeToken(WindowID::SystemInfo),
+            [mgr] { mgr->SetVisible(WindowID::SystemInfo, false); });
+        if (chrome::minimizedAndShelved(chromeToken(WindowID::SystemInfo), mgr->GetName(WindowID::SystemInfo))) return;
         bool isVisible = mgr->IsVisible(WindowID::SystemInfo);
         const char* title = mgr->GetName(WindowID::SystemInfo);
-        ImGuiUtils::SetDpiScaledWindowConstraints(gui::SYSTEM_INFO_WINDOW_MIN_SIZE.x, gui::SYSTEM_INFO_WINDOW_MIN_SIZE.y);
+        ImGuiUtils::SetChromeWindowConstraints(gui::OPTICAL_SYSTEM_INFO_WINDOW_MIN_SIZE.x, gui::OPTICAL_SYSTEM_INFO_WINDOW_MIN_SIZE.y);
+        chrome::applyFrameRect(chromeToken(WindowID::SystemInfo));
         if (ImGui::Begin(title, &isVisible)) {
-            ImGuiUtils::ClampWindowToViewport();
+            ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(chromeToken(WindowID::SystemInfo)));
+            chrome::drawTitleBarButtons(chromeToken(WindowID::SystemInfo), &isVisible);
             guiMgr->renderOpticalSystemInfo();
         }
         ImGui::End();
@@ -120,11 +182,18 @@ namespace {
     void RenderSurfaceProfileInspectorWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(chromeToken(WindowID::SurfaceProfileInspector),
+            chromePersistKey(WindowID::SurfaceProfileInspector));
+        chrome::setCloseHandler(chromeToken(WindowID::SurfaceProfileInspector),
+            [mgr] { mgr->SetVisible(WindowID::SurfaceProfileInspector, false); });
+        if (chrome::minimizedAndShelved(chromeToken(WindowID::SurfaceProfileInspector), mgr->GetName(WindowID::SurfaceProfileInspector))) return;
         bool isVisible = mgr->IsVisible(WindowID::SurfaceProfileInspector);
         const char* title = mgr->GetName(WindowID::SurfaceProfileInspector);
-        ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.x, gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.y);
+        ImGuiUtils::SetChromeWindowConstraints(gui::SURFACE_PROFILE_INSPECTOR_WINDOW_MIN_SIZE.x, gui::SURFACE_PROFILE_INSPECTOR_WINDOW_MIN_SIZE.y);
+        chrome::applyFrameRect(chromeToken(WindowID::SurfaceProfileInspector));
         if (ImGui::Begin(title, &isVisible)) {
-            ImGuiUtils::ClampWindowToViewport();
+            ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(chromeToken(WindowID::SurfaceProfileInspector)));
+            chrome::drawTitleBarButtons(chromeToken(WindowID::SurfaceProfileInspector), &isVisible);
             guiMgr->renderSurfaceProfileInspector();
         }
         ImGui::End();
@@ -136,11 +205,18 @@ namespace {
     void RenderSurfaceIrregularityMapWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(chromeToken(WindowID::SurfaceIrregularityMap),
+            chromePersistKey(WindowID::SurfaceIrregularityMap));
+        chrome::setCloseHandler(chromeToken(WindowID::SurfaceIrregularityMap),
+            [mgr] { mgr->SetVisible(WindowID::SurfaceIrregularityMap, false); });
+        if (chrome::minimizedAndShelved(chromeToken(WindowID::SurfaceIrregularityMap), mgr->GetName(WindowID::SurfaceIrregularityMap))) return;
         bool isVisible = mgr->IsVisible(WindowID::SurfaceIrregularityMap);
         const char* title = mgr->GetName(WindowID::SurfaceIrregularityMap);
-        ImGuiUtils::SetDpiScaledWindowConstraints(gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.x, gui::SAG_ANALYSIS_WINDOW_MIN_SIZE.y);
+        ImGuiUtils::SetChromeWindowConstraints(gui::SURFACE_IRREGULARITY_MAP_WINDOW_MIN_SIZE.x, gui::SURFACE_IRREGULARITY_MAP_WINDOW_MIN_SIZE.y);
+        chrome::applyFrameRect(chromeToken(WindowID::SurfaceIrregularityMap));
         if (ImGui::Begin(title, &isVisible)) {
-            ImGuiUtils::ClampWindowToViewport();
+            ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(chromeToken(WindowID::SurfaceIrregularityMap)));
+            chrome::drawTitleBarButtons(chromeToken(WindowID::SurfaceIrregularityMap), &isVisible);
             guiMgr->renderSurfaceIrregularityMap();
         }
         ImGui::End();
@@ -152,11 +228,17 @@ namespace {
     void RenderLogsWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
+        chrome::setPersistentKey(chromeToken(WindowID::Logs), chromePersistKey(WindowID::Logs));
+        chrome::setCloseHandler(chromeToken(WindowID::Logs),
+            [mgr] { mgr->SetVisible(WindowID::Logs, false); });
+        if (chrome::minimizedAndShelved(chromeToken(WindowID::Logs), mgr->GetName(WindowID::Logs))) return;
         bool isVisible = mgr->IsVisible(WindowID::Logs);
         const char* title = mgr->GetName(WindowID::Logs);
-        ImGuiUtils::SetDpiScaledWindowConstraints(gui::LOGS_WINDOW_MIN_SIZE.x, gui::LOGS_WINDOW_MIN_SIZE.y);
+        ImGuiUtils::SetChromeWindowConstraints(gui::LOGS_WINDOW_MIN_SIZE.x, gui::LOGS_WINDOW_MIN_SIZE.y);
+        chrome::applyFrameRect(chromeToken(WindowID::Logs));
         if (ImGui::Begin(title, &isVisible)) {
-            ImGuiUtils::ClampWindowToViewport();
+            ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(chromeToken(WindowID::Logs)));
+            chrome::drawTitleBarButtons(chromeToken(WindowID::Logs), &isVisible);
             guiMgr->renderLogs();
         }
         ImGui::End();
@@ -168,27 +250,24 @@ namespace {
     void RenderWelcomeWindow(gui::GuiManager* guiMgr) {
         if (!guiMgr) return;
         auto* mgr = guiMgr->getWindowManager();
-        // The card is only meaningful while the DDE link is down. The
-        // visibility flag IS the View menu checkmark: hide the card on connect
-        // (unchecks the menu), restore it when the link goes down again so the
-        // hint re-appears centered (Appearing cond handles the placement).
-        static bool wasConnected = false;
+        // The card is only meaningful while the DDE link is down.
         if (guiMgr->isDDEInitialized()) {
             if (mgr->IsVisible(WindowID::Welcome)) {
                 mgr->SetVisible(WindowID::Welcome, false);
             }
-            wasConnected = true;
             return;
         }
-        if (wasConnected) {
-            wasConnected = false;
-            mgr->SetVisible(WindowID::Welcome, true);
-        }
         // Dock area rect: the centering target and the clamp reference.
+        // Multi-viewport: window coords are desktop coords, so the dock area
+        // rect must be anchored to the main viewport's own position, not to
+        // a (0,0) origin which now points at the desktop corner.
+        const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         const float dockTop = ImGui::GetFrameHeight();
-        const float dockHeight = ImGui::GetIO().DisplaySize.y - dockTop - guiMgr->computeStatusBarHeight();
-        const ImVec2 dockAreaMin(0.0f, dockTop);
-        const ImVec2 dockAreaMax(ImGui::GetIO().DisplaySize.x, dockTop + dockHeight);
+        const ImVec2 dockAreaMin(mainViewport->Pos.x,
+                                 mainViewport->Pos.y + dockTop);
+        const ImVec2 dockAreaMax(mainViewport->Pos.x + mainViewport->Size.x,
+                                 mainViewport->Pos.y + mainViewport->Size.y -
+                                 guiMgr->computeStatusBarHeight());
         const ImVec2 dockAreaCenter((dockAreaMin.x + dockAreaMax.x) * 0.5f,
                                     (dockAreaMin.y + dockAreaMax.y) * 0.5f);
 

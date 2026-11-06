@@ -154,6 +154,9 @@ namespace app::services {
             m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections in {} — {} DDE requests",
                 m_profiles.size(), ZemaxDDE::formatDuration(std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - m_calcStartTime)), m_totalDdeRequests));
+            if (onMapCalculationComplete) {
+                onMapCalculationComplete();
+            }
             return;
         }
 

@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <vector>
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 
 namespace ImGuiUtils {
@@ -29,15 +32,165 @@ namespace ImGuiUtils {
         SpacingY(bottomMultiplier);
     }
 
-    /// Shows a (?)-mark with a tooltip on hover.
-    inline void HelpMarker(const char* desc) {
+    /// Shows a (?)-mark with a tooltip on hover. The tip wraps at ~30 em so
+    /// long explanations read as a short paragraph instead of one wide line.
+    inline void HelpMarker(const char* desc, float wrapEm = 30.0f) {
         ImGui::TextDisabled("%s", ICON_FA_CIRCLE_QUESTION);
         if (ImGui::BeginItemTooltip()) {
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45.0f);
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * wrapEm);
             ImGui::TextUnformatted(desc);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
+    }
+
+    /// One-shot plot request slot (window state storage; key via ImHashStr so
+    /// it matches the scope the toolbar menu writes from and the plot consumer
+    /// reads at window scope - GetID() would hash into two different IDs).
+    /// kPlotRequestReset (1) -> refit the axes on the click frame;
+    /// kPlotRequestCopy (2) -> copy the plot series to the clipboard as CSV.
+    /// kPlotRequestSaveImage (3) -> open a save dialog for the plot frame.
+    inline constexpr int kPlotRequestReset = 1;
+    inline constexpr int kPlotRequestCopy = 2;
+    inline constexpr int kPlotRequestSaveImage = 3;
+
+    inline ImGuiID PlotRequestFlagId() {
+        return ImHashStr("PlotRequest");
+    }
+
+    /// Storage of the current window, which owns every plot-toolbar key. A
+    /// menu is a popup window with its own ImGuiStorage, so callers inside
+    /// BeginMenu must capture this pointer BEFORE the menu opens.
+    inline ImGuiStorage* PlotStorage() {
+        return &ImGui::GetCurrentWindow()->StateStorage;
+    }
+
+    inline void SetPlotRequest(int value) {
+        PlotStorage()->SetInt(PlotRequestFlagId(), value);
+    }
+
+    inline int ConsumePlotRequest() {
+        ImGuiStorage* storage = PlotStorage();
+        const ImGuiID flagId = PlotRequestFlagId();
+        const int value = storage->GetInt(flagId, 0);
+        storage->SetInt(flagId, 0);
+        return value;
+    }
+
+    /// Menu-bar item "Reset Zoom" for the detached-plot toolbar; records a
+    /// one-shot fit request for the current window. The toolbar and the
+    /// detached plot render into one ImGui window even though they belong to
+    /// different service classes, so the window state storage carries the
+    /// request without flag plumbing. The same-frame consumer applies the
+    /// result to the first plot the window creates (ImPlot::SetNextAxesToFit
+    /// before 2D BeginPlot, Always-cond Setup calls inside 3D BeginPlot).
+    inline void ResetZoomMenuItem() {
+        if (ImGui::MenuItem(ICON_FA_EXPAND " Reset Zoom")) {
+            SetPlotRequest(kPlotRequestReset);
+        }
+    }
+
+    /// Menu-bar item "Copy Data" for the detached-plot toolbar; records a
+    /// one-shot copy request. The plot consumer turns it into clipboard text.
+    inline void CopyDataMenuItem() {
+        if (ImGui::MenuItem(ICON_FA_COPY " Copy Data")) {
+            SetPlotRequest(kPlotRequestCopy);
+        }
+    }
+
+    /// Storage keys are hashed rather than taken from GetID(): the toolbar
+    /// writes from inside BeginMenuBar/BeginMenu (which push their own IDs)
+    /// while the plot consumer reads at window scope. The frame size mirrors
+    /// the last rendered plot so the resolution fields of the Save Image menu
+    /// can default to "1x" (as on screen).
+    inline ImGuiID PlotStorageKey(const char* key) {
+        return ImHashStr(key);
+    }
+
+    inline void SetPlotFrameSize(const ImVec2& size) {
+        ImGuiStorage* storage = PlotStorage();
+        storage->SetFloat(PlotStorageKey("PlotFrameWidth"), size.x);
+        storage->SetFloat(PlotStorageKey("PlotFrameHeight"), size.y);
+    }
+
+    /// Effective export resolution: the values the user set in the Save Image
+    /// menu, falling back to the on-screen plot size and then to 1280x720.
+    inline ImVec2 PlotExportResolution() {
+        ImGuiStorage* storage = PlotStorage();
+        int width = storage->GetInt(PlotStorageKey("PlotExportWidth"), 0);
+        int height = storage->GetInt(PlotStorageKey("PlotExportHeight"), 0);
+        if (width <= 0) width = static_cast<int>(storage->GetFloat(PlotStorageKey("PlotFrameWidth"), 0.0f));
+        if (height <= 0) height = static_cast<int>(storage->GetFloat(PlotStorageKey("PlotFrameHeight"), 0.0f));
+        if (width <= 0) width = 1280;
+        if (height <= 0) height = 720;
+        return ImVec2(static_cast<float>(width), static_cast<float>(height));
+    }
+
+    /// Menu "Save Image" for the detached-plot toolbar: export resolution only
+    /// (the file format is picked in the native save dialog). Width/height
+    /// default to the plot size; "Lock aspect" keeps the on-screen ratio.
+    ///
+    /// Every key targets the HOST window's storage, captured before
+    /// BeginMenu(): a menu is a popup window with its own ImGuiStorage, so
+    /// ImGui::GetStateStorage() inside it would never reach the plot consumer.
+    inline void SaveImageMenu() {
+        ImGuiStorage* storage = PlotStorage();
+        const float frameWidth = storage->GetFloat(PlotStorageKey("PlotFrameWidth"), 0.0f);
+        const float frameHeight = storage->GetFloat(PlotStorageKey("PlotFrameHeight"), 0.0f);
+        const int fallbackWidth = frameWidth > 0.0f ? static_cast<int>(frameWidth) : 1280;
+        const int fallbackHeight = frameHeight > 0.0f ? static_cast<int>(frameHeight) : 720;
+
+        if (!ImGui::BeginMenu(ICON_FA_IMAGE " Save Image")) return;
+
+        int width = storage->GetInt(PlotStorageKey("PlotExportWidth"), fallbackWidth);
+        int height = storage->GetInt(PlotStorageKey("PlotExportHeight"), fallbackHeight);
+        bool lockAspect = storage->GetBool(PlotStorageKey("PlotExportLockAspect"), true);
+
+        // Step buttons are hidden (0,0) so the digits get the full field width
+        // and any value can be typed directly; the width fits four digits
+        // (the clamp ceiling is 8192).
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float fieldWidth = ImGui::CalcTextSize("8192").x + style.FramePadding.x * 2.0f +
+                                 style.ItemInnerSpacing.x;
+        ImGui::TextUnformatted("Resolution");
+        ImGui::SetNextItemWidth(fieldWidth);
+        const bool widthEdited = ImGui::InputInt("##ExportWidth", &width, 0, 0);
+        ImGui::SameLine();
+        ImGui::TextUnformatted("x");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(fieldWidth);
+        const bool heightEdited = ImGui::InputInt("##ExportHeight", &height, 0, 0);
+        ImGui::SameLine();
+        ImGui::TextUnformatted("px");
+
+        width = std::clamp(width, 16, 8192);
+        height = std::clamp(height, 16, 8192);
+        if (lockAspect && frameWidth > 0.0f && frameHeight > 0.0f) {
+            if (widthEdited) {
+                height = std::clamp(static_cast<int>(std::lround(
+                    static_cast<double>(width) * frameHeight / frameWidth)), 16, 8192);
+            } else if (heightEdited) {
+                width = std::clamp(static_cast<int>(std::lround(
+                    static_cast<double>(height) * frameWidth / frameHeight)), 16, 8192);
+            }
+        }
+        ImGui::Checkbox("Lock aspect", &lockAspect);
+
+        storage->SetInt(PlotStorageKey("PlotExportWidth"), width);
+        storage->SetInt(PlotStorageKey("PlotExportHeight"), height);
+        storage->SetBool(PlotStorageKey("PlotExportLockAspect"), lockAspect);
+
+        if (ImGui::Selectable("Reset to plot size", false,
+                              ImGuiSelectableFlags_DontClosePopups)) {
+            storage->SetInt(PlotStorageKey("PlotExportWidth"), fallbackWidth);
+            storage->SetInt(PlotStorageKey("PlotExportHeight"), fallbackHeight);
+        }
+
+        ImGui::Separator();
+        if (ImGui::MenuItem("Save image as...")) {
+            storage->SetInt(PlotRequestFlagId(), kPlotRequestSaveImage);
+        }
+        ImGui::EndMenu();
     }
 
     /// Centers the next window in the viewport (call every frame; takes effect
@@ -67,16 +220,19 @@ namespace ImGuiUtils {
             ImVec2(0.5f, 0.5f));
     }
 
-    /// Keeps a floating window fully inside the main viewport: after a main
-    /// window shrink (maximize/restore, or a stale ini position the floating
-    /// panel once got on a bigger window), an undocked window keeps its
-    /// absolute position and may end up out of sight. Docked windows live
-    /// inside a dock node and are always visible - never move those. Call
-    /// right after Begin() returned true.
-    inline void ClampWindowToViewport() {
-        if (ImGui::IsWindowDocked()) return;
-        const ImVec2 vpPos = ImGui::GetMainViewport()->Pos;
-        const ImVec2 vpSize = ImGui::GetMainViewport()->Size;
+    /// Keeps a floating window fully inside its viewport: after a main window
+    /// shrink (or a stale ini position), an undocked window keeps its absolute
+    /// position and may end up out of sight. Docked windows live inside a
+    /// dock node and are always visible - never move those. Call right after
+    /// Begin() returned true. The clamp region is the window's OWN viewport,
+    /// which under multi-viewport is the bounds of its platform (OS) window
+    /// and otherwise the main viewport - one formula covers both. Windows
+    /// with a forced chrome rect (maximized floating panels) pass skip=true:
+    /// their geometry is managed by window_chrome and spans exactly.
+    inline void ClampWindowToViewport(bool skip = false) {
+        if (skip || ImGui::IsWindowDocked()) return;
+        const ImVec2 vpPos = ImGui::GetWindowViewport()->Pos;
+        const ImVec2 vpSize = ImGui::GetWindowViewport()->Size;
         const ImVec2 size = ImGui::GetWindowSize();
         const ImVec2 pos = ImGui::GetWindowPos();
         // Fully-inside clamp; a window wider/taller than the viewport anchors
@@ -90,22 +246,105 @@ namespace ImGuiUtils {
     }
 
     /// Begin a two-column property grid (label | value).
+    /// Rows are collected so PropertyGridRow can recognise its index and the
+    /// grid owner; both are needed for the selectable value cell.
+    namespace detail {
+        struct PropertyGridFrame {
+            ImGuiID id;
+            int nextRow = 0;
+        };
+
+        inline std::vector<PropertyGridFrame>& propertyGridStack() {
+            static std::vector<PropertyGridFrame> stack;
+            return stack;
+        }
+
+        inline ImGuiID propertyGridSelectionId() { return ImHashStr("PropertyGridSelection"); }
+    }
+
     inline void BeginPropertyGrid(const char* id, float labelWidth) {
+        const ImGuiID gridId = ImGui::GetID(id);
         ImGui::BeginTable(id, 2);
         ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, labelWidth);
         ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
+        detail::propertyGridStack().push_back({gridId, 0});
     }
 
     inline void EndPropertyGrid() {
         ImGui::EndTable();
+        if (!detail::propertyGridStack().empty()) {
+            detail::propertyGridStack().pop_back();
+        }
     }
 
+    /// Two-column row whose value cell is selectable: a click selects it,
+    /// double-click or Ctrl+C (while selected) copies the visible value.
+    /// The value text is drawn over an empty Selectable so the highlight spans
+    /// the whole cell, matching the rest of the UI.
     inline void PropertyGridRow(const char* label, const char* value) {
+        auto& stack = detail::propertyGridStack();
+        const ImGuiID gridId = stack.empty() ? 0u : stack.back().id;
+        const int rowIndex = stack.empty() ? 0 : stack.back().nextRow++;
+
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::TextUnformatted(label);
         ImGui::TableSetColumnIndex(1);
-        ImGui::TextUnformatted(value);
+
+        const char* text = value ? value : "";
+        ImGuiStorage* storage = ImGui::GetStateStorage();
+        const ImGuiID selectionId = detail::propertyGridSelectionId();
+        const bool selected = gridId != 0 &&
+            storage->GetInt(selectionId, -1) == static_cast<int>(gridId) &&
+            storage->GetInt(selectionId + 1, -1) == rowIndex;
+
+        ImGui::PushID(rowIndex);
+        const float textWidth = ImGui::CalcTextSize(text).x;
+        const float padX = ImGui::GetStyle().FramePadding.x;
+        const float cellWidth = ImGui::GetContentRegionAvail().x;
+        if (ImGui::Selectable("##value", selected, ImGuiSelectableFlags_AllowDoubleClick,
+                              ImVec2(textWidth + padX * 2.0f, 0.0f))) {
+            storage->SetInt(selectionId, static_cast<int>(gridId));
+            storage->SetInt(selectionId + 1, rowIndex);
+        }
+        const ImVec2 cellMin = ImGui::GetItemRectMin();
+        const ImVec2 cellMax = ImGui::GetItemRectMax();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        const float textHeight = ImGui::GetTextLineHeight();
+        const ImVec2 textPos(cellMin.x + padX,
+                             cellMin.y + (cellMax.y - cellMin.y - textHeight) * 0.5f);
+        drawList->PushClipRect(cellMin, cellMax, true);
+        drawList->AddText(textPos, ImGui::GetColorU32(ImGuiCol_Text), text);
+        drawList->PopClipRect();
+
+        const bool hovered = ImGui::IsItemHovered();
+        const bool clipped = textWidth > cellWidth - padX * 2.0f;
+        if (hovered && clipped) {
+            ImGui::SetTooltip("%s", text);
+        }
+        if (hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && *text) {
+            ImGui::SetClipboardText(text);
+            ImGui::SetTooltip("Copied");
+            gui::notify::copied(label);
+        }
+        if (selected && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C) && *text) {
+            ImGui::SetClipboardText(text);
+            gui::notify::copied(label);
+        }
+        ImGui::PopID();
+    }
+
+    /// Width of the title-bar chrome strip (menu, minimize, maximize and
+    /// close squares with pitch), computed from the live style - used as a
+    /// floor so any theme/DPI keeps the text clear of the buttons
+    /// (DESIGN.md rules).
+    inline float ChromeTitleBarStripWidth() {
+        const ImGuiStyle& s = ImGui::GetStyle();
+        const float b = ImGui::GetFontSize();
+        return s.FramePadding.x * 2.0f     // edge pads
+            + 4.0f * b                     // menu, −, □, ✕ squares
+            + 3.0f * s.ItemInnerSpacing.x; // button pitch
     }
 
     /// Applies DPI-aware min-size constraints to the next window.
@@ -115,6 +354,13 @@ namespace ImGuiUtils {
             ImVec2(minWidth * dpiScale, minHeight * dpiScale),
             ImVec2(FLT_MAX, FLT_MAX)
         );
+    }
+
+    /// Min-size constraint for chrome windows:
+    /// width = max(per-window content constant, title-bar strip).
+    inline void SetChromeWindowConstraints(float minWidth, float minHeight) {
+        SetDpiScaledWindowConstraints(
+            std::max(minWidth, ChromeTitleBarStripWidth()), minHeight);
     }
 
     /// Sets DPI-scaled window size for the next window.
@@ -196,13 +442,6 @@ namespace ImGuiUtils {
                         style.FrameRounding, style.FrameBorderSize);
         }
 
-        // Legacy arc (replaced by DrawBusyArc above, kept for reference):
-        // float angle = ImGui::GetTime() * 5.0f;
-        // ImVec2 spinnerCenter(pos.x + style.FramePadding.x + spinnerRadius,
-        //                      pos.y + btnSize.y * 0.5f);
-        // dl->PathArcTo(spinnerCenter, spinnerRadius, angle,
-        //               angle + static_cast<float>(std::numbers::pi) * 1.5f, 32);
-        // dl->PathStroke(ImGui::GetColorU32(ImGuiCol_Text, disabledAlpha), 0, DpiScale(2.0f));
         ImVec4 spinCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
         spinCol.w *= disabledAlpha;
         DrawBusyArc(ImVec2(pos.x + style.FramePadding.x + spinnerRadius,
@@ -241,22 +480,76 @@ namespace ImGuiUtils {
         }
 
         ImU32 col;
-        if (ImGui::IsItemActive())
+        // Same token the window resize border uses on hover, so the splitter
+        // highlights in the accent color exactly like the popup frame.
+        const bool hovered = ImGui::IsItemHovered();
+        const bool active = ImGui::IsItemActive();
+        if (active)
             col = ImGui::GetColorU32(ImGuiCol_SeparatorActive);
-        else if (ImGui::IsItemHovered())
-            col = ImGui::GetColorU32(ImGuiCol_Text, 0.4f);
+        else if (hovered)
+            col = ImGui::GetColorU32(ImGuiCol_SeparatorHovered);
         else
             col = ImGui::GetColorU32(ImGuiCol_Separator);
 
-        ImGui::GetWindowDrawList()->AddRectFilled(sp, ImVec2(sp.x + width, sp.y + height), col);
+        // Thin border-like line centered in the grab area: the idle state reads
+        // as a divider, hover/active thickens exactly like the window frame
+        // (RenderWindowOuterBorders uses max(2, WindowBorderSize)).
+        const float borderSize = ImGui::GetStyle().WindowBorderSize;
+        const float thickness = (active || hovered) ? std::max(2.0f, borderSize)
+                                                    : std::max(1.0f, borderSize);
+        const float lineX = sp.x + (width - thickness) * 0.5f;
+        ImGui::GetWindowDrawList()->AddRectFilled(
+            ImVec2(lineX, sp.y), ImVec2(lineX + thickness, sp.y + height), col);
 
         return changed;
     }
-    /// Renders a section header with separator title + separator line, optional description.
+    /// Disabled hint paragraph that wraps at the current content width.
+    inline void HintText(const char* text) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("%s", text);
+        ImGui::PopStyleColor();
+    }
+
+    /// Section header: a neutral bar ahead of the title, with an optional
+    /// wrapped description underneath. Replaces SeparatorText, whose line hung
+    /// at the text baseline and read as a cut-off divider. The band is padded
+    /// vertically beyond the text line box so descenders stay inside it, and
+    /// the title sits on a horizontal neutral gradient fading to transparent.
+    /// The helper owns the vertical rhythm under a group header: a guaranteed
+    /// gap before the content, with or without a description.
     inline void SectionHeader(const char* title, const char* description = nullptr) {
-        ImGui::SeparatorText(title);
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float fontSize = ImGui::GetFontSize();
+        const float gapAfterTitle = fontSize * 0.35f;
+        const float barWidth = DpiScale(3.0f);
+        const float barRounding = DpiScale(1.0f);
+        const float bandPad = DpiScale(2.0f);
+
+        const ImVec2 start = ImGui::GetCursorScreenPos();
+        const float lineHeight = ImGui::GetTextLineHeight();
+        const float bandWidth = ImGui::GetContentRegionAvail().x;
+        const ImVec2 bandMin(start.x, start.y - bandPad);
+        const ImVec2 bandMax(start.x + bandWidth, start.y + lineHeight + bandPad);
+
+        // Neutral in both themes: the muted text tone is already theme-tuned.
+        const ImVec4 neutral = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+        const ImU32 tintLeft = ImGui::GetColorU32(ImVec4(neutral.x, neutral.y, neutral.z, 0.18f));
+        const ImU32 tintRight = ImGui::GetColorU32(ImVec4(neutral.x, neutral.y, neutral.z, 0.0f));
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilledMultiColor(bandMin, bandMax,
+            tintLeft, tintRight, tintRight, tintLeft);
+
+        drawList->AddRectFilled(
+            bandMin, ImVec2(bandMin.x + barWidth, bandMax.y),
+            ImGui::GetColorU32(ImGuiCol_TextDisabled), barRounding);
+
+        ImGui::SetCursorScreenPos(
+            ImVec2(start.x + barWidth + style.ItemInnerSpacing.x, start.y));
+        ImGui::TextUnformatted(title);
+
+        ImGui::Dummy(ImVec2(0.0f, gapAfterTitle));
         if (description) {
-            ImGui::TextDisabled(description);
+            HintText(description);
             ImGui::Spacing();
         }
     }
@@ -345,8 +638,10 @@ namespace ImGuiUtils {
         ImGui::EndDisabled();
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
             ImGui::SetTooltip("%s", tooltip);
-        if (clicked && text && *text)
+        if (clicked && text && *text) {
             ImGui::SetClipboardText(text);
+            gui::notify::info("Copied to clipboard");
+        }
         return clicked;
     }
 

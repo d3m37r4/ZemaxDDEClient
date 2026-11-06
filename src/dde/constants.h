@@ -4,9 +4,9 @@
 
 namespace ZemaxDDE {
     inline constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
-    inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";     // Appname DDE
-    inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";   // Topic DDE
-    static constexpr int DDE_TIMEOUT_MS             = 300;          // Timeout in ms (300 ms)
+    inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";
+    inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";
+    static constexpr int DDE_TIMEOUT_MS             = 300;
 
     inline constexpr int MIN_FIELDS = 1;
     inline constexpr int MAX_FIELDS = 12;
@@ -58,6 +58,6 @@ namespace ZemaxDDE {
         static constexpr int LAYER_EXTINCTION_OFFSET_STATUS = 76; // int: Layer Extinction Offset status. 0=fixed, 1=variable, n+1=pickup from layer n. The coating layer number is defined by arg2.
 
         static constexpr int COORD_RETURN_SOLVE_STATUS = 80; // int: Coordinate return solve status. 0=none, 1=Orientation only, 2=Orient+XY, 3=Orient+XYZ. The surface must be a coordinate break for this solve to have any affect.
-        static constexpr int COORD_RETURN_SURFACE_NUMBER = 81; // int: 81 Coordinate return surface number. Used only by the coordinate return solve.
+        static constexpr int COORD_RETURN_SURFACE_NUMBER = 81; // int: Coordinate return surface number. Used only by the coordinate return solve.
     };
 }

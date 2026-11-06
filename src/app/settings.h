@@ -23,6 +23,12 @@ namespace app {
 
     struct GeneralSettings {
         bool restoreWindowLayout = true;
+        /// Show the Welcome card at application start. The card has no View
+        /// menu entry: closing it hides it for the rest of the session.
+        bool showWelcomeOnStartup = true;
+        /// Apply the saved default layout (default_layout.json) at startup
+        /// instead of the previous session's layout.
+        bool applyDefaultLayoutOnStartup = false;
     };
 
     struct AppearanceSettings {

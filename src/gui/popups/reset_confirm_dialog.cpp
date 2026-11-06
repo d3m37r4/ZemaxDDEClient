@@ -37,8 +37,8 @@ namespace gui {
         ImGui::BeginChild("##reset_confirm_body",
                           ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
                           ImGuiChildFlags_Borders);
-        ImGui::TextUnformatted("This will reset all preferences to their factory defaults.");
-        ImGui::TextUnformatted("Unsaved changes will be lost.");
+        ImGui::TextWrapped("%s", "This will reset all preferences to their factory defaults.");
+        ImGui::TextWrapped("%s", "Unsaved changes will be lost.");
         ImGui::EndChild();
 
         float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);

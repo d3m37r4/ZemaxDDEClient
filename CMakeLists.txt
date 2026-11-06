@@ -108,6 +108,12 @@ set(SOURCES
     ${SRC_DIR}/gui/shortcuts.cpp
     ${SRC_DIR}/gui/menu_bar_controller.cpp
     ${SRC_DIR}/gui/graphics_backend.cpp
+    ${SRC_DIR}/gui/plot_image_exporter.cpp
+    ${SRC_DIR}/gui/plot_image_export_util.cpp
+    ${SRC_DIR}/gui/log_time_filter.cpp
+    ${SRC_DIR}/gui/log_filter_util.cpp
+    ${SRC_DIR}/gui/layout_snapshot.cpp
+    ${SRC_DIR}/gui/layout_presets.cpp
     ${SRC_DIR}/app/services/surface_profile_service.cpp
     ${SRC_DIR}/app/services/surface_map_service.cpp
     ${SRC_DIR}/gui/surface_profile_service.cpp
@@ -115,6 +121,7 @@ set(SOURCES
     ${SRC_DIR}/gui/theme_manager.cpp
     ${SRC_DIR}/gui/settings_manager.cpp
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
+    ${SRC_DIR}/gui/window_chrome.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
     ${SRC_DIR}/gui/popups/shortcuts_help_dialog.cpp
@@ -168,6 +175,12 @@ list(APPEND SOURCES
 option(ZEMAX_ENABLE_TEST_ENGINE "Compile the Dear ImGui Test Engine into the app" OFF)
 
 if(ZEMAX_ENABLE_TEST_ENGINE)
+    # The vendored capture tool embeds its own stb_image_write implementation,
+    # while the app's plot exporter provides one for the whole binary. Disable
+    # the tool's copy so the link has a single definition.
+    set_source_files_properties(
+        ${TE_DIR}/imgui_test_engine/imgui_capture_tool.cpp
+        PROPERTIES COMPILE_DEFINITIONS IMGUI_DISABLE_STB_IMAGE_WRITE_IMPLEMENTATION)
     list(APPEND SOURCES
         ${TE_DIR}/imgui_test_engine/imgui_te_context.cpp
         ${TE_DIR}/imgui_test_engine/imgui_te_coroutine.cpp

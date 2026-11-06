@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <format>
 
 #include "app/config_path.h"
 #include "gui/constants.h"
@@ -10,6 +11,7 @@
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
@@ -44,11 +46,16 @@ namespace gui {
 
     void PreferencesDialog::close() noexcept {
         m_open = false;
+        m_confirmResetLayout = false;
         m_resetConfirmDialog->close();
         m_cleanLogsConfirmDialog->close();
     }
 
     bool PreferencesDialog::closeTopmost() {
+        if (m_confirmResetLayout) {
+            m_confirmResetLayout = false;
+            return true;
+        }
         if (m_resetConfirmDialog->isOpen()) {
             m_resetConfirmDialog->close();
             return true;
@@ -59,6 +66,12 @@ namespace gui {
         }
         close();
         return true;
+    }
+
+    void PreferencesDialog::setLayoutActions(std::function<void()> saveDefault,
+                                             std::function<void()> resetToFactory) {
+        m_onSaveLayout = std::move(saveDefault);
+        m_onResetLayout = std::move(resetToFactory);
     }
 
     void PreferencesDialog::render() {
@@ -126,6 +139,44 @@ namespace gui {
         m_resetConfirmDialog->render();
         m_cleanLogsConfirmDialog->render();
 
+        // Layout factory reset confirmation (nested inside Preferences).
+        if (m_confirmResetLayout && !ImGui::IsPopupOpen(LAYOUT_RESET_POPUP_NAME)) {
+            ImGui::OpenPopup(LAYOUT_RESET_POPUP_NAME);
+        }
+        ImGuiUtils::CenterNextWindow();
+        ImGuiUtils::SetDpiScaledWindowConstraints(RESET_CONFIRM_POPUP_MIN_SIZE.x,
+                                                  RESET_CONFIRM_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(RESET_CONFIRM_POPUP_DEFAULT_SIZE);
+        if (ImGuiUtils::BeginPopupModalEx(LAYOUT_RESET_POPUP_NAME, nullptr,
+                                          ImGuiWindowFlags_NoCollapse)) {
+            ImGui::BeginChild("##reset_layout_body", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
+                              ImGuiChildFlags_Borders);
+            ImGui::TextUnformatted("This resets the window layout to the factory default.");
+            ImGui::TextUnformatted("Your saved default layout (if any) is kept.");
+            ImGui::EndChild();
+
+            const float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float resetBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
+            if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
+                m_confirmResetLayout = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
+                m_confirmResetLayout = false;
+                if (m_onResetLayout) {
+                    m_onResetLayout();
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        } else if (m_confirmResetLayout && !ImGui::IsPopupOpen(LAYOUT_RESET_POPUP_NAME)) {
+            // Closed via Esc: drop the pending request so it does not reopen.
+            m_confirmResetLayout = false;
+        }
+
         ImGui::EndPopup();
     }
 
@@ -167,6 +218,44 @@ namespace gui {
         ImGuiUtils::SectionHeader("General", "These options take effect on the next application start.");
 
         ImGui::Checkbox("Restore window layout on startup", &m_working.general.restoreWindowLayout);
+        // The flag gates full restore of the previous session's window layout
+        // (panel visibility + minimized state + floating rects); when off, only
+        // the dedicated "Show logs window on startup" preference is applied.
+        ImGuiUtils::HintText(
+            "When enabled, windows and their minimized states from the previous session "
+            "are restored on the next start; when disabled, the layout starts fresh.");
+
+        ImGui::Checkbox("Show Welcome window on startup", &m_working.general.showWelcomeOnStartup);
+        ImGuiUtils::HintText(
+            "The card appears only at application start. Closing it hides it for the rest "
+            "of the session; it is not listed in the View menu.");
+
+        ImGuiUtils::SpacedSeparator(0.5f, 0.5f);
+        ImGuiUtils::SectionHeader("Default layout",
+                                  "Save the current window arrangement and reuse it later.");
+        ImGui::Checkbox("Apply the saved default layout on startup",
+                        &m_working.general.applyDefaultLayoutOnStartup);
+        ImGui::SameLine();
+        ImGuiUtils::HelpMarker(
+            "When enabled, the application starts with your saved layout instead of "
+            "restoring the previous session's layout.");
+
+        ImGui::BeginDisabled(!m_onSaveLayout);
+        if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save current layout as default")) {
+            m_onSaveLayout();
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+
+        ImGui::BeginDisabled(!m_onResetLayout);
+        if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset layout to factory...")) {
+            m_confirmResetLayout = true;
+        }
+        ImGui::EndDisabled();
+        ImGuiUtils::HintText(
+            "Reset restores the factory docking and panel visibility; the saved default "
+            "layout is kept.");
     }
 
     void PreferencesDialog::renderSectionAppearance() {
@@ -193,7 +282,7 @@ namespace gui {
                 current = i;
             }
         }
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##font_scale", &current, kScaleLabels, kScaleCount)) {
             m_working.appearance.fontScale = kScaleValues[current];
             applyWorkingTheme();
@@ -205,8 +294,8 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
@@ -215,8 +304,8 @@ namespace gui {
 
         auto inputInt = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             return ImGui::InputInt(id, value, 0, 0);
         };
 
@@ -237,8 +326,8 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(200.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
@@ -303,7 +392,7 @@ namespace gui {
         constexpr const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
         ImGui::TextUnformatted("Surface Irregularity Map");
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_surface", &m_working.map.defaultColormapSurface, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();
         }
@@ -319,7 +408,7 @@ namespace gui {
         ImGui::Spacing();
 
         ImGui::TextUnformatted("Deviation Map");
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_deviation", &m_working.map.defaultColormapDeviation, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();
         }
@@ -358,19 +447,19 @@ namespace gui {
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Max log file size (MB)");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFileSizeMB", &m_working.logging.logFileSizeMB, 0, 0);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Log folder size warning threshold (MB)");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFolderThresholdMB", &m_working.logging.logFolderSizeThresholdMB, 0, 0);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Current log folder size");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
         ImGui::TextUnformatted(app::getLogFolderSize().c_str());
         ImGui::SameLine();
         const auto& sem = m_themeManager->semantic();
@@ -459,9 +548,14 @@ namespace gui {
     void PreferencesDialog::onSave() {
         m_settings.apply(m_working);
         m_loaded = m_working;
-        m_settings.saveToFile();
+        const bool saved = m_settings.saveToFile();
         m_closedByAction = true;
         close();
+        if (saved) {
+            notify::success("Settings saved");
+        } else {
+            notify::error("Settings applied, but the file could not be written");
+        }
     }
 
     void PreferencesDialog::onCancel() {
@@ -478,12 +572,18 @@ namespace gui {
     void PreferencesDialog::onReset() {
         m_working = app::AppSettings::defaults();
         m_settings.apply(m_working);
+        notify::info("Preferences reset to defaults");
     }
 
     void PreferencesDialog::onCleanLogs() {
         size_t deleted = app::cleanLogFolder(m_activeLogPath);
         if (m_logger) {
             m_logger->addLog("[APP] Cleaned log folder: " + std::to_string(deleted) + " file(s) deleted");
+        }
+        if (deleted > 0) {
+            notify::success(std::format("Log folder cleaned: {} file(s) deleted", deleted));
+        } else {
+            notify::info("No log files to clean");
         }
     }
 

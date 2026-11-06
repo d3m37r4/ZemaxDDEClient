@@ -1,11 +1,17 @@
 #include <format>
 #include <cmath>
 
+#include <windows.h>
+#include <shellapi.h>
+
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "lib/implot/implot.h"
 
 #include "gui/surface_profile_service.h"
+#include "gui/imgui_utils.h"
+#include "gui/notifications.h"
+#include "gui/plot_image_exporter.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
 #include "logger/logger.h"
@@ -19,6 +25,30 @@ namespace gui {
         ImPlotSpec buildLineSpec(float lineWeight, float markerSize) {
             return ImPlotSpec(ImPlotProp_LineWeight, lineWeight,
                               ImPlotProp_MarkerSize, markerSize);
+        }
+
+        std::string surfaceSeriesCsv(const std::vector<double>& x, const std::vector<double>& y) {
+            std::string csv;
+            for (size_t i = 0; i < x.size(); ++i) {
+                csv += std::to_string(x[i]);
+                csv += ',';
+                csv += std::to_string(y[i]);
+                csv += '\n';
+            }
+            return csv;
+        }
+
+        std::string labelledSeriesCsv(const std::string& label, const std::vector<double>& x, const std::vector<double>& y) {
+            std::string csv;
+            for (size_t i = 0; i < x.size(); ++i) {
+                csv += label;
+                csv += ',';
+                csv += std::to_string(x[i]);
+                csv += ',';
+                csv += std::to_string(y[i]);
+                csv += '\n';
+            }
+            return csv;
         }
 
         const char* kDisplayUnitNames[] = { "mm", "μm" };
@@ -37,6 +67,7 @@ namespace gui {
     void SurfaceProfileService::saveCrossSectionToFile(const app::models::SurfaceData& surface) {
         if (surface.sagDataPoints.empty()) {
             m_logger.addLog(std::format("[GUI] No Sag Cross Section data to save for surface {}", surface.id));
+            notify::warning("No cross-section data to export");
             return;
         }
 
@@ -57,11 +88,13 @@ namespace gui {
         auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_SagCrossSection_Temp.txt", content);
         if (!tempPathOpt) {
             m_logger.addLog("[GUI] Failed to create temporary file for Surface Sag Cross Section export");
+            notify::error("Cross-section export failed");
             return;
         }
 
         ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
         m_logger.addLog(std::format("[GUI] Surface Sag Cross Section saved to {}", tempPathOpt->string()));
+        notify::success("Cross section exported to a temporary file");
     }
 
     static constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
@@ -110,6 +143,10 @@ namespace gui {
             }
         }
 
+        ImGuiUtils::ResetZoomMenuItem();
+        ImGuiUtils::CopyDataMenuItem();
+        ImGuiUtils::SaveImageMenu();
+
         ImGui::EndMenuBar();
     }
 
@@ -131,6 +168,18 @@ namespace gui {
             y_scaled[i] = y_vals[i] * scaleY;
         }
 
+        // The toolbar may issue a one-shot plot request (reset zoom / copy
+        // data). Apply it only on the click frame, so it never refits or
+        // re-copies away later zooms.
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
+        if (plotRequest == ImGuiUtils::kPlotRequestReset) {
+            ImPlot::SetNextAxesToFit();
+        }
+        if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
+            ImGui::SetClipboardText(surfaceSeriesCsv(x_scaled, y_scaled).c_str());
+            notify::copied("surface profile data (CSV)");
+        }
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
             const char* unitX = gui::displayUnitName(units.x);
             const char* unitY = gui::displayUnitName(units.y);
@@ -138,6 +187,15 @@ namespace gui {
                               std::format("Sag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            // Plots are requested with size (-1,-1) ("fill the area"), so the
+            // effective frame size is only known here. Save Image uses it as
+            // the 1x baseline for resolution and aspect lock.
+            ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "sag", surface, ImGui::GetWindowDrawList(),
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize(),
+                                         ImGuiUtils::PlotExportResolution());
+            }
             ImPlot::PlotLine("Surface", x_scaled.data(), y_scaled.data(), x_scaled.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();
@@ -166,6 +224,17 @@ namespace gui {
             y_tol_s[i] = y_tol[i] * scaleY;
         }
 
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
+        if (plotRequest == ImGuiUtils::kPlotRequestReset) {
+            ImPlot::SetNextAxesToFit();
+        }
+        if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
+            std::string csv = labelledSeriesCsv("Nominal", x_nom_s, y_nom_s)
+                            + labelledSeriesCsv("Toleranced", x_tol_s, y_tol_s);
+            ImGui::SetClipboardText(csv.c_str());
+            notify::copied("profile comparison data (CSV)");
+        }
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
             const char* unitX = gui::displayUnitName(units.x);
             const char* unitY = gui::displayUnitName(units.y);
@@ -173,6 +242,12 @@ namespace gui {
                               std::format("Sag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "compare", nominal, ImGui::GetWindowDrawList(),
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize(),
+                                         ImGuiUtils::PlotExportResolution());
+            }
             ImPlot::PlotLine("Nominal", x_nom_s.data(), y_nom_s.data(), x_nom_s.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::PlotLine("Toleranced", x_tol_s.data(), y_tol_s.data(), x_tol_s.size(),
@@ -206,6 +281,15 @@ namespace gui {
             y_s[i] = y_dev[i] * scaleY;
         }
 
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
+        if (plotRequest == ImGuiUtils::kPlotRequestReset) {
+            ImPlot::SetNextAxesToFit();
+        }
+        if (plotRequest == ImGuiUtils::kPlotRequestCopy) {
+            ImGui::SetClipboardText(labelledSeriesCsv("Deviation", x_s, y_s).c_str());
+            notify::copied("deviation data (CSV)");
+        }
+
         if (ImPlot::BeginPlot(plotLabel, size)) {
             const char* unitX = gui::displayUnitName(units.x);
             const char* unitY = gui::displayUnitName(units.y);
@@ -213,6 +297,12 @@ namespace gui {
                               std::format("ΔSag ({})", unitY).c_str(),
                               axisFlagsForGrid(showGrid), axisFlagsForGrid(showGrid));
             ImPlot::SetupLegend(ImPlotLocation_NorthEast, ImPlotLegendFlags_Outside);
+            ImGuiUtils::SetPlotFrameSize(ImPlot::GetPlotSize());
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "dev", nominal, ImGui::GetWindowDrawList(),
+                                         ImPlot::GetPlotPos(), ImPlot::GetPlotSize(),
+                                         ImGuiUtils::PlotExportResolution());
+            }
             ImPlot::PlotLine("Deviation", x_s.data(), y_s.data(), x_s.size(),
                              buildLineSpec(lineWeight, markerSize));
             ImPlot::EndPlot();

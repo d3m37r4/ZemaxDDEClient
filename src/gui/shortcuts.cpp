@@ -2,6 +2,7 @@
 
 #include "app/app.h"
 #include "gui/gui.h"
+#include "gui/windows_dockable/logs.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -246,6 +247,11 @@ bool GuiManager::closeTopmostPopup() {
     }
     if (m_shortcutsHelpDialog && m_shortcutsHelpDialog->isOpen()) {
         m_shortcutsHelpDialog->close();
+        return true;
+    }
+    // Logs panel: its "delete all entries" confirmation is a plain modal owned
+    // by the panel, so it is not part of the dialog classes above.
+    if (m_logsRenderer && m_logsRenderer->cancelDeleteConfirm()) {
         return true;
     }
     return false;

@@ -3,6 +3,7 @@
 #include "windows_dockable/dde_status.h"
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "gui/shortcuts.h"
 #include "gui/theme_manager.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "dde/client.h"
@@ -187,7 +188,8 @@ namespace gui {
         // Tooltip after Pop: it must render in the default text color, not the
         // white on-accent color pushed for the button above (invisible on Light).
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(connected ? "Disconnect active slot (Ctrl+Shift+D)" : "Connect to Zemax (Ctrl+Shift+C)");
+            ImGui::SetTooltip("%s", shortcuts::tooltipFor(
+                connected ? "dde-disconnect" : "dde-connect").c_str());
         }
 
         ImGui::EndChild();

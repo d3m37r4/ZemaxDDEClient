@@ -7,6 +7,7 @@
 
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "gui/window_chrome.h"
 #include "gui/dockable_windows_manager.h"
 #include "gui/utils.h"
 #include "gui/surface_profile_service.h"
@@ -77,7 +78,7 @@ namespace gui {
             UpdateChecker* getUpdateChecker() const noexcept { return m_updateChecker.get(); }
 
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
-            void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
+            void setWindowManager(DockableWindowsManager* wndMgr);
             DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
@@ -90,10 +91,29 @@ namespace gui {
 #endif
 
             template<typename Func>
-            void renderToolbarWindow(const char* title, bool* open, Func content) {
+            void renderToolbarWindow(
+                const char* title, bool* open, const char* persistId, Func content) {
+                // Minimized windows skip rendering entirely; the shelf tile
+                // (pushed inside the call) is their only visible presence.
+                chrome::setPersistentKey(open, persistId);
+                // Tile x closes the detached window like the title-bar x.
+                chrome::setCloseHandler(open, [open] { *open = false; });
+                if (chrome::minimizedAndShelved(open, title)) {
+                    return;
+                }
+                // The default detached size stays a Once condition; chrome
+                // rect overrides (maximized, restore) queue last with Always
+                // and therefore win.
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
+                // Chrome buttons must stay clear of the title text at any
+                // min width; width = max(constant, chrome strip).
+                ImGuiUtils::SetChromeWindowConstraints(
+                    DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
+                chrome::applyFrameRect(open);
                 ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
                 if (ImGui::Begin(title, open, ImGuiWindowFlags_MenuBar)) {
-                    ImGuiUtils::ClampWindowToViewport();
+                    ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(open));
+                    chrome::drawTitleBarButtons(open, open);
                     content();
                 }
                 ImGui::End();

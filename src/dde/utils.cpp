@@ -4,7 +4,6 @@
 
 namespace ZemaxDDE {
 
-    // Convert CP1251 (Windows-1251) encoded data to UTF‑8
     std::string cp1251_to_utf8(const char* data, size_t len) {
         if (!data || len == 0) return {};
         int wlen = MultiByteToWideChar(1251, 0, data, static_cast<int>(len), nullptr, 0);
@@ -23,7 +22,6 @@ namespace ZemaxDDE {
         return u8str;
     }
 
-    // Convert UTF‑16 (wchar_t) string to UTF‑8
     std::string wstring_to_utf8(const std::wstring& wstr) {
         if (wstr.empty()) return {};
         int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(),
