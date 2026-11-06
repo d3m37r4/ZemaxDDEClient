@@ -479,14 +479,26 @@ namespace ImGuiUtils {
         }
 
         ImU32 col;
-        if (ImGui::IsItemActive())
+        // Same token the window resize border uses on hover, so the splitter
+        // highlights in the accent color exactly like the popup frame.
+        const bool hovered = ImGui::IsItemHovered();
+        const bool active = ImGui::IsItemActive();
+        if (active)
             col = ImGui::GetColorU32(ImGuiCol_SeparatorActive);
-        else if (ImGui::IsItemHovered())
-            col = ImGui::GetColorU32(ImGuiCol_Text, 0.4f);
+        else if (hovered)
+            col = ImGui::GetColorU32(ImGuiCol_SeparatorHovered);
         else
             col = ImGui::GetColorU32(ImGuiCol_Separator);
 
-        ImGui::GetWindowDrawList()->AddRectFilled(sp, ImVec2(sp.x + width, sp.y + height), col);
+        // Thin border-like line centered in the grab area: the idle state reads
+        // as a divider, hover/active thickens exactly like the window frame
+        // (RenderWindowOuterBorders uses max(2, WindowBorderSize)).
+        const float borderSize = ImGui::GetStyle().WindowBorderSize;
+        const float thickness = (active || hovered) ? std::max(2.0f, borderSize)
+                                                    : std::max(1.0f, borderSize);
+        const float lineX = sp.x + (width - thickness) * 0.5f;
+        ImGui::GetWindowDrawList()->AddRectFilled(
+            ImVec2(lineX, sp.y), ImVec2(lineX + thickness, sp.y + height), col);
 
         return changed;
     }
