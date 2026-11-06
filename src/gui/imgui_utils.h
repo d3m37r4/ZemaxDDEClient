@@ -32,11 +32,12 @@ namespace ImGuiUtils {
         SpacingY(bottomMultiplier);
     }
 
-    /// Shows a (?)-mark with a tooltip on hover.
-    inline void HelpMarker(const char* desc) {
+    /// Shows a (?)-mark with a tooltip on hover. The tip wraps at ~30 em so
+    /// long explanations read as a short paragraph instead of one wide line.
+    inline void HelpMarker(const char* desc, float wrapEm = 30.0f) {
         ImGui::TextDisabled("%s", ICON_FA_CIRCLE_QUESTION);
         if (ImGui::BeginItemTooltip()) {
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45.0f);
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * wrapEm);
             ImGui::TextUnformatted(desc);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
@@ -502,22 +503,55 @@ namespace ImGuiUtils {
 
         return changed;
     }
-    /// Renders a section header with separator title + separator line, optional description.
-    inline void SectionHeader(const char* title, const char* description = nullptr) {
-        ImGui::SeparatorText(title);
-        if (description) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-            ImGui::TextWrapped("%s", description);
-            ImGui::PopStyleColor();
-            ImGui::Spacing();
-        }
-    }
-
     /// Disabled hint paragraph that wraps at the current content width.
     inline void HintText(const char* text) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         ImGui::TextWrapped("%s", text);
         ImGui::PopStyleColor();
+    }
+
+    /// Section header: a neutral bar ahead of the title, with an optional
+    /// wrapped description underneath. Replaces SeparatorText, whose line hung
+    /// at the text baseline and read as a cut-off divider. The band is padded
+    /// vertically beyond the text line box so descenders stay inside it, and
+    /// the title sits on a horizontal neutral gradient fading to transparent.
+    /// The helper owns the vertical rhythm under a group header: a guaranteed
+    /// gap before the content, with or without a description.
+    inline void SectionHeader(const char* title, const char* description = nullptr) {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float fontSize = ImGui::GetFontSize();
+        const float gapAfterTitle = fontSize * 0.35f;
+        const float barWidth = DpiScale(3.0f);
+        const float barRounding = DpiScale(1.0f);
+        const float bandPad = DpiScale(2.0f);
+
+        const ImVec2 start = ImGui::GetCursorScreenPos();
+        const float lineHeight = ImGui::GetTextLineHeight();
+        const float bandWidth = ImGui::GetContentRegionAvail().x;
+        const ImVec2 bandMin(start.x, start.y - bandPad);
+        const ImVec2 bandMax(start.x + bandWidth, start.y + lineHeight + bandPad);
+
+        // Neutral in both themes: the muted text tone is already theme-tuned.
+        const ImVec4 neutral = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+        const ImU32 tintLeft = ImGui::GetColorU32(ImVec4(neutral.x, neutral.y, neutral.z, 0.18f));
+        const ImU32 tintRight = ImGui::GetColorU32(ImVec4(neutral.x, neutral.y, neutral.z, 0.0f));
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilledMultiColor(bandMin, bandMax,
+            tintLeft, tintRight, tintRight, tintLeft);
+
+        drawList->AddRectFilled(
+            bandMin, ImVec2(bandMin.x + barWidth, bandMax.y),
+            ImGui::GetColorU32(ImGuiCol_TextDisabled), barRounding);
+
+        ImGui::SetCursorScreenPos(
+            ImVec2(start.x + barWidth + style.ItemInnerSpacing.x, start.y));
+        ImGui::TextUnformatted(title);
+
+        ImGui::Dummy(ImVec2(0.0f, gapAfterTitle));
+        if (description) {
+            HintText(description);
+            ImGui::Spacing();
+        }
     }
 
     /// Pushes a danger-tinted FrameBg while the field holds a value that was
