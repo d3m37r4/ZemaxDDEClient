@@ -183,7 +183,6 @@ namespace gui {
 
             UiOperationMonitor m_uiOpMonitor;
             unsigned int m_frameCount = 0;
-            int m_pendingDisconnectIndex = -1;
 
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
             TestEngine* m_testEngine = nullptr;

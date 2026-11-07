@@ -441,17 +441,12 @@ void GuiManager::renderPreferencesDialog() {
 void GuiManager::renderConnectionLostPopup() {
     if (!m_ddeConnectionManager) return;
 
+    // The dead slot is cleaned up by DDEConnectionManager at detection time;
+    // the dialog only informs about the reason.
     if (m_ddeConnectionManager->hasConnectionLost() && !m_connectionLostDialog->isOpen()) {
-        int lostIdx = m_ddeConnectionManager->getConnectionLostIndex();
         std::string reason = m_ddeConnectionManager->getConnectionLostReason();
         m_ddeConnectionManager->clearConnectionLost();
         m_connectionLostDialog->open(reason);
-        m_pendingDisconnectIndex = lostIdx;
-    }
-
-    if (m_pendingDisconnectIndex >= 0 && !m_connectionLostDialog->isOpen()) {
-        m_ddeConnectionManager->disconnect(m_pendingDisconnectIndex);
-        m_pendingDisconnectIndex = -1;
     }
 
     if (m_connectionLostDialog) {
