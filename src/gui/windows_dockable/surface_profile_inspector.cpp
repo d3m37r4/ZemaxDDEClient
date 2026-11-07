@@ -57,7 +57,6 @@ namespace gui {
                 ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
                 ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
                 ImGuiUtils::EndPropertyGrid();
-                ImGuiUtils::SpacingY(0.25f);
 
                 int nominalCalcSlotV = m_profileService->getNominalCalcSlot();
                 bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
@@ -69,6 +68,10 @@ namespace gui {
                         nominalCalcSlotV);
                 }
                 ImGui::EndDisabled();
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.25f);
 
                 if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(nominal);
@@ -126,8 +129,6 @@ namespace gui {
                     forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
 
-                ImGuiUtils::SpacingY(0.5f);
-
                 if (nominalFrozen) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                     ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
@@ -139,6 +140,10 @@ namespace gui {
                 if (nominalOnActiveSlot) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.35f);
 
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalCalculating);
                 if (ImGui::Button(ICON_FA_COPY " Copy toleranced surface settings")) {
@@ -177,6 +182,8 @@ namespace gui {
                     });
             }
         }
+        // Air before the next section bar, as after the property grids.
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::EndChild();
 
         ImGuiUtils::SectionHeader("Toleranced surface parameters");
@@ -200,7 +207,6 @@ namespace gui {
                 ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
                 ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
                 ImGuiUtils::EndPropertyGrid();
-                ImGuiUtils::SpacingY(0.25f);
 
                 int tolerancedCalcSlotV = m_profileService->getTolerancedCalcSlot();
                 bool tolerancedFrozenV = tolerancedCalcSlotV >= 0 && tolerancedCalcSlotV != activeIdx;
@@ -212,6 +218,10 @@ namespace gui {
                         tolerancedCalcSlotV);
                 }
                 ImGui::EndDisabled();
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.25f);
 
                 if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(toleranced);
@@ -269,8 +279,6 @@ namespace gui {
                     forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
 
-                ImGuiUtils::SpacingY(0.5f);
-
                 if (tolerancedFrozen) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                     ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
@@ -282,6 +290,10 @@ namespace gui {
                 if (tolerancedOnActiveSlot) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.35f);
 
                 ImGui::BeginDisabled(!isDDEInitialized() || tolerancedCalculating);
                 if (ImGui::Button(ICON_FA_COPY " Copy nominal surface settings")) {
@@ -320,10 +332,16 @@ namespace gui {
                     });
             }
         }
+        // Air before the next section bar, as after the property grids.
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::EndChild();
 
         if (nominal.isValid() && toleranced.isValid()) {
             ImGuiUtils::SectionHeader("Surface profile analysis results");
+            // Same air under the bar as the property grids give their rows
+            // (CellPadding.y): this section opens with buttons, which would
+            // otherwise sit twice as close to the bar.
+            ImGui::Dummy(ImVec2(0.0f, ImGui::GetStyle().CellPadding.y));
 
             if (ImGui::Button(ICON_FA_CHART_LINE " Show comparison graphic")) {
                 m_profileService->m_showComparisonProfileWindow = true;

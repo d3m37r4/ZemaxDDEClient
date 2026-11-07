@@ -515,12 +515,12 @@ namespace ImGuiUtils {
     /// at the text baseline and read as a cut-off divider. The band is padded
     /// vertically beyond the text line box so descenders stay inside it, and
     /// the title sits on a horizontal neutral gradient fading to transparent.
-    /// The helper owns the vertical rhythm under a group header: a guaranteed
-    /// gap before the content, with or without a description.
+    /// No explicit spacer follows the title: ItemSpacing plus the padding of the
+    /// next widget already separate it, and adding a spacer on top of that read
+    /// as a full missing line. The description stays closer to the title than
+    /// the content below it because it gets an extra gap of its own.
     inline void SectionHeader(const char* title, const char* description = nullptr) {
         const ImGuiStyle& style = ImGui::GetStyle();
-        const float fontSize = ImGui::GetFontSize();
-        const float gapAfterTitle = fontSize * 0.35f;
         const float barWidth = DpiScale(3.0f);
         const float barRounding = DpiScale(1.0f);
         const float bandPad = DpiScale(2.0f);
@@ -547,10 +547,9 @@ namespace ImGuiUtils {
             ImVec2(start.x + barWidth + style.ItemInnerSpacing.x, start.y));
         ImGui::TextUnformatted(title);
 
-        ImGui::Dummy(ImVec2(0.0f, gapAfterTitle));
         if (description) {
             HintText(description);
-            ImGui::Spacing();
+            SpacingY(0.25f);
         }
     }
 
@@ -566,10 +565,12 @@ namespace ImGuiUtils {
         return true;
     }
 
-    /// Warning hint under an input whose value was clamped/snapped.
-    /// No-op when @p adjusted is false. Call after the input row.
+    /// Warning hint beside the input row whose value was clamped/snapped.
+    /// No-op when @p adjusted is false. Drawn on the same line so the transient
+    /// hint never reflows the rows below it. Call after the input row.
     inline void AdjustedHint(bool adjusted, const char* text, const ImVec4& warning) {
         if (!adjusted) return;
+        ImGui::SameLine();
         ImGui::TextColored(warning, "%s", text);
     }
 

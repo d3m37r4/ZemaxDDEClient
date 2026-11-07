@@ -80,7 +80,7 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Lens Name", s.lensName.c_str());
         ImGuiUtils::PropertyGridRow("File Name", s.fileName.c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("System");
         ImGuiUtils::BeginPropertyGrid("##System", maxLabelWidth);
@@ -89,7 +89,7 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Stop Surface", std::to_string(s.stopSurf).c_str());
         ImGuiUtils::PropertyGridRow("Global Reference Surface", std::to_string(s.globalRefSurf).c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("Fields & Waves");
         ImGuiUtils::BeginPropertyGrid("##Fields", maxLabelWidth);
@@ -97,13 +97,13 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Wavelengths", std::to_string(s.numWaves).c_str());
         ImGuiUtils::PropertyGridRow("Primary Wave", std::to_string(s.primWave).c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::BeginChild("##FieldWaveBlock", ImVec2(blockW, 0.0f), ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
         renderFieldTable();
         renderWaveTable();
         ImGui::EndChild();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("Settings");
         ImGuiUtils::BeginPropertyGrid("##Settings", maxLabelWidth);
@@ -111,14 +111,14 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Ray Aiming", getRayAimingTypeString(s.rayAimingType));
         ImGuiUtils::PropertyGridRow("Adjust Index", s.adjustIndex ? "Yes" : "No");
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("Environment");
         ImGuiUtils::BeginPropertyGrid("##Env", maxLabelWidth);
         ImGuiUtils::PropertyGridRow("Temperature", std::format("{:.4f} °C", s.temp).c_str());
         ImGuiUtils::PropertyGridRow("Pressure", std::format("{:.4f} atm", s.pressure).c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGui::EndChild();
     }

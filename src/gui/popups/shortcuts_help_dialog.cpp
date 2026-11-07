@@ -48,6 +48,11 @@ namespace gui {
 
         int tableIndex = 0;
         for (const auto& section : sections) {
+            // Bigger air before every section but the first: the groups must
+            // read as separate blocks inside the scrolling list.
+            if (tableIndex > 0) {
+                ImGuiUtils::SpacingY(0.5f);
+            }
             ImGuiUtils::SectionHeader(section.name);
             ImGui::BeginTable(std::format("##shortcuts_table_{}", tableIndex++).c_str(), 2,
                               ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoBordersInBody);

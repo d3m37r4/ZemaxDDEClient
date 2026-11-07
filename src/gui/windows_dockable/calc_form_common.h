@@ -185,6 +185,12 @@ inline void RenderAngleField(const CalcFormContext& ctx, const ImVec4& danger, c
 
 /// Block "Optical system / Surface number / Sampling / Angle".
 inline void RenderCalcForm(const CalcFormContext& ctx, const ImVec4& danger, const ImVec4& warning) {
+    // Pad like a property-grid row (CellPadding.y): the form opens with an input
+    // frame at the cursor, while a grid row insets its text by CellPadding.y, and
+    // without this the first field sits twice as close to the section bar as the
+    // text-only property grids do.
+    ImGui::Dummy(ImVec2(0.0f, ImGui::GetStyle().CellPadding.y));
+
     {
         // The path always exists while a file is open; empty means no DDE client.
         std::string display = ctx.opticalSystem.empty() ? "Not connected" : ctx.opticalSystem;

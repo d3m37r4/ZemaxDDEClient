@@ -212,6 +212,9 @@ namespace gui {
             case Section::Files:         renderSectionFiles();         break;
             default: break;
         }
+        // One bottom gap for every section: without it the last widget sits
+        // directly on the footer border.
+        ImGuiUtils::SpacingY(0.25f);
     }
 
     void PreferencesDialog::renderSectionGeneral() {
@@ -230,7 +233,7 @@ namespace gui {
             "The card appears only at application start. Closing it hides it for the rest "
             "of the session; it is not listed in the View menu.");
 
-        ImGuiUtils::SpacedSeparator(0.5f, 0.5f);
+        ImGuiUtils::SpacedSeparator(0.4f, 0.25f);
         ImGuiUtils::SectionHeader("Default layout",
                                   "Save the current window arrangement and reuse it later.");
         ImGui::Checkbox("Apply the saved default layout on startup",
@@ -385,7 +388,8 @@ namespace gui {
             applyWorkingPlot();
         }
 
-        ImGui::Spacing();
+        // Same block gap as before every other section bar.
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("3D Map", "Default color palettes for surface irregularity maps.");
 

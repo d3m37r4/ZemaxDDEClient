@@ -61,7 +61,6 @@ namespace gui {
                 ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
                 ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
                 ImGuiUtils::EndPropertyGrid();
-                ImGuiUtils::SpacingY(0.25f);
 
                 int nominalCalcSlotV = m_irregularityMapService->getNominalCalcSlot();
                 bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
@@ -73,6 +72,10 @@ namespace gui {
                         nominalCalcSlotV);
                 }
                 ImGui::EndDisabled();
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.25f);
 
                 if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(nominal);
@@ -126,8 +129,6 @@ namespace gui {
                     forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
 
-                ImGuiUtils::SpacingY(0.5f);
-
                 if (nominalFrozen) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                     ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
@@ -139,6 +140,10 @@ namespace gui {
                 if (nominalOnActiveSlot) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.35f);
 
                 forms::RenderResultActions(
                     form, m_uiOpMonitor, sem, isDDEInitialized(), activeIdx,
@@ -164,6 +169,8 @@ namespace gui {
             }
         }
 
+        // Air before the next section bar, as after the property grids.
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::EndChild();
 
         ImGuiUtils::SectionHeader("Toleranced surface parameters");
@@ -267,8 +274,6 @@ namespace gui {
                             plan.stepDeg).c_str());
                 }
 
-                ImGuiUtils::SpacingY(0.5f);
-
                 if (mapFrozen) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                     ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
@@ -280,6 +285,10 @@ namespace gui {
                 if (mapOnActiveSlot) {
                     forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
+
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.35f);
 
                 forms::RenderResultActions(
                     form, m_uiOpMonitor, sem, isDDEInitialized(), activeIdx,
@@ -301,6 +310,8 @@ namespace gui {
             }
         }
 
+        // Air before the next section bar, as after the property grids.
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::EndChild();
 
         if (m_irregularityMapService->hasData()) {
@@ -309,6 +320,10 @@ namespace gui {
                 TaskSource::SurfaceIrregularityMap);
 
             ImGuiUtils::SectionHeader("Analysis");
+            // Same air under the bar as the property grids give their rows
+            // (CellPadding.y): this section opens with plain text, which would
+            // otherwise stick to the bar.
+            ImGui::Dummy(ImVec2(0.0f, ImGui::GetStyle().CellPadding.y));
 
             ImGui::BeginDisabled(calculating);
 
@@ -333,7 +348,6 @@ namespace gui {
                 ImGui::Text(std::format("  Valley (V): {:.6f} mm", maxPV->valley).c_str());
                 ImGui::Text(std::format("  P-V:       {:.6f} mm", maxPV->pv).c_str());
 
-                ImGui::Spacing();
                 if (ImGui::Button(ICON_FA_CHART_LINE " Show worst profile")) {
                     for (const auto& p : profiles) {
                         if (std::abs(p.angle - maxPV->angle) < 0.01) {
