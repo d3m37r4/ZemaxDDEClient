@@ -252,6 +252,7 @@ namespace ImGuiUtils {
         struct PropertyGridFrame {
             ImGuiID id;
             int nextRow = 0;
+            bool active = false;
         };
 
         inline std::vector<PropertyGridFrame>& propertyGridStack() {
@@ -264,17 +265,27 @@ namespace ImGuiUtils {
 
     inline void BeginPropertyGrid(const char* id, float labelWidth) {
         const ImGuiID gridId = ImGui::GetID(id);
-        ImGui::BeginTable(id, 2);
-        ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, labelWidth);
-        ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
-        detail::propertyGridStack().push_back({gridId, 0});
+        // BeginTable() returns false when the hosting window is clipped away
+        // (SkipItems) and opens no table scope; a Table* call below would then
+        // dereference a null g.CurrentTable and crash (seen when the Find MaxPV
+        // block scrolled the grid out of view). The frame carries the flag so
+        // rows and EndPropertyGrid() stay in sync with the table scope.
+        const bool active = ImGui::BeginTable(id, 2);
+        if (active) {
+            ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, labelWidth);
+            ImGui::TableSetupColumn("##V", ImGuiTableColumnFlags_WidthStretch);
+        }
+        detail::propertyGridStack().push_back({gridId, 0, active});
     }
 
     inline void EndPropertyGrid() {
-        ImGui::EndTable();
-        if (!detail::propertyGridStack().empty()) {
-            detail::propertyGridStack().pop_back();
+        auto& stack = detail::propertyGridStack();
+        if (stack.empty()) return;
+        // EndTable() is legal only when BeginTable() returned true.
+        if (stack.back().active) {
+            ImGui::EndTable();
         }
+        stack.pop_back();
     }
 
     /// Two-column row whose value cell is selectable: a click selects it,
@@ -283,8 +294,11 @@ namespace ImGuiUtils {
     /// the whole cell, matching the rest of the UI.
     inline void PropertyGridRow(const char* label, const char* value) {
         auto& stack = detail::propertyGridStack();
-        const ImGuiID gridId = stack.empty() ? 0u : stack.back().id;
-        const int rowIndex = stack.empty() ? 0 : stack.back().nextRow++;
+        // No active table scope (clipped window): skip the row entirely —
+        // TableNextRow() would crash on the missing table, see BeginPropertyGrid.
+        if (stack.empty() || !stack.back().active) return;
+        const ImGuiID gridId = stack.back().id;
+        const int rowIndex = stack.back().nextRow++;
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);

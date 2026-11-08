@@ -54,24 +54,27 @@ namespace gui {
                 ImGuiUtils::SpacingY(0.5f);
             }
             ImGuiUtils::SectionHeader(section.name);
-            ImGui::BeginTable(std::format("##shortcuts_table_{}", tableIndex++).c_str(), 2,
-                              ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoBordersInBody);
-            ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed, hintColumnWidth);
-            for (const auto& row : section.rows) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                // Wrap instead of clipping: at the minimum window width long
-                // actions must stay readable; the row grows in height.
-                ImGui::TextWrapped("%s", row.action);
-                ImGui::TableSetColumnIndex(1);
-                const float textWidth = ImGui::CalcTextSize(row.hint.c_str()).x;
-                const float available = ImGui::GetContentRegionAvail().x;
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
-                                     std::max(0.0f, available - textWidth));
-                ImGui::TextUnformatted(row.hint.c_str());
+            // BeginTable() opens no scope when the section is scrolled out of
+            // the clipped child; the rows below would crash without the guard.
+            if (ImGui::BeginTable(std::format("##shortcuts_table_{}", tableIndex++).c_str(), 2,
+                                  ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoBordersInBody)) {
+                ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed, hintColumnWidth);
+                for (const auto& row : section.rows) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    // Wrap instead of clipping: at the minimum window width long
+                    // actions must stay readable; the row grows in height.
+                    ImGui::TextWrapped("%s", row.action);
+                    ImGui::TableSetColumnIndex(1);
+                    const float textWidth = ImGui::CalcTextSize(row.hint.c_str()).x;
+                    const float available = ImGui::GetContentRegionAvail().x;
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
+                                         std::max(0.0f, available - textWidth));
+                    ImGui::TextUnformatted(row.hint.c_str());
+                }
+                ImGui::EndTable();
             }
-            ImGui::EndTable();
         }
         ImGui::EndChild();
 
