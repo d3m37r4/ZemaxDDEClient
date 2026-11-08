@@ -55,14 +55,21 @@ namespace gui {
         bool m_showService = true;
         bool m_showOther = true;
 
-        // Parsed metadata cache; rebuilt only when the log size changes so the
-        // per-frame filtering stays a set of cheap checks.
+        /// Row tint derived from the entry text; computed once when the cache is
+        /// rebuilt instead of two substring scans per row per frame.
+        enum class RowTone { Normal, Problem, Success };
+
+        // Parsed metadata cache; rebuilt only when the log content changes so
+        // the per-frame filtering stays a set of cheap checks.
         struct CacheEntry {
             std::optional<std::chrono::system_clock::time_point> time;
             logs::LogLevel level = logs::LogLevel::Unknown;
+            RowTone tone = RowTone::Normal;
         };
+        /// Snapshot of the logger buffer, refreshed only on revision changes.
+        std::vector<std::string> m_entries;
         std::vector<CacheEntry> m_cache;
-        size_t m_cacheSize = static_cast<size_t>(-1);
+        uint64_t m_cacheRevision = static_cast<uint64_t>(-1);
 
         // Multi-selection over visible entries, stored by original index.
         std::set<size_t> m_selected;

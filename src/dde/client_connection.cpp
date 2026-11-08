@@ -65,13 +65,6 @@ namespace ZemaxDDE {
         }
     }
 
-    void ZemaxDDEClient::pumpMessages() {
-        MSG msg;
-        while (PeekMessageW(&msg, m_hwndZemaxClient, WM_DDE_FIRST, WM_DDE_LAST, PM_REMOVE)) {
-            DispatchMessageW(&msg);
-        }
-    }
-
     uint64_t ZemaxDDEClient::submitRequest(const std::string& command,
         std::function<void(const std::string&)> onSuccess,
         std::function<void(const std::string&)> onError,
@@ -155,8 +148,20 @@ namespace ZemaxDDE {
 
             m_activeRequest = std::move(req);
             if (!sendRequest(*m_activeRequest)) {
-                finishRequest();
-                return;
+                // Drop the request and keep draining in this loop: recursing
+                // through the old finishRequest() grew the stack by one frame
+                // per failed send. The owner still receives a failure callback.
+                DdeRequest failed = takeActiveRequest();
+                if (failed.onError) {
+                    try {
+                        failed.onError("Failed to submit request (PostMessage failed)");
+                    } catch (const std::exception& e) {
+                        m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+                    } catch (...) {
+                        m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+                    }
+                }
+                continue;
             }
 
             if (consecutiveErrors >= kMassErrorWarnThreshold) {
@@ -166,7 +171,7 @@ namespace ZemaxDDE {
                     "Server may have disconnected mid-batch.",
                     consecutiveErrors));
             }
-            return;  // active request set; wait for finishRequest()
+            return;  // active request set; wait for the response or timeout
         }
 
         // Queue drained without setting an active request (all errored).
@@ -207,15 +212,15 @@ namespace ZemaxDDE {
         return true;
     }
 
-    void ZemaxDDEClient::finishRequest() {
-        if (m_activeRequest) {
-            if (m_activeRequest->itemAtom != 0) {
-                GlobalDeleteAtom(m_activeRequest->itemAtom);
-                m_activeRequest->itemAtom = 0;
-            }
-            m_activeRequest.reset();
+    DdeRequest ZemaxDDEClient::takeActiveRequest() {
+        if (!m_activeRequest) return {};
+        if (m_activeRequest->itemAtom != 0) {
+            GlobalDeleteAtom(m_activeRequest->itemAtom);
+            m_activeRequest->itemAtom = 0;
         }
-        dispatchNext();
+        DdeRequest request = std::move(*m_activeRequest);
+        m_activeRequest.reset();
+        return request;
     }
 
     void ZemaxDDEClient::processTimeouts() {
@@ -227,6 +232,7 @@ namespace ZemaxDDE {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.startTime);
         if (elapsed.count() < req.timeoutMs) return;
 
+        bool resendFailed = false;
         if (req.retriesLeft > 0) {
             if (req.itemAtom != 0) {
                 GlobalDeleteAtom(req.itemAtom);
@@ -234,40 +240,38 @@ namespace ZemaxDDE {
             }
             req.retriesLeft--;
             req.timeoutMs = static_cast<DWORD>(static_cast<double>(req.timeoutMs) * 1.5);
-            if (!sendRequest(req)) {
-                // Re-send failed (e.g. PostMessageW error). The atom was already
-                // released inside sendRequest; treat the retry as a hard failure
-                // instead of leaving the request suspended in limbo.
-                m_logger.addLog(std::format("[DDE] ERROR: Retry resend failed for request #{}: '{}'",
-                    req.id, req.command));
-                if (req.onError) {
-                    try {
-                        req.onError("Failed to resend request (PostMessage failed)");
-                    } catch (const std::exception& e) {
-                        m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
-                    } catch (...) {
-                        m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
-                    }
-                }
-                finishRequest();
+            if (sendRequest(req)) {
+                m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
+                    req.retriesLeft, req.id, req.command, req.timeoutMs));
                 return;
             }
-
-            m_logger.addLog(std::format("[DDE] Retry #{} for request #{}: '{}' (timeout={}ms)",
-                req.retriesLeft, req.id, req.command, req.timeoutMs));
+            // Re-send failed (e.g. PostMessageW error). The atom was already
+            // released inside sendRequest; treat the retry as a hard failure
+            // instead of leaving the request suspended in limbo.
+            resendFailed = true;
+            m_logger.addLog(std::format("[DDE] ERROR: Retry resend failed for request #{}: '{}'",
+                req.id, req.command));
         } else {
-            m_logger.addLog(std::format("[DDE] ERROR: Request #{} timed out (max retries exceeded)", req.id));
-            if (req.onError) {
-                try {
-                    req.onError("Timeout: max retries exceeded");
-                } catch (const std::exception& e) {
-                    m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
-                } catch (...) {
-                    m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
-                }
-            }
-            finishRequest();
+            m_logger.addLog(std::format("[DDE] ERROR: Request #{} timed out (max retries exceeded)",
+                req.id));
         }
+
+        // Release the request before its callback runs: the callback may cancel
+        // the owner or submit the next request and must never observe this one
+        // as still in flight.
+        DdeRequest completed = takeActiveRequest();
+        if (completed.onError) {
+            try {
+                completed.onError(resendFailed
+                    ? "Failed to resend request (PostMessage failed)"
+                    : "Timeout: max retries exceeded");
+            } catch (const std::exception& e) {
+                m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
+            } catch (...) {
+                m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
+            }
+        }
+        dispatchNext();
     }
 
     void ZemaxDDEClient::checkConnectionHealth() {
@@ -311,16 +315,19 @@ namespace ZemaxDDE {
 
     void ZemaxDDEClient::drainRequestQueue(const std::string& reason) {
         if (m_activeRequest) {
-            if (m_activeRequest->onError) {
+            // Release the request BEFORE its callback: the old finishRequest()
+            // dispatched the next request mid-drain, which then failed with
+            // "Zemax is not connected" instead of this connection-lost reason.
+            DdeRequest failed = takeActiveRequest();
+            if (failed.onError) {
                 try {
-                    m_activeRequest->onError("Connection lost: " + reason);
+                    failed.onError("Connection lost: " + reason);
                 } catch (const std::exception& e) {
                     m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
                 } catch (...) {
                     m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
                 }
             }
-            finishRequest();
         }
 
         while (!m_requestQueue.empty()) {
@@ -367,6 +374,15 @@ namespace ZemaxDDE {
         bool isValid() const { return m_ptr != nullptr; }
         void* get() const { return m_ptr; }
         template<typename T> T* as() const { return static_cast<T*>(m_ptr); }
+        /// Releases the lock explicitly. Required before GlobalFree(): freeing a
+        /// still-locked block and unlocking the freed handle afterwards is
+        /// undefined behaviour (and corrupts the global heap).
+        void unlock() noexcept {
+            if (m_ptr) {
+                GlobalUnlock(m_handle);
+                m_ptr = nullptr;
+            }
+        }
     };
 
     LRESULT ZemaxDDEClient::handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam) {
@@ -418,16 +434,17 @@ namespace ZemaxDDE {
 
                         if (!isAck && !isBusy) {
                             m_logger.addLog(std::format("[DDE] Request #{} rejected by server (Negative ACK)", m_activeRequest->id));
-                            if (m_activeRequest->onError) {
+                            DdeRequest rejected = takeActiveRequest();
+                            if (rejected.onError) {
                                 try {
-                                    m_activeRequest->onError("Server rejected the request (Negative ACK)");
+                                    rejected.onError("Server rejected the request (Negative ACK)");
                                 } catch (const std::exception& e) {
                                     m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onError: {}", e.what()));
                                 } catch (...) {
                                     m_logger.addLog("[DDE] CRITICAL: Unknown exception in onError");
                                 }
                             }
-                            finishRequest();
+                            dispatchNext();
                         }
                     }
 
@@ -442,7 +459,10 @@ namespace ZemaxDDE {
                 return 0;
             }
             case WM_DDE_TERMINATE: {
-                // Server initiated connection termination
+                // DDE requires the client to answer the server's terminate so the
+                // conversation closes on both sides.
+                PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_TERMINATE,
+                             reinterpret_cast<WPARAM>(m_hwndZemaxClient), 0L);
                 m_logger.addLog("[DDE] Received WM_DDE_TERMINATE from server");
                 handleConnectionLost("Server sent WM_DDE_TERMINATE");
                 return 0;
@@ -451,42 +471,32 @@ namespace ZemaxDDE {
                 UnpackDDElParam(WM_DDE_DATA, lParam, &lowWord, &highWord);
                 FreeDDElParam(WM_DDE_DATA, lParam);
 
-                GLOBALHANDLE ddeDataHandle = reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
+                GLOBALHANDLE ddeDataHandle =
+                    reinterpret_cast<GLOBALHANDLE>(reinterpret_cast<uintptr_t>(lowWord));
                 ATOM aItem = static_cast<ATOM>(highWord);
 
                 GlobalLockGuard serverDataLock(ddeDataHandle);
                 if (!serverDataLock.isValid()) {
                     m_logger.addLog("[DDE] ERROR: Invalid GlobalLock in WM_DDE_DATA");
-                    GlobalFree(ddeDataHandle);
-                    if (!m_activeRequest) {
-                        GlobalDeleteAtom(aItem);
-                    } else {
-                        finishRequest();
-                    }
-                    return 0;
-                }
-
-                auto* serverData = serverDataLock.as<::DDEDATA>();
-                bool requestFulfilled = false;
-
-                if (!m_activeRequest) {
-                    if (serverData->fAckReq) {
-                        static_assert(sizeof(::DDEACK) == sizeof(WORD),
-                            "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
-                        WORD wStatus = static_cast<WORD>(0x0000);
-                        PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK,
-                                     reinterpret_cast<WPARAM>(m_hwndZemaxClient),
-                                     PackDDElParam(WM_DDE_ACK, wStatus, aItem));
-                    }
+                    // Broken packet: release what we own and leave the active
+                    // request on its retry/timeout path instead of finishing it.
                     GlobalDeleteAtom(aItem);
-                    if (serverData->fRelease) {
+                    if (ddeDataHandle) {
                         GlobalFree(ddeDataHandle);
                     }
                     return 0;
                 }
 
-                if (serverData->cfFormat == CF_TEXT) {
-                    char item[512]; 
+                auto* serverData = serverDataLock.as<::DDEDATA>();
+                // DDEDATA flags are read before the block can be released.
+                const bool ackRequested = serverData->fAckReq != 0;
+                const bool releaseData = serverData->fRelease != 0;
+                const bool textFormat = serverData->cfFormat == CF_TEXT;
+
+                bool requestFulfilled = false;
+                std::string payload;
+                if (m_activeRequest && textFormat) {
+                    char item[512];
                     wchar_t wItem[512];
                     GlobalGetAtomNameW(aItem, wItem, std::size(wItem));
                     WideCharToMultiByte(CP_ACP, 0, wItem, -1, item, sizeof(item), NULL, NULL);
@@ -495,62 +505,90 @@ namespace ZemaxDDE {
                         requestFulfilled = true;
 
                         #ifdef DEBUG_LOG
-                        m_logger.addLog(std::format("[DDE] Received data for #{}: '{}'", m_activeRequest->id, m_activeRequest->command));
+                        m_logger.addLog(std::format("[DDE] Received data for #{}: '{}'",
+                            m_activeRequest->id, m_activeRequest->command));
                         #endif
 
                         // Build a length-bounded payload from the global memory block so
                         // that non-null-terminated / binary data cannot overread past the
                         // allocated buffer (Value is a flexible trailing array).
                         static constexpr size_t kHeaderSize = offsetof(::DDEDATA, Value);
-                        size_t blockSize = GlobalSize(ddeDataHandle);
-                        std::string payload;
+                        const size_t blockSize = GlobalSize(ddeDataHandle);
                         if (blockSize > kHeaderSize) {
                             payload.assign(reinterpret_cast<const char*>(serverData->Value),
                                            blockSize - kHeaderSize);
                         }
+                    }
+                }
 
+                // Atom ownership: an ACK hands the item back to the server, so the
+                // client must not delete it when the post succeeds. Without an ACK
+                // request (or when the post fails) the atom stays ours to release.
+                if (ackRequested) {
+                    static_assert(sizeof(::DDEACK) == sizeof(WORD),
+                        "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
+                    DDEACK clientAck{};
+                    clientAck.fAck = requestFulfilled ? TRUE : FALSE;
+                    const WORD wStatus = static_cast<WORD>(
+                        (clientAck.fAck  ? 0x2000 : 0) |
+                        (clientAck.fBusy ? 0x1000 : 0)
+                    );
+                    const LPARAM ackParam = PackDDElParam(WM_DDE_ACK, wStatus, aItem);
+                    if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK,
+                                      reinterpret_cast<WPARAM>(m_hwndZemaxClient), ackParam)) {
+                        FreeDDElParam(WM_DDE_ACK, ackParam);
+                        GlobalDeleteAtom(aItem);
+                    }
+                } else {
+                    GlobalDeleteAtom(aItem);
+                }
+
+                // Never free a locked block: unlock first, otherwise the guard's
+                // destructor unlocks the freed handle (global heap corruption).
+                if (releaseData) {
+                    serverDataLock.unlock();
+                    GlobalFree(ddeDataHandle);
+                }
+
+                if (requestFulfilled) {
+                    // Release the request before the callback: the owner may
+                    // submit the next section or cancel from inside onSuccess.
+                    DdeRequest completed = takeActiveRequest();
+                    if (completed.onSuccess) {
                         try {
-                            if (m_activeRequest->onSuccess) {
-                                m_activeRequest->onSuccess(payload);
-                            }
+                            completed.onSuccess(payload);
                         } catch (const std::exception& e) {
                             m_logger.addLog(std::format("[DDE] CRITICAL: Exception in onSuccess: {}", e.what()));
                         } catch (...) {
                             m_logger.addLog("[DDE] CRITICAL: Unknown exception in onSuccess");
                         }
                     }
-                }
-
-                if (!requestFulfilled) {
+                    dispatchNext();
+                } else {
                     m_logger.addLog(std::format("[DDE] WARNING: Data mismatch or no handler for atom {}", aItem));
-                }
-
-                if (serverData->fAckReq) {
-                    static_assert(sizeof(::DDEACK) == sizeof(WORD),
-                        "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
-                    DDEACK clientAck{};
-                    clientAck.fAck = requestFulfilled ? TRUE : FALSE;
-                    WORD wStatus = static_cast<WORD>(
-                        (clientAck.fAck  ? 0x2000 : 0) |
-                        (clientAck.fBusy ? 0x1000 : 0)
-                    );
-                    PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK,
-                                 reinterpret_cast<WPARAM>(m_hwndZemaxClient),
-                                 PackDDElParam(WM_DDE_ACK, wStatus, aItem));
-                }
-
-                if (serverData->fRelease) {
-                    GlobalFree(ddeDataHandle);
-                }
-
-                // Data that did not match the active request (e.g. a stale reply from
-                // an already-timed-out retry whose atom got reused) must NOT complete
-                // the active request. Only advance when the payload is actually ours.
-                if (requestFulfilled) {
-                    finishRequest();
                 }
                 return 0;
             }
+        }
+
+        // DDE messages we do not consume still hand us packed parameters: free
+        // the param block and the item atom, otherwise both leak per message.
+        switch (iMsg) {
+            case WM_DDE_REQUEST:
+            case WM_DDE_ADVISE:
+            case WM_DDE_UNADVISE: {
+                UINT_PTR format = 0;
+                UINT_PTR item = 0;
+                UnpackDDElParam(iMsg, lParam, &format, &item);
+                FreeDDElParam(iMsg, lParam);
+                if (item != 0) {
+                    GlobalDeleteAtom(static_cast<ATOM>(item));
+                }
+                m_logger.addLog(std::format("[DDE] Dropped unsupported message {} (format={})", iMsg, format));
+                return 0;
+            }
+            default:
+                break;
         }
         return DefWindowProcW(m_hwndZemaxClient, iMsg, wParam, lParam);
     }

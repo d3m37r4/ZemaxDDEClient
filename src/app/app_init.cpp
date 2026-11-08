@@ -65,6 +65,8 @@ namespace App {
         
         if (!ctx->glfwWindow) {
             logger.addLog("[APP] Failed to create GLFW window");
+            // NFD was initialized above; unwind it together with GLFW.
+            NFD_Quit();
             glfwTerminate();
             return nullptr;
         }

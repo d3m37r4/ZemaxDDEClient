@@ -68,14 +68,11 @@ namespace gui {
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
         const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
 
-        float sagMin = 1e30f, sagMax = -1e30f;
-        for (const auto& profile : getProfiles()) {
-            for (const auto& pt : profile.sagDataPoints) {
-                float s = static_cast<float>(pt.sag * scaleZ);
-                sagMin = std::min(sagMin, s);
-                sagMax = std::max(sagMax, s);
-            }
-        }
+        // Cached extents: recomputed only when the data changes instead of
+        // walking every point of every section on every frame.
+        const auto& ranges = dataRanges();
+        const float sagMin = ranges.sagValid ? ranges.sagMin * static_cast<float>(scaleZ) : 0.0f;
+        const float sagMax = ranges.sagValid ? ranges.sagMax * static_cast<float>(scaleZ) : 1.0f;
         float sagRange = sagMax - sagMin;
         if (sagRange < 1e-12f) sagRange = 1.0f;
 
@@ -115,6 +112,16 @@ namespace gui {
 
                 float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
                 bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+                // A precise map (thousands of sections) submits hundreds of
+                // thousands of plot items per frame and overruns the 16-bit
+                // ImDrawIdx range. Draw a thinned set; the worst section always
+                // stays so the highlight never disappears. The underlying data
+                // keeps its full resolution.
+                constexpr int kMaxDrawnProfiles = 360;
+                const int stride = std::max(1, numProfiles / kMaxDrawnProfiles);
+                if (!isWorst && (profileIdx % stride) != 0) {
+                    continue;
+                }
 
                 for (int i = 0; i < numRadii; ++i) {
                     double r = i * rStep;
@@ -177,14 +184,11 @@ namespace gui {
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
         const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
 
-        float devMin = 1e30f, devMax = -1e30f;
-        for (const auto& profile : getProfiles()) {
-            for (size_t k = 0; k < profile.sagDataPoints.size() && k < m_nominalSurfaceData.sagDataPoints.size(); ++k) {
-                float dev = static_cast<float>((profile.sagDataPoints[k].sag - m_nominalSurfaceData.sagDataPoints[k].sag) * scaleZ);
-                devMin = std::min(devMin, dev);
-                devMax = std::max(devMax, dev);
-            }
-        }
+        // Cached deviation extents: recomputed only when the data changes instead
+        // of walking every point of every section on every frame.
+        const auto& ranges = dataRanges();
+        const float devMin = ranges.devValid ? ranges.devMin * static_cast<float>(scaleZ) : 0.0f;
+        const float devMax = ranges.devValid ? ranges.devMax * static_cast<float>(scaleZ) : 1.0f;
         float devRange = devMax - devMin;
         if (devRange < 1e-12f) devRange = 1.0f;
 
@@ -224,6 +228,14 @@ namespace gui {
 
                 float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
                 bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+                // Same thinning as the surface plot: a precise map would flood
+                // ImPlot3D with plot items every frame. The worst section is
+                // always kept so its highlight never disappears.
+                constexpr int kMaxDrawnProfiles = 360;
+                const int stride = std::max(1, numProfiles / kMaxDrawnProfiles);
+                if (!isWorst && (profileIdx % stride) != 0) {
+                    continue;
+                }
 
                 for (int i = 0; i < numRadii; ++i) {
                     double r = i * rStep;

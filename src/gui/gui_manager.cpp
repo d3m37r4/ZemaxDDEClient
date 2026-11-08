@@ -73,6 +73,11 @@ namespace {
             m_uiOpMonitor.failAllTasksOnSlot(index);
             m_profileService->onClientDisconnected(index);
             m_irregularityMapService->onClientDisconnected(index);
+            // The callback fires while the slot is being torn down, before the
+            // client is destroyed: drop the cached pointers now instead of
+            // letting a renderer in this frame touch the dying connection.
+            m_zemaxDDEClient = nullptr;
+            m_uiOpMonitor.setMonitor(nullptr);
         });
     }
     m_menuBarController = std::make_unique<MenuBarController>(m_logger, m_ddeConnectionManager);
@@ -112,6 +117,7 @@ namespace {
     m_preferencesDialog->setThemeManager(&m_graphics.getThemeManager());
     m_settingsManager->setUpdateChecker(m_updateChecker.get());
     m_settingsManager->setLogger(&m_logger);
+    m_settingsManager->setMapService(m_irregularityMapService.get());
     m_menuBarController->setPreferencesCallback([this]() {
         m_preferencesDialog->setActiveLogPath(m_logger.getCurrentLogPath());
         m_preferencesDialog->open();
@@ -127,17 +133,10 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
     m_profileService->setSettingsManager(m_settingsManager.get());
     m_irregularityMapService->setSettingsManager(m_settingsManager.get());
 
-    const auto& mapSettings = m_settingsManager->current().map;
-    m_irregularityMapService->m_windowState.selectedColormapSurface = mapSettings.defaultColormapSurface;
-    m_irregularityMapService->m_windowState.selectedColormapDeviation = mapSettings.defaultColormapDeviation;
-    m_irregularityMapService->m_windowState.highlightWorstSurface = mapSettings.highlightWorstSurface;
-    m_irregularityMapService->m_windowState.highlightWorstDeviation = mapSettings.highlightWorstDeviation;
-    m_irregularityMapService->m_windowState.worstColorSurface[0] = mapSettings.worstColorSurface[0];
-    m_irregularityMapService->m_windowState.worstColorSurface[1] = mapSettings.worstColorSurface[1];
-    m_irregularityMapService->m_windowState.worstColorSurface[2] = mapSettings.worstColorSurface[2];
-    m_irregularityMapService->m_windowState.worstColorDeviation[0] = mapSettings.worstColorDeviation[0];
-    m_irregularityMapService->m_windowState.worstColorDeviation[1] = mapSettings.worstColorDeviation[1];
-    m_irregularityMapService->m_windowState.worstColorDeviation[2] = mapSettings.worstColorDeviation[2];
+    // One place owns the map state: applyMap() copies palettes, the highlight
+    // flags and the worst colours into the service, so the Preferences live
+    // preview and the startup path cannot drift apart.
+    m_settingsManager->applyMap(m_settingsManager->current().map);
 
     const auto& themeManager = m_graphics.getThemeManager();
     m_menuBarController->setThemeManager(&themeManager);
@@ -149,13 +148,16 @@ void GuiManager::initialize(bool isLightTheme, float dpiScale) {
 }
 
 void GuiManager::render() {
-    m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
-    m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
-
+    // DDE housekeeping first: checkAllConnectionHealth() tears a dead slot down
+    // in this very call (the client and its OperationMonitor are destroyed).
+    // Caching m_zemaxDDEClient before it would leave both pointers dangling for
+    // every renderer below - a use-after-free right after a Zemax crash.
     if (m_ddeConnectionManager) {
         m_ddeConnectionManager->processAllTimeouts();
         m_ddeConnectionManager->checkAllConnectionHealth();
     }
+    m_zemaxDDEClient = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveClient() : nullptr;
+    m_uiOpMonitor.setMonitor(m_zemaxDDEClient ? m_zemaxDDEClient->getOperationMonitor() : nullptr);
 
     constexpr unsigned int kThemeCheckInterval = 60;
     if (++m_frameCount % kThemeCheckInterval == 0) {
@@ -163,6 +165,9 @@ void GuiManager::render() {
     }
 
     m_graphics.beginFrame();
+    // Input is final only after NewFrame(): handling shortcuts before it (as the
+    // main loop did) read the previous frame's key state and could double-fire.
+    handleShortcuts();
     if (m_menuBarController) {
         m_menuBarController->render();
     }

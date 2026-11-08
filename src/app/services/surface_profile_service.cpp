@@ -94,7 +94,7 @@ namespace app::services {
             calc.onFailed = [this]() { onTolerancedFailed(); };
         }
 
-        calc.startCalculation(surface, sampling, angle, source);
+        calc.startCalculation(surface, sampling, angle, source, "", slot);
     }
 
     void SurfaceProfileService::onNominalComplete() {

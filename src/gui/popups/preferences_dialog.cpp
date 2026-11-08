@@ -18,6 +18,22 @@
 
 namespace gui {
 
+    namespace {
+        /// Sidebar entries and the width measurement share one list: the old
+        /// hand-written width array missed the icons and the Logging entry, so
+        /// long labels could clip at larger font scales.
+        constexpr const char* kSidebarLabels[] = {
+            ICON_FA_SLIDERS " General",
+            ICON_FA_PALETTE " Appearance",
+            ICON_FA_PLUG " DDE Connection",
+            ICON_FA_GAUGE_HIGH " DDE Performance",
+            ICON_FA_CHART_LINE " Plot Settings",
+            ICON_FA_ARROW_UP " Updates",
+            ICON_FA_FILE_LINES " Logging",
+            ICON_FA_FOLDER " Files",
+        };
+    }
+
     PreferencesDialog::PreferencesDialog(SettingsManager& settings) noexcept
         : m_settings(settings) {
         m_resetConfirmDialog = std::make_unique<ResetConfirmDialog>();
@@ -102,14 +118,17 @@ namespace gui {
             m_closedByAction = true;
         }
 
-        static const char* sidebarLabels[] = {
-            "General", "Appearance", "DDE Connection", "DDE Performance", "Plot", "Updates", "Files"
-        };
-        if (m_sidebarWidth <= 0.0f) {
+        // Recompute on font/DPI change: CalcTextSize follows the active scale,
+        // while a stale cached width used to clip the labels.
+        const float sidebarFontSize = ImGui::GetFontSize();
+        if (m_sidebarWidth <= 0.0f || m_sidebarFontSize != sidebarFontSize) {
             float maxW = 0.0f;
-            for (auto* l : sidebarLabels)
-                maxW = std::max(maxW, ImGui::CalcTextSize(l).x);
-            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f + ImGuiUtils::DpiScale(PREFS_SIDEBAR_EXTRA_PAD);
+            for (const char* label : kSidebarLabels) {
+                maxW = std::max(maxW, ImGui::CalcTextSize(label).x);
+            }
+            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f
+                + ImGuiUtils::DpiScale(PREFS_SIDEBAR_EXTRA_PAD);
+            m_sidebarFontSize = sidebarFontSize;
         }
 
         const float footerH    = ImGui::GetFrameHeightWithSpacing();
@@ -181,20 +200,12 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSidebar() {
-        static const char* labels[static_cast<int>(Section::Count)] = {
-            ICON_FA_SLIDERS " General",
-            ICON_FA_PALETTE " Appearance",
-            ICON_FA_PLUG " DDE Connection",
-            ICON_FA_GAUGE_HIGH " DDE Performance",
-            ICON_FA_CHART_LINE " Plot Settings",
-            ICON_FA_ARROW_UP " Updates",
-            ICON_FA_FILE_LINES " Logging",
-            ICON_FA_FOLDER " Files",
-        };
+        static_assert(IM_ARRAYSIZE(kSidebarLabels) == static_cast<int>(Section::Count),
+                      "Add a sidebar label for every section");
 
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
             const bool selected = (static_cast<int>(m_section) == i);
-            if (ImGui::Selectable(labels[i], selected)) {
+            if (ImGui::Selectable(kSidebarLabels[i], selected)) {
                 m_section = static_cast<Section>(i);
             }
         }
@@ -300,6 +311,11 @@ namespace gui {
             ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
             ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
+            if (changed) {
+                // The loader clamps stored values to the same range; keep the
+                // live edit inside it so Save cannot persist an out-of-range value.
+                *value = std::clamp(*value, app::kMinTimeoutMs, app::kMaxTimeoutMs);
+            }
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
             return changed;
@@ -319,7 +335,13 @@ namespace gui {
             changed |= inputMs("Connection timeout", "##d timeout", &m_working.dde.connectionTimeoutMs);
             changed |= inputInt("Max retry count", "##d retry", &m_working.dde.maxRetryCount);
             changed |= inputInt("Max concurrent connections", "##d conns", &m_working.dde.maxConnections);
-            if (changed) applyWorkingDDE();
+            if (changed) {
+                m_working.dde.maxRetryCount = std::clamp(
+                    m_working.dde.maxRetryCount, app::kMinRetries, app::kMaxRetries);
+                m_working.dde.maxConnections = std::clamp(
+                    m_working.dde.maxConnections, app::kMinConnections, app::kMaxConnections);
+                applyWorkingDDE();
+            }
         }
         ImGui::EndChild();
     }
@@ -332,6 +354,9 @@ namespace gui {
             ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
             ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
+            if (changed) {
+                *value = std::clamp(*value, app::kMinRequestTimeoutMs, app::kMaxRequestTimeoutMs);
+            }
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
             return changed;
@@ -454,12 +479,19 @@ namespace gui {
         ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
         ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFileSizeMB", &m_working.logging.logFileSizeMB, 0, 0);
+        // A zero/negative size made the logger rotate on every line; clamp to the
+        // same bounds the settings loader enforces.
+        m_working.logging.logFileSizeMB = std::clamp(
+            m_working.logging.logFileSizeMB, app::kMinFileSizeMB, app::kMaxFileSizeMB);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Log folder size warning threshold (MB)");
         ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
         ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFolderThresholdMB", &m_working.logging.logFolderSizeThresholdMB, 0, 0);
+        m_working.logging.logFolderSizeThresholdMB = std::clamp(
+            m_working.logging.logFolderSizeThresholdMB,
+            app::kMinFolderThresholdMB, app::kMaxFolderThresholdMB);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Current log folder size");

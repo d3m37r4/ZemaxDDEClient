@@ -81,6 +81,20 @@ namespace app::services {
             bool hasData() const { return !m_profiles.empty() && m_totalAngles > 0 && static_cast<int>(m_profiles.size()) >= m_totalAngles; }
             const std::vector<app::models::SurfaceData>& getProfiles() const { return m_profiles; }
             const std::optional<MaxPVResult>& getMaxPVResult() const { return m_maxPVResult; }
+
+            /// Cached data extents (unscaled sag units). The 3D renderers used to
+            /// walk every point of every section each frame, which stalled the UI
+            /// on precise maps; the extents are now recomputed only when the data
+            /// changes (map completion, nominal load, clear).
+            struct DataRanges {
+                bool sagValid = false;
+                float sagMin = 0.0f;
+                float sagMax = 0.0f;
+                bool devValid = false;
+                float devMin = 0.0f;
+                float devMax = 0.0f;
+            };
+            [[nodiscard]] const DataRanges& dataRanges() const { return m_ranges; }
             std::optional<MaxPVResult> findMaxPVSection() const;
             bool calculateDeviations();
 
@@ -102,6 +116,8 @@ namespace app::services {
 
         protected:
             void startNextProfile();
+            /// Recomputes the cached sag/deviation extents from the current data.
+            void recomputeRanges();
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
@@ -112,6 +128,7 @@ namespace app::services {
 
             std::vector<app::models::SurfaceData> m_profiles;
             std::optional<MaxPVResult> m_maxPVResult;
+            DataRanges m_ranges;
 
             int m_targetSurface = 0;
             int m_targetSampling = 0;

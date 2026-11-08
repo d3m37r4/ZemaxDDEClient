@@ -201,8 +201,13 @@ std::string truncateToWidth(ImFont* font, float fontSize, float avail,
     std::string label = title + "...";
     while (label.size() > 4
         && font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, label.c_str()).x > avail) {
-        // Drop one character before the ellipsis tail.
-        label.erase(label.size() - 4, 1);
+        // Drop one full UTF-8 code point before the ellipsis tail: erasing a
+        // single byte split Cyrillic letters and the degree sign (0xC2 0xB0).
+        size_t cut = label.size() - 4;
+        while (cut > 0 && (static_cast<unsigned char>(label[cut]) & 0xC0) == 0x80) {
+            --cut;
+        }
+        label.erase(cut, label.size() - 4 - cut + 1);
     }
     return label;
 }

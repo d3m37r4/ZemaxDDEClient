@@ -23,8 +23,13 @@ namespace app::compute {
             void setSurfaceDataTimeoutMs(DWORD ms) { m_surfaceDataTimeoutMsOverride = ms; }
             void setSagTimeoutMs(DWORD ms) { m_sagTimeoutMsOverride = ms; }
 
+            /// @param slot  Connection slot the run is pinned to (-1 = whatever
+            ///              slot is active when the run starts). Every request of
+            ///              the run resolves its client through this slot, so
+            ///              switching the target mid-run cannot redirect it.
             void startCalculation(int surface, int sampling, double angle,
-                                  app::models::TaskSource source, const std::string& label = "");
+                                  app::models::TaskSource source, const std::string& label = "",
+                                  int slot = -1);
             void cancel();
 
             bool isCalculating() const { return m_state == State::FetchingSurfaceData || m_state == State::FetchingSagPoints; }
@@ -62,6 +67,9 @@ namespace app::compute {
             Logger& m_logger;
             app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
             ZemaxDDE::ZemaxDDEClient* m_boundClient{nullptr};
+            /// Slot the current run is pinned to (-1 = not pinned). Sibling
+            /// instances may target different slots at the same time.
+            int m_boundSlot{-1};
 
             enum class State { Idle, FetchingSurfaceData, FetchingSagPoints, Completed, Failed };
             State m_state = State::Idle;

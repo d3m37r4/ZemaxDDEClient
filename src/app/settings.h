@@ -21,6 +21,25 @@ namespace app {
     inline constexpr float kMinFontScale = 0.75f;
     inline constexpr float kMaxFontScale = 3.0f;
 
+    // Numeric bounds of the persisted settings. The loader clamps stored values
+    // and the Preferences fields clamp live edits to the same ranges.
+    inline constexpr int kMinTimeoutMs = 1000;
+    inline constexpr int kMaxTimeoutMs = 30000;
+    inline constexpr int kMinRequestTimeoutMs = 100;
+    inline constexpr int kMaxRequestTimeoutMs = 30000;
+    inline constexpr int kMinRetries = 0;
+    inline constexpr int kMaxRetries = 10;
+    inline constexpr int kMinConnections = 1;
+    inline constexpr int kMaxConnections = 16;
+    inline constexpr float kMinLineWeight = 1.0f;
+    inline constexpr float kMaxLineWeight = 3.0f;
+    inline constexpr float kMinMarkerSize = 0.0f;
+    inline constexpr float kMaxMarkerSize = 10.0f;
+    inline constexpr int kMinFileSizeMB = 1;
+    inline constexpr int kMaxFileSizeMB = 100;
+    inline constexpr int kMinFolderThresholdMB = 10;
+    inline constexpr int kMaxFolderThresholdMB = 500;
+
     struct GeneralSettings {
         bool restoreWindowLayout = true;
         /// Show the Welcome card at application start. The card has no View

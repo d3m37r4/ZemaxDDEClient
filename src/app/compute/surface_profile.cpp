@@ -23,7 +23,15 @@ namespace app::compute {
 
     ZemaxDDE::ZemaxDDEClient* SurfaceProfile::getClient() const {
         if (m_boundClient) return m_boundClient;
-        return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
+        if (!m_connectionManager) return nullptr;
+        // A run pinned to a slot must never fall back to whichever slot happens
+        // to be active now: switching the target (F6) mid-map used to continue
+        // the remaining sections against another Zemax instance.
+        if (m_boundSlot >= 0) {
+            DDEConnection* conn = m_connectionManager->getConnection(m_boundSlot);
+            return (conn && conn->isConnected()) ? conn->client.get() : nullptr;
+        }
+        return m_connectionManager->getActiveClient();
     }
 
     bool SurfaceProfile::isCancelled() const {
@@ -32,18 +40,23 @@ namespace app::compute {
     }
 
     void SurfaceProfile::startCalculation(
-        int surface, int sampling, double angle, app::models::TaskSource source, const std::string& label)
+        int surface, int sampling, double angle, app::models::TaskSource source, const std::string& label,
+        int slot)
     {
         // Bump the generation so any still-in-flight callbacks from a previous run
         // will be ignored when they arrive.
         uint64_t generation = ++m_generation;
 
         // Resolve the client fresh each run so a stale pointer from a previously
-        // disconnected slot can never be re-used (use-after-free guard).
+        // disconnected slot can never be re-used (use-after-free guard). The slot
+        // pins every request of the run: a map calls this once per section and
+        // F6 must not redirect the remaining sections.
         m_boundClient = nullptr;
+        m_boundSlot = slot;
 
         auto* client = getClient();
         if (!client) {
+            m_boundSlot = -1;
             m_state = State::Failed;
             m_error = "No active DDE connection";
             if (onFailed) onFailed();
@@ -56,8 +69,11 @@ namespace app::compute {
             std::string taskLabel = label.empty()
                 ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
                 : label;
-            int clientSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
-            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot);
+            int clientSlot = slot >= 0
+                ? slot
+                : (m_connectionManager ? m_connectionManager->getActiveIndex() : -1);
+            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot,
+                                                client->getOperationMonitor());
         }
 
         m_state = State::FetchingSurfaceData;
@@ -127,6 +143,7 @@ namespace app::compute {
             client->cancelPendingRequests(m_serviceTag);
         }
         m_boundClient = nullptr;
+        m_boundSlot = -1;
         m_cancelRequested = true;
         m_state = State::Failed;
         m_error = "Cancelled";
@@ -181,6 +198,7 @@ namespace app::compute {
             // Drop the reference to the client at completion so a later disconnect
             // cannot leave 'this' holding a dangling client pointer.
             m_boundClient = nullptr;
+            m_boundSlot = -1;
 
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->completeTask(m_taskId);
@@ -226,6 +244,7 @@ namespace app::compute {
             m_result.sagDataPoints.clear();
             m_state = State::Completed;
             m_boundClient = nullptr;
+            m_boundSlot = -1;
             if (onComplete) onComplete();
             return;
         }
@@ -319,6 +338,7 @@ namespace app::compute {
         m_state = State::Failed;
         m_error = error;
         m_boundClient = nullptr;
+        m_boundSlot = -1;
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->failTask(m_taskId, error);

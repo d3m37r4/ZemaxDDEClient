@@ -11,6 +11,8 @@
 
 #include "logger.h"
 
+#include "app/config_path.h"
+
 namespace {
     std::string getLocalAppDataPath() {
         static std::string path;
@@ -32,6 +34,12 @@ namespace {
 }
 
 std::string Logger::getLogDir() const {
+    // Single source of truth: Preferences -> Files shows this path and the
+    // "clean log folder" action deletes from it.
+    const char* configured = app::getLogFolderPath();
+    if (configured && *configured) {
+        return configured;
+    }
     std::string basePath = getLocalAppDataPath();
     if (basePath.empty()) return "logs";
     return basePath + "\\logs";
@@ -64,9 +72,25 @@ void Logger::openLogFile() {
     }
 
     m_currentLogDate = today;
-    m_rotationIndex = 0;
 
-    std::string path = getLogPath(today, 0);
+    // First slot that still has room; existing archives are never truncated
+    // (the old code reopened -01.log with trunc and erased the previous
+    // session's log on a restart within the same day).
+    std::string path;
+    m_rotationIndex = 0;
+    for (int rotation = 0; rotation <= 999; ++rotation) {
+        const std::string candidate = getLogPath(today, rotation);
+        std::error_code ec;
+        const auto size = std::filesystem::file_size(candidate, ec);
+        if (ec || size < m_maxFileSize) {
+            m_rotationIndex = rotation;
+            path = candidate;
+            break;
+        }
+    }
+    if (path.empty()) {
+        path = getLogPath(today, 0);
+    }
     m_logFile.open(path, std::ios::app);
     if (m_logFile.is_open()) {
         m_logFile.seekp(0, std::ios::end);
@@ -78,10 +102,30 @@ void Logger::rotateLogFile() {
     if (m_logFile.is_open()) {
         m_logFile.close();
     }
-    m_rotationIndex++;
-    std::string path = getLogPath(m_currentLogDate, m_rotationIndex);
-    m_logFile.open(path, std::ios::trunc);
-    m_currentFileSize = 0;
+    // Skip to the first slot with room instead of truncating an existing
+    // archive: a restart within the same day used to erase -01.log.
+    std::string path;
+    for (int rotation = m_rotationIndex + 1; rotation <= 999; ++rotation) {
+        const std::string candidate = getLogPath(m_currentLogDate, rotation);
+        std::error_code ec;
+        const auto size = std::filesystem::file_size(candidate, ec);
+        if (ec || size < m_maxFileSize) {
+            m_rotationIndex = rotation;
+            path = candidate;
+            break;
+        }
+    }
+    if (path.empty()) {
+        ++m_rotationIndex;
+        path = getLogPath(m_currentLogDate, m_rotationIndex);
+    }
+    m_logFile.open(path, std::ios::app);
+    if (m_logFile.is_open()) {
+        m_logFile.seekp(0, std::ios::end);
+        m_currentFileSize = static_cast<size_t>(m_logFile.tellp());
+    } else {
+        m_currentFileSize = 0;
+    }
 }
 
 std::string Logger::getCurrentLogPath() const {
@@ -92,11 +136,12 @@ std::string Logger::getCurrentLogPath() const {
 void Logger::clearLogs() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_logs.clear();
+    m_revision.fetch_add(1, std::memory_order_relaxed);
 }
 
 std::vector<std::string> Logger::getLogs() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    return m_logs;
+    return {m_logs.begin(), m_logs.end()};
 }
 
 void Logger::addLog(std::string_view message) {
@@ -121,6 +166,12 @@ void Logger::addLog(std::string_view message) {
 
     std::lock_guard<std::mutex> lock(m_mutex);
     m_logs.push_back(std::move(logEntry));
+    // Bound the in-memory buffer: a precise map run appends tens of thousands
+    // of lines. Trim in batches so the erase cost stays amortized.
+    if (m_logs.size() > MAX_MEMORY_LOGS) {
+        m_logs.erase(m_logs.begin(), m_logs.begin() + static_cast<std::ptrdiff_t>(TRIM_BATCH));
+    }
+    m_revision.fetch_add(1, std::memory_order_relaxed);
 
     #ifdef DEBUG_LOG
     std::cout << m_logs.back() << '\n';

@@ -93,7 +93,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     while (!ctx->gui->shouldClose()) {
         glfwPollEvents();
 
-        ctx->gui->handleShortcuts();
+        // Shortcuts run inside GuiManager::render(), right after NewFrame():
+        // before it, key state still belongs to the previous frame.
         ctx->gui->render();
 
 #ifdef ZEMAX_ENABLE_TEST_ENGINE

@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cmath>
 #include <format>
+#include <limits>
 
 #include "dde/constants.h"
 #include "dde/operation_monitor.h"
@@ -37,6 +39,7 @@ namespace app::services {
             m_maxPVResult.reset();
             m_mapCalcSlot = -1;
         }
+        recomputeRanges();
     }
 
     void SurfaceMapService::startCalculation(int surface, int sampling, double angle, app::models::TaskSource source) {
@@ -52,6 +55,7 @@ namespace app::services {
             // titles render "[Slot N]" from it.
             m_nominalSurfaceData.sourceSlot = m_nominalCalcSlot;
             m_nominalCalcSlot = -1;
+            recomputeRanges();
             if (m_nominalSurfaceData.isValid()) {
                 m_logger.addLog("[IrregularityMapService] Nominal surface profile calculated and stored as reference");
             }
@@ -65,7 +69,7 @@ namespace app::services {
             if (onNominalCalculationComplete) onNominalCalculationComplete();
         };
 
-        m_nominalCalculator.startCalculation(surface, sampling, angle, source);
+        m_nominalCalculator.startCalculation(surface, sampling, angle, source, "", m_nominalCalcSlot);
     }
 
     void SurfaceMapService::cancelCalculation() {
@@ -150,6 +154,7 @@ namespace app::services {
             m_windowState.tolerancedSurfaceIndex = m_targetSurface;
             m_windowState.tolerancedSampling = m_targetSampling;
             m_windowState.tolerancedAngleStep = m_angleStepDeg;
+            recomputeRanges();
 
             m_logger.addLog(std::format("[IrregularityMapService] Surface map completed: {} sections in {} — {} DDE requests",
                 m_profiles.size(), ZemaxDDE::formatDuration(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -218,7 +223,8 @@ namespace app::services {
 
         m_mapCalculator.startCalculation(m_targetSurface, m_targetSampling, angle,
             app::models::TaskSource::SurfaceIrregularityMap,
-            std::format("Section {}/{} at {:.3f}°", m_currentAngleIndex + 1, m_totalAngles, angle));
+            std::format("Section {}/{} at {:.3f}°", m_currentAngleIndex + 1, m_totalAngles, angle),
+            m_mapCalcSlot);
     }
 
     void SurfaceMapService::cancelMapCalculation() {
@@ -250,6 +256,7 @@ namespace app::services {
         m_maxPVResult.reset();
         m_currentAngleIndex = 0;
         m_mapTaskId = 0;
+        recomputeRanges();
     }
 
     std::optional<MaxPVResult> SurfaceMapService::findMaxPVSection() const {
@@ -264,5 +271,50 @@ namespace app::services {
                 m_maxPVResult->angle, m_maxPVResult->peak, m_maxPVResult->valley, m_maxPVResult->pv));
         }
         return m_maxPVResult.has_value();
+    }
+
+    void SurfaceMapService::recomputeRanges() {
+        m_ranges = {};
+
+        if (!m_profiles.empty()) {
+            float lo = std::numeric_limits<float>::max();
+            float hi = std::numeric_limits<float>::lowest();
+            bool any = false;
+            for (const auto& profile : m_profiles) {
+                for (const auto& pt : profile.sagDataPoints) {
+                    const float sag = static_cast<float>(pt.sag);
+                    lo = std::min(lo, sag);
+                    hi = std::max(hi, sag);
+                    any = true;
+                }
+            }
+            if (any) {
+                m_ranges.sagValid = true;
+                m_ranges.sagMin = lo;
+                m_ranges.sagMax = hi;
+            }
+        }
+
+        if (!m_profiles.empty() && m_nominalSurfaceData.isValid()) {
+            float lo = std::numeric_limits<float>::max();
+            float hi = std::numeric_limits<float>::lowest();
+            bool any = false;
+            for (const auto& profile : m_profiles) {
+                const size_t n = std::min(profile.sagDataPoints.size(),
+                                          m_nominalSurfaceData.sagDataPoints.size());
+                for (size_t i = 0; i < n; ++i) {
+                    const float dev = static_cast<float>(
+                        profile.sagDataPoints[i].sag - m_nominalSurfaceData.sagDataPoints[i].sag);
+                    lo = std::min(lo, dev);
+                    hi = std::max(hi, dev);
+                    any = true;
+                }
+            }
+            if (any) {
+                m_ranges.devValid = true;
+                m_ranges.devMin = lo;
+                m_ranges.devMax = hi;
+            }
+        }
     }
 }

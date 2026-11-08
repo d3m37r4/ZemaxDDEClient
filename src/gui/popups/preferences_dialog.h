@@ -91,6 +91,9 @@ namespace gui {
             app::AppSettings m_loaded;
             Section m_section = Section::General;
             float m_sidebarWidth = 0.0f;
+            /// Font size the cached sidebar width was measured at; a scale change
+            /// invalidates it so labels never clip.
+            float m_sidebarFontSize = 0.0f;
             bool m_open = false;
             // Last-frame visibility (X-click detection) and "closed by an
             // explicit action" (Save/Cancel) for the revert-on-X/Esc contract.

@@ -7,23 +7,6 @@
 namespace app {
 
     namespace {
-        constexpr int kMinTimeoutMs = 1000;
-        constexpr int kMaxTimeoutMs = 30000;
-        constexpr int kMinRequestTimeoutMs = 100;
-        constexpr int kMaxRequestTimeoutMs = 30000;
-        constexpr int kMinRetries = 0;
-        constexpr int kMaxRetries = 10;
-        constexpr int kMinConnections = 1;
-        constexpr int kMaxConnections = 16;
-        constexpr float kMinLineWeight = 1.0f;
-        constexpr float kMaxLineWeight = 3.0f;
-        constexpr float kMinMarkerSize = 0.0f;
-        constexpr float kMaxMarkerSize = 10.0f;
-        constexpr int kMinFileSizeMB = 1;
-        constexpr int kMaxFileSizeMB = 100;
-        constexpr int kMinFolderThresholdMB = 10;
-        constexpr int kMaxFolderThresholdMB = 500;
-
         template <typename T>
         T clampValue(T value, T min, T max, T fallback) {
             if (value < min || value > max) return fallback;

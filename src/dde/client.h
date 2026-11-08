@@ -47,7 +47,6 @@ namespace ZemaxDDE {
             [[nodiscard]] ConnectionState connectionState() const noexcept { return m_connectionState; }
             [[nodiscard]] bool isConnected() const noexcept { return m_connectionState == ConnectionState::Connected; }
 
-            void pumpMessages();
             void processTimeouts();
 
             /// Checks if the Zemax server window is still alive.
@@ -120,8 +119,11 @@ namespace ZemaxDDE {
             /// Converts command to UTF-16, creates a Win32 atom,
             /// and posts WM_DDE_REQUEST to the Zemax server window.
             bool sendRequest(DdeRequest& req);
-            /// Resets active request and advances to the next in queue.
-            void finishRequest();
+            /// Releases the item atom and returns the active request by value,
+            /// leaving the pipeline idle. Callers invoke the callbacks only after
+            /// this returns, so a re-entrant submit/cancel from a callback never
+            /// sees the finished request as still in flight.
+            DdeRequest takeActiveRequest();
             void checkDDEConnection();
             /// Handles connection loss by draining queue and setting flag.
             void handleConnectionLost(const std::string& reason);

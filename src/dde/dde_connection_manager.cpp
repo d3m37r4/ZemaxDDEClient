@@ -82,6 +82,10 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     SetWindowLongPtrW(conn.hwndClient, GWLP_USERDATA,
         reinterpret_cast<LONG_PTR>(conn.client.get()));
 
+    // Connection defaults (Preferences -> DDE Connection). Without these the
+    // fresh client kept its compiled-in 1000 ms / 1 retry regardless of settings.
+    conn.client->setDefaultTimeoutMs(m_defaultTimeoutMs);
+    conn.client->setDefaultRetries(m_defaultRetries);
     conn.client->setGetNameTimeoutMs(m_getNameTimeoutMs);
     conn.client->setGetFileTimeoutMs(m_getFileTimeoutMs);
     conn.client->setGetSystemTimeoutMs(m_getSystemTimeoutMs);

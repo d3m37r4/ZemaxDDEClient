@@ -79,16 +79,24 @@ namespace gui {
 
     void Logs::render(Logger& logger, const ThemeManager* themeManager) {
         const auto& sem = themeManager->semantic();
-        const std::vector<std::string> entries = logger.getLogs();
 
-        // Metadata cache: parsed once per log-size change, not every frame.
-        if (m_cache.size() != entries.size()) {
-            m_cache.resize(entries.size());
-            for (size_t i = 0; i < entries.size(); ++i) {
-                m_cache[i].time = logs::parseLogTimestamp(entries[i]);
-                m_cache[i].level = logs::levelOf(entries[i]);
+        // Snapshot + metadata are refreshed only when the logger actually changed:
+        // copying tens of thousands of strings every frame was the main reason the
+        // panel dragged the whole application down after a big map run.
+        const uint64_t revision = logger.revision();
+        if (revision != m_cacheRevision) {
+            m_entries = logger.getLogs();
+            m_cache.resize(m_entries.size());
+            for (size_t i = 0; i < m_entries.size(); ++i) {
+                m_cache[i].time = logs::parseLogTimestamp(m_entries[i]);
+                m_cache[i].level = logs::levelOf(m_entries[i]);
+                m_cache[i].tone = logs::looksLikeProblem(m_entries[i]) ? RowTone::Problem
+                    : logs::looksLikeSuccess(m_entries[i]) ? RowTone::Success
+                                                           : RowTone::Normal;
             }
+            m_cacheRevision = revision;
         }
+        const std::vector<std::string>& entries = m_entries;
 
         std::optional<Clock::time_point> rangeFrom;
         std::optional<Clock::time_point> rangeTo;
@@ -157,10 +165,15 @@ namespace gui {
 
         ImGui::SameLine();
 
-        const std::string visibleText = joinEntries(entries, visible, nullptr);
-        if (ImGuiUtils::CopyButton(ICON_FA_COPY "##logs_copy_all", visibleText.c_str(),
-                                   filtering ? "Copy visible log entries" : "Copy all log entries to clipboard")) {
+        // Build the clipboard text only on click: it used to be assembled on
+        // every frame, which alone could allocate megabytes per second.
+        if (ImGui::Button(ICON_FA_COPY "##logs_copy_all")) {
+            copyToClipboard(joinEntries(entries, visible, nullptr), visibleCount);
             logger.addLog("[GUI] Logs copied to clipboard");
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", filtering ? "Copy visible log entries"
+                                              : "Copy all log entries to clipboard");
         }
 
         ImGui::SameLine();
@@ -405,64 +418,72 @@ namespace gui {
             }
         };
 
-        for (const size_t index : visibleIndices) {
-            const bool selected = m_selected.count(index) != 0;
-            ImGui::PushID(static_cast<int>(index));
-            // Empty label + overlay text: log lines may contain "##", which
-            // ImGui would treat as a hidden suffix and cut the visible text.
-            const bool clicked = ImGui::Selectable("##logrow", selected,
-                                                   ImGuiSelectableFlags_AllowDoubleClick);
-            const ImVec2 rowMin = ImGui::GetItemRectMin();
-            const ImVec2 rowMax = ImGui::GetItemRectMax();
-            ImDrawList* drawList = ImGui::GetWindowDrawList();
-            const float textY = rowMin.y +
-                (rowMax.y - rowMin.y - ImGui::GetTextLineHeight()) * 0.5f;
-            ImU32 textColor = ImGui::GetColorU32(ImGuiCol_Text);
-            if (logs::looksLikeProblem(entries[index])) {
-                textColor = ImGui::GetColorU32(sem.danger);
-            } else if (logs::looksLikeSuccess(entries[index])) {
-                textColor = ImGui::GetColorU32(sem.success);
-            }
-            drawList->PushClipRect(rowMin, rowMax, true);
-            drawList->AddText(ImVec2(rowMin.x + ImGui::GetStyle().FramePadding.x, textY),
-                              textColor, entries[index].c_str());
-            drawList->PopClipRect();
+        // Only the rows inside the scroll view are submitted: with tens of
+        // thousands of entries the old loop built every row and its draw
+        // commands on every frame, which is what dragged the app down.
+        ImGuiListClipper clipper;
+        clipper.Begin(static_cast<int>(visibleIndices.size()));
+        while (clipper.Step()) {
+            for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row) {
+                const size_t index = visibleIndices[static_cast<size_t>(row)];
+                const bool selected = m_selected.count(index) != 0;
+                ImGui::PushID(static_cast<int>(index));
+                // Empty label + overlay text: log lines may contain "##", which
+                // ImGui would treat as a hidden suffix and cut the visible text.
+                const bool clicked = ImGui::Selectable("##logrow", selected,
+                                                       ImGuiSelectableFlags_AllowDoubleClick);
+                const ImVec2 rowMin = ImGui::GetItemRectMin();
+                const ImVec2 rowMax = ImGui::GetItemRectMax();
+                ImDrawList* drawList = ImGui::GetWindowDrawList();
+                const float textY = rowMin.y +
+                    (rowMax.y - rowMin.y - ImGui::GetTextLineHeight()) * 0.5f;
+                ImU32 textColor = ImGui::GetColorU32(ImGuiCol_Text);
+                if (m_cache[index].tone == RowTone::Problem) {
+                    textColor = ImGui::GetColorU32(sem.danger);
+                } else if (m_cache[index].tone == RowTone::Success) {
+                    textColor = ImGui::GetColorU32(sem.success);
+                }
+                drawList->PushClipRect(rowMin, rowMax, true);
+                drawList->AddText(ImVec2(rowMin.x + ImGui::GetStyle().FramePadding.x, textY),
+                                  textColor, entries[index].c_str());
+                drawList->PopClipRect();
 
-            if (clicked) {
-                const bool ctrl = ImGui::GetIO().KeyCtrl;
-                const bool shift = ImGui::GetIO().KeyShift;
-                if (shift && m_hasSelectionAnchor) {
-                    selectRange(m_selectionAnchor, index);
-                } else if (ctrl) {
-                    if (selected) {
-                        m_selected.erase(index);
+                if (clicked) {
+                    const bool ctrl = ImGui::GetIO().KeyCtrl;
+                    const bool shift = ImGui::GetIO().KeyShift;
+                    if (shift && m_hasSelectionAnchor) {
+                        selectRange(m_selectionAnchor, index);
+                    } else if (ctrl) {
+                        if (selected) {
+                            m_selected.erase(index);
+                        } else {
+                            m_selected.insert(index);
+                        }
+                        m_selectionAnchor = index;
+                        m_hasSelectionAnchor = true;
                     } else {
+                        m_selected.clear();
                         m_selected.insert(index);
+                        m_selectionAnchor = index;
+                        m_hasSelectionAnchor = true;
                     }
-                    m_selectionAnchor = index;
-                    m_hasSelectionAnchor = true;
-                } else {
-                    m_selected.clear();
-                    m_selected.insert(index);
-                    m_selectionAnchor = index;
-                    m_hasSelectionAnchor = true;
                 }
+                if (ImGui::BeginPopupContextItem("##logs_row_ctx")) {
+                    if (ImGui::MenuItem("Copy selection", nullptr, false, !m_selected.empty())) {
+                        copySelection();
+                    }
+                    if (ImGui::MenuItem("Copy all visible")) {
+                        copyToClipboard(joinEntries(entries, visible, nullptr), visibleCount);
+                    }
+                    if (ImGui::MenuItem("Clear selection", nullptr, false, !m_selected.empty())) {
+                        clearSelection();
+                    }
+                    ImGui::Separator();
+                    ImGui::TextDisabled("Click selects · Ctrl/Shift+Click extends · Ctrl+C copies");
+                    ImGui::EndPopup();
+                }
+                ImGui::PopID();
             }
-            if (ImGui::BeginPopupContextItem("##logs_row_ctx")) {
-                if (ImGui::MenuItem("Copy selection", nullptr, false, !m_selected.empty())) {
-                    copySelection();
-                }
-                if (ImGui::MenuItem("Copy all visible")) {
-                    copyToClipboard(visibleText, visibleCount);
-                }
-                if (ImGui::MenuItem("Clear selection", nullptr, false, !m_selected.empty())) {
-                    clearSelection();
-                }
-                ImGui::Separator();
-                ImGui::TextDisabled("Click selects · Ctrl/Shift+Click extends · Ctrl+C copies");
-                ImGui::EndPopup();
-            }
-            ImGui::PopID();
         }
 
         if (visibleCount == 0) {

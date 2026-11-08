@@ -81,5 +81,27 @@ TEST(OperationMonitorService, FailAllTasksOnSlotRemovesOnlyThatSlot) {
     EXPECT_FALSE(svc.hasActiveTasks());
 }
 
+TEST(OperationMonitorService, StartTaskBindsTheProvidedMonitorOfItsSlot) {
+    ZemaxDDE::OperationMonitor activeSlotMonitor;
+    ZemaxDDE::OperationMonitor pinnedSlotMonitor;
+
+    app::services::OperationMonitorService svc;
+    svc.setMonitor(&activeSlotMonitor);
+
+    // A map pinned to slot 1 while slot 0 is the active target must register its
+    // progress on slot 1's monitor, not on the active slot's one.
+    const uint64_t task = svc.startTask(
+        app::models::TaskSource::SurfaceIrregularityMap, "Map", 4, /*clientSlot=*/1,
+        &pinnedSlotMonitor);
+
+    ASSERT_EQ(svc.getTasks().size(), 1u);
+    const auto it = svc.getTasks().find(task);
+    ASSERT_NE(it, svc.getTasks().end());
+    EXPECT_EQ(it->second.boundMonitor, &pinnedSlotMonitor);
+    EXPECT_EQ(it->second.clientSlot, 1);
+    EXPECT_EQ(pinnedSlotMonitor.getOperations().size(), 1u);
+    EXPECT_TRUE(activeSlotMonitor.getOperations().empty());
+}
+
 } // namespace
 } // namespace ZemaxDDE
