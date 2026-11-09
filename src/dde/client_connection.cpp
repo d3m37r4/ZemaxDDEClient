@@ -37,6 +37,7 @@ namespace ZemaxDDE {
         setConnectionState(ConnectionState::Connecting);
         m_isConnecting = true;
         m_hwndZemaxServer = nullptr;
+        m_connectStartTime = std::chrono::steady_clock::now();
 
         ATOM appAtom = GlobalAddAtomW(DDE_APP_NAME);
         ATOM topicAtom = GlobalAddAtomW(DDE_TOPIC);
@@ -275,6 +276,20 @@ namespace ZemaxDDE {
     }
 
     void ZemaxDDEClient::checkConnectionHealth() {
+        // A connect that never got an ACK must not strand the slot in
+        // "Connecting" forever: after the connect timeout it returns to
+        // Disconnected and the slot becomes reusable (see findFreeSlot).
+        if (m_connectionState == ConnectionState::Connecting) {
+            if (m_connectStartTime != std::chrono::steady_clock::time_point{}) {
+                const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - m_connectStartTime);
+                if (elapsed.count() >= static_cast<long long>(getDefaultTimeoutMs())) {
+                    handleConnectionLost("DDE connect timed out (no ACK)");
+                }
+            }
+            return;
+        }
+
         if (m_connectionState != ConnectionState::Connected) return;
 
         if (!IsWindow(m_hwndZemaxServer)) {
@@ -306,6 +321,7 @@ namespace ZemaxDDE {
     void ZemaxDDEClient::handleConnectionLost(const std::string& reason) {
         m_logger.addLog(std::format("[DDE] ERROR: Connection lost — {}", reason));
         m_isConnecting = false;
+        m_connectStartTime = {};
         setConnectionState(ConnectionState::Disconnected);
         m_hwndZemaxServer = nullptr;
         drainRequestQueue(reason);
@@ -357,6 +373,7 @@ namespace ZemaxDDE {
             m_logger.addLog("[DDE] Connection terminated");
         }
         m_isConnecting = false;
+        m_connectStartTime = {};
         setConnectionState(ConnectionState::Disconnected);
         m_hwndZemaxServer = nullptr;
         drainRequestQueue("Manual disconnect");
@@ -400,6 +417,7 @@ namespace ZemaxDDE {
 
                     m_hwndZemaxServer = reinterpret_cast<HWND>(wParam);
                     m_isConnecting = false;
+                    m_connectStartTime = {};
                     setConnectionState(ConnectionState::Connected);
 
                     DWORD pid = 0;

@@ -135,6 +135,9 @@ namespace ZemaxDDE {
             HWND m_hwndZemaxClient = nullptr;
             ConnectionState m_connectionState = ConnectionState::Disconnected;
             bool m_isConnecting = false;
+            /// Set when initiateDDE() starts; a connect that never receives an
+            /// ACK is aborted from checkConnectionHealth() after the timeout.
+            std::chrono::steady_clock::time_point m_connectStartTime{};
             DWORD m_serverPid = 0;
             Logger& m_logger;
             bool m_connectionLost = false;
