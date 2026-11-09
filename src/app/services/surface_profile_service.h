@@ -68,7 +68,6 @@ namespace app::services {
 
             bool isCalculating() const { return m_nominalCalculator.isCalculating() || m_tolerancedCalculator.isCalculating(); }
             bool isCalculating(app::models::TaskSource source) const;
-            const app::models::SurfaceData& getResult() const;
             const app::models::SurfaceData& getResult(app::models::TaskSource source) const;
             int getNominalCalcSlot() const { return m_nominalCalcSlot; }
             int getTolerancedCalcSlot() const { return m_tolerancedCalcSlot; }

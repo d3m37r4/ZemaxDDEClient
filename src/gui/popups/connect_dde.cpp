@@ -43,7 +43,7 @@ namespace gui {
         // can show the "Connected" mark and clicks can switch instead of
         // creating a duplicate connection.
         auto connectedSlotFor = [this](HWND hwnd) -> int {
-            for (int slot = 0; slot < DDEConnectionManager::MAX_CONNECTIONS; ++slot) {
+            for (int slot = 0; slot < m_connectionManager->getMaxConnections(); ++slot) {
                 const DDEConnection* conn = m_connectionManager->getConnection(slot);
                 if (conn && conn->isConnected() && conn->hwndServer == hwnd) {
                     return slot;

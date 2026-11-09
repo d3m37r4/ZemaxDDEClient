@@ -6,7 +6,6 @@ namespace ZemaxDDE {
     inline constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
     inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";
     inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";
-    static constexpr int DDE_TIMEOUT_MS             = 300;
 
     inline constexpr int MIN_FIELDS = 1;
     inline constexpr int MAX_FIELDS = 12;

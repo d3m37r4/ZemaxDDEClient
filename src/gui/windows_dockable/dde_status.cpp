@@ -16,18 +16,16 @@ namespace gui {
     void DDEStatus::toggleConnection(Logger& logger) {
         if (!m_connectionManager) return;
         const int activeIdx = m_connectionManager->getActiveIndex();
-        const bool connected = (activeIdx >= 0) || m_connectionManager->hasConnectionLost();
-        if (connected) {
-            if (m_connectionManager->hasConnectionLost()) {
-                m_connectionManager->clearConnectionLost();
-            }
-            if (activeIdx >= 0) {
-                m_connectionManager->disconnect(activeIdx);
-            }
+        // One action per state: with a slot the button disconnects it, otherwise
+        // it opens the picker. The old "acknowledge the lost flag" branch could
+        // log a disconnect while nothing was connected; the loss flag is consumed
+        // by renderConnectionLostPopup, so it is not needed here.
+        if (activeIdx >= 0) {
+            m_connectionManager->disconnect(activeIdx);
             logger.addLog("[DDE] Disconnected from Zemax");
-        } else {
-            m_connectPopup->open();
+            return;
         }
+        m_connectPopup->open();
     }
 
     void DDEStatus::openConnectPopup() {
@@ -49,7 +47,7 @@ namespace gui {
         );
 
         int connectionCount = 0;
-        for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+        for (int i = 0; i < m_connectionManager->getMaxConnections(); ++i) {
             auto* conn = m_connectionManager->getConnection(i);
             if (conn && conn->isConnected()) ++connectionCount;
         }
@@ -104,7 +102,7 @@ namespace gui {
             ImGui::SameLine(0.0f, ImGuiUtils::DpiScale(DDE_STATUS_ELEMENT_GAP));
 
             std::string preview;
-            for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+            for (int i = 0; i < m_connectionManager->getMaxConnections(); ++i) {
                 auto* conn = m_connectionManager->getConnection(i);
                 if (!conn || !conn->isConnected()) continue;
                 std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
@@ -116,7 +114,7 @@ namespace gui {
 
             ImGui::SetNextItemWidth(-1.0f);
             if (ImGui::BeginCombo("##TargetCombo", preview.c_str())) {
-                for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                for (int i = 0; i < m_connectionManager->getMaxConnections(); ++i) {
                     auto* conn = m_connectionManager->getConnection(i);
                     if (!conn || !conn->isConnected()) continue;
                     std::string title = ZemaxDDE::wstring_to_utf8(conn->serverTitle);
@@ -152,7 +150,7 @@ namespace gui {
                     }
                 }
 
-                if (connectionCount < DDEConnectionManager::MAX_CONNECTIONS) {
+                if (connectionCount < m_connectionManager->getMaxConnections()) {
                     ImGui::Separator();
                     if (ImGui::Selectable(ICON_FA_PLUS " Connect to another Zemax...")) {
                         m_connectPopup->open();
@@ -165,19 +163,24 @@ namespace gui {
 
         ImGui::Separator();
 
-        bool connected = (activeIdx >= 0) || connectionLost;
+        // One derived state for the whole panel: the button must agree with the
+        // status label and the status bar. A pending "connection lost" flag with
+        // no slot is not a connection, so it must offer "Connect", not
+        // "Disconnect" for a slot that no longer exists.
+        const bool hasSlot = activeIdx >= 0;
+        const bool connected = hasSlot && !connectionLost;
 
         // Connect/disconnect button uses semantic danger/success tokens (not ImGuiCol_Button*)
         // so the action remains visually unambiguous regardless of the active theme.
         const auto& sem = m_themeManager->semantic();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(-1.0f, ImGuiUtils::DpiScale(DDE_STATUS_BTN_VPAD)));
-        ImGuiUtils::PushFilledButton(connected ? sem.dangerButton : sem.successButton,
-                                     connected ? sem.dangerButtonHover : sem.successButtonHover,
-                                     connected ? sem.dangerButtonActive : sem.successButtonActive,
+        ImGuiUtils::PushFilledButton(hasSlot ? sem.dangerButton : sem.successButton,
+                                     hasSlot ? sem.dangerButtonHover : sem.successButtonHover,
+                                     hasSlot ? sem.dangerButtonActive : sem.successButtonActive,
                                      sem.onAccent);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
 
-        if (ImGui::Button(connected ? ICON_FA_PLUG_CIRCLE_XMARK " Disconnect from Zemax" : ICON_FA_PLUG " Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
+        if (ImGui::Button(hasSlot ? ICON_FA_PLUG_CIRCLE_XMARK " Disconnect from Zemax" : ICON_FA_PLUG " Connect to Zemax", ImVec2(-1.0f, 0.0f))) {
             toggleConnection(logger);
         }
 
@@ -189,7 +192,7 @@ namespace gui {
         // white on-accent color pushed for the button above (invisible on Light).
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("%s", shortcuts::tooltipFor(
-                connected ? "dde-disconnect" : "dde-connect").c_str());
+                hasSlot ? "dde-disconnect" : "dde-connect").c_str());
         }
 
         ImGui::EndChild();

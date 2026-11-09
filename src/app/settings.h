@@ -30,7 +30,9 @@ namespace app {
     inline constexpr int kMinRetries = 0;
     inline constexpr int kMaxRetries = 10;
     inline constexpr int kMinConnections = 1;
-    inline constexpr int kMaxConnections = 16;
+    /// Must match DDEConnectionManager::MAX_CONNECTIONS (asserted in
+    /// settings_manager.cpp): the application supports a fixed pair of slots.
+    inline constexpr int kMaxConnections = 2;
     inline constexpr float kMinLineWeight = 1.0f;
     inline constexpr float kMaxLineWeight = 3.0f;
     inline constexpr float kMinMarkerSize = 0.0f;
@@ -60,7 +62,8 @@ namespace app {
     struct DDESettings {
         int connectionTimeoutMs = 5000;
         int maxRetryCount = 3;
-        int maxConnections = 4;
+        /// Effective pool size; clamped to DDEConnectionManager::MAX_CONNECTIONS.
+        int maxConnections = 2;
 
         // Per-request timeout overrides — Initial Data Load (startup).
         int getNameTimeoutMs = 2000;

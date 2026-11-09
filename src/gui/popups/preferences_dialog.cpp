@@ -405,11 +405,13 @@ namespace gui {
             applyWorkingPlot();
         }
 
-        if (ImGui::SliderFloat("Line weight (px)", &m_working.plot.lineWeight, 0.5f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
+        if (ImGui::SliderFloat("Line weight (px)", &m_working.plot.lineWeight,
+                               app::kMinLineWeight, app::kMaxLineWeight, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
             applyWorkingPlot();
         }
 
-        if (ImGui::SliderFloat("Marker size (px)", &m_working.plot.markerSize, 1.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
+        if (ImGui::SliderFloat("Marker size (px)", &m_working.plot.markerSize,
+                               app::kMinMarkerSize, app::kMaxMarkerSize, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
             applyWorkingPlot();
         }
 
@@ -453,7 +455,7 @@ namespace gui {
 
     void PreferencesDialog::renderSectionUpdates() {
         ImGuiUtils::SectionHeader("Updates",
-            "Update checker settings. Channel changes take effect on next check.");
+            "Applied on Save; the channel takes effect on the next check.");
 
         ImGui::Checkbox("Check for updates on startup", &m_working.updates.autoCheckOnStartup);
 
@@ -469,9 +471,13 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionLogging() {
-        ImGuiUtils::SectionHeader("Logging", "Logging and debug log settings.");
+        ImGuiUtils::SectionHeader("Logging",
+            "Applied on Save: startup visibility, file logging and rotation.");
 
         ImGui::Checkbox("Show logs window on startup", &m_working.logging.showLogsOnStartup);
+        ImGuiUtils::HintText(
+            "Applies only when \"Restore window layout on startup\" (General) is disabled; "
+            "otherwise the previous session's layout decides.");
         ImGui::Checkbox("Enable file logging", &m_working.logging.enableFileLogging);
 
         ImGui::Spacing();

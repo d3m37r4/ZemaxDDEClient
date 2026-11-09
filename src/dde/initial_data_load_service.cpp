@@ -178,14 +178,21 @@ namespace ZemaxDDE {
         m_client.submitRequest(std::format("GetField,{}", m_currentField),
             [this](const std::string& buffer) {
                 auto tokens = tokenize(buffer);
-                if (tokens.size() >= 2) {
-                    try {
-                        m_opticalSystem.xField[m_currentField] = std::stod(tokens[0]);
-                        m_opticalSystem.yField[m_currentField] = std::stod(tokens[1]);
-                    } catch (const std::exception& e) {
-                        onError(std::format("GetField,{}: parse error: {}", m_currentField, e.what()));
-                        return;
-                    }
+                // The manual guarantees eight values for GetField,n
+                // (x, y, weight, vignetting): a shorter reply is malformed and
+                // must not leave silent zeros in the panel. Same policy as
+                // GetSystem/GetField,0 above.
+                if (tokens.size() < 2) {
+                    onError(std::format("GetField,{}: expected at least 2 tokens, got {}",
+                        m_currentField, tokens.size()));
+                    return;
+                }
+                try {
+                    m_opticalSystem.xField[m_currentField] = std::stod(tokens[0]);
+                    m_opticalSystem.yField[m_currentField] = std::stod(tokens[1]);
+                } catch (const std::exception& e) {
+                    onError(std::format("GetField,{}: parse error: {}", m_currentField, e.what()));
+                    return;
                 }
                 m_currentField++;
                 loadNextField();
@@ -210,14 +217,19 @@ namespace ZemaxDDE {
         m_client.submitRequest(std::format("GetWave,{}", m_currentWave),
             [this](const std::string& buffer) {
                 auto tokens = tokenize(buffer);
-                if (tokens.size() >= 2) {
-                    try {
-                        m_opticalSystem.waveData[m_currentWave].value  = std::stod(tokens[0]);
-                        m_opticalSystem.waveData[m_currentWave].weight = std::stod(tokens[1]);
-                    } catch (const std::exception& e) {
-                        onError(std::format("GetWave,{}: parse error: {}", m_currentWave, e.what()));
-                        return;
-                    }
+                // GetWave,n carries exactly "wavelength, weight"; a shorter reply
+                // is malformed. Same policy as GetWave,0 above.
+                if (tokens.size() < 2) {
+                    onError(std::format("GetWave,{}: expected at least 2 tokens, got {}",
+                        m_currentWave, tokens.size()));
+                    return;
+                }
+                try {
+                    m_opticalSystem.waveData[m_currentWave].value  = std::stod(tokens[0]);
+                    m_opticalSystem.waveData[m_currentWave].weight = std::stod(tokens[1]);
+                } catch (const std::exception& e) {
+                    onError(std::format("GetWave,{}: parse error: {}", m_currentWave, e.what()));
+                    return;
                 }
                 m_currentWave++;
                 loadNextWave();

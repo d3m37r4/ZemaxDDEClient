@@ -14,6 +14,11 @@
 
 namespace gui {
 
+    // The settings model cannot include the DDE manager (layering), so the two
+    // bounds are kept in sync here at compile time.
+    static_assert(app::kMaxConnections == DDEConnectionManager::MAX_CONNECTIONS,
+                  "app::kMaxConnections must match DDEConnectionManager::MAX_CONNECTIONS");
+
     bool SettingsManager::detectSystemDarkMode() {
         HKEY hKey = nullptr;
         LONG regResult = RegOpenKeyExW(HKEY_CURRENT_USER,

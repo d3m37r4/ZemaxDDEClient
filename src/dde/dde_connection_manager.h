@@ -26,6 +26,9 @@ public:
     void setActiveConnection(int index);
     ZemaxDDE::ZemaxDDEClient* getActiveClient() const;
     int getActiveIndex() const { return m_activeIndex; }
+    /// Effective number of usable slots (1..MAX_CONNECTIONS), driven by the
+    /// "Max concurrent connections" setting.
+    [[nodiscard]] int getMaxConnections() const noexcept { return m_maxConnections; }
 
     /// Registers a callback invoked when a connection slot is torn down (immediately
     /// before the client object is destroyed). Upper layers use it to release any

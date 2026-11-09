@@ -141,7 +141,7 @@ void GuiManager::openDdeConnect() {
     if (!m_ddeConnectionManager || !m_ddeStatusRenderer) {
         return;
     }
-    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+    for (int i = 0; i < m_ddeConnectionManager->getMaxConnections(); ++i) {
         auto* conn = m_ddeConnectionManager->getConnection(i);
         if (conn && !conn->isConnected()) {
             m_ddeStatusRenderer->openConnectPopup();
@@ -186,7 +186,7 @@ void GuiManager::cycleDdeTarget() {
     }
     int connected[DDEConnectionManager::MAX_CONNECTIONS];
     int count = 0;
-    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+    for (int i = 0; i < m_ddeConnectionManager->getMaxConnections(); ++i) {
         auto* conn = m_ddeConnectionManager->getConnection(i);
         if (conn && conn->isConnected()) {
             connected[count++] = i;

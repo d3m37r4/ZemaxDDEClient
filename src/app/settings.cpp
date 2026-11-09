@@ -60,7 +60,7 @@ namespace app {
 
         dde.connectionTimeoutMs = 5000;
         dde.maxRetryCount = 3;
-        dde.maxConnections = 4;
+        dde.maxConnections = 2;
 
         dde.getNameTimeoutMs = 2000;
         dde.getFileTimeoutMs = 2000;
@@ -165,7 +165,7 @@ namespace app {
             }
             if (d.contains("maxConnections") && d["maxConnections"].is_number_integer()) {
                 dde.maxConnections = clampValue(
-                    d["maxConnections"].get<int>(), kMinConnections, kMaxConnections, 4);
+                    d["maxConnections"].get<int>(), kMinConnections, kMaxConnections, 2);
             }
             if (d.contains("getNameTimeoutMs") && d["getNameTimeoutMs"].is_number_integer()) {
                 dde.getNameTimeoutMs = clampValue(

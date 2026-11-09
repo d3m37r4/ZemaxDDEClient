@@ -78,7 +78,7 @@ namespace gui {
             if (ImGui::BeginMenu(ICON_FA_COMPUTER " DDE")) {
                 if (m_pDDEClientMgr) {
                     int connectedCount = 0;
-                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                    for (int i = 0; i < m_pDDEClientMgr->getMaxConnections(); ++i) {
                         auto* conn = m_pDDEClientMgr->getConnection(i);
                         if (conn && conn->isConnected()) {
                             ++connectedCount;
@@ -86,14 +86,14 @@ namespace gui {
                     }
                     const int activeIdx = m_pDDEClientMgr->getActiveIndex();
                     if (ImGui::MenuItem("Connect to Zemax...", "Ctrl+Shift+C", false,
-                                        connectedCount < DDEConnectionManager::MAX_CONNECTIONS)) {
+                                        connectedCount < m_pDDEClientMgr->getMaxConnections())) {
                         if (m_onConnect) m_onConnect();
                     }
                     if (ImGui::MenuItem("Disconnect Active Slot", "Ctrl+Shift+D", false, activeIdx >= 0)) {
                         if (m_onDisconnect) m_onDisconnect();
                     }
                     ImGui::Separator();
-                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                    for (int i = 0; i < m_pDDEClientMgr->getMaxConnections(); ++i) {
                         auto* conn = m_pDDEClientMgr->getConnection(i);
                         const bool slotConnected = conn && conn->isConnected();
                         std::string label = std::format("Select Slot {}", i);

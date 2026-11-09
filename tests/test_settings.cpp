@@ -31,7 +31,7 @@ TEST(SettingsDefaults, AllFieldsMatchExpected) {
     EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
     EXPECT_EQ(s.dde.maxRetryCount, 3);
-    EXPECT_EQ(s.dde.maxConnections, 4);
+    EXPECT_EQ(s.dde.maxConnections, 2);
     EXPECT_EQ(s.dde.getNameTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getFileTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getSystemTimeoutMs, 2000);

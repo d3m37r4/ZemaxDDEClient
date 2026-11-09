@@ -54,10 +54,6 @@ namespace app::services {
         return false;
     }
 
-    const app::models::SurfaceData& SurfaceProfileService::getResult() const {
-        return m_nominalCalculator.getResult();
-    }
-
     const app::models::SurfaceData& SurfaceProfileService::getResult(app::models::TaskSource source) const {
         switch (source) {
             case app::models::TaskSource::NominalSurfaceProfile:
