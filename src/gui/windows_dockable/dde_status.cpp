@@ -53,9 +53,13 @@ namespace gui {
         }
         int activeIdx = m_connectionManager->getActiveIndex();
         bool connectionLost = m_connectionManager->hasConnectionLost();
+        // One derived state for the whole panel: the status label, the button and
+        // the status bar agree. A pending "connection lost" flag with no slot is
+        // not a connection, so the button offers "Connect".
+        const bool hasSlot = activeIdx >= 0;
+        const bool connected = hasSlot && !connectionLost;
 
         {
-            const bool connected = (activeIdx >= 0) && !connectionLost;
             const char* label = "Zemax DDE Status:";
             const char* value;
             const char* icon;
@@ -162,13 +166,6 @@ namespace gui {
         }
 
         ImGui::Separator();
-
-        // One derived state for the whole panel: the button must agree with the
-        // status label and the status bar. A pending "connection lost" flag with
-        // no slot is not a connection, so it must offer "Connect", not
-        // "Disconnect" for a slot that no longer exists.
-        const bool hasSlot = activeIdx >= 0;
-        const bool connected = hasSlot && !connectionLost;
 
         // Connect/disconnect button uses semantic danger/success tokens (not ImGuiCol_Button*)
         // so the action remains visually unambiguous regardless of the active theme.
