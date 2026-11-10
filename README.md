@@ -75,6 +75,7 @@ This project uses the following third-party libraries:
 - **[Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended)** by Bernard Teo (based on Michael Labbe's NFD) — Cross-platform file dialogs
 - **[ImPlot3D](https://github.com/brenocq/implot3d)** by brenocq — 3D plotting library for Dear ImGui
 - **[JSON for Modern C++](https://github.com/nlohmann/json)** by Niels Lohmann — Header-only JSON library
+- **[ImGuiNotify](https://github.com/TyomaVader/ImGuiNotify)** by TyomaVader (maintained fork of the archived `patrickcjk/imgui-notify`) — Toast notifications for Dear ImGui
 
 ## 🚀 Build Setup
 1. Clone the repository:

@@ -75,6 +75,7 @@ Zemax реализует интерфейс DDE-сервера, что даёт 
 - **[Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended)** от Bernard Teo (на основе NFD от Michael Labbe) — кроссплатформенные нативные диалоги выбора файлов и папок
 - **[ImPlot3D](https://github.com/brenocq/implot3d)** от brenocq — библиотека трёхмерной визуализации для Dear ImGui
 - **[JSON for Modern C++](https://github.com/nlohmann/json)** от Niels Lohmann — заголовочная библиотека для работы с JSON
+- **[ImGuiNotify](https://github.com/TyomaVader/ImGuiNotify)** от TyomaVader (поддерживаемый форк архивного `patrickcjk/imgui-notify`) — всплывающие уведомления (тосты) для Dear ImGui
 
 ## 🚀 Подготовка к сборке
 1. Склонируйте репозиторий:
