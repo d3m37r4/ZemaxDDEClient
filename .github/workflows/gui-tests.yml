@@ -26,8 +26,6 @@ jobs:
             mingw-w64-x86_64-glfw
             mingw-w64-x86_64-ninja
             curl
-            tar
-            unzip
 
       - name: Make build.sh executable
         run: git update-index --chmod=+x build.sh
@@ -42,7 +40,9 @@ jobs:
           curl -fL -o mesa.7z \
             https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-mingw.7z
           mkdir -p mesa
-          tar -xf mesa.7z -C mesa
+          # Windows' bsdtar (System32) reads 7z; the MSYS2 shell ships GNU tar,
+          # which does not, so the absolute path is required.
+          /c/Windows/System32/tar.exe -xf mesa.7z -C mesa
           ls -l mesa/x64/opengl32.dll mesa/x64/libgallium_wgl.dll mesa/x64/dxil.dll
         shell: msys2 {0}
 
