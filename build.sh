@@ -3,6 +3,7 @@
 # Settings
 PROJECT_NAME="ZemaxDDEClient"
 BUILD_DIR="build"
+TEST_BUILD_DIR="build-test"
 SOURCE_DIR="."
 OUTPUT_EXE=""
 
@@ -14,10 +15,11 @@ NC='\033[0m' # No Color
 
 # Help
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    echo "Usage: $0 [debug|release] [optimize=1|2]"
+    echo "Usage: $0 [debug|release|test] [optimize=1|2]"
     echo "  $0               -> Release build"
     echo "  $0 debug         -> Debug build"
     echo "  $0 release       -> Release build"
+    echo "  $0 test          -> Release build with the Dear ImGui Test Engine (in $TEST_BUILD_DIR/)"
     echo "  $0 optimize=2    -> Release + -O3"
     echo "  $0 debug optimize=1 -> Debug + -O2"
     exit 0
@@ -27,6 +29,7 @@ fi
 CMAKE_BUILD_TYPE="Release"
 EXTRA_CMAKE_ARGS=()
 EXTRA_BUILD_ARGS=()
+ENABLE_TEST_ENGINE=0
 
 for arg in "$@"; do
     case "$arg" in
@@ -35,6 +38,13 @@ for arg in "$@"; do
             ;;
         release|Release|RELEASE)
             CMAKE_BUILD_TYPE="Release"
+            ;;
+        test|Test|TEST)
+            # Build with the Dear ImGui Test Engine enabled. Kept in a separate
+            # directory so it never overwrites the regular release build.
+            CMAKE_BUILD_TYPE="Release"
+            ENABLE_TEST_ENGINE=1
+            BUILD_DIR="$TEST_BUILD_DIR"
             ;;
         optimize=1)
             EXTRA_CMAKE_ARGS+=("-DBUILD_OPTIMIZE=1")
@@ -53,6 +63,10 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+if [ "$ENABLE_TEST_ENGINE" = "1" ]; then
+    EXTRA_CMAKE_ARGS+=("-DZEMAX_ENABLE_TEST_ENGINE=ON")
+fi
 
 # Use external BUILD_TIMESTAMP if provided (e.g., from CI), otherwise use current time
 if [ -z "${BUILD_TIMESTAMP+1}" ]; then

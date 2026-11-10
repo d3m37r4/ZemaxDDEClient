@@ -47,7 +47,6 @@ namespace ZemaxDDE {
             [[nodiscard]] ConnectionState connectionState() const noexcept { return m_connectionState; }
             [[nodiscard]] bool isConnected() const noexcept { return m_connectionState == ConnectionState::Connected; }
 
-            void pumpMessages();
             void processTimeouts();
 
             /// Checks if the Zemax server window is still alive.
@@ -81,6 +80,7 @@ namespace ZemaxDDE {
             void setGetSagProfileTimeoutMs(DWORD ms) noexcept         { m_getSagProfileTimeoutMs = ms; }
             void setGetSurfaceDataMapTimeoutMs(DWORD ms) noexcept     { m_getSurfaceDataMapTimeoutMs = ms; }
             void setGetSagMapTimeoutMs(DWORD ms) noexcept             { m_getSagMapTimeoutMs = ms; }
+            void setGetRefreshTimeoutMs(DWORD ms) noexcept            { m_getRefreshTimeoutMs = ms; }
 
             [[nodiscard]] DWORD getGetNameTimeoutMs() const noexcept        { return m_getNameTimeoutMs; }
             [[nodiscard]] DWORD getGetFileTimeoutMs() const noexcept        { return m_getFileTimeoutMs; }
@@ -91,6 +91,7 @@ namespace ZemaxDDE {
             [[nodiscard]] DWORD getGetSagProfileTimeoutMs() const noexcept         { return m_getSagProfileTimeoutMs; }
             [[nodiscard]] DWORD getGetSurfaceDataMapTimeoutMs() const noexcept     { return m_getSurfaceDataMapTimeoutMs; }
             [[nodiscard]] DWORD getGetSagMapTimeoutMs() const noexcept             { return m_getSagMapTimeoutMs; }
+            [[nodiscard]] DWORD getGetRefreshTimeoutMs() const noexcept            { return m_getRefreshTimeoutMs; }
 
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
@@ -105,7 +106,12 @@ namespace ZemaxDDE {
                 int retries = -1,
                 const std::string& serviceId = "");
 
-            // Getters
+            /// Drops every queued (not yet dispatched) request of the given
+            /// service and fails it with 'Cancelled'. A request that is already
+            /// dispatched cannot be recalled — the owner must ignore its late
+            /// response on its own (generation/state guards).
+            void cancelPendingRequests(const std::string& serviceId);
+
             [[nodiscard]] const OpticalSystemData& getOpticalSystemData() const noexcept { return m_opticalSystem; }
             [[nodiscard]] OperationMonitor* getOperationMonitor() noexcept { return m_operationMonitor.get(); }
 
@@ -115,8 +121,11 @@ namespace ZemaxDDE {
             /// Converts command to UTF-16, creates a Win32 atom,
             /// and posts WM_DDE_REQUEST to the Zemax server window.
             bool sendRequest(DdeRequest& req);
-            /// Resets active request and advances to the next in queue.
-            void finishRequest();
+            /// Releases the item atom and returns the active request by value,
+            /// leaving the pipeline idle. Callers invoke the callbacks only after
+            /// this returns, so a re-entrant submit/cancel from a callback never
+            /// sees the finished request as still in flight.
+            DdeRequest takeActiveRequest();
             void checkDDEConnection();
             /// Handles connection loss by draining queue and setting flag.
             void handleConnectionLost(const std::string& reason);
@@ -128,6 +137,9 @@ namespace ZemaxDDE {
             HWND m_hwndZemaxClient = nullptr;
             ConnectionState m_connectionState = ConnectionState::Disconnected;
             bool m_isConnecting = false;
+            /// Set when initiateDDE() starts; a connect that never receives an
+            /// ACK is aborted from checkConnectionHealth() after the timeout.
+            std::chrono::steady_clock::time_point m_connectStartTime{};
             DWORD m_serverPid = 0;
             Logger& m_logger;
             bool m_connectionLost = false;
@@ -153,5 +165,6 @@ namespace ZemaxDDE {
             DWORD m_getSagProfileTimeoutMs = 1000;
             DWORD m_getSurfaceDataMapTimeoutMs = 2000;
             DWORD m_getSagMapTimeoutMs = 1000;
+            DWORD m_getRefreshTimeoutMs = 2000;
     };
 }

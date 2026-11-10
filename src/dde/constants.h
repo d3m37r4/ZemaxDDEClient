@@ -4,9 +4,8 @@
 
 namespace ZemaxDDE {
     inline constexpr double DEG_TO_RAD = std::numbers::pi / 180.0;
-    inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";     // Appname DDE
-    inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";   // Topic DDE
-    static constexpr int DDE_TIMEOUT_MS             = 300;          // Timeout in ms (300 ms)
+    inline constexpr const wchar_t* DDE_APP_NAME    = L"ZEMAX";
+    inline constexpr const wchar_t* DDE_TOPIC       = L"RayData";
 
     inline constexpr int MIN_FIELDS = 1;
     inline constexpr int MAX_FIELDS = 12;
@@ -16,8 +15,6 @@ namespace ZemaxDDE {
 
     inline constexpr int FIELD_ARRAY_SIZE = MAX_FIELDS + 1;
     inline constexpr int WAVE_ARRAY_SIZE  = MAX_WAVES + 1;
-
-    // inline constexpr int MAX_SURFACE_NUMBER = 2048;
 
     /**
      * @brief Codes for command GetSurfaceData/SetSurfaceData
@@ -60,27 +57,6 @@ namespace ZemaxDDE {
         static constexpr int LAYER_EXTINCTION_OFFSET_STATUS = 76; // int: Layer Extinction Offset status. 0=fixed, 1=variable, n+1=pickup from layer n. The coating layer number is defined by arg2.
 
         static constexpr int COORD_RETURN_SOLVE_STATUS = 80; // int: Coordinate return solve status. 0=none, 1=Orientation only, 2=Orient+XY, 3=Orient+XYZ. The surface must be a coordinate break for this solve to have any affect.
-        static constexpr int COORD_RETURN_SURFACE_NUMBER = 81; // int: 81 Coordinate return surface number. Used only by the coordinate return solve.
-
-        // static constexpr bool isValid(int code) noexcept {
-        //     switch (code) {
-        //         case TYPE_NAME: case COMMENT: case CURVATURE: case THICKNESS:
-        //         case GLASS: case SEMI_DIAMETER: case CONIC: case COATING:
-        //         case TCE: case DLL_NAME: case IGNORE_SURFACE:
-        //         case BEFORE_TILT_DECENTER_ORDER: case BEFORE_DECENTER_X:
-        //         case BEFORE_DECENTER_Y: case BEFORE_TILT_X: case BEFORE_TILT_Y:
-        //         case BEFORE_TILT_Z: case AFTER_STATUS: case AFTER_TILT_DECENTER_ORDER:
-        //         case AFTER_DECENTER_X: case AFTER_DECENTER_Y: case AFTER_TILT_X:
-        //         case AFTER_TILT_Y: case AFTER_TILT_Z:
-        //         case USE_LAYER_MULTIPLIERS_AND_INDEX_OFFSETS: case LAYER_MULTIPLIER_VALUE:
-        //         case LAYER_MULTIPLIER_STATUS: case LAYER_INDEX_OFFSET_VALUE:
-        //         case LAYER_INDEX_OFFSET_STATUS: case LAYER_EXTINCTION_OFFSET_VALUE:
-        //         case LAYER_EXTINCTION_OFFSET_STATUS: case COORD_RETURN_SOLVE_STATUS:
-        //         case COORD_RETURN_SURFACE_NUMBER:
-        //             return true;
-        //         default:
-        //             return false;
-        //     }
-        // }
+        static constexpr int COORD_RETURN_SURFACE_NUMBER = 81; // int: Coordinate return surface number. Used only by the coordinate return solve.
     };
 }

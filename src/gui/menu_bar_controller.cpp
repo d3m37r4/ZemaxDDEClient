@@ -76,31 +76,24 @@ namespace gui {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu(ICON_FA_COMPUTER " DDE")) {
-                if (m_pWndMgr) {
-                    bool showDDEStatus = m_pWndMgr->IsVisible(WindowID::DDEStatus);
-                    if (ImGui::MenuItem("Show DDE Status", nullptr, &showDDEStatus)) {
-                        m_pWndMgr->SetVisible(WindowID::DDEStatus, showDDEStatus);
-                    }
-                }
                 if (m_pDDEClientMgr) {
                     int connectedCount = 0;
-                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                    for (int i = 0; i < m_pDDEClientMgr->getMaxConnections(); ++i) {
                         auto* conn = m_pDDEClientMgr->getConnection(i);
                         if (conn && conn->isConnected()) {
                             ++connectedCount;
                         }
                     }
                     const int activeIdx = m_pDDEClientMgr->getActiveIndex();
-                    ImGui::Separator();
                     if (ImGui::MenuItem("Connect to Zemax...", "Ctrl+Shift+C", false,
-                                        connectedCount < DDEConnectionManager::MAX_CONNECTIONS)) {
+                                        connectedCount < m_pDDEClientMgr->getMaxConnections())) {
                         if (m_onConnect) m_onConnect();
                     }
                     if (ImGui::MenuItem("Disconnect Active Slot", "Ctrl+Shift+D", false, activeIdx >= 0)) {
                         if (m_onDisconnect) m_onDisconnect();
                     }
                     ImGui::Separator();
-                    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+                    for (int i = 0; i < m_pDDEClientMgr->getMaxConnections(); ++i) {
                         auto* conn = m_pDDEClientMgr->getConnection(i);
                         const bool slotConnected = conn && conn->isConnected();
                         std::string label = std::format("Select Slot {}", i);
@@ -126,33 +119,29 @@ namespace gui {
                 }
                 ImGui::EndMenu();
             }
-            if (m_pWndMgr && ImGui::BeginMenu(ICON_FA_WRENCH " Tools")) {
-                auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Tools);
-                for (WindowID id : ids) {
-                    bool visible = m_pWndMgr->IsVisible(id);
-                    const char* name = m_pWndMgr->GetName(id);
+            if (m_pWndMgr && ImGui::BeginMenu(ICON_FA_EYE " View")) {
+                struct ViewEntry {
+                    WindowID id;
+                    const char* hint;
+                };
+                static constexpr ViewEntry kViewPanels[] = {
+                    {WindowID::DDEStatus, "Ctrl+1"},
+                    {WindowID::SystemInfo, "Ctrl+2"},
+                    {WindowID::SurfaceProfileInspector, "Ctrl+3"},
+                    {WindowID::SurfaceIrregularityMap, "Ctrl+4"},
+                    {WindowID::Logs, "Ctrl+5"},
+                };
+                for (const auto& entry : kViewPanels) {
+                    bool visible = m_pWndMgr->IsVisible(entry.id);
+                    const char* name = m_pWndMgr->GetName(entry.id);
                     if (!name) continue;
-                    if (ImGui::MenuItem(name, nullptr, &visible)) {
-                        m_pWndMgr->SetVisible(id, visible);
+                    if (ImGui::MenuItem(name, entry.hint, &visible)) {
+                        m_pWndMgr->SetVisible(entry.id, visible);
                     }
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu(ICON_FA_CLIPBOARD_LIST " Info")) {
-                if (m_pWndMgr) {
-                    auto ids = m_pWndMgr->GetIDsByCategory(WindowCategory::Info);
-                    for (WindowID id : ids) {
-                        bool visible = m_pWndMgr->IsVisible(id);
-                        const char* name = m_pWndMgr->GetName(id);
-                        if (!name) continue;
-                        if (ImGui::MenuItem(name, nullptr, &visible)) {
-                            m_pWndMgr->SetVisible(id, visible);
-                        }
-                    }
-                    if (!ids.empty()) {
-                        ImGui::Separator();
-                    }
-                }
+            if (ImGui::BeginMenu(ICON_FA_CIRCLE_QUESTION " Help")) {
                 if (ImGui::MenuItem("Check for Updates", "Ctrl+U")) {
                     if (m_onUpdates) m_onUpdates();
                 }

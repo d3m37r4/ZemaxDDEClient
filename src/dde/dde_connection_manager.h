@@ -26,6 +26,9 @@ public:
     void setActiveConnection(int index);
     ZemaxDDE::ZemaxDDEClient* getActiveClient() const;
     int getActiveIndex() const { return m_activeIndex; }
+    /// Effective number of usable slots (1..MAX_CONNECTIONS), driven by the
+    /// "Max concurrent connections" setting.
+    [[nodiscard]] int getMaxConnections() const noexcept { return m_maxConnections; }
 
     /// Registers a callback invoked when a connection slot is torn down (immediately
     /// before the client object is destroyed). Upper layers use it to release any
@@ -67,6 +70,7 @@ public:
     void setGetSagProfileTimeoutMs(DWORD ms);
     void setGetSurfaceDataMapTimeoutMs(DWORD ms);
     void setGetSagMapTimeoutMs(DWORD ms);
+    void setGetRefreshTimeoutMs(DWORD ms);
 
     [[nodiscard]] DWORD getDefaultTimeoutMs() const;
     [[nodiscard]] int   getDefaultRetries()   const;
@@ -80,6 +84,7 @@ public:
     [[nodiscard]] DWORD getGetSagProfileTimeoutMs() const { return m_getSagProfileTimeoutMs; }
     [[nodiscard]] DWORD getGetSurfaceDataMapTimeoutMs() const { return m_getSurfaceDataMapTimeoutMs; }
     [[nodiscard]] DWORD getGetSagMapTimeoutMs() const { return m_getSagMapTimeoutMs; }
+    [[nodiscard]] DWORD getGetRefreshTimeoutMs() const { return m_getRefreshTimeoutMs; }
 
 private:
     std::array<DDEConnection, MAX_CONNECTIONS> m_connections;
@@ -99,6 +104,7 @@ private:
     DWORD m_getSagProfileTimeoutMs = 1000;
     DWORD m_getSurfaceDataMapTimeoutMs = 2000;
     DWORD m_getSagMapTimeoutMs = 1000;
+    DWORD m_getRefreshTimeoutMs = 2000;
 
     int findFreeSlot();
     HWND createClientWindow();

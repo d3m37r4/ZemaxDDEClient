@@ -25,6 +25,8 @@ namespace gui {
         const ThemeManager* m_themeManager = nullptr;
         Logger* m_logger = nullptr;
         bool m_open = false;
-        int m_selectedWindowIndex = -1;
+        /// Selected row is remembered by HWND: the list is re-enumerated every
+        /// frame, so a row index would silently point at another window.
+        HWND m_selectedHwnd = nullptr;
     };
 }

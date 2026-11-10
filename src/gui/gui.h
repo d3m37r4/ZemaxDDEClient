@@ -6,6 +6,9 @@
 #include <GLFW/glfw3.h>
 
 #include "gui/constants.h"
+#include "gui/imgui_utils.h"
+#include "gui/window_chrome.h"
+#include "gui/dockable_windows_manager.h"
 #include "gui/utils.h"
 #include "gui/surface_profile_service.h"
 #include "gui/surface_irregularity_map_service.h"
@@ -17,6 +20,7 @@
 #include "gui/popups/about_dialog.h"
 #include "gui/popups/shortcuts_help_dialog.h"
 #include "gui/popups/connection_lost_dialog.h"
+#include "gui/popups/refresh_failed_dialog.h"
 #include "gui/popups/preferences_dialog.h"
 #include "gui/popups/update_checker.h"
 #include "gui/settings_manager.h"
@@ -26,6 +30,10 @@
 class DockableWindowsManager;
 
 class Logger;
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+class TestEngine;
+#endif
 
 namespace gui {
     class GuiManager {
@@ -55,6 +63,8 @@ namespace gui {
             void cycleDdeTarget();
             /// Selects a DDE target slot directly (Alt+1/Alt+2). No-op if empty.
             void selectDdeTarget(int slot);
+            /// Toggles a dockable panel (View menu, Ctrl+1..5). No-op without a window manager.
+            void toggleDockableWindow(WindowID id);
             /// Closes the topmost open dialog, innermost layer first (Esc).
             /// Returns true if anything was closed.
             bool closeTopmostPopup();
@@ -64,20 +74,48 @@ namespace gui {
             void renderShortcutsHelpDialog();
             void renderPreferencesDialog();
             void renderConnectionLostPopup();
+            void renderRefreshFailedPopup();
 
             SettingsManager& getSettingsManager() noexcept { return *m_settingsManager; }
             UpdateChecker* getUpdateChecker() const noexcept { return m_updateChecker.get(); }
 
             MenuBarController* getMenuBarController() { return m_menuBarController.get(); }
-            void setWindowManager(DockableWindowsManager* wndMgr) { m_pWndMgr = wndMgr; }
+            void setWindowManager(DockableWindowsManager* wndMgr);
             DockableWindowsManager* getWindowManager() const { return m_pWndMgr; }
             Logger& getLogger() const { return m_logger; }
             DDEStatus* getDDEStatusRenderer() const { return m_ddeStatusRenderer.get(); }
 
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+            /// Attaches the Dear ImGui Test Engine so its UI is rendered inside
+            /// the application frame. Only available in test-enabled builds.
+            void setTestEngine(TestEngine* engine) { m_testEngine = engine; }
+            TestEngine* getTestEngine() const { return m_testEngine; }
+#endif
+
             template<typename Func>
-            void renderToolbarWindow(const char* title, bool* open, Func content) {
+            void renderToolbarWindow(
+                const char* title, bool* open, const char* persistId, Func content) {
+                // Minimized windows skip rendering entirely; the shelf tile
+                // (pushed inside the call) is their only visible presence.
+                chrome::setPersistentKey(open, persistId);
+                // Tile x closes the detached window like the title-bar x.
+                chrome::setCloseHandler(open, [open] { *open = false; });
+                if (chrome::minimizedAndShelved(open, title)) {
+                    return;
+                }
+                // The default detached size stays a Once condition; chrome
+                // rect overrides (maximized, restore) queue last with Always
+                // and therefore win.
+                ImGui::SetNextWindowSize(ImGuiUtils::DpiScaleVec2(DETACHED_WINDOW_DEFAULT_SIZE), ImGuiCond_Once);
+                // Chrome buttons must stay clear of the title text at any
+                // min width; width = max(constant, chrome strip).
+                ImGuiUtils::SetChromeWindowConstraints(
+                    DETACHED_WINDOW_MIN_SIZE.x, DETACHED_WINDOW_MIN_SIZE.y);
+                chrome::applyFrameRect(open);
                 ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
                 if (ImGui::Begin(title, open, ImGuiWindowFlags_MenuBar)) {
+                    ImGuiUtils::ClampWindowToViewport(chrome::isMaximized(open));
+                    chrome::drawTitleBarButtons(open, open);
                     content();
                 }
                 ImGui::End();
@@ -89,10 +127,40 @@ namespace gui {
             void renderSurfaceIrregularityMap();
             void renderLogs();
 
+            /// Body of the Welcome window: accent icon, short hint and the
+            /// primary Connect CTA (same popup as the menu/shortcut path).
+            /// The window itself (pos/size/visibility) is owned by
+            /// DockableWindowsManager, which auto-hides it while connected.
+            /// Window size of the Welcome card: measured content extent +
+            /// card padding + title bar. Given to ImGui before the window
+            /// appears so pivot centering lands exactly on the final size
+            /// (AlwaysAutoResize would settle one frame later).
+            [[nodiscard]] ImVec2 welcomeWindowSize() const;
+
+            void renderWelcomeContent();
+
+            /// Global status bar height, used to center the Welcome window
+            /// over the dock area.
+            [[nodiscard]] float computeStatusBarHeight() const { return m_uiOpMonitor.computeStatusBarHeight(); }
+
             [[nodiscard]] bool shouldClose() const noexcept { return m_glfwWindow ? glfwWindowShouldClose(m_glfwWindow) : true; }
             [[nodiscard]] bool isDDEInitialized() const noexcept { return m_zemaxDDEClient != nullptr && m_zemaxDDEClient->isConnected(); }
 
         private:
+            /// Row metrics of the welcome card body at the current DPI.
+            /// Shared by welcomeWindowSize() (window sizing) and
+            /// renderWelcomeContent() (centering) so both stay in sync.
+            struct WelcomeMetrics {
+                ImVec2 icon{};   // drawing extent at the enlarged font
+                ImVec2 title{};
+                ImVec2 hint1{};
+                ImVec2 hint2{};
+                ImVec2 button{}; // filled button incl. frame padding
+                float wrap = 0.0f; // hint wrap width, DPI-scaled
+                float gap = 0.0f;  // row gap, DPI-scaled
+            };
+            void measureWelcome(WelcomeMetrics& m) const;
+
             // Non-owning. Lifetime guaranteed by AppContext (outlives GuiManager).
             GLFWwindow* m_glfwWindow;
             DDEConnectionManager* m_ddeConnectionManager;
@@ -109,6 +177,7 @@ namespace gui {
             std::unique_ptr<AboutDialog> m_aboutDialog;
             std::unique_ptr<ShortcutsHelpDialog> m_shortcutsHelpDialog;
             std::unique_ptr<ConnectionLostDialog> m_connectionLostDialog;
+            std::unique_ptr<RefreshFailedDialog> m_refreshFailedDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
             std::unique_ptr<SettingsManager>   m_settingsManager;
             std::unique_ptr<PreferencesDialog> m_preferencesDialog;
@@ -117,6 +186,9 @@ namespace gui {
 
             UiOperationMonitor m_uiOpMonitor;
             unsigned int m_frameCount = 0;
-            int m_pendingDisconnectIndex = -1;
+
+#ifdef ZEMAX_ENABLE_TEST_ENGINE
+            TestEngine* m_testEngine = nullptr;
+#endif
     };
 }

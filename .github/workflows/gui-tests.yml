@@ -1,0 +1,66 @@
+name: GUI Tests (Mesa llvmpipe)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  gui-tests:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            git
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glfw
+            mingw-w64-x86_64-ninja
+            curl
+
+      - name: Make build.sh executable
+        run: git update-index --chmod=+x build.sh
+        shell: msys2 {0}
+
+      - name: Build with the Test Engine
+        run: ./build.sh test
+        shell: msys2 {0}
+
+      - name: Download Mesa (llvmpipe software renderer)
+        run: |
+          curl -fL -o mesa.7z \
+            https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-mingw.7z
+          mkdir -p mesa
+          # Windows' bsdtar (System32) reads 7z; the MSYS2 shell ships GNU tar,
+          # which does not, so the absolute path is required.
+          /c/Windows/System32/tar.exe -xf mesa.7z -C mesa
+          ls -l mesa/x64/opengl32.dll mesa/x64/libgallium_wgl.dll mesa/x64/dxil.dll
+        shell: msys2 {0}
+
+      - name: Run GUI tests (Mesa llvmpipe)
+        env:
+          GALLIUM_DRIVER: llvmpipe
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          EXE=$(ls -t build-test/bin/ZemaxDDEClient_*.exe | head -1)
+          cp mesa/x64/opengl32.dll mesa/x64/libgallium_wgl.dll mesa/x64/dxil.dll "$(dirname "$EXE")/"
+          "$EXE" --run-tests all --test-results gui-test-results.xml
+        shell: msys2 {0}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-test-results
+          path: |
+            gui-test-results.xml
+            output/captures/

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 // Central registry of global keyboard shortcuts.
 //
 // This header is intentionally ImGui-free: it only *describes* chords
@@ -22,6 +27,9 @@ enum class Key : int {
     Escape,
     Digit1,
     Digit2,
+    Digit3,
+    Digit4,
+    Digit5,
 };
 
 enum Mod : int {
@@ -43,6 +51,11 @@ struct Entry {
 inline constexpr Entry kEntries[] = {
     {"open-zmx", "File", Key::O, Mod_Ctrl, "Ctrl+O", "Open *.ZMX file in Zemax"},
     {"preferences", "File", Key::Comma, Mod_Ctrl, "Ctrl+,", "Open Preferences"},
+    {"view-dde-status", "View", Key::Digit1, Mod_Ctrl, "Ctrl+1", "Toggle DDE Status panel"},
+    {"view-system-info", "View", Key::Digit2, Mod_Ctrl, "Ctrl+2", "Toggle Optical System Information panel"},
+    {"view-profile", "View", Key::Digit3, Mod_Ctrl, "Ctrl+3", "Toggle Surface Profile Inspector panel"},
+    {"view-map", "View", Key::Digit4, Mod_Ctrl, "Ctrl+4", "Toggle Surface Irregularity Map panel"},
+    {"view-logs", "View", Key::Digit5, Mod_Ctrl, "Ctrl+5", "Toggle Logs panel"},
     {"check-updates", "Info", Key::U, Mod_Ctrl, "Ctrl+U", "Check for Updates"},
     {"about", "Info", Key::I, Mod_Ctrl, "Ctrl+I", "Open About dialog"},
     {"shortcuts-help", "Info", Key::F1, Mod_None, "F1", "Keyboard shortcuts help"},
@@ -53,8 +66,88 @@ inline constexpr Entry kEntries[] = {
     {"target-slot-0", "DDE", Key::Digit1, Mod_Alt, "Alt+1", "Select DDE target [0]"},
     {"target-slot-1", "DDE", Key::Digit2, Mod_Alt, "Alt+2", "Select DDE target [1]"},
     {"close-popup", "Dialogs", Key::Escape, Mod_None, "Esc", "Close topmost dialog"},
+    {"logs-copy-selection", "Logs", Key::C, Mod_Ctrl, "Ctrl+C", "Copy selected log lines (Logs panel)"},
 };
 
 inline constexpr int kEntryCount = sizeof(kEntries) / sizeof(kEntries[0]);
+
+/// Mouse gestures shown in the help dialog next to the keyboard shortcuts.
+/// They live outside kEntries because handleShortcuts() dispatches chords
+/// only; the entries just describe wording for the dialog.
+struct HintRow {
+    const char* section; // same groups as Entry::section
+    const char* action;
+    const char* hint;
+};
+
+inline constexpr HintRow kHintRows[] = {
+    {"Logs", "Select a log line", "Click"},
+    {"Logs", "Add or remove a line", "Ctrl+Click"},
+    {"Logs", "Select a range", "Shift+Click"},
+    {"Logs", "Open the copy menu", "Right-click"},
+};
+
+inline constexpr int kHintRowCount = sizeof(kHintRows) / sizeof(kHintRows[0]);
+
+/// Row of the help dialog: an action and its shortcut/gesture text.
+struct DisplayRow {
+    const char* action;
+    std::string hint;
+};
+
+/// A group of rows shown under one section header.
+struct DisplaySection {
+    const char* name;
+    std::vector<DisplayRow> rows;
+};
+
+/// Builds the help-dialog contents once: sections in registry order, repeated
+/// actions merged ("F1 / Ctrl+/") and mouse hints appended to their section.
+/// Pure (no ImGui) so the grouping rules are unit-testable.
+inline std::vector<DisplaySection> buildDisplaySections() {
+    std::vector<DisplaySection> sections;
+    auto appendHints = [](DisplaySection& section) {
+        for (int h = 0; h < kHintRowCount; ++h) {
+            if (std::string_view(kHintRows[h].section) == section.name) {
+                section.rows.push_back({kHintRows[h].action, kHintRows[h].hint});
+            }
+        }
+    };
+
+    for (int i = 0; i < kEntryCount; ++i) {
+        const Entry& entry = kEntries[i];
+        if (sections.empty() || std::string_view(sections.back().name) != entry.section) {
+            if (!sections.empty()) {
+                appendHints(sections.back());
+            }
+            sections.push_back({entry.section, {}});
+        }
+        std::string hint = entry.hint;
+        while (i + 1 < kEntryCount
+               && std::string_view(kEntries[i + 1].section) == entry.section
+               && std::string_view(kEntries[i + 1].action) == entry.action) {
+            hint += " / ";
+            hint += kEntries[++i].hint;
+        }
+        sections.back().rows.push_back({entry.action, std::move(hint)});
+    }
+    if (!sections.empty()) {
+        appendHints(sections.back());
+    }
+    return sections;
+}
+
+/// "<action> (<hint>)" tooltip text of a shortcut id, e.g.
+/// "Connect to Zemax... (Ctrl+Shift+C)". The registry is the single
+/// wording source shared by the menu, the help dialog and button
+/// tooltips; empty string for an unknown id.
+inline std::string tooltipFor(std::string_view id) {
+    for (const Entry& e : kEntries) {
+        if (e.id == id) {
+            return std::string(e.action) + " (" + e.hint + ")";
+        }
+    }
+    return {};
+}
 
 } // namespace gui::shortcuts

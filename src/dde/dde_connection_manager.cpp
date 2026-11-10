@@ -82,7 +82,10 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     SetWindowLongPtrW(conn.hwndClient, GWLP_USERDATA,
         reinterpret_cast<LONG_PTR>(conn.client.get()));
 
-    // Propagate per-request timeouts to new client.
+    // Connection defaults (Preferences -> DDE Connection). Without these the
+    // fresh client kept its compiled-in 1000 ms / 1 retry regardless of settings.
+    conn.client->setDefaultTimeoutMs(m_defaultTimeoutMs);
+    conn.client->setDefaultRetries(m_defaultRetries);
     conn.client->setGetNameTimeoutMs(m_getNameTimeoutMs);
     conn.client->setGetFileTimeoutMs(m_getFileTimeoutMs);
     conn.client->setGetSystemTimeoutMs(m_getSystemTimeoutMs);
@@ -92,6 +95,7 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     conn.client->setGetSagProfileTimeoutMs(m_getSagProfileTimeoutMs);
     conn.client->setGetSurfaceDataMapTimeoutMs(m_getSurfaceDataMapTimeoutMs);
     conn.client->setGetSagMapTimeoutMs(m_getSagMapTimeoutMs);
+    conn.client->setGetRefreshTimeoutMs(m_getRefreshTimeoutMs);
 
     try {
         conn.client->initiateDDE(targetHwnd);
@@ -134,7 +138,11 @@ void DDEConnectionManager::disconnect(int index) {
     if (index < 0 || index >= MAX_CONNECTIONS) return;
 
     auto& conn = m_connections[index];
-    if (conn.isDisconnected()) return;
+    // Guard on slot occupancy, not on connection state: after a connection loss
+    // the state is already Disconnected while the client object, window and
+    // active index are still held, and skipping the cleanup here used to leak
+    // them - the UI then kept showing a live connection to a dead slot.
+    if (!conn.client && !conn.hwndClient) return;
 
     // Notify upper layers before the client is destroyed so that any bookkeeping
     // referencing this connection's OperationMonitor can be released.
@@ -147,7 +155,9 @@ void DDEConnectionManager::disconnect(int index) {
         reinterpret_cast<uintptr_t>(conn.hwndClient),
         reinterpret_cast<uintptr_t>(conn.hwndServer)));
 
-    if (conn.client) {
+    // Only a live handshake gets the polite WM_DDE_TERMINATE: for a dead
+    // connection the server window is gone and the message is pure noise.
+    if (conn.client && conn.client->connectionState() != ZemaxDDE::ConnectionState::Disconnected) {
         conn.client->terminateDDE();
     }
 
@@ -179,7 +189,9 @@ void DDEConnectionManager::disconnect(int index) {
 
 void DDEConnectionManager::disconnectAll() {
     for (int i = 0; i < MAX_CONNECTIONS; ++i) {
-        if (m_connections[i].isConnected()) {
+        // Occupied slots, not only connected ones: a dead slot (state already
+        // Disconnected) still holds a client and must be cleaned up on exit.
+        if (m_connections[i].client || m_connections[i].hwndClient) {
             disconnect(i);
         }
     }
@@ -236,10 +248,17 @@ void DDEConnectionManager::checkAllConnectionHealth() {
         conn.client->checkConnectionHealth();
 
         if (conn.client->hasConnectionLost()) {
-            m_connectionLostIndex = i;
-            m_connectionLostReason = conn.client->getConnectionLostReason();
+            const std::string reason = conn.client->getConnectionLostReason();
             conn.client->clearConnectionLost();
-            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", i, m_connectionLostReason));
+            m_logger.addLog(std::format("[DDE] Connection lost flagged for slot {}: {}", i, reason));
+            // Clean the slot up right away. The dialog only informs about the
+            // reason, and deferring the disconnect until its dismissal used to
+            // leak the slot whenever a second loss arrived while the dialog was
+            // still open: the pending index got overwritten and the dead slot
+            // kept the UI in the connected state.
+            disconnect(i);
+            m_connectionLostIndex = i;
+            m_connectionLostReason = reason;
         }
     }
 }
@@ -370,6 +389,12 @@ void DDEConnectionManager::setGetSagMapTimeoutMs(DWORD ms) {
     propagatePerRequestTimeouts();
 }
 
+void DDEConnectionManager::setGetRefreshTimeoutMs(DWORD ms) {
+    if (ms == m_getRefreshTimeoutMs) return;
+    m_getRefreshTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
 void DDEConnectionManager::propagateDefaultTimeout(DWORD ms) {
     for (auto& conn : m_connections) {
         if (conn.client) conn.client->setDefaultTimeoutMs(ms);
@@ -394,5 +419,6 @@ void DDEConnectionManager::propagatePerRequestTimeouts() {
         conn.client->setGetSagProfileTimeoutMs(m_getSagProfileTimeoutMs);
         conn.client->setGetSurfaceDataMapTimeoutMs(m_getSurfaceDataMapTimeoutMs);
         conn.client->setGetSagMapTimeoutMs(m_getSagMapTimeoutMs);
+        conn.client->setGetRefreshTimeoutMs(m_getRefreshTimeoutMs);
     }
 }

@@ -5,6 +5,7 @@
 #include <vector>
 
 enum class WindowID {
+    Welcome,
     SurfaceProfileInspector,
     SurfaceIrregularityMap,
     Logs,
@@ -31,6 +32,7 @@ struct DockableWindowData {
 };
 
 inline constexpr DockableWindowData DockableWindows[] = {
+    { WindowID::Welcome, WindowCategory::Tools, "Welcome — Getting Started", true, 0 },
     { WindowID::DDEStatus, WindowCategory::DDE, "DDE Status", true, 0 },
     { WindowID::SystemInfo, WindowCategory::Tools, "Optical System Information", true, 0 },
     { WindowID::SurfaceProfileInspector, WindowCategory::Tools, "Surface Profile Inspector", false, 1 },
@@ -53,7 +55,12 @@ class DockableWindowsManager {
         void LoadState();
         void SaveState();
 
-        std::vector<WindowID> GetIDsByCategory(WindowCategory category) const;
+        /// In-memory variants used by the layout snapshot (no file access).
+        [[nodiscard]] std::string SaveStateToString() const;
+        void LoadStateFromString(std::string_view json);
+
+        /// Puts every window back to the visibility from the registry table.
+        void ResetVisibilityToDefaults();
 
         const char* GetName(WindowID id) const;
 

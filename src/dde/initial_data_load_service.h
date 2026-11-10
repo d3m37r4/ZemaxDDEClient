@@ -31,6 +31,7 @@ namespace ZemaxDDE {
 
         private:
             void loadSystem();
+            void loadSystemFields();
             void loadNextField();
             void loadNextWave();
             void onError(const std::string& msg);

@@ -9,6 +9,7 @@ class Logger;
 namespace gui {
     class GraphicsBackend;
     class UpdateChecker;
+    class SurfaceIrregularityMapService;
 
     /// Centralized bridge between persistent AppSettings and runtime subsystems.
     /// apply() pushes a complete settings snapshot to all bound consumers;
@@ -31,6 +32,9 @@ namespace gui {
             void setGraphicsBackend(GraphicsBackend* gb) noexcept { m_graphicsBackend = gb; }
             void setUpdateChecker(UpdateChecker* updateChecker) noexcept { m_updateChecker = updateChecker; }
             void setLogger(Logger* logger) noexcept { m_logger = logger; }
+            /// Non-owning; lets applyMap() push palette/highlight changes into the
+            /// live 3D window state instead of waiting for a restart.
+            void setMapService(SurfaceIrregularityMapService* service) noexcept { m_mapService = service; }
 
             // Applies every section in @p settings. Requires bind() to have been called
             // for the consumers used by the settings being applied.
@@ -85,6 +89,7 @@ namespace gui {
             GraphicsBackend* m_graphicsBackend = nullptr;
             DDEConnectionManager* m_ddeConnectionManager = nullptr;
             UpdateChecker* m_updateChecker = nullptr;
+            SurfaceIrregularityMapService* m_mapService = nullptr;
             Logger* m_logger = nullptr;
 
             // Cached system dark mode for change detection.

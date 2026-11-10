@@ -22,6 +22,10 @@ namespace app::models {
         std::string fileName;
         std::vector<SagData> sagDataPoints;
 
+        /// DDE connection slot that supplied the data (-1 = unknown). Drives
+        /// the "[Slot N]" suffix of the detached plot window titles.
+        int sourceSlot = -1;
+
         bool isValid() const noexcept { return id >= 0; }
         double diameter() const noexcept { return 2.0 * semiDiameter; }
 
@@ -34,6 +38,7 @@ namespace app::models {
             type = "Unknown";
             fileName.clear();
             sagDataPoints.clear();
+            sourceSlot = -1;
         }
     };
 

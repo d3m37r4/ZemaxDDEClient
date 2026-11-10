@@ -17,13 +17,20 @@ inline constexpr std::string_view kThemeNameDark  = "Dark Theme";
 /// Stored per-theme so future themes can override look-and-feel without
 /// touching color values. Defaults match the legacy hardcoded applyGeometry().
 struct ThemeGeometry {
-    float windowRounding    = 5.0f;
-    float childRounding     = 5.0f;
-    float frameRounding     = 5.0f;
-    float popupRounding     = 5.0f;
-    float scrollbarRounding = 3.0f;
-    float grabRounding      = 3.0f;
-    float tabRounding       = 5.0f;
+    // One radius for the whole UI (px, before DPI scaling): windows, popups,
+    // cards, buttons, frames, tabs, slider grabs and the scrollbar thumb.
+    // Floating viewport windows opt the OS into DWMWCP_ROUNDSMALL, whose
+    // radius equals this design radius DPI-scaled, so the OS clip matches
+    // the ImGui-drawn arc without increasing the radius. The scrollbar
+    // thumb is narrow, so the renderer clamps its radius to half its width
+    // and it reads as a pill.
+    float windowRounding    = 4.0f;
+    float childRounding     = 4.0f;
+    float frameRounding     = 4.0f;
+    float popupRounding     = 4.0f;
+    float scrollbarRounding = 4.0f;
+    float grabRounding      = 4.0f;
+    float tabRounding       = 4.0f;
 
     ImVec2 windowPadding    = ImVec2(12, 12);
     ImVec2 framePadding     = ImVec2(8,  4);
@@ -60,10 +67,6 @@ struct SemanticPalette {
     ImVec4 dangerButton;
     ImVec4 dangerButtonHover;
     ImVec4 dangerButtonActive;
-
-    ImVec4 neutralButton;
-    ImVec4 neutralButtonHover;
-    ImVec4 neutralButtonActive;
 
     ImVec4 onAccent;         // Text drawn on top of an accent-colored button.
 };

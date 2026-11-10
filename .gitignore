@@ -20,6 +20,11 @@
 # Dear ImGui artifacts
 [iI]mgui.ini
 
+# Test engine artifacts (screenshots, videos, exported results)
+/output/
+/test_screenshots/
+/gui-test-results.xml
+
 # Build directories
 /[bB]uild*/
 /[bB]in*/

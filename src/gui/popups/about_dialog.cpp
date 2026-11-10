@@ -40,7 +40,7 @@ namespace gui {
             "%s - Advanced analysis of optical systems using parameters "
             "retrieved from Zemax via DDE (Dynamic Data Exchange)",
             APP_NAME);
-        ImGui::Spacing();    
+        ImGui::Spacing();
         ImGui::Separator();
 
         ImGui::TextUnformatted("GitHub Repository:");

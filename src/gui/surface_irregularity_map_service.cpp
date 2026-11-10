@@ -3,11 +3,29 @@
 #include <numbers>
 
 #include "surface_irregularity_map_service.h"
+#include "gui/imgui_utils.h"
+#include "gui/plot_image_exporter.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
 #include "lib/implot3d/implot3d.h"
 
 namespace {
+    // ImPlot3D has no public fit request, so a "reset zoom" in the toolbar
+    // reproduces the as-created view for one Always-cond frame: the ImPlot3D
+    // default InitialRotation quaternion (implot3d_internal.h) and the data
+    // extents the plot fit when it was just created.
+    const ImPlot3DQuat kDefaultBoxRotation(-0.513269, -0.212596, -0.318184, 0.76819);
+
+    // One Always-cond setup frame; BeginPlot resets RangeCond and RotationCond
+    // to None before it, so the lock never outlives the reset frame.
+    void resetViewSetup(double xMin, double xMax, double yMin, double yMax,
+                        double zMin, double zMax) {
+        ImPlot3D::SetupBoxRotation(kDefaultBoxRotation, false, ImPlot3DCond_Always);
+        ImPlot3D::SetupAxisLimits(ImAxis3D_X, xMin, xMax, ImPlot3DCond_Always);
+        ImPlot3D::SetupAxisLimits(ImAxis3D_Y, yMin, yMax, ImPlot3DCond_Always);
+        ImPlot3D::SetupAxisLimits(ImAxis3D_Z, zMin, zMax, ImPlot3DCond_Always);
+    }
+
     ImVec4 imcol(int r, int g, int b) {
         return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
     }
@@ -50,16 +68,15 @@ namespace gui {
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
         const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
 
-        float sagMin = 1e30f, sagMax = -1e30f;
-        for (const auto& profile : getProfiles()) {
-            for (const auto& pt : profile.sagDataPoints) {
-                float s = static_cast<float>(pt.sag * scaleZ);
-                sagMin = std::min(sagMin, s);
-                sagMax = std::max(sagMax, s);
-            }
-        }
+        // Cached extents: recomputed only when the data changes instead of
+        // walking every point of every section on every frame.
+        const auto& ranges = dataRanges();
+        const float sagMin = ranges.sagValid ? ranges.sagMin * static_cast<float>(scaleZ) : 0.0f;
+        const float sagMax = ranges.sagValid ? ranges.sagMax * static_cast<float>(scaleZ) : 1.0f;
         float sagRange = sagMax - sagMin;
         if (sagRange < 1e-12f) sagRange = 1.0f;
+
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
         if (ImPlot3D::BeginPlot("##Surface3D_Lines", size, ImPlot3DFlags_NoLegend)) {
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
@@ -68,6 +85,18 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("Z ({})", unitZ).c_str());
+            ImGuiUtils::SetPlotFrameSize(ImPlot3D::GetPlotRectSize());
+            if (plotRequest == ImGuiUtils::kPlotRequestReset) {
+                resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
+                               -semiDiameter * scaleY, semiDiameter * scaleY,
+                               sagMin, sagMax);
+            }
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "map", m_nominalSurfaceData,
+                                         ImGui::GetWindowDrawList(),
+                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize(),
+                                         ImGuiUtils::PlotExportResolution());
+            }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
             constexpr int SEGMENT_SIZE = 3;
@@ -83,6 +112,16 @@ namespace gui {
 
                 float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
                 bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+                // A precise map (thousands of sections) submits hundreds of
+                // thousands of plot items per frame and overruns the 16-bit
+                // ImDrawIdx range. Draw a thinned set; the worst section always
+                // stays so the highlight never disappears. The underlying data
+                // keeps its full resolution.
+                constexpr int kMaxDrawnProfiles = 360;
+                const int stride = std::max(1, numProfiles / kMaxDrawnProfiles);
+                if (!isWorst && (profileIdx % stride) != 0) {
+                    continue;
+                }
 
                 for (int i = 0; i < numRadii; ++i) {
                     double r = i * rStep;
@@ -145,16 +184,15 @@ namespace gui {
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
         const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
 
-        float devMin = 1e30f, devMax = -1e30f;
-        for (const auto& profile : getProfiles()) {
-            for (size_t k = 0; k < profile.sagDataPoints.size() && k < m_nominalSurfaceData.sagDataPoints.size(); ++k) {
-                float dev = static_cast<float>((profile.sagDataPoints[k].sag - m_nominalSurfaceData.sagDataPoints[k].sag) * scaleZ);
-                devMin = std::min(devMin, dev);
-                devMax = std::max(devMax, dev);
-            }
-        }
+        // Cached deviation extents: recomputed only when the data changes instead
+        // of walking every point of every section on every frame.
+        const auto& ranges = dataRanges();
+        const float devMin = ranges.devValid ? ranges.devMin * static_cast<float>(scaleZ) : 0.0f;
+        const float devMax = ranges.devValid ? ranges.devMax * static_cast<float>(scaleZ) : 1.0f;
         float devRange = devMax - devMin;
         if (devRange < 1e-12f) devRange = 1.0f;
+
+        const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
         if (ImPlot3D::BeginPlot("##Deviation3D_Lines", size, ImPlot3DFlags_NoLegend)) {
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
@@ -163,6 +201,18 @@ namespace gui {
             ImPlot3D::SetupAxes(std::format("X ({})", unitX).c_str(),
                                 std::format("Y ({})", unitY).c_str(),
                                 std::format("ΔSag ({})", unitZ).c_str());
+            ImGuiUtils::SetPlotFrameSize(ImPlot3D::GetPlotRectSize());
+            if (plotRequest == ImGuiUtils::kPlotRequestReset) {
+                resetViewSetup(-semiDiameter * scaleX, semiDiameter * scaleX,
+                               -semiDiameter * scaleY, semiDiameter * scaleY,
+                               devMin, devMax);
+            }
+            if (plotRequest == ImGuiUtils::kPlotRequestSaveImage) {
+                plot_export::requestSave(m_logger, "devmap", m_nominalSurfaceData,
+                                         ImGui::GetWindowDrawList(),
+                                         ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize(),
+                                         ImGuiUtils::PlotExportResolution());
+            }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 
             constexpr int SEGMENT_SIZE = 3;
@@ -178,6 +228,14 @@ namespace gui {
 
                 float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
                 bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+                // Same thinning as the surface plot: a precise map would flood
+                // ImPlot3D with plot items every frame. The worst section is
+                // always kept so its highlight never disappears.
+                constexpr int kMaxDrawnProfiles = 360;
+                const int stride = std::max(1, numProfiles / kMaxDrawnProfiles);
+                if (!isWorst && (profileIdx % stride) != 0) {
+                    continue;
+                }
 
                 for (int i = 0; i < numRadii; ++i) {
                     double r = i * rStep;

@@ -3,6 +3,12 @@
 namespace ZemaxDDE {
 
 uint64_t OperationMonitor::registerOperation(const std::string& serviceId, int totalSteps) {
+    // Bound the history: a map registers one operation per section, so the list
+    // otherwise grows for the whole session.
+    static constexpr size_t MAX_OPERATIONS = 512;
+    if (m_operations.size() >= MAX_OPERATIONS) {
+        m_operations.erase(m_operations.begin());
+    }
     OperationInfo info;
     info.id = m_nextId++;
     info.serviceId = serviceId;

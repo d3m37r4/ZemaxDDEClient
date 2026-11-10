@@ -1,10 +1,15 @@
 #include "operation_monitor_service.h"
 
 namespace app::services {
-    uint64_t OperationMonitorService::startTask(app::models::TaskSource source, const std::string& label, int totalSteps, int clientSlot) {
+    uint64_t OperationMonitorService::startTask(app::models::TaskSource source, const std::string& label,
+                                                int totalSteps, int clientSlot,
+                                                ZemaxDDE::OperationMonitor* monitor) {
+        // The operation must live on the monitor of the slot that runs it: a map
+        // pinned to one slot can run while another slot is the active one.
+        ZemaxDDE::OperationMonitor* targetMonitor = monitor ? monitor : m_monitor;
         uint64_t ddeId = 0;
-        if (m_monitor) {
-            ddeId = m_monitor->registerOperation(label, totalSteps);
+        if (targetMonitor) {
+            ddeId = targetMonitor->registerOperation(label, totalSteps);
         }
 
         TaskRecord rec;
@@ -13,7 +18,8 @@ namespace app::services {
         rec.label = label;
         rec.ddeOperationId = ddeId;
         rec.clientSlot = clientSlot;
-        rec.boundMonitor = m_monitor;
+        rec.boundMonitor = targetMonitor;
+        rec.startedAt = std::chrono::steady_clock::now();
         m_tasks.emplace(rec.taskId, rec);
 
         return rec.taskId;
@@ -101,11 +107,6 @@ namespace app::services {
         return false;
     }
 
-    int OperationMonitorService::getTaskClientSlot(uint64_t taskId) const {
-        auto* rec = findRecord(taskId);
-        return rec ? rec->clientSlot : -1;
-    }
-
     std::optional<OperationMonitorService::TaskProgress> OperationMonitorService::getTaskProgress(app::models::TaskSource source) const {
         for (const auto& [id, t] : m_tasks) {
             if (t.source != source) continue;
@@ -131,13 +132,5 @@ namespace app::services {
     const OperationMonitorService::TaskRecord* OperationMonitorService::findRecord(uint64_t taskId) const {
         auto it = m_tasks.find(taskId);
         return (it != m_tasks.end()) ? &it->second : nullptr;
-    }
-
-    const ZemaxDDE::OperationInfo* OperationMonitorService::findDdeOp(uint64_t ddeId) const {
-        if (!m_monitor) return nullptr;
-        for (const auto& op : m_monitor->getOperations()) {
-            if (op.id == ddeId) return &op;
-        }
-        return nullptr;
     }
 }

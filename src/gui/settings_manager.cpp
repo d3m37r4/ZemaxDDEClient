@@ -9,9 +9,15 @@
 #include "dde/dde_connection_manager.h"
 #include "gui/graphics_backend.h"
 #include "gui/popups/update_checker.h"
+#include "gui/surface_irregularity_map_service.h"
 #include "gui/theme_manager.h"
 
 namespace gui {
+
+    // The settings model cannot include the DDE manager (layering), so the two
+    // bounds are kept in sync here at compile time.
+    static_assert(app::kMaxConnections == DDEConnectionManager::MAX_CONNECTIONS,
+                  "app::kMaxConnections must match DDEConnectionManager::MAX_CONNECTIONS");
 
     bool SettingsManager::detectSystemDarkMode() {
         HKEY hKey = nullptr;
@@ -47,6 +53,11 @@ namespace gui {
     }
 
     void SettingsManager::applyTheme(const app::AppearanceSettings& appearance) {
+        // Font scale applies independently of the theme name so it also takes
+        // effect when the resolved theme is unchanged (startup, Cancel).
+        if (m_graphicsBackend) {
+            m_graphicsBackend->setFontScale(appearance.fontScale);
+        }
         if (!m_themeManager) return;
 
         bool isDark = detectSystemDarkMode();
@@ -84,20 +95,31 @@ namespace gui {
         m_ddeConnectionManager->setGetSagProfileTimeoutMs(static_cast<DWORD>(dde.getSagProfileTimeoutMs));
         m_ddeConnectionManager->setGetSurfaceDataMapTimeoutMs(static_cast<DWORD>(dde.getSurfaceDataMapTimeoutMs));
         m_ddeConnectionManager->setGetSagMapTimeoutMs(static_cast<DWORD>(dde.getSagMapTimeoutMs));
+        m_ddeConnectionManager->setGetRefreshTimeoutMs(static_cast<DWORD>(dde.getRefreshTimeoutMs));
     }
 
     void SettingsManager::applyPlot(const app::PlotSettings& plot) {
-        (void)plot;
-        // ImPlot 1.x does not expose LineWeight/MarkerSize as global ImPlotStyle fields;
-        // they are per-item properties on ImPlotSpec. Surface services read them via
-        // plotLineWeight()/plotMarkerSize() and pass to each PlotLine()/PlotScatter() call.
-        // showGridByDefault is consumed by surface services via showGridByDefault().
+        // Cache the values: the plot services read them through
+        // showGridByDefault()/plotLineWeight()/plotMarkerSize(), so storing them
+        // makes the Preferences live preview take effect on the next frame.
+        // (ImPlot 1.x keeps LineWeight/MarkerSize per item, hence no global style.)
+        m_current.plot = plot;
     }
 
     void SettingsManager::applyMap(const app::MapSettings& map) {
-        // Map colormap settings are read directly by the service via current().map.
-        // No runtime action needed — just store for retrieval.
-        (void)map;
+        m_current.map = map;
+        if (!m_mapService) return;
+        // Push into the live window state: palettes and the worst-section
+        // highlight used to be copied once at startup and required a restart.
+        auto& state = m_mapService->m_windowState;
+        state.selectedColormapSurface = map.defaultColormapSurface;
+        state.selectedColormapDeviation = map.defaultColormapDeviation;
+        state.highlightWorstSurface = map.highlightWorstSurface;
+        state.highlightWorstDeviation = map.highlightWorstDeviation;
+        for (int i = 0; i < 3; ++i) {
+            state.worstColorSurface[i] = map.worstColorSurface[i];
+            state.worstColorDeviation[i] = map.worstColorDeviation[i];
+        }
     }
 
     void SettingsManager::applyUpdates(const app::UpdateSettings& updates) {

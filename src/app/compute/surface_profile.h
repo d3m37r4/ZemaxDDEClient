@@ -23,12 +23,27 @@ namespace app::compute {
             void setSurfaceDataTimeoutMs(DWORD ms) { m_surfaceDataTimeoutMsOverride = ms; }
             void setSagTimeoutMs(DWORD ms) { m_sagTimeoutMsOverride = ms; }
 
+            /// @param slot  Connection slot the run is pinned to (-1 = whatever
+            ///              slot is active when the run starts). Every request of
+            ///              the run resolves its client through this slot, so
+            ///              switching the target mid-run cannot redirect it.
             void startCalculation(int surface, int sampling, double angle,
-                                  app::models::TaskSource source, const std::string& label = "");
+                                  app::models::TaskSource source, const std::string& label = "",
+                                  int slot = -1);
+
+            /// Adopts a task created by the caller for the next run. The refresh
+            /// phase is already visible in the monitor, so startCalculation()
+            /// must not register a second task. Consumed once.
+            void adoptTask(uint64_t taskId) noexcept { m_taskId = taskId; m_adoptedTask = true; }
             void cancel();
 
             bool isCalculating() const { return m_state == State::FetchingSurfaceData || m_state == State::FetchingSagPoints; }
             bool isCancelled() const;
+            /// UI-monitor task id of the current run (0 = no task). The status
+            /// bar cancel routes by this id: source alone is ambiguous since
+            /// both the profile service and the map service run "Nominal
+            /// Profile"-sourced tasks.
+            uint64_t taskId() const { return m_taskId; }
             const std::string& getError() const { return m_error; }
             const app::models::SurfaceData& getResult() const { return m_result; }
             int getTotalDdeRequests() const { return m_totalDdeRequests; }
@@ -57,6 +72,9 @@ namespace app::compute {
             Logger& m_logger;
             app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
             ZemaxDDE::ZemaxDDEClient* m_boundClient{nullptr};
+            /// Slot the current run is pinned to (-1 = not pinned). Sibling
+            /// instances may target different slots at the same time.
+            int m_boundSlot{-1};
 
             enum class State { Idle, FetchingSurfaceData, FetchingSagPoints, Completed, Failed };
             State m_state = State::Idle;
@@ -64,6 +82,9 @@ namespace app::compute {
 
             app::models::TaskSource m_source{app::models::TaskSource::None};
             uint64_t m_taskId{0};
+            /// Set by adoptTask(): the next startCalculation() keeps m_taskId
+            /// instead of creating a task of its own.
+            bool m_adoptedTask{false};
             int m_targetSurface = 0;
             int m_targetSampling = 0;
             double m_targetAngle = 0.0;
@@ -75,6 +96,12 @@ namespace app::compute {
             app::models::SurfaceData m_result;
             int m_totalDdeRequests{0};
             bool m_cancelRequested{false};
+
+            // Unique per-instance DDE service tag. cancel() purges only this
+            // instance's pending requests, so a sibling calculator (nominal vs
+            // toleranced, profile inspector vs map) running concurrently on the
+            // same client is never cancelled by mistake.
+            std::string m_serviceTag;
 
             DWORD m_surfaceDataTimeoutMsOverride = 0;
             DWORD m_sagTimeoutMsOverride = 0;

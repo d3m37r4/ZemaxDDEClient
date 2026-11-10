@@ -1,7 +1,9 @@
 #include "gui/popups/preferences_dialog.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <format>
 
 #include "app/config_path.h"
 #include "gui/constants.h"
@@ -9,11 +11,28 @@
 #include "gui/popups/reset_confirm_dialog.h"
 #include "gui/settings_manager.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
 namespace gui {
+
+    namespace {
+        /// Sidebar entries and the width measurement share one list: the old
+        /// hand-written width array missed the icons and the Logging entry, so
+        /// long labels could clip at larger font scales.
+        constexpr const char* kSidebarLabels[] = {
+            ICON_FA_SLIDERS " General",
+            ICON_FA_PALETTE " Appearance",
+            ICON_FA_PLUG " DDE Connection",
+            ICON_FA_GAUGE_HIGH " DDE Performance",
+            ICON_FA_CHART_LINE " Plot Settings",
+            ICON_FA_ARROW_UP " Updates",
+            ICON_FA_FILE_LINES " Logging",
+            ICON_FA_FOLDER " Files",
+        };
+    }
 
     PreferencesDialog::PreferencesDialog(SettingsManager& settings) noexcept
         : m_settings(settings) {
@@ -34,6 +53,8 @@ namespace gui {
         m_working = m_settings.current();
         m_loaded  = m_settings.current();
         m_section = Section::General;
+        m_wasOpen = false;
+        m_closedByAction = false;
         m_resetConfirmDialog->close();
         m_cleanLogsConfirmDialog->close();
         m_open = true;
@@ -41,11 +62,16 @@ namespace gui {
 
     void PreferencesDialog::close() noexcept {
         m_open = false;
+        m_confirmResetLayout = false;
         m_resetConfirmDialog->close();
         m_cleanLogsConfirmDialog->close();
     }
 
     bool PreferencesDialog::closeTopmost() {
+        if (m_confirmResetLayout) {
+            m_confirmResetLayout = false;
+            return true;
+        }
         if (m_resetConfirmDialog->isOpen()) {
             m_resetConfirmDialog->close();
             return true;
@@ -58,6 +84,12 @@ namespace gui {
         return true;
     }
 
+    void PreferencesDialog::setLayoutActions(std::function<void()> saveDefault,
+                                             std::function<void()> resetToFactory) {
+        m_onSaveLayout = std::move(saveDefault);
+        m_onResetLayout = std::move(resetToFactory);
+    }
+
     void PreferencesDialog::render() {
         if (m_open && !ImGui::IsPopupOpen(PREFERENCES_POPUP_NAME)) {
             ImGui::OpenPopup(PREFERENCES_POPUP_NAME);
@@ -67,18 +99,36 @@ namespace gui {
         ImGuiUtils::SetDpiScaledWindowConstraints(PREFERENCES_POPUP_MIN_SIZE.x, PREFERENCES_POPUP_MIN_SIZE.y);
         ImGuiUtils::SetDpiScaledWindowSize(PREFERENCES_POPUP_DEFAULT_SIZE);
 
+        const bool wasOpen = m_wasOpen;
         if (!ImGuiUtils::BeginPopupModalEx(PREFERENCES_POPUP_NAME, &m_open, ImGuiWindowFlags_NoCollapse)) {
+            // Fully closed. If it was visible and no action (Save/Cancel) did
+            // it, the user hit X or Esc: revert the working copy like Cancel.
+            if (wasOpen && !m_open && !m_closedByAction) {
+                revertWorkingCopy();
+            }
+            m_wasOpen = false;
+            m_closedByAction = false;
             return;
         }
+        m_wasOpen = true;
+        if (!m_open && !m_closedByAction) {
+            // Title-bar X clicked this frame: ImGui cleared m_open behind our
+            // back while the popup is still visible. Revert like Cancel.
+            revertWorkingCopy();
+            m_closedByAction = true;
+        }
 
-        static const char* sidebarLabels[] = {
-            "General", "Appearance", "DDE Connection", "DDE Performance", "Plot", "Updates", "Files"
-        };
-        if (m_sidebarWidth <= 0.0f) {
+        // Recompute on font/DPI change: CalcTextSize follows the active scale,
+        // while a stale cached width used to clip the labels.
+        const float sidebarFontSize = ImGui::GetFontSize();
+        if (m_sidebarWidth <= 0.0f || m_sidebarFontSize != sidebarFontSize) {
             float maxW = 0.0f;
-            for (auto* l : sidebarLabels)
-                maxW = std::max(maxW, ImGui::CalcTextSize(l).x);
-            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f + ImGuiUtils::DpiScale(PREFS_SIDEBAR_EXTRA_PAD);
+            for (const char* label : kSidebarLabels) {
+                maxW = std::max(maxW, ImGui::CalcTextSize(label).x);
+            }
+            m_sidebarWidth = maxW + ImGui::GetStyle().FramePadding.x * 2.0f
+                + ImGuiUtils::DpiScale(PREFS_SIDEBAR_EXTRA_PAD);
+            m_sidebarFontSize = sidebarFontSize;
         }
 
         const float footerH    = ImGui::GetFrameHeightWithSpacing();
@@ -108,24 +158,54 @@ namespace gui {
         m_resetConfirmDialog->render();
         m_cleanLogsConfirmDialog->render();
 
+        // Layout factory reset confirmation (nested inside Preferences).
+        if (m_confirmResetLayout && !ImGui::IsPopupOpen(LAYOUT_RESET_POPUP_NAME)) {
+            ImGui::OpenPopup(LAYOUT_RESET_POPUP_NAME);
+        }
+        ImGuiUtils::CenterNextWindow();
+        ImGuiUtils::SetDpiScaledWindowConstraints(RESET_CONFIRM_POPUP_MIN_SIZE.x,
+                                                  RESET_CONFIRM_POPUP_MIN_SIZE.y);
+        ImGuiUtils::SetDpiScaledWindowSize(RESET_CONFIRM_POPUP_DEFAULT_SIZE);
+        if (ImGuiUtils::BeginPopupModalEx(LAYOUT_RESET_POPUP_NAME, nullptr,
+                                          ImGuiWindowFlags_NoCollapse)) {
+            ImGui::BeginChild("##reset_layout_body", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
+                              ImGuiChildFlags_Borders);
+            ImGui::TextUnformatted("This resets the window layout to the factory default.");
+            ImGui::TextUnformatted("Your saved default layout (if any) is kept.");
+            ImGui::EndChild();
+
+            const float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float resetBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
+            const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
+            if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
+                m_confirmResetLayout = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
+                m_confirmResetLayout = false;
+                if (m_onResetLayout) {
+                    m_onResetLayout();
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        } else if (m_confirmResetLayout && !ImGui::IsPopupOpen(LAYOUT_RESET_POPUP_NAME)) {
+            // Closed via Esc: drop the pending request so it does not reopen.
+            m_confirmResetLayout = false;
+        }
+
         ImGui::EndPopup();
     }
 
     void PreferencesDialog::renderSidebar() {
-        static const char* labels[static_cast<int>(Section::Count)] = {
-            ICON_FA_SLIDERS " General",
-            ICON_FA_PALETTE " Appearance",
-            ICON_FA_PLUG " DDE Connection",
-            ICON_FA_GAUGE_HIGH " DDE Performance",
-            ICON_FA_CHART_LINE " Plot Settings",
-            ICON_FA_ARROW_UP " Updates",
-            ICON_FA_FILE_LINES " Logging",
-            ICON_FA_FOLDER " Files",
-        };
+        static_assert(IM_ARRAYSIZE(kSidebarLabels) == static_cast<int>(Section::Count),
+                      "Add a sidebar label for every section");
 
         for (int i = 0; i < static_cast<int>(Section::Count); ++i) {
             const bool selected = (static_cast<int>(m_section) == i);
-            if (ImGui::Selectable(labels[i], selected)) {
+            if (ImGui::Selectable(kSidebarLabels[i], selected)) {
                 m_section = static_cast<Section>(i);
             }
         }
@@ -143,21 +223,84 @@ namespace gui {
             case Section::Files:         renderSectionFiles();         break;
             default: break;
         }
+        // One bottom gap for every section: without it the last widget sits
+        // directly on the footer border.
+        ImGuiUtils::SpacingY(0.25f);
     }
 
     void PreferencesDialog::renderSectionGeneral() {
         ImGuiUtils::SectionHeader("General", "These options take effect on the next application start.");
 
         ImGui::Checkbox("Restore window layout on startup", &m_working.general.restoreWindowLayout);
+        // The flag gates full restore of the previous session's window layout
+        // (panel visibility + minimized state + floating rects); when off, only
+        // the dedicated "Show logs window on startup" preference is applied.
+        ImGuiUtils::HintText(
+            "When enabled, windows and their minimized states from the previous session "
+            "are restored on the next start; when disabled, the layout starts fresh.");
+
+        ImGui::Checkbox("Show Welcome window on startup", &m_working.general.showWelcomeOnStartup);
+        ImGuiUtils::HintText(
+            "The card appears only at application start. Closing it hides it for the rest "
+            "of the session; it is not listed in the View menu.");
+
+        ImGuiUtils::SpacedSeparator(0.4f, 0.25f);
+        ImGuiUtils::SectionHeader("Default layout",
+                                  "Save the current window arrangement and reuse it later.");
+        ImGui::Checkbox("Apply the saved default layout on startup",
+                        &m_working.general.applyDefaultLayoutOnStartup);
+        ImGui::SameLine();
+        ImGuiUtils::HelpMarker(
+            "When enabled, the application starts with your saved layout instead of "
+            "restoring the previous session's layout.");
+
+        ImGui::BeginDisabled(!m_onSaveLayout);
+        if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save current layout as default")) {
+            m_onSaveLayout();
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+
+        ImGui::BeginDisabled(!m_onResetLayout);
+        if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset layout to factory...")) {
+            m_confirmResetLayout = true;
+        }
+        ImGui::EndDisabled();
+        ImGuiUtils::HintText(
+            "Reset restores the factory docking and panel visibility; the saved default "
+            "layout is kept.");
     }
 
     void PreferencesDialog::renderSectionAppearance() {
-        ImGuiUtils::SectionHeader("Appearance", "Theme changes are applied immediately.");
+        ImGuiUtils::SectionHeader("Appearance", "Theme and interface scale apply immediately.");
 
         int mode = static_cast<int>(m_working.appearance.themeMode);
         if (ImGui::RadioButton(ICON_FA_SUN " Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
         if (ImGui::RadioButton(ICON_FA_MOON " Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
         if (ImGui::RadioButton(ICON_FA_DISPLAY " System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Interface scale");
+        // Same preset steps as Windows Settings → Display → Scale.
+        static constexpr const char* kScaleLabels[] = {
+            "100%", "125%", "150%", "175%", "200%", "225%", "250%", "300%"};
+        static constexpr float kScaleValues[] = {1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.25f, 2.5f, 3.0f};
+        static constexpr int kScaleCount = 8;
+        int current = 0;
+        float best = std::fabs(m_working.appearance.fontScale - kScaleValues[0]);
+        for (int i = 1; i < kScaleCount; ++i) {
+            float d = std::fabs(m_working.appearance.fontScale - kScaleValues[i]);
+            if (d < best) {
+                best = d;
+                current = i;
+            }
+        }
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
+        if (ImGui::Combo("##font_scale", &current, kScaleLabels, kScaleCount)) {
+            m_working.appearance.fontScale = kScaleValues[current];
+            applyWorkingTheme();
+        }
     }
 
     void PreferencesDialog::renderSectionDDE() {
@@ -165,9 +308,14 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
+            if (changed) {
+                // The loader clamps stored values to the same range; keep the
+                // live edit inside it so Save cannot persist an out-of-range value.
+                *value = std::clamp(*value, app::kMinTimeoutMs, app::kMaxTimeoutMs);
+            }
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
             return changed;
@@ -175,8 +323,8 @@ namespace gui {
 
         auto inputInt = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             return ImGui::InputInt(id, value, 0, 0);
         };
 
@@ -187,7 +335,13 @@ namespace gui {
             changed |= inputMs("Connection timeout", "##d timeout", &m_working.dde.connectionTimeoutMs);
             changed |= inputInt("Max retry count", "##d retry", &m_working.dde.maxRetryCount);
             changed |= inputInt("Max concurrent connections", "##d conns", &m_working.dde.maxConnections);
-            if (changed) applyWorkingDDE();
+            if (changed) {
+                m_working.dde.maxRetryCount = std::clamp(
+                    m_working.dde.maxRetryCount, app::kMinRetries, app::kMaxRetries);
+                m_working.dde.maxConnections = std::clamp(
+                    m_working.dde.maxConnections, app::kMinConnections, app::kMaxConnections);
+                applyWorkingDDE();
+            }
         }
         ImGui::EndChild();
     }
@@ -197,9 +351,12 @@ namespace gui {
 
         auto inputMs = [](const char* label, const char* id, int* value) -> bool {
             ImGui::TextUnformatted(label);
-            ImGui::SameLine(ImGuiUtils::DpiScale(200.0f));
-            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+            ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+            ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
             bool changed = ImGui::InputInt(id, value, 0, 0);
+            if (changed) {
+                *value = std::clamp(*value, app::kMinRequestTimeoutMs, app::kMaxRequestTimeoutMs);
+            }
             ImGui::SameLine();
             ImGui::TextUnformatted("ms");
             return changed;
@@ -207,8 +364,7 @@ namespace gui {
 
         bool changed = false;
 
-        // Optical System Info
-        if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7), ImGuiChildFlags_Borders)) {
+        if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 8), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Optical System Info");
             ImGui::Spacing();
             changed |= inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
@@ -216,12 +372,12 @@ namespace gui {
             changed |= inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
             changed |= inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
             changed |= inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
+            changed |= inputMs("GetRefresh",     "##t GetRefresh",     &m_working.dde.getRefreshTimeoutMs);
         }
         ImGui::EndChild();
 
         ImGui::Spacing();
 
-        // Surface Profile Inspector
         if (ImGui::BeginChild("##perf_profile", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Profile Inspector");
             ImGui::Spacing();
@@ -232,7 +388,6 @@ namespace gui {
 
         ImGui::Spacing();
 
-        // Surface Irregularity Map
         if (ImGui::BeginChild("##perf_map", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Surface Irregularity Map");
             ImGui::Spacing();
@@ -251,22 +406,25 @@ namespace gui {
             applyWorkingPlot();
         }
 
-        if (ImGui::SliderFloat("Line weight (px)", &m_working.plot.lineWeight, 0.5f, 5.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
+        if (ImGui::SliderFloat("Line weight (px)", &m_working.plot.lineWeight,
+                               app::kMinLineWeight, app::kMaxLineWeight, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
             applyWorkingPlot();
         }
 
-        if (ImGui::SliderFloat("Marker size (px)", &m_working.plot.markerSize, 1.0f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
+        if (ImGui::SliderFloat("Marker size (px)", &m_working.plot.markerSize,
+                               app::kMinMarkerSize, app::kMaxMarkerSize, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
             applyWorkingPlot();
         }
 
-        ImGui::Spacing();
+        // Same block gap as before every other section bar.
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("3D Map", "Default color palettes for surface irregularity maps.");
 
         constexpr const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
         ImGui::TextUnformatted("Surface Irregularity Map");
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_surface", &m_working.map.defaultColormapSurface, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();
         }
@@ -282,7 +440,7 @@ namespace gui {
         ImGui::Spacing();
 
         ImGui::TextUnformatted("Deviation Map");
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(200.0f));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_deviation", &m_working.map.defaultColormapDeviation, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();
         }
@@ -297,7 +455,8 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionUpdates() {
-        ImGuiUtils::SectionHeader("Updates", "Update checker settings. Channel changes take effect on next check.");
+        ImGuiUtils::SectionHeader("Updates",
+            "Applied on Save; the channel takes effect on the next check.");
 
         ImGui::Checkbox("Check for updates on startup", &m_working.updates.autoCheckOnStartup);
 
@@ -313,54 +472,66 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionLogging() {
-        ImGuiUtils::SectionHeader("Logging", "Logging and debug log settings.");
+        ImGuiUtils::SectionHeader("Logging",
+            "Applied on Save: startup visibility, file logging and rotation.");
 
         ImGui::Checkbox("Show logs window on startup", &m_working.logging.showLogsOnStartup);
+        ImGuiUtils::HintText(
+            "Applies only when \"Restore window layout on startup\" (General) is disabled; "
+            "otherwise the previous session's layout decides.");
         ImGui::Checkbox("Enable file logging", &m_working.logging.enableFileLogging);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Max log file size (MB)");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFileSizeMB", &m_working.logging.logFileSizeMB, 0, 0);
+        // A zero/negative size made the logger rotate on every line; clamp to the
+        // same bounds the settings loader enforces.
+        m_working.logging.logFileSizeMB = std::clamp(
+            m_working.logging.logFileSizeMB, app::kMinFileSizeMB, app::kMaxFileSizeMB);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Log folder size warning threshold (MB)");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
-        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(120.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_FIELD_WIDTH));
         ImGui::InputInt("##logFolderThresholdMB", &m_working.logging.logFolderSizeThresholdMB, 0, 0);
+        m_working.logging.logFolderSizeThresholdMB = std::clamp(
+            m_working.logging.logFolderSizeThresholdMB,
+            app::kMinFolderThresholdMB, app::kMaxFolderThresholdMB);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Current log folder size");
-        ImGui::SameLine(ImGuiUtils::DpiScale(250.0f));
+        ImGui::SameLine(ImGuiUtils::DpiScale(PREFS_LABEL_COLUMN));
         ImGui::TextUnformatted(app::getLogFolderSize().c_str());
         ImGui::SameLine();
         const auto& sem = m_themeManager->semantic();
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
-        ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
+        ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
         if (ImGui::Button(ICON_FA_BROOM " Clean logs")) {
             m_cleanLogsConfirmDialog->open();
         }
-        ImGui::PopStyleColor(4);
+        ImGuiUtils::PopFilledButton();
     }
 
     void PreferencesDialog::renderSectionFiles() {
         ImGuiUtils::SectionHeader("Files", "Configuration file locations (read-only).");
 
-        auto pathRow = [](const char* label, const char* id, const char* path) {
+        const auto& sem = m_themeManager->semantic();
+        auto pathRow = [&sem](const char* label, const char* inputId, const char* copyId, const char* path) {
             ImGui::TextUnformatted(label);
-            ImGui::SetNextItemWidth(-1.0f);
-            ImGui::InputText(id, const_cast<char*>(path),
+            ImGui::SetNextItemWidth(-(ImGuiUtils::CopyButtonWidth()
+                + ImGui::GetStyle().ItemSpacing.x));
+            ImGui::InputText(inputId, const_cast<char*>(path),
                              static_cast<int>(std::strlen(path)), ImGuiInputTextFlags_ReadOnly);
+            ImGui::SameLine();
+            ImGuiUtils::CopyButton(copyId, path);
             ImGui::Spacing();
         };
 
-        pathRow("ImGui Layout",         "##path_imgui",    app::getImguiIniPath());
-        pathRow("Window Layout",        "##path_window",   app::getWindowStatePath());
-        pathRow("Application Settings", "##path_settings", app::getSettingsJsonPath());
-        pathRow("Log Folder",           "##path_log",      app::getLogFolderPath());
+        pathRow("ImGui Layout",         "##path_imgui",    ICON_FA_COPY "##copy_imgui",    app::getImguiIniPath());
+        pathRow("Window Layout",        "##path_window",   ICON_FA_COPY "##copy_window",   app::getWindowStatePath());
+        pathRow("Application Settings", "##path_settings", ICON_FA_COPY "##copy_settings", app::getSettingsJsonPath());
+        pathRow("Log Folder",           "##path_log",      ICON_FA_COPY "##copy_log",      app::getLogFolderPath());
     }
 
     void PreferencesDialog::renderFooter() {
@@ -370,10 +541,6 @@ namespace gui {
 
         const auto& sem = m_themeManager->semantic();
 
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
-
         if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
             m_resetConfirmDialog->open();
         }
@@ -381,38 +548,27 @@ namespace gui {
             ImGui::SetTooltip("Discard all changes and restore factory defaults.");
         }
 
-        ImGui::PopStyleColor(3);
-
         const float groupWidth = cancelBtnW + saveBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - groupWidth);
-
-        ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
 
         if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             onCancel();
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Discard all changes and revert to the last saved values.");
+            ImGui::SetTooltip("Discard all changes and revert to the last saved values. Closes the dialog.");
         }
-
-        ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
 
         {
-            ImGui::PushStyleColor(ImGuiCol_Button,        sem.successButton);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.successButtonHover);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.successButtonActive);
-            ImGui::PushStyleColor(ImGuiCol_Text, sem.onAccent);
+            ImGuiUtils::PushFilledButton(sem.successButton, sem.successButtonHover, sem.successButtonActive, sem.onAccent);
             if (ImGui::Button(ICON_FA_FLOPPY_DISK " Save", ImVec2(saveBtnW, 0))) {
                 onSave();
             }
-            ImGui::PopStyleColor(4);
+            ImGuiUtils::PopFilledButton();
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Persist the current values to settings.json.");
+            ImGui::SetTooltip("Persist the current values to settings.json. Closes the dialog.");
         }
     }
 
@@ -435,10 +591,23 @@ namespace gui {
     void PreferencesDialog::onSave() {
         m_settings.apply(m_working);
         m_loaded = m_working;
-        m_settings.saveToFile();
+        const bool saved = m_settings.saveToFile();
+        m_closedByAction = true;
+        close();
+        if (saved) {
+            notify::success("Settings saved");
+        } else {
+            notify::error("Settings applied, but the file could not be written");
+        }
     }
 
     void PreferencesDialog::onCancel() {
+        revertWorkingCopy();
+        m_closedByAction = true;
+        close();
+    }
+
+    void PreferencesDialog::revertWorkingCopy() {
         m_working = m_loaded;
         m_settings.apply(m_working);
     }
@@ -446,12 +615,18 @@ namespace gui {
     void PreferencesDialog::onReset() {
         m_working = app::AppSettings::defaults();
         m_settings.apply(m_working);
+        notify::info("Preferences reset to defaults");
     }
 
     void PreferencesDialog::onCleanLogs() {
         size_t deleted = app::cleanLogFolder(m_activeLogPath);
         if (m_logger) {
             m_logger->addLog("[APP] Cleaned log folder: " + std::to_string(deleted) + " file(s) deleted");
+        }
+        if (deleted > 0) {
+            notify::success(std::format("Log folder cleaned: {} file(s) deleted", deleted));
+        } else {
+            notify::info("No log files to clean");
         }
     }
 

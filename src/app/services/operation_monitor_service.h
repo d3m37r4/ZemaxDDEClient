@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -20,11 +21,19 @@ namespace app::services {
             uint64_t ddeOperationId;
             int clientSlot{-1};
             ZemaxDDE::OperationMonitor* boundMonitor{nullptr};
+            /// Task start moment: the status bar ETA derives it from the
+            /// elapsed time and percent complete. Empty value means no ETA.
+            std::chrono::steady_clock::time_point startedAt{};
         };
 
         void setMonitor(ZemaxDDE::OperationMonitor* monitor) { m_monitor = monitor; }
 
-        uint64_t startTask(app::models::TaskSource source, const std::string& label, int totalSteps, int clientSlot = -1);
+        /// @param monitor  Operation monitor of the slot that runs the task.
+        ///                 Defaults to the active slot's monitor; a run pinned to
+        ///                 another slot passes its own, so progress lands on the
+        ///                 right connection.
+        uint64_t startTask(app::models::TaskSource source, const std::string& label, int totalSteps,
+                           int clientSlot = -1, ZemaxDDE::OperationMonitor* monitor = nullptr);
         void reportProgress(uint64_t taskId, int currentStep, const std::string& message);
         bool isCancelled(uint64_t taskId) const;
         void completeTask(uint64_t taskId);
@@ -46,11 +55,9 @@ namespace app::services {
 
         bool hasActiveTasks(std::optional<app::models::TaskSource> filter = std::nullopt) const;
         bool hasActiveTasksOnSlot(int slot, std::optional<app::models::TaskSource> filter = std::nullopt) const;
-        int getTaskClientSlot(uint64_t taskId) const;
         std::optional<TaskProgress> getTaskProgress(app::models::TaskSource source) const;
 
         const std::unordered_map<uint64_t, TaskRecord>& getTasks() const { return m_tasks; }
-        const ZemaxDDE::OperationInfo* findDdeOp(uint64_t ddeId) const;
 
     private:
         ZemaxDDE::OperationMonitor* m_monitor = nullptr;

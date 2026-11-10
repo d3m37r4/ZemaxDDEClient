@@ -13,4 +13,11 @@ namespace ZemaxDDE {
     /// Formats a duration for human-readable logging.
     /// Examples: "2.345s", "10m 30.456s", "1h 2m 3.456s"
     std::string formatDuration(std::chrono::milliseconds dur);
+
+    /// Reply of the GetRefresh/GetUpdate item.
+    enum class UpdateStatus { Updated, NotUpdated, Unknown };
+
+    /// "0" -> Updated, "-1" -> NotUpdated, anything else (empty, timeout text,
+    /// garbage) -> Unknown. Trims NUL/CR/LF/spaces the DDE payload may carry.
+    UpdateStatus parseUpdateStatus(std::string_view buffer);
 }

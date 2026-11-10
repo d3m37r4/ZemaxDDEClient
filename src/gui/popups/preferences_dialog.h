@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -38,6 +39,11 @@ namespace gui {
             void setLogger(Logger* logger) noexcept { m_logger = logger; }
             void setThemeManager(ThemeManager* tm) noexcept;
 
+            /// Layout actions owned by GuiManager (it holds the window manager):
+            /// save the current layout as the default and reset to factory.
+            void setLayoutActions(std::function<void()> saveDefault,
+                                  std::function<void()> resetToFactory);
+
         private:
             enum class Section : int {
                 General       = 0,
@@ -74,6 +80,10 @@ namespace gui {
             void onReset();
             void onCleanLogs();
 
+            /// Restores the last-saved snapshot into the working copy and pushes
+            /// it to the runtime (undoes live preview). Does not close or save.
+            void revertWorkingCopy();
+
             SettingsManager& m_settings;
             std::unique_ptr<ResetConfirmDialog> m_resetConfirmDialog;
             std::unique_ptr<CleanLogsConfirmDialog> m_cleanLogsConfirmDialog;
@@ -81,10 +91,20 @@ namespace gui {
             app::AppSettings m_loaded;
             Section m_section = Section::General;
             float m_sidebarWidth = 0.0f;
+            /// Font size the cached sidebar width was measured at; a scale change
+            /// invalidates it so labels never clip.
+            float m_sidebarFontSize = 0.0f;
             bool m_open = false;
+            // Last-frame visibility (X-click detection) and "closed by an
+            // explicit action" (Save/Cancel) for the revert-on-X/Esc contract.
+            bool m_wasOpen = false;
+            bool m_closedByAction = false;
             std::string m_activeLogPath;
             Logger* m_logger = nullptr;
             ThemeManager* m_themeManager = nullptr;
+            std::function<void()> m_onSaveLayout;
+            std::function<void()> m_onResetLayout;
+            bool m_confirmResetLayout = false;
     };
 
 } // namespace gui

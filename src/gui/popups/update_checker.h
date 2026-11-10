@@ -49,9 +49,15 @@ namespace gui {
             std::atomic<bool> m_isChecking{false};
             std::atomic<bool> m_isCheckComplete{false};
 
+            /// One-shot toast guard: the worker only flips the flags, the UI
+            /// thread reports completion even when the dialog is closed.
+            bool m_reportedThisCheck{false};
+
             std::thread m_workerThread;
 
-            app::UpdateChannel m_channel{app::UpdateChannel::Stable};
+            /// Read by the worker thread while running; atomic so a channel change
+            /// in Preferences cannot race the request being built.
+            std::atomic<app::UpdateChannel> m_channel{app::UpdateChannel::Stable};
             bool m_autoCheckOnStartup{false};
             const ThemeManager* m_themeManager = nullptr;
 

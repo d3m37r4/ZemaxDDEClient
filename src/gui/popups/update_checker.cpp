@@ -2,6 +2,7 @@
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "gui/theme_manager.h"
+#include "gui/notifications.h"
 #include "lib/imgui/imgui.h"
 #include "version.h"
 #include "app/app.h"
@@ -152,6 +153,7 @@ namespace gui {
 
         m_isChecking = true;
         m_isCheckComplete = false;
+        m_reportedThisCheck = false;
         m_errorMessage.clear();
         m_updateInfo = {};
 
@@ -177,6 +179,26 @@ namespace gui {
     }
 
     void UpdateChecker::render() {
+        // Completion toast fires even while the dialog is closed: a startup
+        // auto-check used to stay silent until the dialog was opened once.
+        if (m_isCheckComplete && !m_reportedThisCheck) {
+            m_reportedThisCheck = true;
+            UpdateInfo info;
+            std::string err;
+            {
+                std::lock_guard<std::mutex> lock(m_dataMutex);
+                info = m_updateInfo;
+                err = m_errorMessage;
+            }
+            if (!err.empty()) {
+                notify::error("Update check failed: " + err);
+            } else if (info.hasUpdate) {
+                notify::info(std::format("Update available: {}", info.version));
+            } else {
+                notify::success("You are up to date");
+            }
+        }
+
         if (m_open && !ImGui::IsPopupOpen(UPDATE_POPUP_NAME)) {
             ImGui::OpenPopup(UPDATE_POPUP_NAME);
         }
@@ -235,14 +257,16 @@ namespace gui {
         float okBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
 
         if (!m_isChecking) {
-            float actionBtnW = ImGuiUtils::DpiScale(180.0f);
+            float actionBtnW = ImGuiUtils::DpiScale(UPDATE_ACTION_BUTTON_WIDTH);
             float totalW = actionBtnW + spacing + okBtnW;
             ImGui::SetCursorPosX((windowWidth - totalW) * 0.5f);
 
             bool hasUpdate = false;
+            std::string downloadUrl;
             {
                 std::lock_guard<std::mutex> lock(m_dataMutex);
                 hasUpdate = m_updateInfo.hasUpdate;
+                downloadUrl = m_updateInfo.downloadUrl;
             }
 
             if (!hasUpdate || !m_isCheckComplete) {
@@ -251,8 +275,10 @@ namespace gui {
                 }
             } else if (hasUpdate && m_isCheckComplete) {
                 if (ImGuiUtils::SpinnerButton("Download Update", false, ImVec2(actionBtnW, 0))) {
-                    if (!m_updateInfo.downloadUrl.empty()) {
-                        ShellExecuteA(nullptr, "open", m_updateInfo.downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+                    // Use the snapshot: the worker may overwrite m_updateInfo
+                    // between the frame read and this click handler.
+                    if (!downloadUrl.empty()) {
+                        ShellExecuteA(nullptr, "open", downloadUrl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
                     }
                 }
             }

@@ -37,37 +37,23 @@ namespace gui {
         ImGui::BeginChild("##reset_confirm_body",
                           ImVec2(0, -ImGui::GetFrameHeightWithSpacing()),
                           ImGuiChildFlags_Borders);
-        ImGui::TextUnformatted("This will reset all preferences to their factory defaults.");
-        ImGui::TextUnformatted("Unsaved changes will be lost.");
+        ImGui::TextWrapped("%s", "This will reset all preferences to their factory defaults.");
+        ImGui::TextWrapped("%s", "Unsaved changes will be lost.");
         ImGui::EndChild();
 
         float cancelBtnW = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
         float resetBtnW  = ImGuiUtils::DpiScale(BASE_POPUP_BUTTON_WIDTH);
         const float totalW = cancelBtnW + resetBtnW + ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - totalW) * 0.5f);
-        if (m_themeManager) {
-            const auto& sem = m_themeManager->semantic();
-            ImGui::PushStyleColor(ImGuiCol_Button,        sem.neutralButton);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,  sem.neutralButtonHover);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,   sem.neutralButtonActive);
-        }
-
         if (ImGui::Button(ICON_FA_XMARK " Cancel", ImVec2(cancelBtnW, 0))) {
             close();
-        }
-
-        if (m_themeManager) {
-            ImGui::PopStyleColor(3);
         }
 
         ImGui::SameLine();
 
         if (m_themeManager) {
             const auto& sem = m_themeManager->semantic();
-            ImGui::PushStyleColor(ImGuiCol_Button,        sem.dangerButton);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, sem.dangerButtonHover);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  sem.dangerButtonActive);
-            ImGui::PushStyleColor(ImGuiCol_Text,          sem.onAccent);
+            ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
         }
 
         if (ImGui::Button(ICON_FA_ROTATE_LEFT " Reset", ImVec2(resetBtnW, 0))) {
@@ -76,7 +62,7 @@ namespace gui {
         }
 
         if (m_themeManager) {
-            ImGui::PopStyleColor(4);
+            ImGuiUtils::PopFilledButton();
         }
 
         ImGui::EndPopup();

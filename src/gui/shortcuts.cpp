@@ -2,6 +2,7 @@
 
 #include "app/app.h"
 #include "gui/gui.h"
+#include "gui/windows_dockable/logs.h"
 #include "lib/imgui/imgui.h"
 #include "logger/logger.h"
 
@@ -23,6 +24,9 @@ ImGuiKey toImGuiKey(shortcuts::Key key) {
         case Key::Escape: return ImGuiKey_Escape;
         case Key::Digit1: return ImGuiKey_1;
         case Key::Digit2: return ImGuiKey_2;
+        case Key::Digit3: return ImGuiKey_3;
+        case Key::Digit4: return ImGuiKey_4;
+        case Key::Digit5: return ImGuiKey_5;
     }
     return ImGuiKey_None;
 }
@@ -72,6 +76,9 @@ bool GuiManager::isAnyModalOpen() const noexcept {
     if (m_connectionLostDialog && m_connectionLostDialog->isOpen()) {
         return true;
     }
+    if (m_refreshFailedDialog && m_refreshFailedDialog->isOpen()) {
+        return true;
+    }
     if (m_ddeStatusRenderer && m_ddeStatusRenderer->isConnectPopupOpen()) {
         return true;
     }
@@ -101,6 +108,16 @@ void GuiManager::handleShortcuts() {
         if (m_menuBarController) {
             m_menuBarController->openPreferences();
         }
+    } else if (isChordPressed(shortcuts::Key::Digit1, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::DDEStatus);
+    } else if (isChordPressed(shortcuts::Key::Digit2, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::SystemInfo);
+    } else if (isChordPressed(shortcuts::Key::Digit3, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::SurfaceProfileInspector);
+    } else if (isChordPressed(shortcuts::Key::Digit4, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::SurfaceIrregularityMap);
+    } else if (isChordPressed(shortcuts::Key::Digit5, shortcuts::Mod_Ctrl)) {
+        toggleDockableWindow(WindowID::Logs);
     } else if (isChordPressed(shortcuts::Key::U, shortcuts::Mod_Ctrl)) {
         openUpdates();
     } else if (isChordPressed(shortcuts::Key::I, shortcuts::Mod_Ctrl)) {
@@ -127,7 +144,7 @@ void GuiManager::openDdeConnect() {
     if (!m_ddeConnectionManager || !m_ddeStatusRenderer) {
         return;
     }
-    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+    for (int i = 0; i < m_ddeConnectionManager->getMaxConnections(); ++i) {
         auto* conn = m_ddeConnectionManager->getConnection(i);
         if (conn && !conn->isConnected()) {
             m_ddeStatusRenderer->openConnectPopup();
@@ -172,7 +189,7 @@ void GuiManager::cycleDdeTarget() {
     }
     int connected[DDEConnectionManager::MAX_CONNECTIONS];
     int count = 0;
-    for (int i = 0; i < DDEConnectionManager::MAX_CONNECTIONS; ++i) {
+    for (int i = 0; i < m_ddeConnectionManager->getMaxConnections(); ++i) {
         auto* conn = m_ddeConnectionManager->getConnection(i);
         if (conn && conn->isConnected()) {
             connected[count++] = i;
@@ -204,6 +221,13 @@ void GuiManager::selectDdeTarget(int slot) {
     }
 }
 
+void GuiManager::toggleDockableWindow(WindowID id) {
+    if (!m_pWndMgr) {
+        return;
+    }
+    m_pWndMgr->SetVisible(id, !m_pWndMgr->IsVisible(id));
+}
+
 bool GuiManager::closeTopmostPopup() {
     if (m_preferencesDialog && m_preferencesDialog->isOpen()) {
         return m_preferencesDialog->closeTopmost();
@@ -216,6 +240,10 @@ bool GuiManager::closeTopmostPopup() {
         m_connectionLostDialog->close();
         return true;
     }
+    if (m_refreshFailedDialog && m_refreshFailedDialog->isOpen()) {
+        m_refreshFailedDialog->close();
+        return true;
+    }
     if (m_updateChecker && m_updateChecker->isOpen()) {
         m_updateChecker->close();
         return true;
@@ -226,6 +254,11 @@ bool GuiManager::closeTopmostPopup() {
     }
     if (m_shortcutsHelpDialog && m_shortcutsHelpDialog->isOpen()) {
         m_shortcutsHelpDialog->close();
+        return true;
+    }
+    // Logs panel: its "delete all entries" confirmation is a plain modal owned
+    // by the panel, so it is not part of the dialog classes above.
+    if (m_logsRenderer && m_logsRenderer->cancelDeleteConfirm()) {
         return true;
     }
     return false;

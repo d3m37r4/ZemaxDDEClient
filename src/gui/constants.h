@@ -3,28 +3,41 @@
 #include "lib/imgui/imgui.h"
 
 namespace gui {
-    // DDE status window constraints
-    inline constexpr ImVec2 DDE_STATUS_WINDOW_MIN_SIZE   = ImVec2(220.0f, 100.0f);
+    // DDE Status panel window constraints
+    inline constexpr ImVec2 DDE_STATUS_WINDOW_MIN_SIZE   = ImVec2(260.0f, 140.0f);
     inline constexpr ImVec2 DDE_STATUS_CONTENT_SIZE      = ImVec2(0.0f, 0.0f);   // Automatic size
 
-    // Debug log window constraints
-    inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(236.0f, 160.0f);
+    // Logs panel window constraints
+    inline constexpr ImVec2 LOGS_WINDOW_MIN_SIZE    = ImVec2(260.0f, 140.0f);
 
-    // System info window constraints
-    inline constexpr ImVec2 SYSTEM_INFO_WINDOW_MIN_SIZE  = ImVec2(200.0f, 160.0f);
+    // Logs panel header: clears the on-screen log entries (not the files).
+    inline constexpr const char* DELETE_LOG_ENTRIES_CONFIRM_POPUP_NAME = "Delete all log entries?";
+    inline constexpr ImVec2 DELETE_LOG_ENTRIES_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(320.0f, 154.0f);
+    inline constexpr ImVec2 DELETE_LOG_ENTRIES_CONFIRM_POPUP_MIN_SIZE     = ImVec2(320.0f, 154.0f);
 
-    // Sag analysis window constraints
-    inline constexpr ImVec2 SAG_ANALYSIS_WINDOW_MIN_SIZE = ImVec2(200.0f, 160.0f);
+    // Optical System Information panel window constraints
+    inline constexpr ImVec2 OPTICAL_SYSTEM_INFO_WINDOW_MIN_SIZE = ImVec2(380.0f, 100.0f);
 
-    // Sag analysis sampling constraints
-    // Maximum: Zemax tool "Surface Sag Cross Section" limit
-    inline constexpr int MAX_SAMPLING = 16385;
-    // Minimum: Zemax requires at least 33 for valid profile calculation
-    inline constexpr int MIN_SAMPLING = 33;
+    // Surface Profile Inspector panel window constraints
+    inline constexpr ImVec2 SURFACE_PROFILE_INSPECTOR_WINDOW_MIN_SIZE = ImVec2(380.0f, 160.0f);
+
+    // Surface Irregularity Map panel window constraints
+    inline constexpr ImVec2 SURFACE_IRREGULARITY_MAP_WINDOW_MIN_SIZE = ImVec2(380.0f, 160.0f);
+
+    // Sag analysis sampling constraints live in app/compute/sag_sampling.h — the
+    // UI and the map service share them (Zemax tool limits).
+
+    // Sag analysis orientation angle constraints (degrees)
+    inline constexpr double MIN_ANGLE = -360.0;
+    inline constexpr double MAX_ANGLE = 360.0;
+
+    // The angular step of an irregularity map (0.001–180) and the request
+    // budget of a map live in app::compute::surface_map.h — the UI and the
+    // service share them.
 
     // Connect DDE popup constraints
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(550.0f, 120.0f);
-    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(550.0f, 120.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_DEFAULT_SIZE = ImVec2(600.0f, 152.0f);
+    inline constexpr ImVec2 CONNECT_DDE_POPUP_MIN_SIZE     = ImVec2(600.0f, 152.0f);
 
     // DPI scale constraints
     inline constexpr float MIN_DPI_SCALE = 1.0f;
@@ -41,6 +54,7 @@ namespace gui {
     inline constexpr const char* UPDATE_POPUP_NAME       = "Check for Updates";
     inline constexpr const char* PREFERENCES_POPUP_NAME  = "Preferences";
     inline constexpr const char* RESET_CONFIRM_POPUP_NAME = "Reset Preferences?";
+    inline constexpr const char* LAYOUT_RESET_POPUP_NAME = "Reset layout?";
     inline constexpr const char* CONNECT_DDE_POPUP_NAME  = "Connect to Zemax \xe2\x80\x93 select a window";
 
     // GitHub links (used by About dialog)
@@ -52,8 +66,8 @@ namespace gui {
     inline constexpr const char* GITHUB_COMMIT_URL_FMT = "https://github.com/d3m37r4/ZemaxDDEClient/commit/{}";
 
     // About popup
-    inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(428.0f, 242.0f);
-    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(428.0f, 242.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_DEFAULT_SIZE = ImVec2(460.0f, 310.0f);
+    inline constexpr ImVec2 ABOUT_POPUP_MIN_SIZE     = ImVec2(460.0f, 310.0f);
 
     // Keyboard shortcuts help popup
     inline constexpr const char* SHORTCUTS_POPUP_NAME = "Keyboard Shortcuts";
@@ -61,20 +75,26 @@ namespace gui {
     inline constexpr ImVec2 SHORTCUTS_POPUP_MIN_SIZE     = ImVec2(420.0f, 300.0f);
 
     // Check for Updates popup
-    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(340.0f, 120.0f);
-    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(340.0f, 120.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_DEFAULT_SIZE = ImVec2(325.0f, 160.0f);
+    inline constexpr ImVec2 UPDATE_POPUP_MIN_SIZE     = ImVec2(325.0f, 160.0f);
 
     // Connection Lost popup
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_DEFAULT_SIZE = ImVec2(380.0f, 140.0f);
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_MIN_SIZE     = ImVec2(380.0f, 140.0f);
 
-    // Reset Preferences popup
-    inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 120.0f);
-    inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 120.0f);
+    // GetRefresh returned "-1": Zemax cannot update the lens.
+    inline constexpr const char* REFRESH_FAILED_POPUP_NAME         = "Zemax Could Not Update the System";
+    inline constexpr ImVec2 REFRESH_FAILED_POPUP_DEFAULT_SIZE      = ImVec2(460.0f, 220.0f);
+    inline constexpr ImVec2 REFRESH_FAILED_POPUP_MIN_SIZE          = ImVec2(380.0f, 180.0f);
 
-    inline constexpr const char* CLEAN_LOGS_CONFIRM_POPUP_NAME = "Clean Logs";
-    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(364.0f, 100.0f);
-    inline constexpr ImVec2 CLEAN_LOGS_CONFIRM_POPUP_MIN_SIZE     = ImVec2(364.0f, 100.0f);
+    // Reset Preferences popup
+    inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 154.0f);
+    inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 154.0f);
+
+    // Preferences: deletes log files on disk (the active log is kept).
+    inline constexpr const char* CLEAN_LOG_FILES_CONFIRM_POPUP_NAME = "Clean Logs";
+    inline constexpr ImVec2 CLEAN_LOG_FILES_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(386.0f, 132.0f);
+    inline constexpr ImVec2 CLEAN_LOG_FILES_CONFIRM_POPUP_MIN_SIZE     = ImVec2(386.0f, 132.0f);
 
     // Preferences popup
     inline constexpr ImVec2 PREFERENCES_POPUP_DEFAULT_SIZE = ImVec2(660.0f, 280.0f);
@@ -85,10 +105,52 @@ namespace gui {
     inline constexpr float PREFS_SIDEBAR_MIN_WIDTH  = 60.0f;
     inline constexpr float PREFS_SIDEBAR_EXTRA_PAD  = 20.0f;
     inline constexpr float PREFS_RIGHT_MARGIN       = 100.0f;
+    // Label/field grid of the settings sections (DPI-scaled at call sites):
+    // same-line offset for the label column and the fixed input widths.
+    inline constexpr float PREFS_LABEL_COLUMN       = 250.0f;
+    inline constexpr float PREFS_FIELD_WIDTH        = 120.0f;
+    inline constexpr float PREFS_COMBO_WIDTH        = 200.0f;
+
+    // Update dialog: secondary action button (DPI-scaled at the call site)
+    inline constexpr float UPDATE_ACTION_BUTTON_WIDTH = 180.0f;
+
+    // Logs panel: tolerance for the "stuck to the bottom" scroll check
+    // (DPI-scaled at the call site)
+    inline constexpr float LOGS_AUTOSCROLL_SLACK    = 4.0f;
+
+    // Property grids: extra slack after the widest label (DPI-scaled)
+    inline constexpr float PROPERTY_GRID_LABEL_SLACK = 8.0f;
 
     // DDE status panel
     inline constexpr float DDE_STATUS_ELEMENT_GAP   = 4.0f;
     inline constexpr float DDE_STATUS_BTN_VPAD      = 4.0f;
+
+    // Default size of a detached plot window (DPI-scaled at call sites)
+    inline constexpr ImVec2 DETACHED_WINDOW_DEFAULT_SIZE = ImVec2(600.0f, 400.0f);
+
+    // Minimum size of a detached plot window: below this the menu bar, the
+    // axes and the outside legend cannot be read reliably
+    // (DPI-scaled at call sites)
+    inline constexpr ImVec2 DETACHED_WINDOW_MIN_SIZE = ImVec2(380.0f, 240.0f);
+
+    // Base width of the operation selector combo in the status bar
+    // (DPI-scaled at the call site)
+    inline constexpr float OPERATION_COMBO_BASE_WIDTH = 220.0f;
+
+    // Global status bar (always visible): paddings and the cancel button gap
+    inline constexpr float STATUS_BAR_VPAD         = 4.0f;
+    inline constexpr float STATUS_BAR_ELEMENT_GAP  = 4.0f;
+
+    // Welcome card (floating helper over the dock area, closable): the card
+    // width comes from the hint wrap width, the height from the measured
+    // rows (GuiManager::welcomeWindowSize). Both DPI-scaled at the call site.
+    inline constexpr float WELCOME_HINT_WRAP_WIDTH = 520.0f;
+    inline constexpr float WELCOME_ROW_GAP         = 8.0f;
+    inline constexpr float WELCOME_ICON_FONT_SCALE = 2.4f;
+
+    // Inner breathing room of the Welcome card so the text does not touch the
+    // borders (DPI-scaled at the call site).
+    inline constexpr ImVec2 WELCOME_CARD_PADDING = ImVec2(24.0f, 24.0f);
 
     // Default highlight color for worst-section markers
     inline constexpr ImVec4 DEFAULT_WORST_HIGHLIGHT_COLOR{1.0f, 0.0f, 0.0f, 1.0f};

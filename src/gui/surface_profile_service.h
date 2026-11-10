@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "app/services/surface_profile_service.h"
 #include "app/models/optical_system.h"
 #include "lib/imgui/imgui.h"

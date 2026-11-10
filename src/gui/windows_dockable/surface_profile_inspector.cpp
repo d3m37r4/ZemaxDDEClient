@@ -7,39 +7,22 @@
 #include "gui/constants.h"
 #include "gui/surface_profile_service.h"
 #include "gui/imgui_utils.h"
+#include "gui/notifications.h"
+#include "gui/windows_dockable/calc_form_common.h"
+#include "assets/icons/fa/IconsFontAwesome6.h"
 #include "lib/imgui/imgui.h"
-
-namespace {
-    std::string getSamplingTooltip() {
-        return std::format(
-            "Total number of sample points across the full surface diameter (min={}, max={}).\n"
-            "Automatically rounded up to the nearest odd number to ensure a center point at r=0.\n"
-            "Higher values = smoother profile, slower calculation.",
-            gui::MIN_SAMPLING, gui::MAX_SAMPLING
-        );
-    }
-
-    std::string getAngleTooltip() {
-        return "Orientation angle in degrees relative to the local x axis.";
-    }
-
-    void renderCalcBanner(app::models::TaskSource source, const char* label, gui::UiOperationMonitor& monitor) {
-        auto progress = monitor.getTaskProgress(source);
-        if (!progress) return;
-        int pct = progress->totalSteps > 0 ? (progress->currentStep * 100 / progress->totalSteps) : 0;
-        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "%s — calculation in progress on slot %d: %d%%", label, progress->clientSlot, pct);
-    }
-}
 
 namespace gui {
     void GuiManager::renderSurfaceProfileInspector() {
         auto& state = m_profileService->m_windowState;
         auto& nominal = m_profileService->m_nominalSurfaceData;
         auto& toleranced = m_profileService->m_tolerancedSurfaceData;
+        const auto& sem = m_graphics.getThemeManager().semantic();
+        const int hdrActiveIdx = m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1;
 
         ImGui::BeginChild("##SurfaceProfileContent",
             ImVec2(0.0f, 0.0f),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
@@ -54,6 +37,7 @@ namespace gui {
         maxLabelWidth += cp * 2.0f;
 
         ImGuiUtils::SectionHeader("Nominal surface parameters");
+        forms::RenderFrozenHint(m_profileService->getNominalCalcSlot(), hdrActiveIdx);
         ImGui::BeginChild(
             "NominalSurfaceContent",
             ImVec2(0.0f, 0.0f),
@@ -73,31 +57,40 @@ namespace gui {
                 ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", nominal.semiDiameter, getUnitString(nominal.units)).c_str());
                 ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", nominal.diameter(), getUnitString(nominal.units)).c_str());
                 ImGuiUtils::EndPropertyGrid();
-                ImGuiUtils::SpacingY(0.25f);
 
                 int nominalCalcSlotV = m_profileService->getNominalCalcSlot();
                 bool nominalFrozenV = nominalCalcSlotV >= 0 && nominalCalcSlotV != activeIdx;
 
                 ImGui::BeginDisabled(nominalFrozenV);
-                renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                forms::RenderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor, sem.warning);
+                if (nominalFrozenV) {
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
+                        nominalCalcSlotV);
+                }
                 ImGui::EndDisabled();
 
-                if (ImGui::Button("Export txt")) {
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.25f);
+
+                if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(nominal);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Show profile graphic")) {
+                if (ImGui::Button(ICON_FA_CHART_LINE " Show profile graphic")) {
                     m_profileService->m_showNominalProfileWindow = true;
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Clear data")) {
+                ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
+                if (ImGui::Button(ICON_FA_TRASH " Clear data")) {
                     m_profileService->m_showNominalProfileWindow = false;
                     nominal.clear();
                 }
+                ImGuiUtils::PopFilledButton();
             } else {
                 int nominalCalcSlot = m_profileService->getNominalCalcSlot();
                 bool nominalFrozen = nominalCalcSlot >= 0 && nominalCalcSlot != activeIdx;
@@ -106,54 +99,54 @@ namespace gui {
 
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalFrozen || nominalOnActiveSlot);
 
+                forms::CalcFormContext form;
                 {
                     const auto& optSys = nominalFrozen
                         ? m_profileService->m_frozenNominalOpticalSystem
                         : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_profileService->m_frozenNominalOpticalSystem);
-                    auto fileName = optSys.fileName;
-                    ImGui::TextUnformatted("Optical system:");
-                    ImGui::SameLine();
-                    ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+                    const int maxSurf = m_zemaxDDEClient
+                        ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0;
+
+                    form.source             = TaskSource::NominalSurfaceProfile;
+                    form.bannerLabel        = "Nominal Profile";
+                    form.opticalSystem      = optSys.fileName;
+                    form.copyId             = "##copy_optical_nominal";
+                    form.surfaceId          = "##nominal_surf_num";
+                    form.surfaceValue       = &state.nominalSurfaceIndex;
+                    form.surfaceAdjustedAt  = &state.nominalSurfaceAdjustedAt;
+                    form.samplingId         = "##nominal_sampling";
+                    form.samplingValue      = &state.nominalSampling;
+                    form.samplingAdjustedAt = &state.nominalSamplingAdjustedAt;
+                    form.angleId            = "##nominal_angle";
+                    form.angleValue         = &state.nominalAngle;
+                    form.angleAdjustedAt    = &state.nominalAngleAdjustedAt;
+                    form.maxSurfaces        = maxSurf;
+                    form.frozen             = nominalFrozen;
+                    form.onActiveSlot       = nominalOnActiveSlot;
+                    form.actionLabel        = "Get nominal surface data";
+                    form.actionIcon         = ICON_FA_DOWNLOAD;
+
+                    forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
-
-                ImGui::TextUnformatted("Surface number:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                ImGui::InputInt("##nominal_surf_num", &state.nominalSurfaceIndex, 1, 10);
-                if (!nominalFrozen && !nominalOnActiveSlot) {
-                    state.nominalSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.nominalSurfaceIndex));
-                }
-
-                ImGui::TextUnformatted("Sampling:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                ImGui::InputInt("##nominal_sampling", &state.nominalSampling, 10, 50);
-                state.nominalSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.nominalSampling)) | 1;
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-
-                ImGui::TextUnformatted("Angle:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                ImGui::InputDouble("##nominal_angle", &state.nominalAngle, 1.0, 10.0, "%.2f");
-                state.nominalAngle = std::clamp(state.nominalAngle, -360.0, 360.0);
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
-
-                ImGuiUtils::SpacingY(0.5f);
 
                 if (nominalFrozen) {
-                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
+                        nominalCalcSlot);
                 }
 
                 ImGui::EndDisabled();
 
                 if (nominalOnActiveSlot) {
-                    renderCalcBanner(TaskSource::NominalSurfaceProfile, "Nominal Profile", m_uiOpMonitor);
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
 
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.35f);
+
                 ImGui::BeginDisabled(!isDDEInitialized() || nominalCalculating);
-                if (ImGui::Button("Copy toleranced surface settings")) {
+                if (ImGui::Button(ICON_FA_COPY " Copy toleranced surface settings")) {
                     state.nominalSampling = state.tolerancedSampling;
                     state.nominalAngle = state.tolerancedAngle;
                 }
@@ -161,29 +154,11 @@ namespace gui {
 
                 ImGui::SameLine();
 
-                if (nominalFrozen || nominalOnActiveSlot) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
-                        m_profileService->cancelCalculation(TaskSource::NominalSurfaceProfile);
-                        m_profileService->onNominalCalculationComplete = nullptr;
-                        nominal.clear();
-                    }
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
-                    ImGui::BeginDisabled(true);
-                    ImGui::Button("Get nominal surface data");
-                    if (ImGui::BeginItemTooltip()) {
-                        ImGui::TextUnformatted("Another calculation is in progress on this slot");
-                        ImGui::EndTooltip();
-                    }
-                    ImGui::EndDisabled();
-                } else {
-                    ImGui::BeginDisabled(!isDDEInitialized());
-                    if (ImGui::Button("Get nominal surface data")) {
+                forms::RenderResultActions(
+                    form, m_uiOpMonitor, sem, isDDEInitialized(), activeIdx,
+                    [&]() {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenNominalOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
-                            nominal.units = m_zemaxDDEClient->getOpticalSystemData().units;
-                            nominal.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
                             m_profileService->onNominalCalculationComplete = [this, &nominal]() {
                                 const auto& result = m_profileService->getResult(TaskSource::NominalSurfaceProfile);
@@ -194,17 +169,25 @@ namespace gui {
                                 nominal.sampling = result.sampling;
                                 nominal.angle = result.angle;
                                 nominal.sagDataPoints = result.sagDataPoints;
+                                notify::success(std::format("Nominal profile ready: {} points",
+                                                            nominal.sagDataPoints.size()));
                             };
                             m_profileService->startCalculation(state.nominalSurfaceIndex, state.nominalSampling, state.nominalAngle, TaskSource::NominalSurfaceProfile);
                         }
-                    }
-                    ImGui::EndDisabled();
-                }
+                    },
+                    [&]() {
+                        m_profileService->cancelCalculation(TaskSource::NominalSurfaceProfile);
+                        m_profileService->onNominalCalculationComplete = nullptr;
+                        nominal.clear();
+                    });
             }
         }
+        // Air before the next section bar, as after the property grids.
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::EndChild();
 
         ImGuiUtils::SectionHeader("Toleranced surface parameters");
+        forms::RenderFrozenHint(m_profileService->getTolerancedCalcSlot(), hdrActiveIdx);
         ImGui::BeginChild(
             "TolerancedSurfaceContent",
             ImVec2(0.0f, 0.0f),
@@ -224,31 +207,40 @@ namespace gui {
                 ImGuiUtils::PropertyGridRow("Semi-diameter", std::format("{:.3f} {}", toleranced.semiDiameter, getUnitString(toleranced.units)).c_str());
                 ImGuiUtils::PropertyGridRow("Diameter", std::format("{:.3f} {}", toleranced.diameter(), getUnitString(toleranced.units)).c_str());
                 ImGuiUtils::EndPropertyGrid();
-                ImGuiUtils::SpacingY(0.25f);
 
                 int tolerancedCalcSlotV = m_profileService->getTolerancedCalcSlot();
                 bool tolerancedFrozenV = tolerancedCalcSlotV >= 0 && tolerancedCalcSlotV != activeIdx;
 
                 ImGui::BeginDisabled(tolerancedFrozenV);
-                renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                forms::RenderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor, sem.warning);
+                if (tolerancedFrozenV) {
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
+                        tolerancedCalcSlotV);
+                }
                 ImGui::EndDisabled();
 
-                if (ImGui::Button("Export txt")) {
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.25f);
+
+                if (ImGui::Button(ICON_FA_FILE_EXPORT " Export TXT")) {
                     m_profileService->saveCrossSectionToFile(toleranced);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Show profile graphic")) {
+                if (ImGui::Button(ICON_FA_CHART_LINE " Show profile graphic")) {
                     m_profileService->m_showTolerancedProfileWindow = true;
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::Button("Clear data")) {
+                ImGuiUtils::PushFilledButton(sem.dangerButton, sem.dangerButtonHover, sem.dangerButtonActive, sem.onAccent);
+                if (ImGui::Button(ICON_FA_TRASH " Clear data")) {
                     m_profileService->m_showTolerancedProfileWindow = false;
                     toleranced.clear();
                 }
+                ImGuiUtils::PopFilledButton();
             } else {
                 int tolerancedCalcSlot = m_profileService->getTolerancedCalcSlot();
                 bool tolerancedFrozen = tolerancedCalcSlot >= 0 && tolerancedCalcSlot != activeIdx;
@@ -257,54 +249,54 @@ namespace gui {
 
                 ImGui::BeginDisabled(!isDDEInitialized() || tolerancedFrozen || tolerancedOnActiveSlot);
 
+                forms::CalcFormContext form;
                 {
                     const auto& optSys = tolerancedFrozen
                         ? m_profileService->m_frozenTolerancedOpticalSystem
                         : (m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData() : m_profileService->m_frozenTolerancedOpticalSystem);
-                    auto fileName = optSys.fileName;
-                    ImGui::TextUnformatted("Optical system:");
-                    ImGui::SameLine();
-                    ImGui::InputText("##optical_system", fileName.data(), fileName.capacity() + 1, ImGuiInputTextFlags_ReadOnly);
+                    const int maxSurf = m_zemaxDDEClient
+                        ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0;
+
+                    form.source             = TaskSource::TolerancedSurfaceProfile;
+                    form.bannerLabel        = "Toleranced Profile";
+                    form.opticalSystem      = optSys.fileName;
+                    form.copyId             = "##copy_optical_toleranced";
+                    form.surfaceId          = "##toleranced_surf_num";
+                    form.surfaceValue       = &state.tolerancedSurfaceIndex;
+                    form.surfaceAdjustedAt  = &state.tolerancedSurfaceAdjustedAt;
+                    form.samplingId         = "##toleranced_sampling";
+                    form.samplingValue      = &state.tolerancedSampling;
+                    form.samplingAdjustedAt = &state.tolerancedSamplingAdjustedAt;
+                    form.angleId            = "##toleranced_angle";
+                    form.angleValue         = &state.tolerancedAngle;
+                    form.angleAdjustedAt    = &state.tolerancedAngleAdjustedAt;
+                    form.maxSurfaces        = maxSurf;
+                    form.frozen             = tolerancedFrozen;
+                    form.onActiveSlot       = tolerancedOnActiveSlot;
+                    form.actionLabel        = "Get toleranced surface data";
+                    form.actionIcon         = ICON_FA_DOWNLOAD;
+
+                    forms::RenderCalcForm(form, sem.danger, sem.warning);
                 }
-
-                ImGui::TextUnformatted("Surface number:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                ImGui::InputInt("##toleranced_surf_num", &state.tolerancedSurfaceIndex, 1, 10);
-                if (!tolerancedFrozen && !tolerancedOnActiveSlot) {
-                    state.tolerancedSurfaceIndex = std::max(0, std::min(m_zemaxDDEClient ? m_zemaxDDEClient->getOpticalSystemData().numSurfs : 0, state.tolerancedSurfaceIndex));
-                }
-
-                ImGui::TextUnformatted("Sampling:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                ImGui::InputInt("##toleranced_sampling", &state.tolerancedSampling, 10, 50);
-                state.tolerancedSampling = std::max(gui::MIN_SAMPLING, std::min(gui::MAX_SAMPLING, state.tolerancedSampling)) | 1;
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getSamplingTooltip().c_str());
-
-                ImGui::TextUnformatted("Angle:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-                ImGui::InputDouble("##toleranced_angle", &state.tolerancedAngle, 1.0, 10.0, "%.2f");
-                state.tolerancedAngle = std::clamp(state.tolerancedAngle, -360.0, 360.0);
-                ImGui::SameLine();
-                ImGuiUtils::HelpMarker(getAngleTooltip().c_str());
-
-                ImGuiUtils::SpacingY(0.5f);
 
                 if (tolerancedFrozen) {
-                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
+                    ImGui::TextColored(sem.warning, "Frozen on slot %d: switch target (F6) or Cancel below.",
+                        tolerancedCalcSlot);
                 }
 
                 ImGui::EndDisabled();
 
                 if (tolerancedOnActiveSlot) {
-                    renderCalcBanner(TaskSource::TolerancedSurfaceProfile, "Toleranced Profile", m_uiOpMonitor);
+                    forms::RenderCalcBanner(form, m_uiOpMonitor, sem.warning);
                 }
 
+                // After the conditional status lines, so the gap to the action
+                // buttons stays the same whatever they show.
+                ImGuiUtils::SpacingY(0.35f);
+
                 ImGui::BeginDisabled(!isDDEInitialized() || tolerancedCalculating);
-                if (ImGui::Button("Copy nominal surface settings")) {
+                if (ImGui::Button(ICON_FA_COPY " Copy nominal surface settings")) {
                     state.tolerancedSampling = state.nominalSampling;
                     state.tolerancedAngle = state.nominalAngle;
                 }
@@ -312,29 +304,11 @@ namespace gui {
 
                 ImGui::SameLine();
 
-                if (tolerancedFrozen || tolerancedOnActiveSlot) {
-                    ImGuiUtils::SpinnerButton("Processing...", true);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Cancel")) {
-                        m_profileService->cancelCalculation(TaskSource::TolerancedSurfaceProfile);
-                        m_profileService->onTolerancedCalculationComplete = nullptr;
-                        toleranced.clear();
-                    }
-                } else if (m_uiOpMonitor.hasActiveTasksOnSlot(activeIdx)) {
-                    ImGui::BeginDisabled(true);
-                    ImGui::Button("Get toleranced surface data");
-                    if (ImGui::BeginItemTooltip()) {
-                        ImGui::TextUnformatted("Another calculation is in progress on this slot");
-                        ImGui::EndTooltip();
-                    }
-                    ImGui::EndDisabled();
-                } else {
-                    ImGui::BeginDisabled(!isDDEInitialized());
-                    if (ImGui::Button("Get toleranced surface data")) {
+                forms::RenderResultActions(
+                    form, m_uiOpMonitor, sem, isDDEInitialized(), activeIdx,
+                    [&]() {
                         if (isDDEInitialized()) {
                             m_profileService->m_frozenTolerancedOpticalSystem = m_zemaxDDEClient->getOpticalSystemData();
-                            toleranced.units = m_zemaxDDEClient->getOpticalSystemData().units;
-                            toleranced.fileName = m_zemaxDDEClient->getOpticalSystemData().fileName;
 
                             m_profileService->onTolerancedCalculationComplete = [this, &toleranced]() {
                                 const auto& result = m_profileService->getResult(TaskSource::TolerancedSurfaceProfile);
@@ -345,26 +319,37 @@ namespace gui {
                                 toleranced.sampling = result.sampling;
                                 toleranced.angle = result.angle;
                                 toleranced.sagDataPoints = result.sagDataPoints;
+                                notify::success(std::format("Toleranced profile ready: {} points",
+                                                            toleranced.sagDataPoints.size()));
                             };
                             m_profileService->startCalculation(state.tolerancedSurfaceIndex, state.tolerancedSampling, state.tolerancedAngle, TaskSource::TolerancedSurfaceProfile);
                         }
-                    }
-                    ImGui::EndDisabled();
-                }
+                    },
+                    [&]() {
+                        m_profileService->cancelCalculation(TaskSource::TolerancedSurfaceProfile);
+                        m_profileService->onTolerancedCalculationComplete = nullptr;
+                        toleranced.clear();
+                    });
             }
         }
+        // Air before the next section bar, as after the property grids.
+        ImGuiUtils::SpacingY(0.5f);
         ImGui::EndChild();
 
         if (nominal.isValid() && toleranced.isValid()) {
             ImGuiUtils::SectionHeader("Surface profile analysis results");
+            // Same air under the bar as the property grids give their rows
+            // (CellPadding.y): this section opens with buttons, which would
+            // otherwise sit twice as close to the bar.
+            ImGui::Dummy(ImVec2(0.0f, ImGui::GetStyle().CellPadding.y));
 
-            if (ImGui::Button("Show comparison graphic")) {
+            if (ImGui::Button(ICON_FA_CHART_LINE " Show comparison graphic")) {
                 m_profileService->m_showComparisonProfileWindow = true;
             }
 
             ImGui::SameLine();
 
-            if (ImGui::Button("Show deviation graphic")) {
+            if (ImGui::Button(ICON_FA_CHART_LINE " Show deviation graphic")) {
                 m_profileService->m_showDeviationProfileWindow = true;
             }
         }

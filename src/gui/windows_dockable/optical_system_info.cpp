@@ -1,13 +1,14 @@
 #include <format>
 
 #include "gui/gui.h"
+#include "gui/constants.h"
 #include "gui/imgui_utils.h"
 #include "lib/imgui/imgui.h"
 
 namespace gui {
     void GuiManager::renderOpticalSystemInfo() {
         if (!isDDEInitialized()) {
-            ImGui::TextUnformatted("To get data, initialize a DDE connection with Zemax server.");
+            ImGui::TextWrapped("%s", "To get data, initialize a DDE connection with Zemax server.");
             return;
         }
 
@@ -15,7 +16,7 @@ namespace gui {
 
         ImGui::BeginChild("##SystemInfoContent",
             ImVec2(0.0f, 0.0f),
-            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle,
+            ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_FrameStyle | ImGuiChildFlags_Borders,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground
         );
 
@@ -72,14 +73,14 @@ namespace gui {
         float maxLabelWidth = 0.0f;
         for (auto* l : allLabels)
             maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(l).x);
-        maxLabelWidth += ImGuiUtils::DpiScale(8.0f);
+        maxLabelWidth += ImGuiUtils::DpiScale(PROPERTY_GRID_LABEL_SLACK);
 
         ImGuiUtils::SectionHeader("File");
         ImGuiUtils::BeginPropertyGrid("##File", maxLabelWidth);
         ImGuiUtils::PropertyGridRow("Lens Name", s.lensName.c_str());
         ImGuiUtils::PropertyGridRow("File Name", s.fileName.c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("System");
         ImGuiUtils::BeginPropertyGrid("##System", maxLabelWidth);
@@ -88,7 +89,7 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Stop Surface", std::to_string(s.stopSurf).c_str());
         ImGuiUtils::PropertyGridRow("Global Reference Surface", std::to_string(s.globalRefSurf).c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("Fields & Waves");
         ImGuiUtils::BeginPropertyGrid("##Fields", maxLabelWidth);
@@ -96,12 +97,13 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Wavelengths", std::to_string(s.numWaves).c_str());
         ImGuiUtils::PropertyGridRow("Primary Wave", std::to_string(s.primWave).c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
-        ImGui::BeginChild("##FieldWaveBlock", ImVec2(blockW, 0.0f), ImGuiChildFlags_AutoResizeY);
+        ImGuiUtils::SpacingY(0.5f);
+        ImGui::BeginChild("##FieldWaveBlock", ImVec2(blockW, 0.0f), ImGuiChildFlags_AutoResizeY,
+            ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
         renderFieldTable();
         renderWaveTable();
         ImGui::EndChild();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("Settings");
         ImGuiUtils::BeginPropertyGrid("##Settings", maxLabelWidth);
@@ -109,14 +111,14 @@ namespace gui {
         ImGuiUtils::PropertyGridRow("Ray Aiming", getRayAimingTypeString(s.rayAimingType));
         ImGuiUtils::PropertyGridRow("Adjust Index", s.adjustIndex ? "Yes" : "No");
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGuiUtils::SectionHeader("Environment");
         ImGuiUtils::BeginPropertyGrid("##Env", maxLabelWidth);
         ImGuiUtils::PropertyGridRow("Temperature", std::format("{:.4f} °C", s.temp).c_str());
         ImGuiUtils::PropertyGridRow("Pressure", std::format("{:.4f} atm", s.pressure).c_str());
         ImGuiUtils::EndPropertyGrid();
-        ImGuiUtils::SpacingY(0.25f);
+        ImGuiUtils::SpacingY(0.5f);
 
         ImGui::EndChild();
     }

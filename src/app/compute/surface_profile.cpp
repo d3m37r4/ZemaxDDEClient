@@ -1,5 +1,6 @@
 #include <format>
 #include <cmath>
+#include <atomic>
 
 #include "surface_profile.h"
 #include "app/models/surface_data.h"
@@ -16,11 +17,21 @@ namespace app::compute {
         : m_connectionManager(connectionManager)
         , m_logger(logger)
     {
+        static std::atomic<uint64_t> instanceCounter{1};
+        m_serviceTag = std::format("SurfaceProfileService#{}", instanceCounter.fetch_add(1));
     }
 
     ZemaxDDE::ZemaxDDEClient* SurfaceProfile::getClient() const {
         if (m_boundClient) return m_boundClient;
-        return m_connectionManager ? m_connectionManager->getActiveClient() : nullptr;
+        if (!m_connectionManager) return nullptr;
+        // A run pinned to a slot must never fall back to whichever slot happens
+        // to be active now: switching the target (F6) mid-map used to continue
+        // the remaining sections against another Zemax instance.
+        if (m_boundSlot >= 0) {
+            DDEConnection* conn = m_connectionManager->getConnection(m_boundSlot);
+            return (conn && conn->isConnected()) ? conn->client.get() : nullptr;
+        }
+        return m_connectionManager->getActiveClient();
     }
 
     bool SurfaceProfile::isCancelled() const {
@@ -29,32 +40,53 @@ namespace app::compute {
     }
 
     void SurfaceProfile::startCalculation(
-        int surface, int sampling, double angle, app::models::TaskSource source, const std::string& label)
+        int surface, int sampling, double angle, app::models::TaskSource source, const std::string& label,
+        int slot)
     {
         // Bump the generation so any still-in-flight callbacks from a previous run
         // will be ignored when they arrive.
         uint64_t generation = ++m_generation;
 
         // Resolve the client fresh each run so a stale pointer from a previously
-        // disconnected slot can never be re-used (use-after-free guard).
+        // disconnected slot can never be re-used (use-after-free guard). The slot
+        // pins every request of the run: a map calls this once per section and
+        // F6 must not redirect the remaining sections.
         m_boundClient = nullptr;
+        m_boundSlot = slot;
 
         auto* client = getClient();
         if (!client) {
+            m_boundSlot = -1;
             m_state = State::Failed;
             m_error = "No active DDE connection";
+            // A task adopted for this run (created for the refresh phase) must not
+            // stay pending when the slot disappeared in between.
+            if (m_uiOpMonitor && m_taskId > 0) {
+                m_uiOpMonitor->failTask(m_taskId, "No active DDE connection");
+                m_taskId = 0;
+            }
+            m_adoptedTask = false;
             if (onFailed) onFailed();
             return;
         }
 
         m_boundClient = client;
         m_source = source;
-        if (m_createTask && m_uiOpMonitor) {
-            std::string taskLabel = label.empty()
-                ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
-                : label;
-            int clientSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
-            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot);
+        if (m_adoptedTask) {
+            // The service created the task before GetRefresh; keep its id.
+            m_adoptedTask = false;
+        } else {
+            m_taskId = 0;
+            if (m_createTask && m_uiOpMonitor) {
+                std::string taskLabel = label.empty()
+                    ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
+                    : label;
+                int clientSlot = slot >= 0
+                    ? slot
+                    : (m_connectionManager ? m_connectionManager->getActiveIndex() : -1);
+                m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot,
+                                                    client->getOperationMonitor());
+            }
         }
 
         m_state = State::FetchingSurfaceData;
@@ -70,6 +102,12 @@ namespace app::compute {
         m_result = {};
         m_result.id = surface;
         m_result.sagDataPoints.clear();
+        // System metadata travels with the result: the service replaces the
+        // whole SurfaceData on completion, so anything seeded only by the UI
+        // would be lost.
+        const auto& system = client->getOpticalSystemData();
+        m_result.fileName = system.fileName;
+        m_result.units = system.units;
         m_surfaceRequestsRemaining = 2;
 
         int estimatedRequests = sampling + 2;
@@ -89,7 +127,7 @@ namespace app::compute {
             [this, generation](const std::string& error) {
                 onError(std::format("GetSurfaceData(TYPE_NAME): {}", error), generation);
             },
-            surfaceDataTimeout, 1, "SurfaceProfileService");
+            surfaceDataTimeout, 1, m_serviceTag);
 
         client->submitRequest(
             std::format("GetSurfaceData,{},{}", surface, ZemaxDDE::SurfaceDataCode::SEMI_DIAMETER),
@@ -99,15 +137,36 @@ namespace app::compute {
             [this, generation](const std::string& error) {
                 onError(std::format("GetSurfaceData(SEMI_DIAMETER): {}", error), generation);
             },
-            surfaceDataTimeout, 1, "SurfaceProfileService");
+            surfaceDataTimeout, 1, m_serviceTag);
     }
 
     void SurfaceProfile::cancel() {
-        m_cancelRequested = true;
-        m_boundClient = nullptr;
-        if (m_uiOpMonitor && m_taskId > 0) {
-            m_uiOpMonitor->requestCancel(m_taskId);
+        if (!isCalculating()) {
+            m_cancelRequested = true;
+            return;
         }
+
+        // Finalize synchronously at the click instead of waiting for the next
+        // DDE response: the generation bump invalidates every late callback,
+        // and the queue purge stops everything that was submitted but not
+        // dispatched yet. An already-dispatched request cannot be recalled —
+        // its response is dropped by the generation check below.
+        ++m_generation;
+        if (auto* client = getClient()) {
+            client->cancelPendingRequests(m_serviceTag);
+        }
+        m_boundClient = nullptr;
+        m_boundSlot = -1;
+        m_cancelRequested = true;
+        m_adoptedTask = false;
+        m_state = State::Failed;
+        m_error = "Cancelled";
+        if (m_uiOpMonitor && m_taskId > 0) {
+            m_uiOpMonitor->failTask(m_taskId, "Cancelled");
+            m_taskId = 0;
+        }
+        m_logger.addLog("[SurfaceProfileService] Cancelled by user");
+        if (onFailed) onFailed();
     }
 
     void SurfaceProfile::onSurfaceDataReceived(
@@ -153,9 +212,11 @@ namespace app::compute {
             // Drop the reference to the client at completion so a later disconnect
             // cannot leave 'this' holding a dangling client pointer.
             m_boundClient = nullptr;
+            m_boundSlot = -1;
 
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->completeTask(m_taskId);
+                m_taskId = 0;
             }
 
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -178,6 +239,7 @@ namespace app::compute {
             m_error = "Cancelled";
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->failTask(m_taskId, "Cancelled");
+                m_taskId = 0;
             }
             m_logger.addLog("[SurfaceProfileService] Cancelled by user");
             if (onFailed) onFailed();
@@ -198,6 +260,7 @@ namespace app::compute {
             m_result.sagDataPoints.clear();
             m_state = State::Completed;
             m_boundClient = nullptr;
+            m_boundSlot = -1;
             if (onComplete) onComplete();
             return;
         }
@@ -233,7 +296,7 @@ namespace app::compute {
                     onError(std::format("GetSag failed: {}", error), generation);
                 }
             },
-            sagTimeout, 1, "SurfaceProfileService");
+            sagTimeout, 1, m_serviceTag);
     }
 
     void SurfaceProfile::onSagDataReceived(const std::string& buffer, uint64_t generation) {
@@ -291,9 +354,11 @@ namespace app::compute {
         m_state = State::Failed;
         m_error = error;
         m_boundClient = nullptr;
+        m_boundSlot = -1;
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->failTask(m_taskId, error);
+            m_taskId = 0;
         }
 
         m_logger.addLog(std::format("[SurfaceProfileService] {}", error));

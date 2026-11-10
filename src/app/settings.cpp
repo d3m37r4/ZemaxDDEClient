@@ -7,23 +7,6 @@
 namespace app {
 
     namespace {
-        constexpr int kMinTimeoutMs = 1000;
-        constexpr int kMaxTimeoutMs = 30000;
-        constexpr int kMinRequestTimeoutMs = 100;
-        constexpr int kMaxRequestTimeoutMs = 30000;
-        constexpr int kMinRetries = 0;
-        constexpr int kMaxRetries = 10;
-        constexpr int kMinConnections = 1;
-        constexpr int kMaxConnections = 16;
-        constexpr float kMinLineWeight = 1.0f;
-        constexpr float kMaxLineWeight = 3.0f;
-        constexpr float kMinMarkerSize = 0.0f;
-        constexpr float kMaxMarkerSize = 10.0f;
-        constexpr int kMinFileSizeMB = 1;
-        constexpr int kMaxFileSizeMB = 100;
-        constexpr int kMinFolderThresholdMB = 10;
-        constexpr int kMaxFolderThresholdMB = 500;
-
         template <typename T>
         T clampValue(T value, T min, T max, T fallback) {
             if (value < min || value > max) return fallback;
@@ -69,12 +52,15 @@ namespace app {
         version = kCurrentVersion;
 
         general.restoreWindowLayout = true;
+        general.applyDefaultLayoutOnStartup = false;
+        general.showWelcomeOnStartup = true;
 
         appearance.themeMode = ThemeMode::System;
+        appearance.fontScale = kDefaultFontScale;
 
         dde.connectionTimeoutMs = 5000;
         dde.maxRetryCount = 3;
-        dde.maxConnections = 4;
+        dde.maxConnections = 2;
 
         dde.getNameTimeoutMs = 2000;
         dde.getFileTimeoutMs = 2000;
@@ -150,6 +136,10 @@ namespace app {
             const auto& g = j["general"];
             if (g.contains("restoreWindowLayout") && g["restoreWindowLayout"].is_boolean())
                 general.restoreWindowLayout = g["restoreWindowLayout"].get<bool>();
+            if (g.contains("applyDefaultLayoutOnStartup") && g["applyDefaultLayoutOnStartup"].is_boolean())
+                general.applyDefaultLayoutOnStartup = g["applyDefaultLayoutOnStartup"].get<bool>();
+            if (g.contains("showWelcomeOnStartup") && g["showWelcomeOnStartup"].is_boolean())
+                general.showWelcomeOnStartup = g["showWelcomeOnStartup"].get<bool>();
         }
 
         // Appearance
@@ -157,6 +147,9 @@ namespace app {
             const auto& a = j["appearance"];
             if (a.contains("themeMode") && a["themeMode"].is_string())
                 appearance.themeMode = themeModeFromString(a["themeMode"].get<std::string_view>());
+            if (a.contains("fontScale") && a["fontScale"].is_number())
+                appearance.fontScale = clampValue(
+                    a["fontScale"].get<float>(), kMinFontScale, kMaxFontScale, kDefaultFontScale);
         }
 
         // DDE
@@ -172,7 +165,7 @@ namespace app {
             }
             if (d.contains("maxConnections") && d["maxConnections"].is_number_integer()) {
                 dde.maxConnections = clampValue(
-                    d["maxConnections"].get<int>(), kMinConnections, kMaxConnections, 4);
+                    d["maxConnections"].get<int>(), kMinConnections, kMaxConnections, 2);
             }
             if (d.contains("getNameTimeoutMs") && d["getNameTimeoutMs"].is_number_integer()) {
                 dde.getNameTimeoutMs = clampValue(
@@ -205,6 +198,7 @@ namespace app {
             loadPerWindow("getSagProfileTimeoutMs",        dde.getSagProfileTimeoutMs,        1000);
             loadPerWindow("getSurfaceDataMapTimeoutMs",     dde.getSurfaceDataMapTimeoutMs,     2000);
             loadPerWindow("getSagMapTimeoutMs",             dde.getSagMapTimeoutMs,             1000);
+            loadPerWindow("getRefreshTimeoutMs",            dde.getRefreshTimeoutMs,            2000);
 
             // Backward compat: if legacy fields exist but new ones don't, use legacy values.
             if (d.contains("getSurfaceDataTimeoutMs") && d["getSurfaceDataTimeoutMs"].is_number_integer()) {
@@ -303,8 +297,11 @@ namespace app {
         j["version"] = version;
 
         j["general"]["restoreWindowLayout"]   = general.restoreWindowLayout;
+        j["general"]["applyDefaultLayoutOnStartup"] = general.applyDefaultLayoutOnStartup;
+        j["general"]["showWelcomeOnStartup"]  = general.showWelcomeOnStartup;
 
         j["appearance"]["themeMode"]      = std::string{themeModeToString(appearance.themeMode)};
+        j["appearance"]["fontScale"]      = appearance.fontScale;
 
         j["dde"]["connectionTimeoutMs"] = dde.connectionTimeoutMs;
         j["dde"]["maxRetryCount"]       = dde.maxRetryCount;
@@ -319,6 +316,7 @@ namespace app {
         j["dde"]["getSagProfileTimeoutMs"]         = dde.getSagProfileTimeoutMs;
         j["dde"]["getSurfaceDataMapTimeoutMs"]     = dde.getSurfaceDataMapTimeoutMs;
         j["dde"]["getSagMapTimeoutMs"]             = dde.getSagMapTimeoutMs;
+        j["dde"]["getRefreshTimeoutMs"]            = dde.getRefreshTimeoutMs;
 
         j["plot"]["showGridByDefault"] = plot.showGridByDefault;
         j["plot"]["lineWeight"]        = plot.lineWeight;

@@ -4,7 +4,6 @@
 
 namespace ZemaxDDE {
 
-    // Convert CP1251 (Windows-1251) encoded data to UTF‑8
     std::string cp1251_to_utf8(const char* data, size_t len) {
         if (!data || len == 0) return {};
         int wlen = MultiByteToWideChar(1251, 0, data, static_cast<int>(len), nullptr, 0);
@@ -23,7 +22,6 @@ namespace ZemaxDDE {
         return u8str;
     }
 
-    // Convert UTF‑16 (wchar_t) string to UTF‑8
     std::string wstring_to_utf8(const std::wstring& wstr) {
         if (wstr.empty()) return {};
         int len = WideCharToMultiByte(CP_UTF8, 0, wstr.data(),
@@ -83,5 +81,19 @@ namespace ZemaxDDE {
         if (mins > 0)
             return std::format("{}m {:.3f}s", mins, secs);
         return std::format("{:.3f}s", secs);
+    }
+
+    UpdateStatus parseUpdateStatus(std::string_view buffer) {
+        const auto isPad = [](char c) {
+            return c == '\0' || c == '\r' || c == '\n' || c == ' ' || c == '\t';
+        };
+        size_t begin = 0;
+        size_t end = buffer.size();
+        while (begin < end && isPad(buffer[begin])) ++begin;
+        while (end > begin && isPad(buffer[end - 1])) --end;
+        const std::string_view value = buffer.substr(begin, end - begin);
+        if (value == "0") return UpdateStatus::Updated;
+        if (value == "-1") return UpdateStatus::NotUpdated;
+        return UpdateStatus::Unknown;
     }
 }

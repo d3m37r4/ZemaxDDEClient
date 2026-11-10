@@ -8,10 +8,7 @@
 namespace app {
 namespace {
 
-// ============================================================
-//  Helpers
-// ============================================================
-
+// Helpers
 static std::string tmpPath(const char* name) {
     return std::string(std::tmpnam(nullptr)) + name;
 }
@@ -21,25 +18,26 @@ static void writeFile(const std::string& path, const std::string& content) {
     out << content;
 }
 
-// ============================================================
-//  AppSettings::defaults() / reset()
-// ============================================================
-
+// AppSettings::defaults() / reset()
 TEST(SettingsDefaults, AllFieldsMatchExpected) {
     auto s = AppSettings::defaults();
 
     EXPECT_EQ(s.version, AppSettings::kCurrentVersion);
     EXPECT_TRUE(s.general.restoreWindowLayout);
+    EXPECT_FALSE(s.general.applyDefaultLayoutOnStartup);
+    EXPECT_TRUE(s.general.showWelcomeOnStartup);
     EXPECT_TRUE(s.logging.showLogsOnStartup);
     EXPECT_EQ(s.appearance.themeMode, ThemeMode::System);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
     EXPECT_EQ(s.dde.maxRetryCount, 3);
-    EXPECT_EQ(s.dde.maxConnections, 4);
+    EXPECT_EQ(s.dde.maxConnections, 2);
     EXPECT_EQ(s.dde.getNameTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getFileTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getSystemTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getFieldTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getWaveTimeoutMs, 2000);
+    EXPECT_EQ(s.dde.getRefreshTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getSurfaceDataProfileTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getSagProfileTimeoutMs, 1000);
     EXPECT_EQ(s.dde.getSurfaceDataMapTimeoutMs, 2000);
@@ -55,19 +53,18 @@ TEST(SettingsReset, RestoresDefaults) {
     AppSettings s;
     s.dde.connectionTimeoutMs = 9999;
     s.appearance.themeMode = ThemeMode::Light;
+    s.appearance.fontScale = 1.5f;
     s.plot.lineWeight = 2.5f;
 
     s.reset();
 
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
     EXPECT_EQ(s.appearance.themeMode, ThemeMode::System);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
     EXPECT_FLOAT_EQ(s.plot.lineWeight, 1.0f);
 }
 
-// ============================================================
-//  Enum roundtrip
-// ============================================================
-
+// Enum roundtrip
 TEST(ThemeModeRoundtrip, LightDarkSystem) {
     EXPECT_EQ(themeModeFromString(themeModeToString(ThemeMode::Light)),  ThemeMode::Light);
     EXPECT_EQ(themeModeFromString(themeModeToString(ThemeMode::Dark)),   ThemeMode::Dark);
@@ -89,35 +86,37 @@ TEST(UpdateChannelFromString, InvalidReturnsStable) {
     EXPECT_EQ(updateChannelFromString(""), UpdateChannel::Stable);
 }
 
-// ============================================================
-//  Load / save roundtrip
-// ============================================================
-
+// Load / save roundtrip
 TEST(SettingsLoadSave, RoundtripPreservesValues) {
     std::string path = tmpPath("_settings_roundtrip.json");
 
     AppSettings s;
     s.dde.connectionTimeoutMs = 7777;
+    s.dde.getRefreshTimeoutMs = 2222;
     s.appearance.themeMode = ThemeMode::Dark;
+    s.appearance.fontScale = 1.25f;
     s.plot.lineWeight = 2.0f;
     s.updates.channel = UpdateChannel::Beta;
+    s.general.applyDefaultLayoutOnStartup = true;
+    s.general.showWelcomeOnStartup = false;
     ASSERT_TRUE(s.saveToFile(path));
 
     AppSettings loaded;
     std::string err;
     EXPECT_EQ(loaded.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(loaded.dde.connectionTimeoutMs, 7777);
+    EXPECT_EQ(loaded.dde.getRefreshTimeoutMs, 2222);
     EXPECT_EQ(loaded.appearance.themeMode, ThemeMode::Dark);
+    EXPECT_FLOAT_EQ(loaded.appearance.fontScale, 1.25f);
     EXPECT_FLOAT_EQ(loaded.plot.lineWeight, 2.0f);
     EXPECT_EQ(loaded.updates.channel, UpdateChannel::Beta);
+    EXPECT_TRUE(loaded.general.applyDefaultLayoutOnStartup);
+    EXPECT_FALSE(loaded.general.showWelcomeOnStartup);
 
     std::remove(path.c_str());
 }
 
-// ============================================================
-//  Load error cases
-// ============================================================
-
+// Load error cases
 TEST(SettingsLoad, FileMissingReturnsFileMissing) {
     AppSettings s;
     std::string err;
@@ -160,10 +159,7 @@ TEST(SettingsLoad, UnknownVersionResetsAndReturns) {
     std::remove(path.c_str());
 }
 
-// ============================================================
-//  DDE clamp
-// ============================================================
-
+// DDE clamp
 TEST(SettingsClamp, ConnectionTimeoutBelowMin) {
     std::string path = tmpPath("_settings_clamp_min.json");
     writeFile(path, R"({"version": 1, "dde": {"connectionTimeoutMs": 100}})");
@@ -184,6 +180,30 @@ TEST(SettingsClamp, ConnectionTimeoutAboveMax) {
     std::string err;
     ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, RefreshTimeoutValid) {
+    std::string path = tmpPath("_settings_clamp_refresh.json");
+    writeFile(path, R"({"version": 1, "dde": {"getRefreshTimeoutMs": 2500}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_EQ(s.dde.getRefreshTimeoutMs, 2500);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, RefreshTimeoutBelowMinFallsBack) {
+    std::string path = tmpPath("_settings_clamp_refresh_min.json");
+    writeFile(path, R"({"version": 1, "dde": {"getRefreshTimeoutMs": 1}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_EQ(s.dde.getRefreshTimeoutMs, 2000);
 
     std::remove(path.c_str());
 }
@@ -249,6 +269,66 @@ TEST(SettingsLoad, WrongScalarTypeIsTolerated) {
     std::string err;
     EXPECT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(s.dde.maxRetryCount, 3);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleBelowMinFallsBack) {
+    std::string path = tmpPath("_settings_fs_min.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 0.1}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleAboveMaxFallsBack) {
+    std::string path = tmpPath("_settings_fs_max.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 5.0}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleValidPreserved) {
+    std::string path = tmpPath("_settings_fs_valid.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 1.5}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.5f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, FontScaleMaxPresetPreserved) {
+    std::string path = tmpPath("_settings_fs_maxpreset.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": 3.0}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 3.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsLoad, FontScaleWrongTypeIsTolerated) {
+    std::string path = tmpPath("_settings_fs_wrongtype.json");
+    writeFile(path, R"({"version": 1, "appearance": {"fontScale": "large"}})");
+
+    AppSettings s;
+    std::string err;
+    EXPECT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_FLOAT_EQ(s.appearance.fontScale, 1.0f);
 
     std::remove(path.c_str());
 }
