@@ -343,6 +343,10 @@ void GuiManager::render() {
         }
     }
 
+    // The popup below consumes the loss flag; remember it so the transition
+    // below does not stack a second "disconnected" toast on top of the error.
+    const bool lossPending = m_ddeConnectionManager && m_ddeConnectionManager->hasConnectionLost();
+
     renderUpdatesPopup();
     renderAboutPopup();
     renderShortcutsHelpDialog();
@@ -355,7 +359,6 @@ void GuiManager::render() {
     // DDE transitions: one toast per state change; the log stays the detailed
     // source of truth. The active slot's window title makes the toast concrete.
     static bool wasConnected = false;
-    static bool wasConnectionLost = false;
     const bool connected = isDDEInitialized();
     if (connected != wasConnected) {
         wasConnected = connected;
@@ -370,17 +373,12 @@ void GuiManager::render() {
             }
             notify::success(title.empty() ? "Connected to Zemax"
                                           : std::format("Connected to \"{}\"", title));
-        } else {
-            notify::warning("Disconnected from Zemax");
+        } else if (!lossPending) {
+            // A user-initiated disconnect is a normal action, not a warning; an
+            // unexpected loss already reported an error toast in the popup path.
+            notify::info("Disconnected from Zemax");
         }
     }
-    const bool connectionLost =
-        m_ddeConnectionManager && m_ddeConnectionManager->hasConnectionLost();
-    if (connectionLost && !wasConnectionLost) {
-        notify::error(std::format("Connection lost: {}",
-            m_ddeConnectionManager->getConnectionLostReason()));
-    }
-    wasConnectionLost = connectionLost;
 
     // Toasts inherit the active theme (window background, rounding, border) and
     // are drawn above every window by ImGuiNotify.
@@ -466,6 +464,9 @@ void GuiManager::renderConnectionLostPopup() {
         std::string reason = m_ddeConnectionManager->getConnectionLostReason();
         m_ddeConnectionManager->clearConnectionLost();
         m_connectionLostDialog->open(reason);
+        // Report the loss here, while the reason is still available: the state
+        // transition below sees the already-cleared flag.
+        notify::error(std::format("Connection lost: {}", reason));
     }
 
     if (m_connectionLostDialog) {
