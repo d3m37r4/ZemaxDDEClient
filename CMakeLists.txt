@@ -56,7 +56,7 @@ endif()
 
 # Application version
 set(APP_VERSION_MAJOR 0)
-set(APP_VERSION_MINOR 8)
+set(APP_VERSION_MINOR 9)
 set(APP_VERSION_PATCH 0)
 set(APP_VERSION_PRERELEASE "b")
 
