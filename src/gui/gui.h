@@ -20,6 +20,7 @@
 #include "gui/popups/about_dialog.h"
 #include "gui/popups/shortcuts_help_dialog.h"
 #include "gui/popups/connection_lost_dialog.h"
+#include "gui/popups/refresh_failed_dialog.h"
 #include "gui/popups/preferences_dialog.h"
 #include "gui/popups/update_checker.h"
 #include "gui/settings_manager.h"
@@ -73,6 +74,7 @@ namespace gui {
             void renderShortcutsHelpDialog();
             void renderPreferencesDialog();
             void renderConnectionLostPopup();
+            void renderRefreshFailedPopup();
 
             SettingsManager& getSettingsManager() noexcept { return *m_settingsManager; }
             UpdateChecker* getUpdateChecker() const noexcept { return m_updateChecker.get(); }
@@ -175,6 +177,7 @@ namespace gui {
             std::unique_ptr<AboutDialog> m_aboutDialog;
             std::unique_ptr<ShortcutsHelpDialog> m_shortcutsHelpDialog;
             std::unique_ptr<ConnectionLostDialog> m_connectionLostDialog;
+            std::unique_ptr<RefreshFailedDialog> m_refreshFailedDialog;
             std::unique_ptr<UpdateChecker> m_updateChecker;
             std::unique_ptr<SettingsManager>   m_settingsManager;
             std::unique_ptr<PreferencesDialog> m_preferencesDialog;

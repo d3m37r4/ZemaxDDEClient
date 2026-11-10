@@ -82,6 +82,11 @@ namespace gui {
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_DEFAULT_SIZE = ImVec2(380.0f, 140.0f);
     inline constexpr ImVec2 CONNECTION_LOST_POPUP_MIN_SIZE     = ImVec2(380.0f, 140.0f);
 
+    // GetRefresh returned "-1": Zemax cannot update the lens.
+    inline constexpr const char* REFRESH_FAILED_POPUP_NAME         = "Zemax Could Not Update the System";
+    inline constexpr ImVec2 REFRESH_FAILED_POPUP_DEFAULT_SIZE      = ImVec2(460.0f, 220.0f);
+    inline constexpr ImVec2 REFRESH_FAILED_POPUP_MIN_SIZE          = ImVec2(380.0f, 180.0f);
+
     // Reset Preferences popup
     inline constexpr ImVec2 RESET_CONFIRM_POPUP_DEFAULT_SIZE = ImVec2(360.0f, 154.0f);
     inline constexpr ImVec2 RESET_CONFIRM_POPUP_MIN_SIZE     = ImVec2(360.0f, 154.0f);

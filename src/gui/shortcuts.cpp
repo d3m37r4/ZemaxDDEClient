@@ -76,6 +76,9 @@ bool GuiManager::isAnyModalOpen() const noexcept {
     if (m_connectionLostDialog && m_connectionLostDialog->isOpen()) {
         return true;
     }
+    if (m_refreshFailedDialog && m_refreshFailedDialog->isOpen()) {
+        return true;
+    }
     if (m_ddeStatusRenderer && m_ddeStatusRenderer->isConnectPopupOpen()) {
         return true;
     }
@@ -235,6 +238,10 @@ bool GuiManager::closeTopmostPopup() {
     }
     if (m_connectionLostDialog && m_connectionLostDialog->isOpen()) {
         m_connectionLostDialog->close();
+        return true;
+    }
+    if (m_refreshFailedDialog && m_refreshFailedDialog->isOpen()) {
+        m_refreshFailedDialog->close();
         return true;
     }
     if (m_updateChecker && m_updateChecker->isOpen()) {

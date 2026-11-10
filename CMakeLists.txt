@@ -99,6 +99,7 @@ set(SOURCES
     ${SRC_DIR}/dde/client_connection.cpp
     ${SRC_DIR}/dde/operation_monitor.cpp
     ${SRC_DIR}/dde/initial_data_load_service.cpp
+    ${SRC_DIR}/dde/lens_update.cpp
     ${SRC_DIR}/dde/utils.cpp
     ${SRC_DIR}/dde/dde_connection_manager.cpp
     ${SRC_DIR}/app/compute/surface_profile.cpp
@@ -126,6 +127,7 @@ set(SOURCES
     ${SRC_DIR}/gui/popups/about_dialog.cpp
     ${SRC_DIR}/gui/popups/shortcuts_help_dialog.cpp
     ${SRC_DIR}/gui/popups/connection_lost_dialog.cpp
+    ${SRC_DIR}/gui/popups/refresh_failed_dialog.cpp
     ${SRC_DIR}/gui/popups/preferences_dialog.cpp
     ${SRC_DIR}/gui/popups/clean_logs_confirm_dialog.cpp
     ${SRC_DIR}/gui/popups/reset_confirm_dialog.cpp

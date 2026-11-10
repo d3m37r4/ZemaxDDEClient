@@ -19,11 +19,13 @@ set(TEST_SOURCES
     test_log_time_filter.cpp
     test_log_filter_util.cpp
     test_layout_snapshot.cpp
+    test_dde_utils.cpp
 )
 
 set(TEST_LIB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/app/settings.cpp
     ${CMAKE_SOURCE_DIR}/src/dde/operation_monitor.cpp
+    ${CMAKE_SOURCE_DIR}/src/dde/utils.cpp
     ${CMAKE_SOURCE_DIR}/src/app/services/operation_monitor_service.cpp
     ${CMAKE_SOURCE_DIR}/src/app/compute/surface_map.cpp
     ${CMAKE_SOURCE_DIR}/src/gui/plot_image_export_util.cpp

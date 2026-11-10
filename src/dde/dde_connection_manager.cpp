@@ -95,6 +95,7 @@ int DDEConnectionManager::connectToZemax(HWND targetHwnd, const std::wstring& ti
     conn.client->setGetSagProfileTimeoutMs(m_getSagProfileTimeoutMs);
     conn.client->setGetSurfaceDataMapTimeoutMs(m_getSurfaceDataMapTimeoutMs);
     conn.client->setGetSagMapTimeoutMs(m_getSagMapTimeoutMs);
+    conn.client->setGetRefreshTimeoutMs(m_getRefreshTimeoutMs);
 
     try {
         conn.client->initiateDDE(targetHwnd);
@@ -388,6 +389,12 @@ void DDEConnectionManager::setGetSagMapTimeoutMs(DWORD ms) {
     propagatePerRequestTimeouts();
 }
 
+void DDEConnectionManager::setGetRefreshTimeoutMs(DWORD ms) {
+    if (ms == m_getRefreshTimeoutMs) return;
+    m_getRefreshTimeoutMs = ms;
+    propagatePerRequestTimeouts();
+}
+
 void DDEConnectionManager::propagateDefaultTimeout(DWORD ms) {
     for (auto& conn : m_connections) {
         if (conn.client) conn.client->setDefaultTimeoutMs(ms);
@@ -412,5 +419,6 @@ void DDEConnectionManager::propagatePerRequestTimeouts() {
         conn.client->setGetSagProfileTimeoutMs(m_getSagProfileTimeoutMs);
         conn.client->setGetSurfaceDataMapTimeoutMs(m_getSurfaceDataMapTimeoutMs);
         conn.client->setGetSagMapTimeoutMs(m_getSagMapTimeoutMs);
+        conn.client->setGetRefreshTimeoutMs(m_getRefreshTimeoutMs);
     }
 }

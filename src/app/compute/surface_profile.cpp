@@ -59,21 +59,34 @@ namespace app::compute {
             m_boundSlot = -1;
             m_state = State::Failed;
             m_error = "No active DDE connection";
+            // A task adopted for this run (created for the refresh phase) must not
+            // stay pending when the slot disappeared in between.
+            if (m_uiOpMonitor && m_taskId > 0) {
+                m_uiOpMonitor->failTask(m_taskId, "No active DDE connection");
+                m_taskId = 0;
+            }
+            m_adoptedTask = false;
             if (onFailed) onFailed();
             return;
         }
 
         m_boundClient = client;
         m_source = source;
-        if (m_createTask && m_uiOpMonitor) {
-            std::string taskLabel = label.empty()
-                ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
-                : label;
-            int clientSlot = slot >= 0
-                ? slot
-                : (m_connectionManager ? m_connectionManager->getActiveIndex() : -1);
-            m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot,
-                                                client->getOperationMonitor());
+        if (m_adoptedTask) {
+            // The service created the task before GetRefresh; keep its id.
+            m_adoptedTask = false;
+        } else {
+            m_taskId = 0;
+            if (m_createTask && m_uiOpMonitor) {
+                std::string taskLabel = label.empty()
+                    ? (source == app::models::TaskSource::NominalSurfaceProfile ? "Nominal Profile" : "Toleranced Profile")
+                    : label;
+                int clientSlot = slot >= 0
+                    ? slot
+                    : (m_connectionManager ? m_connectionManager->getActiveIndex() : -1);
+                m_taskId = m_uiOpMonitor->startTask(source, taskLabel, sampling + 2, clientSlot,
+                                                    client->getOperationMonitor());
+            }
         }
 
         m_state = State::FetchingSurfaceData;
@@ -145,6 +158,7 @@ namespace app::compute {
         m_boundClient = nullptr;
         m_boundSlot = -1;
         m_cancelRequested = true;
+        m_adoptedTask = false;
         m_state = State::Failed;
         m_error = "Cancelled";
         if (m_uiOpMonitor && m_taskId > 0) {
@@ -202,6 +216,7 @@ namespace app::compute {
 
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->completeTask(m_taskId);
+                m_taskId = 0;
             }
 
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -224,6 +239,7 @@ namespace app::compute {
             m_error = "Cancelled";
             if (m_uiOpMonitor) {
                 m_uiOpMonitor->failTask(m_taskId, "Cancelled");
+                m_taskId = 0;
             }
             m_logger.addLog("[SurfaceProfileService] Cancelled by user");
             if (onFailed) onFailed();
@@ -342,6 +358,7 @@ namespace app::compute {
 
         if (m_uiOpMonitor) {
             m_uiOpMonitor->failTask(m_taskId, error);
+            m_taskId = 0;
         }
 
         m_logger.addLog(std::format("[SurfaceProfileService] {}", error));

@@ -67,6 +67,10 @@ namespace app::services {
             /// so the GUI can report completion without polling.
             std::function<void()> onMapCalculationComplete;
 
+            /// Fired when GetRefresh reported a model Zemax cannot update; the
+            /// calculation is not started (the GUI shows a modal dialog).
+            std::function<void(const std::string& reason)> onUpdateFailed;
+
             /// Cancels the task owning the given UI-monitor task id (map run or
             /// the nominal reference profile). Returns false when nothing
             /// matches. See SurfaceProfileService::cancelTask for rationale.
@@ -116,8 +120,18 @@ namespace app::services {
 
         protected:
             void startNextProfile();
+            /// Runs the map after a successful lens refresh: clears the previous
+            /// data, adopts the task registered for the refresh phase and starts
+            /// the section loop.
+            void beginMapRun(const app::compute::MapPlan& plan, int surface, uint64_t taskId);
             /// Recomputes the cached sag/deviation extents from the current data.
             void recomputeRanges();
+            /// Client of the given slot, or nullptr when the slot is gone.
+            ZemaxDDE::ZemaxDDEClient* resolveClient(int slot) const;
+            /// Drops a queued GetRefresh and invalidates its callback.
+            void abortPendingRefresh(bool nominal);
+            /// Fails the task created for the refresh phase (not yet adopted).
+            void cancelPendingRefreshTask(bool nominal);
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
@@ -140,6 +154,13 @@ namespace app::services {
             uint64_t m_mapTaskId{0};
             int m_nominalCalcSlot{-1};
             int m_mapCalcSlot{-1};
+            /// Invalidate pending refresh callbacks (cancel/restart/disconnect).
+            uint64_t m_nominalRefreshToken{0};
+            uint64_t m_mapRefreshToken{0};
+            /// Tasks created for the refresh phase; adopted on success or failed
+            /// on GetRefresh "-1".
+            uint64_t m_nominalRefreshTaskId{0};
+            uint64_t m_mapRefreshTaskId{0};
             std::chrono::steady_clock::time_point m_calcStartTime;
     };
 }

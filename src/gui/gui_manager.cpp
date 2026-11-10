@@ -110,6 +110,7 @@ namespace {
     m_aboutDialog        = std::make_unique<AboutDialog>();
     m_shortcutsHelpDialog = std::make_unique<ShortcutsHelpDialog>();
     m_connectionLostDialog = std::make_unique<ConnectionLostDialog>();
+    m_refreshFailedDialog  = std::make_unique<RefreshFailedDialog>();
     m_updateChecker      = std::make_unique<UpdateChecker>();
     m_settingsManager   = std::make_unique<SettingsManager>();
     m_preferencesDialog = std::make_unique<PreferencesDialog>(*m_settingsManager);
@@ -118,6 +119,18 @@ namespace {
     m_settingsManager->setUpdateChecker(m_updateChecker.get());
     m_settingsManager->setLogger(&m_logger);
     m_settingsManager->setMapService(m_irregularityMapService.get());
+
+    // GetRefresh reported a model Zemax cannot update: the calculation was not
+    // started. requestOpen() only stores the reason (safe from a DDE callback);
+    // the modal opens in the next render phase.
+    auto onUpdateFailed = [this](const std::string& reason) {
+        if (m_refreshFailedDialog) {
+            m_refreshFailedDialog->requestOpen(reason);
+        }
+        notify::error("Zemax could not update the system");
+    };
+    m_profileService->onUpdateFailed = onUpdateFailed;
+    m_irregularityMapService->onUpdateFailed = onUpdateFailed;
     m_menuBarController->setPreferencesCallback([this]() {
         m_preferencesDialog->setActiveLogPath(m_logger.getCurrentLogPath());
         m_preferencesDialog->open();
@@ -335,6 +348,7 @@ void GuiManager::render() {
     renderShortcutsHelpDialog();
     renderPreferencesDialog();
     renderConnectionLostPopup();
+    renderRefreshFailedPopup();
 
     m_uiOpMonitor.renderGlobalStatusBar();
 
@@ -456,6 +470,12 @@ void GuiManager::renderConnectionLostPopup() {
 
     if (m_connectionLostDialog) {
         m_connectionLostDialog->render();
+    }
+}
+
+void GuiManager::renderRefreshFailedPopup() {
+    if (m_refreshFailedDialog) {
+        m_refreshFailedDialog->render();
     }
 }
 

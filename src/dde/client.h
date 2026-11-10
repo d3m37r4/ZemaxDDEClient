@@ -80,6 +80,7 @@ namespace ZemaxDDE {
             void setGetSagProfileTimeoutMs(DWORD ms) noexcept         { m_getSagProfileTimeoutMs = ms; }
             void setGetSurfaceDataMapTimeoutMs(DWORD ms) noexcept     { m_getSurfaceDataMapTimeoutMs = ms; }
             void setGetSagMapTimeoutMs(DWORD ms) noexcept             { m_getSagMapTimeoutMs = ms; }
+            void setGetRefreshTimeoutMs(DWORD ms) noexcept            { m_getRefreshTimeoutMs = ms; }
 
             [[nodiscard]] DWORD getGetNameTimeoutMs() const noexcept        { return m_getNameTimeoutMs; }
             [[nodiscard]] DWORD getGetFileTimeoutMs() const noexcept        { return m_getFileTimeoutMs; }
@@ -90,6 +91,7 @@ namespace ZemaxDDE {
             [[nodiscard]] DWORD getGetSagProfileTimeoutMs() const noexcept         { return m_getSagProfileTimeoutMs; }
             [[nodiscard]] DWORD getGetSurfaceDataMapTimeoutMs() const noexcept     { return m_getSurfaceDataMapTimeoutMs; }
             [[nodiscard]] DWORD getGetSagMapTimeoutMs() const noexcept             { return m_getSagMapTimeoutMs; }
+            [[nodiscard]] DWORD getGetRefreshTimeoutMs() const noexcept            { return m_getRefreshTimeoutMs; }
 
             LRESULT handleDDEMessages(UINT iMsg, WPARAM wParam, LPARAM lParam);
 
@@ -163,5 +165,6 @@ namespace ZemaxDDE {
             DWORD m_getSagProfileTimeoutMs = 1000;
             DWORD m_getSurfaceDataMapTimeoutMs = 2000;
             DWORD m_getSagMapTimeoutMs = 1000;
+            DWORD m_getRefreshTimeoutMs = 2000;
     };
 }

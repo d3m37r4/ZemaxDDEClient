@@ -37,6 +37,7 @@ TEST(SettingsDefaults, AllFieldsMatchExpected) {
     EXPECT_EQ(s.dde.getSystemTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getFieldTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getWaveTimeoutMs, 2000);
+    EXPECT_EQ(s.dde.getRefreshTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getSurfaceDataProfileTimeoutMs, 2000);
     EXPECT_EQ(s.dde.getSagProfileTimeoutMs, 1000);
     EXPECT_EQ(s.dde.getSurfaceDataMapTimeoutMs, 2000);
@@ -91,6 +92,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
 
     AppSettings s;
     s.dde.connectionTimeoutMs = 7777;
+    s.dde.getRefreshTimeoutMs = 2222;
     s.appearance.themeMode = ThemeMode::Dark;
     s.appearance.fontScale = 1.25f;
     s.plot.lineWeight = 2.0f;
@@ -103,6 +105,7 @@ TEST(SettingsLoadSave, RoundtripPreservesValues) {
     std::string err;
     EXPECT_EQ(loaded.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(loaded.dde.connectionTimeoutMs, 7777);
+    EXPECT_EQ(loaded.dde.getRefreshTimeoutMs, 2222);
     EXPECT_EQ(loaded.appearance.themeMode, ThemeMode::Dark);
     EXPECT_FLOAT_EQ(loaded.appearance.fontScale, 1.25f);
     EXPECT_FLOAT_EQ(loaded.plot.lineWeight, 2.0f);
@@ -177,6 +180,30 @@ TEST(SettingsClamp, ConnectionTimeoutAboveMax) {
     std::string err;
     ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
     EXPECT_EQ(s.dde.connectionTimeoutMs, 5000);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, RefreshTimeoutValid) {
+    std::string path = tmpPath("_settings_clamp_refresh.json");
+    writeFile(path, R"({"version": 1, "dde": {"getRefreshTimeoutMs": 2500}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_EQ(s.dde.getRefreshTimeoutMs, 2500);
+
+    std::remove(path.c_str());
+}
+
+TEST(SettingsClamp, RefreshTimeoutBelowMinFallsBack) {
+    std::string path = tmpPath("_settings_clamp_refresh_min.json");
+    writeFile(path, R"({"version": 1, "dde": {"getRefreshTimeoutMs": 1}})");
+
+    AppSettings s;
+    std::string err;
+    ASSERT_EQ(s.loadFromFileWithReason(path, err), AppSettings::LoadResult::Success);
+    EXPECT_EQ(s.dde.getRefreshTimeoutMs, 2000);
 
     std::remove(path.c_str());
 }

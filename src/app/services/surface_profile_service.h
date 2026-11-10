@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -82,6 +84,10 @@ namespace app::services {
             std::function<void()> onNominalCalculationComplete;
             std::function<void()> onTolerancedCalculationComplete;
 
+            /// Fired when GetRefresh reported a model Zemax cannot update; the
+            /// calculation is not started (the GUI shows a modal dialog).
+            std::function<void(const std::string& reason)> onUpdateFailed;
+
             app::models::SurfaceData m_nominalSurfaceData;
             app::models::SurfaceData m_tolerancedSurfaceData;
 
@@ -93,11 +99,28 @@ namespace app::services {
 
             DDEConnectionManager* m_connectionManager;
             Logger& m_logger;
+            /// UI monitor, stored so the refresh phase can register its own task
+            /// before the calculators start (they get it via setMonitor too).
+            app::services::OperationMonitorService* m_uiOpMonitor{nullptr};
             app::compute::SurfaceProfile m_nominalCalculator;
             app::compute::SurfaceProfile m_tolerancedCalculator;
 
         private:
             int m_nominalCalcSlot{-1};
             int m_tolerancedCalcSlot{-1};
+            /// Invalidates a pending refresh callback (cancel/restart/disconnect).
+            std::array<uint64_t, 2> m_refreshToken{};
+            /// Task created for the refresh phase; adopted by the calculator on
+            /// success or failed on GetRefresh "-1".
+            std::array<uint64_t, 2> m_refreshTaskId{};
+
+            /// Client of the given slot, or nullptr when the slot is gone.
+            ZemaxDDE::ZemaxDDEClient* resolveClient(int slot) const;
+            /// Drops a queued GetRefresh of the given calculator and invalidates
+            /// its callback.
+            void abortPendingRefresh(bool nominal);
+            /// Fails the task created for the refresh phase (it has not been
+            /// adopted by the calculator yet).
+            void cancelPendingRefreshTask(int tokenIndex);
     };
 }

@@ -3,7 +3,9 @@
 #include <format>
 #include <limits>
 
+#include "dde/client.h"
 #include "dde/constants.h"
+#include "dde/lens_update.h"
 #include "dde/operation_monitor.h"
 #include "dde/utils.h"
 
@@ -11,6 +13,11 @@
 #include "logger/logger.h"
 
 namespace app::services {
+    namespace {
+        // Unique ids so cancelling the map never drops the nominal refresh.
+        constexpr const char* kMapRefreshId = "LensRefresh#map";
+        constexpr const char* kMapNominalRefreshId = "LensRefresh#mapNominal";
+    }
     SurfaceMapService::SurfaceMapService(DDEConnectionManager* connectionManager, Logger& logger)
         : m_connectionManager(connectionManager)
         , m_logger(logger)
@@ -27,11 +34,15 @@ namespace app::services {
 
     void SurfaceMapService::onClientDisconnected(int index) {
         if (m_nominalCalcSlot == index) {
+            abortPendingRefresh(true);
+            cancelPendingRefreshTask(true);
             m_nominalCalculator.cancel();
             m_nominalCalcSlot = -1;
             m_nominalSurfaceData = {};
         }
         if (m_mapCalcSlot == index) {
+            abortPendingRefresh(false);
+            cancelPendingRefreshTask(false);
             m_mapCalculator.cancel();
             m_mapTaskId = 0;
             m_currentAngleIndex = 0;
@@ -40,6 +51,25 @@ namespace app::services {
             m_mapCalcSlot = -1;
         }
         recomputeRanges();
+    }
+
+    ZemaxDDE::ZemaxDDEClient* SurfaceMapService::resolveClient(int slot) const {
+        if (!m_connectionManager || slot < 0) return nullptr;
+        DDEConnection* conn = m_connectionManager->getConnection(slot);
+        return (conn && conn->isConnected()) ? conn->client.get() : nullptr;
+    }
+
+    void SurfaceMapService::abortPendingRefresh(bool nominal) {
+        if (nominal) {
+            ++m_nominalRefreshToken;
+        } else {
+            ++m_mapRefreshToken;
+        }
+        const int slot = nominal ? m_nominalCalcSlot : m_mapCalcSlot;
+        if (!m_connectionManager || slot < 0) return;
+        DDEConnection* conn = m_connectionManager->getConnection(slot);
+        if (!conn || !conn->client) return;
+        conn->client->cancelPendingRequests(nominal ? kMapNominalRefreshId : kMapRefreshId);
     }
 
     void SurfaceMapService::startCalculation(int surface, int sampling, double angle, app::models::TaskSource source) {
@@ -69,10 +99,66 @@ namespace app::services {
             if (onNominalCalculationComplete) onNominalCalculationComplete();
         };
 
-        m_nominalCalculator.startCalculation(surface, sampling, angle, source, "", m_nominalCalcSlot);
+        // Refresh the server lens copy first; the profile starts in the callback.
+        const uint64_t token = ++m_nominalRefreshToken;
+        ZemaxDDE::ZemaxDDEClient* client = resolveClient(m_nominalCalcSlot);
+        if (!client) {
+            // Let the calculator report the failure through onFailed as before.
+            m_nominalCalculator.startCalculation(surface, sampling, angle, source, "", m_nominalCalcSlot);
+            return;
+        }
+
+        const int targetSlot = m_nominalCalcSlot;
+        // Register the task before the refresh so the phase is visible and
+        // cancellable; the calculator adopts the same id on success.
+        if (m_uiOpMonitor) {
+            m_nominalRefreshTaskId = m_uiOpMonitor->startTask(
+                source, "Nominal Profile", sampling + 2, targetSlot,
+                client->getOperationMonitor());
+        }
+
+        requestLensRefresh(*client, m_logger,
+            [this, token, targetSlot, surface, sampling, angle, source]
+            (ZemaxDDE::UpdateStatus status) {
+                if (m_nominalRefreshToken != token) return;
+                if (status == ZemaxDDE::UpdateStatus::NotUpdated) {
+                    m_logger.addLog("[IrregularityMapService] GetRefresh returned \"-1\": nominal profile aborted");
+                    if (m_uiOpMonitor && m_nominalRefreshTaskId > 0) {
+                        m_uiOpMonitor->failTask(m_nominalRefreshTaskId,
+                            "GetRefresh returned \"-1\": the lens cannot be updated");
+                        m_nominalRefreshTaskId = 0;
+                    }
+                    m_nominalCalcSlot = -1;
+                    if (onUpdateFailed) {
+                        onUpdateFailed("Zemax returned \"-1\" for GetRefresh — the lens cannot be "
+                                       "updated, so the calculation was stopped.");
+                    }
+                    return;
+                }
+                if (status == ZemaxDDE::UpdateStatus::Unknown) {
+                    m_logger.addLog("[IrregularityMapService] WARNING: GetRefresh gave no usable "
+                                    "answer; continuing with the current server lens");
+                }
+                const uint64_t taskId = m_nominalRefreshTaskId;
+                m_nominalRefreshTaskId = 0;
+                if (taskId > 0) m_nominalCalculator.adoptTask(taskId);
+                m_nominalCalculator.startCalculation(surface, sampling, angle, source, "", targetSlot);
+            },
+            client->getGetRefreshTimeoutMs(), 1, kMapNominalRefreshId);
+    }
+
+    void SurfaceMapService::cancelPendingRefreshTask(bool nominal) {
+        if (!m_uiOpMonitor) return;
+        uint64_t& taskId = nominal ? m_nominalRefreshTaskId : m_mapRefreshTaskId;
+        if (taskId > 0) {
+            m_uiOpMonitor->failTask(taskId, "Cancelled");
+            taskId = 0;
+        }
     }
 
     void SurfaceMapService::cancelCalculation() {
+        abortPendingRefresh(true);
+        cancelPendingRefreshTask(true);
         m_nominalCalculator.cancel();
         m_nominalCalcSlot = -1;
     }
@@ -105,6 +191,47 @@ namespace app::services {
 
         m_mapCalcSlot = m_connectionManager->getActiveIndex();
 
+        // Register the task before the refresh so the phase is visible and
+        // cancellable; beginMapRun() adopts the same id on success.
+        if (m_uiOpMonitor) {
+            m_mapRefreshTaskId = m_uiOpMonitor->startTask(
+                app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map",
+                plan.sections * (plan.sampling + 2), m_mapCalcSlot,
+                client->getOperationMonitor());
+        }
+
+        // Refresh the server lens copy first; the section loop starts only when
+        // the refresh did not report a model Zemax cannot update.
+        const uint64_t token = ++m_mapRefreshToken;
+        requestLensRefresh(*client, m_logger,
+            [this, token, plan, surface](ZemaxDDE::UpdateStatus status) {
+                if (m_mapRefreshToken != token) return;   // cancelled or restarted
+                if (status == ZemaxDDE::UpdateStatus::NotUpdated) {
+                    m_logger.addLog("[IrregularityMapService] GetRefresh returned \"-1\": map aborted");
+                    if (m_uiOpMonitor && m_mapRefreshTaskId > 0) {
+                        m_uiOpMonitor->failTask(m_mapRefreshTaskId,
+                            "GetRefresh returned \"-1\": the lens cannot be updated");
+                        m_mapRefreshTaskId = 0;
+                    }
+                    m_mapCalcSlot = -1;
+                    if (onUpdateFailed) {
+                        onUpdateFailed("Zemax returned \"-1\" for GetRefresh — the lens cannot be "
+                                       "updated, so the calculation was stopped.");
+                    }
+                    return;
+                }
+                if (status == ZemaxDDE::UpdateStatus::Unknown) {
+                    m_logger.addLog("[IrregularityMapService] WARNING: GetRefresh gave no usable "
+                                    "answer; continuing with the current server lens");
+                }
+                const uint64_t taskId = m_mapRefreshTaskId;
+                m_mapRefreshTaskId = 0;
+                beginMapRun(plan, surface, taskId);
+            },
+            client->getGetRefreshTimeoutMs(), 1, kMapRefreshId);
+    }
+
+    void SurfaceMapService::beginMapRun(const app::compute::MapPlan& plan, int surface, uint64_t taskId) {
         if (m_connectionManager) {
             m_mapCalculator.setSurfaceDataTimeoutMs(m_connectionManager->getGetSurfaceDataMapTimeoutMs());
             m_mapCalculator.setSagTimeoutMs(m_connectionManager->getGetSagMapTimeoutMs());
@@ -119,17 +246,17 @@ namespace app::services {
         m_currentAngleIndex = 0;
         m_centerSagRef = 0.0;
         m_totalDdeRequests = 0;
-        m_mapTaskId = 0;
+        m_mapTaskId = taskId;
         m_calcStartTime = std::chrono::steady_clock::now();
 
         m_logger.addLog(std::format("[IrregularityMapService] Starting surface map: surface {}, {} sections ({:.3f}° step, {} pts each) — estimated {} DDE requests",
             surface, m_totalAngles, plan.stepDeg, plan.sampling, plan.estimatedRequests));
 
-        if (m_uiOpMonitor) {
-            int clientSlot = m_connectionManager ? m_connectionManager->getActiveIndex() : -1;
+        if (m_uiOpMonitor && m_mapTaskId == 0) {
+            // Fallback for callers that did not pre-register a task.
             m_mapTaskId = m_uiOpMonitor->startTask(
                 app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map",
-                m_totalAngles * (m_targetSampling + 2), clientSlot);
+                m_totalAngles * (m_targetSampling + 2), m_mapCalcSlot);
         }
 
         startNextProfile();
@@ -228,6 +355,8 @@ namespace app::services {
     }
 
     void SurfaceMapService::cancelMapCalculation() {
+        abortPendingRefresh(false);
+        cancelPendingRefreshTask(false);
         if (m_mapCalculator.isCalculating()) {
             m_mapCalculator.cancel();
         } else if (m_mapTaskId > 0) {
@@ -240,6 +369,16 @@ namespace app::services {
     }
 
     bool SurfaceMapService::cancelTask(uint64_t taskId) {
+        if (taskId == 0) return false;
+        // Tasks created for the refresh phase have not reached the calculator.
+        if (m_mapRefreshTaskId == taskId) {
+            cancelMapCalculation();
+            return true;
+        }
+        if (m_nominalRefreshTaskId == taskId) {
+            cancelCalculation();
+            return true;
+        }
         if (m_mapTaskId > 0 && m_mapTaskId == taskId) {
             cancelMapCalculation();
             return true;

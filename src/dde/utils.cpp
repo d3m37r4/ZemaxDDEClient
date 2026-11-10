@@ -82,4 +82,18 @@ namespace ZemaxDDE {
             return std::format("{}m {:.3f}s", mins, secs);
         return std::format("{:.3f}s", secs);
     }
+
+    UpdateStatus parseUpdateStatus(std::string_view buffer) {
+        const auto isPad = [](char c) {
+            return c == '\0' || c == '\r' || c == '\n' || c == ' ' || c == '\t';
+        };
+        size_t begin = 0;
+        size_t end = buffer.size();
+        while (begin < end && isPad(buffer[begin])) ++begin;
+        while (end > begin && isPad(buffer[end - 1])) --end;
+        const std::string_view value = buffer.substr(begin, end - begin);
+        if (value == "0") return UpdateStatus::Updated;
+        if (value == "-1") return UpdateStatus::NotUpdated;
+        return UpdateStatus::Unknown;
+    }
 }

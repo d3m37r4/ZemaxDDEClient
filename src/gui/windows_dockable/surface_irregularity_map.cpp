@@ -315,8 +315,10 @@ namespace gui {
         ImGui::EndChild();
 
         if (m_irregularityMapService->hasData()) {
+            // The run is pinned to its start slot: check that slot, not the one
+            // that happens to be active now (F6 mid-run).
             bool calculating = m_uiOpMonitor.hasActiveTasksOnSlot(
-                m_ddeConnectionManager ? m_ddeConnectionManager->getActiveIndex() : -1,
+                m_irregularityMapService->getMapCalcSlot(),
                 TaskSource::SurfaceIrregularityMap);
 
             ImGuiUtils::SectionHeader("Analysis");

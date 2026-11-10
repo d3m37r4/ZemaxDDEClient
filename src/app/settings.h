@@ -72,6 +72,9 @@ namespace app {
         int getFieldTimeoutMs = 2000;
         int getWaveTimeoutMs = 2000;
 
+        // GetRefresh issued before reading a lens (once per user action).
+        int getRefreshTimeoutMs = 2000;
+
         // Per-request timeout overrides — Surface Profile Inspector.
         int getSurfaceDataProfileTimeoutMs = 2000;
         int getSagProfileTimeoutMs = 1000;

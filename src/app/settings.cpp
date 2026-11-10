@@ -198,6 +198,7 @@ namespace app {
             loadPerWindow("getSagProfileTimeoutMs",        dde.getSagProfileTimeoutMs,        1000);
             loadPerWindow("getSurfaceDataMapTimeoutMs",     dde.getSurfaceDataMapTimeoutMs,     2000);
             loadPerWindow("getSagMapTimeoutMs",             dde.getSagMapTimeoutMs,             1000);
+            loadPerWindow("getRefreshTimeoutMs",            dde.getRefreshTimeoutMs,            2000);
 
             // Backward compat: if legacy fields exist but new ones don't, use legacy values.
             if (d.contains("getSurfaceDataTimeoutMs") && d["getSurfaceDataTimeoutMs"].is_number_integer()) {
@@ -315,6 +316,7 @@ namespace app {
         j["dde"]["getSagProfileTimeoutMs"]         = dde.getSagProfileTimeoutMs;
         j["dde"]["getSurfaceDataMapTimeoutMs"]     = dde.getSurfaceDataMapTimeoutMs;
         j["dde"]["getSagMapTimeoutMs"]             = dde.getSagMapTimeoutMs;
+        j["dde"]["getRefreshTimeoutMs"]            = dde.getRefreshTimeoutMs;
 
         j["plot"]["showGridByDefault"] = plot.showGridByDefault;
         j["plot"]["lineWeight"]        = plot.lineWeight;

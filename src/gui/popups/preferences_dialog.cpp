@@ -364,7 +364,7 @@ namespace gui {
 
         bool changed = false;
 
-        if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7), ImGuiChildFlags_Borders)) {
+        if (ImGui::BeginChild("##perf_initdata", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 8), ImGuiChildFlags_Borders)) {
             ImGui::TextUnformatted("Optical System Info");
             ImGui::Spacing();
             changed |= inputMs("GetName",        "##t GetName",        &m_working.dde.getNameTimeoutMs);
@@ -372,6 +372,7 @@ namespace gui {
             changed |= inputMs("GetSystem",      "##t GetSystem",      &m_working.dde.getSystemTimeoutMs);
             changed |= inputMs("GetField",       "##t GetField",       &m_working.dde.getFieldTimeoutMs);
             changed |= inputMs("GetWave",        "##t GetWave",        &m_working.dde.getWaveTimeoutMs);
+            changed |= inputMs("GetRefresh",     "##t GetRefresh",     &m_working.dde.getRefreshTimeoutMs);
         }
         ImGui::EndChild();
 

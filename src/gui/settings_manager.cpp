@@ -95,6 +95,7 @@ namespace gui {
         m_ddeConnectionManager->setGetSagProfileTimeoutMs(static_cast<DWORD>(dde.getSagProfileTimeoutMs));
         m_ddeConnectionManager->setGetSurfaceDataMapTimeoutMs(static_cast<DWORD>(dde.getSurfaceDataMapTimeoutMs));
         m_ddeConnectionManager->setGetSagMapTimeoutMs(static_cast<DWORD>(dde.getSagMapTimeoutMs));
+        m_ddeConnectionManager->setGetRefreshTimeoutMs(static_cast<DWORD>(dde.getRefreshTimeoutMs));
     }
 
     void SettingsManager::applyPlot(const app::PlotSettings& plot) {
