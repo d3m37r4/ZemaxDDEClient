@@ -34,3 +34,9 @@ jobs:
     uses: ./.github/workflows/run-tests.yml
     with:
       artifact_name: binaries-${{ github.sha }}
+
+  # Builds the app with the Dear ImGui Test Engine and runs the GUI tests on
+  # Mesa llvmpipe (no GPU on the runner). Independent of build-binaries: the
+  # job builds everything itself, so it runs in parallel with run-tests.
+  gui-tests:
+    uses: ./.github/workflows/gui-tests.yml
