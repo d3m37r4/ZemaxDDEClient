@@ -30,3 +30,9 @@ dangerousTypeCast:src/gui/settings_manager.cpp
 # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 has no public symbol in the MinGW
 # headers, so the fixed SDK value (-4) is passed as a pointer.
 intToPointerCast:src/app/app_init.cpp
+
+# The --crash-test modes crash the process on purpose: the stack overflow test
+# grows the frame with alloca, the null test dereferences a null pointer. Both
+# are the intent of that function, not defects.
+allocaCalled:src/app/crash_handler.cpp
+nullPointer:src/app/crash_handler.cpp
