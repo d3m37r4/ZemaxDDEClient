@@ -241,9 +241,7 @@ void DDEConnectionManager::checkAllConnectionHealth() {
         // Sync the slot's externally-visible state with the actual client state
         // (covers asynchronous WM_DDE_ACK handshakes promoted during pump/glfw).
         ZemaxDDE::ConnectionState actual = conn.client->connectionState();
-        if (conn.connectionState != actual) {
-            conn.connectionState = actual;
-        }
+        conn.connectionState = actual;
 
         conn.client->checkConnectionHealth();
 

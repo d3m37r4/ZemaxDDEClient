@@ -132,7 +132,7 @@ namespace app {
 
     std::string getLogFolderSize() {
         const char* path = getLogFolderPath();
-        if (!path || path[0] == '\0') return "0 B";
+        if (path[0] == '\0') return "0 B";
 
         uintmax_t totalSize = 0;
         std::error_code ec;
@@ -145,7 +145,7 @@ namespace app {
 
     size_t cleanLogFolder(const std::string& skipFilePath) {
         const char* path = getLogFolderPath();
-        if (!path || path[0] == '\0') return 0;
+        if (path[0] == '\0') return 0;
 
         size_t deleted = 0;
         std::error_code ec;
