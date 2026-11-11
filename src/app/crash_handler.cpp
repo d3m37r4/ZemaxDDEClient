@@ -26,10 +26,23 @@ namespace {
     constexpr DWORD kStatusHeapCorruption = 0xC0000379;
 
     constexpr size_t kReportCapacity = 64 * 1024;
+    constexpr int kMaxModules = 192;
+    constexpr DWORD kMaxFrames = 62;
 
     std::atomic<bool> g_handling{false};
 
     const Logger* g_logger = nullptr;
+
+    struct ModuleInfo {
+        char name[MAX_PATH];
+        uintptr_t base;
+        size_t size;
+    };
+    ModuleInfo g_modules[kMaxModules];
+    int g_moduleCount = 0;
+
+    void* g_frames[kMaxFrames];
+    DWORD g_frameCount = 0;
 
     char g_report[kReportCapacity];
     size_t g_reportLength = 0;
@@ -90,9 +103,107 @@ namespace {
         }
     }
 
-    void buildReport(const char* reason, EXCEPTION_POINTERS* pointers) {
+    void collectModules() {
+        g_moduleCount = 0;
+
+        const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
+        if (snapshot == INVALID_HANDLE_VALUE) {
+            return;
+        }
+
+        MODULEENTRY32W entry{};
+        entry.dwSize = sizeof(entry);
+        if (Module32FirstW(snapshot, &entry)) {
+            do {
+                if (g_moduleCount >= kMaxModules) {
+                    break;
+                }
+                ModuleInfo& info = g_modules[g_moduleCount];
+                if (WideCharToMultiByte(CP_UTF8, 0, entry.szModule, -1, info.name, MAX_PATH, nullptr, nullptr) == 0) {
+                    info.name[0] = '\0';
+                }
+                info.base = reinterpret_cast<uintptr_t>(entry.modBaseAddr);
+                info.size = entry.modBaseSize;
+                ++g_moduleCount;
+            } while (Module32NextW(snapshot, &entry));
+        }
+        CloseHandle(snapshot);
+    }
+
+    const ModuleInfo* findModule(uintptr_t address) {
+        for (int i = 0; i < g_moduleCount; ++i) {
+            if (address >= g_modules[i].base && address < g_modules[i].base + g_modules[i].size) {
+                return &g_modules[i];
+            }
+        }
+        return nullptr;
+    }
+
+    void captureStack() {
+        g_frameCount = CaptureStackBackTrace(0, kMaxFrames, g_frames, nullptr);
+    }
+
+    void appendContext(const CONTEXT* context) {
+        if (context == nullptr) {
+            return;
+        }
+#if defined(__x86_64__)
+        appendFormat("\nCONTEXT        : RIP=0x%016llX RSP=0x%016llX RBP=0x%016llX\n",
+                     static_cast<unsigned long long>(context->Rip),
+                     static_cast<unsigned long long>(context->Rsp),
+                     static_cast<unsigned long long>(context->Rbp));
+        appendFormat("                  RAX=0x%016llX RBX=0x%016llX RCX=0x%016llX RDX=0x%016llX\n",
+                     static_cast<unsigned long long>(context->Rax),
+                     static_cast<unsigned long long>(context->Rbx),
+                     static_cast<unsigned long long>(context->Rcx),
+                     static_cast<unsigned long long>(context->Rdx));
+        appendFormat("                  RSI=0x%016llX RDI=0x%016llX R8=0x%016llX R9=0x%016llX\n",
+                     static_cast<unsigned long long>(context->Rsi),
+                     static_cast<unsigned long long>(context->Rdi),
+                     static_cast<unsigned long long>(context->R8),
+                     static_cast<unsigned long long>(context->R9));
+#else
+        appendFormat("\nCONTEXT        : EIP=0x%08lX ESP=0x%08lX EBP=0x%08lX\n",
+                     static_cast<unsigned long long>(context->Eip),
+                     static_cast<unsigned long long>(context->Esp),
+                     static_cast<unsigned long long>(context->Ebp));
+#endif
+    }
+
+    void appendModules() {
+        appendFormat("\nModules (name  base  size):\n");
+        for (int i = 0; i < g_moduleCount; ++i) {
+            appendFormat("  %-30s 0x%016llX  0x%08X\n", g_modules[i].name,
+                         static_cast<unsigned long long>(g_modules[i].base),
+                         static_cast<unsigned>(g_modules[i].size));
+        }
+    }
+
+    void appendStack() {
+        if (g_frameCount == 0) {
+            return;
+        }
+        appendFormat("\nStack (module+offset):\n");
+        for (DWORD i = 0; i < g_frameCount; ++i) {
+            const uintptr_t address = reinterpret_cast<uintptr_t>(g_frames[i]);
+            const ModuleInfo* module = findModule(address);
+            if (module != nullptr) {
+                appendFormat("  #%-2u %s + 0x%llX\n", i, module->name,
+                             static_cast<unsigned long long>(address - module->base));
+            } else {
+                appendFormat("  #%-2u 0x%016llX\n", i, static_cast<unsigned long long>(address));
+            }
+        }
+    }
+
+    void buildReport(const char* reason, EXCEPTION_POINTERS* pointers, bool includeDetails) {
         SYSTEMTIME time{};
         GetLocalTime(&time);
+
+        if (includeDetails) {
+            collectModules();
+            captureStack();
+        }
 
         appendFormat("=== ZemaxDDEClient crash report ===\n");
         appendFormat("Version : %s (build %s) commit %s\n",
@@ -107,13 +218,28 @@ namespace {
             const EXCEPTION_RECORD* record = pointers->ExceptionRecord;
             appendFormat("\nException code : 0x%08lX (%s)\n",
                          record->ExceptionCode, exceptionName(record->ExceptionCode));
-            appendFormat("Fault address  : 0x%016llX\n",
-                         static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(record->ExceptionAddress)));
+
+            const uintptr_t faultAddress = reinterpret_cast<uintptr_t>(record->ExceptionAddress);
+            const ModuleInfo* faultModule = includeDetails ? findModule(faultAddress) : nullptr;
+            if (faultModule != nullptr) {
+                appendFormat("Fault address  : 0x%016llX  (%s + 0x%llX)\n",
+                             static_cast<unsigned long long>(faultAddress), faultModule->name,
+                             static_cast<unsigned long long>(faultAddress - faultModule->base));
+            } else {
+                appendFormat("Fault address  : 0x%016llX\n", static_cast<unsigned long long>(faultAddress));
+            }
+
             if (record->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && record->NumberParameters >= 2) {
                 appendFormat("Access type    : %s\n", record->ExceptionInformation[0] != 0 ? "write" : "read");
                 appendFormat("Faulting addr  : 0x%016llX\n",
                              static_cast<unsigned long long>(record->ExceptionInformation[1]));
             }
+        }
+
+        if (includeDetails) {
+            appendContext(pointers != nullptr ? pointers->ContextRecord : nullptr);
+            appendModules();
+            appendStack();
         }
     }
 
@@ -169,7 +295,7 @@ namespace {
         }
         beginHandling();
 
-        buildReport("unhandled exception", pointers);
+        buildReport("unhandled exception", pointers, true);
         writeReportFile();
 
         // Let the system handle it: the user still gets the usual dialog.
@@ -194,7 +320,7 @@ namespace {
 
         // The stack is exhausted: keep the report minimal, the deep calls a
         // stack capture needs would fault again.
-        buildReport("stack overflow", pointers);
+        buildReport("stack overflow", pointers, false);
         writeReportFile();
 
         return EXCEPTION_CONTINUE_SEARCH;
@@ -205,7 +331,7 @@ namespace {
             beginHandling();
             // abort() does not go through std::terminate, so the terminate
             // handler never sees it. assert() failures end up here as well.
-            buildReport("abort()", nullptr);
+            buildReport("abort()", nullptr, true);
             writeReportFile();
         }
         // Hand the signal back to the CRT so the process dies as expected.
@@ -236,7 +362,7 @@ namespace {
             message[sizeof(message) - 1] = '\0';
         }
 
-        buildReport("unhandled C++ exception", nullptr);
+        buildReport("unhandled C++ exception", nullptr, true);
         appendFormat("Exception      : %s\n", message);
         writeReportFile();
 
