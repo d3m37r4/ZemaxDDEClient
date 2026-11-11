@@ -1,0 +1,32 @@
+# cppcheck suppressions for reviewed false positives.
+#
+# Syntax: <id>            suppress the id in every file
+#         <id>:<file>     suppress the id in one file
+#
+# Only add an entry after manually confirming that the finding is not a real
+# defect - otherwise a genuine bug in the same file stays hidden as well.
+
+# Vendored third-party code (src/lib) is analyzed only because our headers
+# include it. Its findings are not ours and must not be triaged or fixed.
+*:src/lib/*
+
+# Style-only checks: reviewed and deliberately not enforced. This audit targets
+# crashes and memory errors, so the remaining findings are style or
+# micro-optimization hints that would add churn without a behavioral gain.
+useStlAlgorithm
+functionStatic
+functionConst
+noExplicitConstructor
+constVariableReference
+constParameterReference
+constParameterPointer
+constVariablePointer
+
+# RegQueryValueExW requires a BYTE* for the value buffer; the pointed-to DWORD
+# is properly aligned, so the cast is safe.
+dangerousTypeCast:src/app/app_init.cpp
+dangerousTypeCast:src/gui/settings_manager.cpp
+
+# DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 has no public symbol in the MinGW
+# headers, so the fixed SDK value (-4) is passed as a pointer.
+intToPointerCast:src/app/app_init.cpp

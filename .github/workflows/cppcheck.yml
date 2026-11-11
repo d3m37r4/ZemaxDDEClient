@@ -1,0 +1,38 @@
+name: Static Analysis (cppcheck)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  cppcheck:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            mingw-w64-x86_64-cppcheck
+
+      - name: Make cppcheck.sh executable
+        run: git update-index --chmod=+x cppcheck.sh
+        shell: msys2 {0}
+
+      - name: Run cppcheck
+        run: ./cppcheck.sh --check
+        shell: msys2 {0}
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report-${{ github.sha }}
+          path: build-audit/
