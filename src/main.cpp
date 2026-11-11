@@ -5,6 +5,7 @@
 #include "logger/logger.h"
 #include "app/app.h"
 #include "app/config_path.h"
+#include "app/crash_handler.h"
 #include "gui/gui.h"
 #include "gui/dockable_windows_manager.h"
 #include "gui/layout_presets.h"
@@ -16,10 +17,19 @@
 
 namespace chrome = gui::chrome;
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
+int main(int argc, char** argv) {
+    // The crash handlers must be in place before anything else can fail.
+    app::crash::install();
+
     Logger logger;
+    app::crash::setLogSource(&logger);
 
     logger.addLog("[APP] Application started");
+
+    if (const char* crashMode = app::crash::parseTestCrashMode(argc, argv)) {
+        logger.addLog("[APP] Crash test requested: " + std::string(crashMode));
+        app::crash::triggerTestCrash(crashMode);
+    }
 
 #ifdef ZEMAX_ENABLE_TEST_ENGINE
     const app::testing::TestCliOptions testOptions = app::testing::parseTestCliOptions(argc, argv);
