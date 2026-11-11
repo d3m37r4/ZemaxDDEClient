@@ -1,6 +1,7 @@
 #include "app/crash_handler.h"
 
 #include "app/config_path.h"
+#include "logger/logger.h"
 #include "version.h"
 
 #include <windows.h>
@@ -196,7 +197,23 @@ namespace {
         }
     }
 
-    void buildReport(const char* reason, EXCEPTION_POINTERS* pointers, bool includeDetails) {
+    void appendLogTail() {
+        if (g_logger == nullptr) {
+            return;
+        }
+        appendFormat("\nLast log lines:\n");
+
+        char logBuffer[16 * 1024];
+        size_t written = 0;
+        if (!g_logger->tryCopyLogTail(logBuffer, sizeof(logBuffer), written)) {
+            appendFormat("  (unavailable: the logger mutex is held by the crashed thread)\n");
+            return;
+        }
+        appendText(logBuffer);
+    }
+
+    void buildReport(const char* reason, const char* detail,
+                     EXCEPTION_POINTERS* pointers, bool includeDetails) {
         SYSTEMTIME time{};
         GetLocalTime(&time);
 
@@ -213,6 +230,9 @@ namespace {
         appendFormat("PID/TID : %lu / %lu\n",
                      GetCurrentProcessId(), GetCurrentThreadId());
         appendFormat("Reason  : %s\n", reason);
+        if (detail != nullptr && detail[0] != '\0') {
+            appendFormat("Detail  : %s\n", detail);
+        }
 
         if (pointers != nullptr && pointers->ExceptionRecord != nullptr) {
             const EXCEPTION_RECORD* record = pointers->ExceptionRecord;
@@ -240,6 +260,7 @@ namespace {
             appendContext(pointers != nullptr ? pointers->ContextRecord : nullptr);
             appendModules();
             appendStack();
+            appendLogTail();
         }
     }
 
@@ -295,7 +316,7 @@ namespace {
         }
         beginHandling();
 
-        buildReport("unhandled exception", pointers, true);
+        buildReport("unhandled exception", nullptr, pointers, true);
         writeReportFile();
 
         // Let the system handle it: the user still gets the usual dialog.
@@ -320,7 +341,7 @@ namespace {
 
         // The stack is exhausted: keep the report minimal, the deep calls a
         // stack capture needs would fault again.
-        buildReport("stack overflow", pointers, false);
+        buildReport("stack overflow", nullptr, pointers, false);
         writeReportFile();
 
         return EXCEPTION_CONTINUE_SEARCH;
@@ -331,7 +352,7 @@ namespace {
             beginHandling();
             // abort() does not go through std::terminate, so the terminate
             // handler never sees it. assert() failures end up here as well.
-            buildReport("abort()", nullptr, true);
+            buildReport("abort()", nullptr, nullptr, true);
             writeReportFile();
         }
         // Hand the signal back to the CRT so the process dies as expected.
@@ -362,8 +383,7 @@ namespace {
             message[sizeof(message) - 1] = '\0';
         }
 
-        buildReport("unhandled C++ exception", nullptr, true);
-        appendFormat("Exception      : %s\n", message);
+        buildReport("unhandled C++ exception", message, nullptr, true);
         writeReportFile();
 
         std::abort();

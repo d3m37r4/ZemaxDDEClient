@@ -25,6 +25,12 @@ class Logger {
             return m_revision.load(std::memory_order_relaxed);
         }
 
+        /// Copies the tail of the buffered entries into @p buffer without
+        /// allocating and without blocking. The crash handler uses it: a
+        /// crashed process may hold the mutex, and a blocking lock there would
+        /// deadlock the report. Returns false when the mutex is held.
+        [[nodiscard]] bool tryCopyLogTail(char* buffer, size_t capacity, size_t& written) const;
+
         void setEnabled(bool enabled) noexcept { m_enabled = enabled; }
         void setMaxFileSize(size_t bytes) noexcept { m_maxFileSize = bytes; }
         [[nodiscard]] std::string getCurrentLogPath() const;

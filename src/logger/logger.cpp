@@ -1,4 +1,5 @@
 #include <ctime>
+#include <cstring>
 #include <filesystem>
 #include <format>
 
@@ -142,6 +143,41 @@ void Logger::clearLogs() {
 std::vector<std::string> Logger::getLogs() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return {m_logs.begin(), m_logs.end()};
+}
+
+bool Logger::tryCopyLogTail(char* buffer, size_t capacity, size_t& written) const {
+    written = 0;
+    if (buffer == nullptr || capacity == 0) {
+        return false;
+    }
+
+    std::unique_lock<std::mutex> lock(m_mutex, std::try_to_lock);
+    if (!lock.owns_lock()) {
+        return false;
+    }
+
+    // Walk from the end so that the most recent lines survive the capacity
+    // limit, then copy them in chronological order.
+    size_t first = m_logs.size();
+    size_t required = 0;
+    while (first > 0) {
+        const size_t entrySize = m_logs[first - 1].size() + 1;
+        if (required + entrySize > capacity) {
+            break;
+        }
+        required += entrySize;
+        --first;
+    }
+
+    size_t used = 0;
+    for (size_t i = first; i < m_logs.size(); ++i) {
+        const std::string& entry = m_logs[i];
+        std::memcpy(buffer + used, entry.data(), entry.size());
+        used += entry.size();
+        buffer[used++] = '\n';
+    }
+    written = used;
+    return true;
 }
 
 void Logger::addLog(std::string_view message) {
