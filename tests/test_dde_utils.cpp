@@ -26,5 +26,46 @@ TEST(UpdateStatus, ParsesUnknown) {
     EXPECT_EQ(parseUpdateStatus("error"), UpdateStatus::Unknown);
 }
 
+TEST(Ack, StatuslessAcknowledgementIsUnspecified) {
+    // Zemax 13 answers with an empty packed block, so the status word reads
+    // back as zero. Such an acknowledgement says nothing and must never be
+    // read as a rejection.
+    EXPECT_EQ(classifyAck(0, false), AckVerdict::Unspecified);
+}
+
+TEST(Ack, AckFlagIsAccepted) {
+    EXPECT_EQ(classifyAck(kDdeAckFAck, true), AckVerdict::Accepted);
+}
+
+TEST(Ack, BusyFlagIsBusy) {
+    EXPECT_EQ(classifyAck(kDdeAckFBusy, true), AckVerdict::Busy);
+}
+
+TEST(Ack, ReadableEmptyStatusIsRejected) {
+    EXPECT_EQ(classifyAck(0, true), AckVerdict::Rejected);
+}
+
+TEST(Ack, AckWinsOverBusy) {
+    EXPECT_EQ(classifyAck(kDdeAckFAck | kDdeAckFBusy, true), AckVerdict::Accepted);
+}
+
+TEST(ItemName, MatchesTheSentCommand) {
+    EXPECT_TRUE(itemNameMatches("GetSag,1,0.5,0.5", "GetSag,1,0.5,0.5"));
+    EXPECT_FALSE(itemNameMatches("GetSag,1,0.5,0.5", "GetSag,1,0.6,0.5"));
+    EXPECT_FALSE(itemNameMatches("GetSag,1,0.5,0.5", "GetSag,1,0.5,0.5 "));
+}
+
+TEST(ItemName, EmptyNamesNeverMatch) {
+    // An unreadable item name must not be mistaken for a match, and an empty
+    // command is never a valid item.
+    EXPECT_FALSE(itemNameMatches("", "GetName"));
+    EXPECT_FALSE(itemNameMatches("GetName", ""));
+    EXPECT_FALSE(itemNameMatches("", ""));
+}
+
+TEST(AtomName, InvalidAtomYieldsEmptyName) {
+    EXPECT_EQ(atomName(0), "");
+}
+
 } // namespace
 } // namespace ZemaxDDE
