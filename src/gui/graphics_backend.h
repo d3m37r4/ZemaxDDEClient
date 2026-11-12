@@ -63,5 +63,16 @@ namespace gui {
             /// style + DWM rounding). Stored as void* per the header rule about
             /// not including windows.h here.
             std::vector<void*> m_preparedViewports;
+            /// Last logged chrome state per secondary viewport. Diagnostics:
+            /// the DWM corner preference and whether the window straddles two
+            /// displays both change what the user sees, and neither is visible
+            /// from the outside.
+            struct ChromeState {
+                void* hwnd = nullptr;
+                void* monitor = nullptr;
+                int cornerPreference = -1;
+                bool spansMonitors = false;
+            };
+            std::vector<ChromeState> m_chromeStates;
     };
 }
