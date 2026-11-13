@@ -7,7 +7,6 @@
 #include "gui/plot_image_exporter.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
-#include "logger/logger.h"
 #include "lib/implot3d/implot3d.h"
 
 namespace {
@@ -77,22 +76,6 @@ namespace gui {
         const float sagMax = ranges.sagValid ? ranges.sagMax * static_cast<float>(scaleZ) : 1.0f;
         float sagRange = sagMax - sagMin;
         if (sagRange < 1e-12f) sagRange = 1.0f;
-
-        // Diagnostic: a zero semi-diameter collapses every section onto the Z
-        // axis (rStep == 0), so the map looks empty instead of broken.
-        {
-            static int lastProfiles = -1;
-            static double lastSemiDiameter = -1.0;
-            if (numProfiles != lastProfiles || semiDiameter != lastSemiDiameter) {
-                lastProfiles = numProfiles;
-                lastSemiDiameter = semiDiameter;
-                m_logger.addLog(std::format(
-                    "[GUI] 3D surface map: profiles={} numRadii={} semiDiameter={} "
-                    "rStep={} scale=({},{},{}) sagRange=({},{})",
-                    numProfiles, numRadii, semiDiameter, rStep,
-                    scaleX, scaleY, scaleZ, sagMin, sagMax));
-            }
-        }
 
         const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
@@ -209,23 +192,6 @@ namespace gui {
         const float devMax = ranges.devValid ? ranges.devMax * static_cast<float>(scaleZ) : 1.0f;
         float devRange = devMax - devMin;
         if (devRange < 1e-12f) devRange = 1.0f;
-
-        // Diagnostic: a zero semi-diameter collapses every section onto the Z
-        // axis (rStep == 0), so the map looks empty instead of broken. The
-        // semi-diameter comes from one profile only, hence the log.
-        {
-            static int lastProfiles = -1;
-            static double lastSemiDiameter = -1.0;
-            if (numProfiles != lastProfiles || semiDiameter != lastSemiDiameter) {
-                lastProfiles = numProfiles;
-                lastSemiDiameter = semiDiameter;
-                m_logger.addLog(std::format(
-                    "[GUI] 3D deviation map: profiles={} numRadii={} semiDiameter={} "
-                    "rStep={} scale=({},{},{}) devRange=({},{})",
-                    numProfiles, numRadii, semiDiameter, rStep,
-                    scaleX, scaleY, scaleZ, devMin, devMax));
-            }
-        }
 
         const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 

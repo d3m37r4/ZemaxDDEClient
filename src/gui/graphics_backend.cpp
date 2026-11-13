@@ -54,28 +54,6 @@ namespace gui {
             ::FreeLibrary(dwmApi);
         }
 
-        // Reads back a DWM attribute. Used by the secondary-window diagnostics:
-        // the corner preference the OS actually applies is not observable
-        // from the outside.
-        bool dwmGetWindowAttribute(HWND hwnd, DWORD attribute,
-            void* value, DWORD size) {
-            HMODULE dwmApi = ::LoadLibraryW(L"dwmapi.dll");
-            if (!dwmApi) {
-                return false;
-            }
-            using DwmGetWindowAttributeFunc = HRESULT (WINAPI*)(
-                HWND, DWORD, PVOID, DWORD);
-            auto* dwmFunc = reinterpret_cast<DwmGetWindowAttributeFunc>(
-                reinterpret_cast<void*>(::GetProcAddress(dwmApi,
-                    "DwmGetWindowAttribute")));
-            bool read = false;
-            if (dwmFunc) {
-                read = SUCCEEDED(dwmFunc(hwnd, attribute, value, size));
-            }
-            ::FreeLibrary(dwmApi);
-            return read;
-        }
-
         // Renderer_RenderWindow replacement for secondary viewports. The
         // vendored backend (imgui_impl_opengl3.cpp:1207) clears secondary
         // framebuffer with opaque black; a rounded window drawn there then
@@ -337,60 +315,6 @@ namespace gui {
                 ::SetWindowLongPtrW(hwnd, GWL_EXSTYLE,
                     (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
             }
-            // Diagnostic: what the OS actually applies to this window. Three
-            // things decide whether the user sees rounded corners - the corner
-            // preference we set, whether the window straddles two displays (DWM
-            // does not round those) and the monitor it sits on. None of it is
-            // observable from the outside, so log it whenever it changes.
-            {
-                int cornerPreference = -1;
-                dwmGetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
-                    &cornerPreference, sizeof(cornerPreference));
-                RECT windowRect{};
-                ::GetWindowRect(hwnd, &windowRect);
-                const bool spansMonitors =
-                    ::MonitorFromRect(&windowRect, MONITOR_DEFAULTTONULL) != nullptr;
-                const HMONITOR monitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
-                // The DPI scale of that monitor as the platform backend sees it.
-                float dpiScale = 0.0f;
-                for (const ImGuiPlatformMonitor& known : platformIO.Monitors) {
-                    if (static_cast<HMONITOR>(known.PlatformHandle) == monitor) {
-                        dpiScale = known.DpiScale;
-                        break;
-                    }
-                }
-
-                ChromeState* state = nullptr;
-                for (auto& entry : m_chromeStates) {
-                    if (entry.hwnd == hwnd) {
-                        state = &entry;
-                        break;
-                    }
-                }
-                bool changed = false;
-                if (state == nullptr) {
-                    m_chromeStates.push_back({hwnd, reinterpret_cast<void*>(monitor),
-                                              cornerPreference, spansMonitors});
-                    changed = true;
-                } else if (state->monitor != reinterpret_cast<void*>(monitor) ||
-                           state->cornerPreference != cornerPreference ||
-                           state->spansMonitors != spansMonitors) {
-                    state->monitor = reinterpret_cast<void*>(monitor);
-                    state->cornerPreference = cornerPreference;
-                    state->spansMonitors = spansMonitors;
-                    changed = true;
-                }
-                if (changed && m_logger != nullptr) {
-                    m_logger->addLog(std::format(
-                        "[GUI] Secondary window {:#010x}: monitor={:#010x} dpiScale={:.2f} "
-                        "cornerPreference={} spansMonitors={} rect=({},{},{},{})",
-                        reinterpret_cast<uintptr_t>(hwnd),
-                        reinterpret_cast<uintptr_t>(monitor), dpiScale,
-                        cornerPreference, spansMonitors ? 1 : 0,
-                        windowRect.left, windowRect.top,
-                        windowRect.right, windowRect.bottom));
-                }
-            }
             // DWM rounding is otherwise applied only on ownership transitions;
             // a modal viewport may never transition (it is created unowned), so
             // prepare each window once on first sight.
@@ -426,8 +350,6 @@ namespace gui {
         // the OS, so a stale entry could skip the polish for a new window).
         std::erase_if(m_preparedViewports,
                       [](void* entry) { return !::IsWindow(static_cast<HWND>(entry)); });
-        std::erase_if(m_chromeStates,
-                      [](const ChromeState& entry) { return !::IsWindow(static_cast<HWND>(entry.hwnd)); });
 
         const HWND foreground = ::GetForegroundWindow();
         // Raise-all trigger (variant "external focus only"): react when the
