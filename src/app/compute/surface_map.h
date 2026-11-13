@@ -60,6 +60,15 @@ namespace app::compute {
     /// the Z axis, so the widest section wins.
     float maxSemiDiameter(const std::vector<app::models::SurfaceData>& profiles);
 
+    /// Stride for thinning the sections a map draws.
+    ///
+    /// A precise map holds hundreds of thousands of sections and every drawn
+    /// section costs several plot items. The items are what floods ImPlot3D, so
+    /// the budget counts items and not sections - counting sections left the
+    /// thinning switched off exactly when the map grew. Returns 1 when
+    /// everything fits.
+    int drawnProfileStride(int numProfiles, int itemsPerProfile, int maxItems);
+
     class SurfaceMap {
         public:
             std::optional<app::models::MaxPVResult> findMaxPVSection(

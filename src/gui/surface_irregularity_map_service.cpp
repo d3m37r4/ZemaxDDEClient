@@ -5,6 +5,7 @@
 #include "surface_irregularity_map_service.h"
 #include "gui/imgui_utils.h"
 #include "gui/plot_image_exporter.h"
+#include "app/compute/surface_map.h"
 #include "gui/settings_manager.h"
 #include "gui/utils.h"
 #include "lib/implot3d/implot3d.h"
@@ -106,6 +107,17 @@ namespace gui {
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
             constexpr int SEGMENT_SIZE = 3;
+            const int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
+            // A precise map (thousands of sections) submits hundreds of
+            // thousands of plot items per frame and overruns the 16-bit
+            // ImDrawIdx range. Thin the drawn set by an item budget - the
+            // items are what floods ImPlot3D, not the sections, and counting
+            // sections left the thinning off exactly when the map grew. The
+            // worst section always stays so the highlight never disappears.
+            // The underlying data keeps its full resolution.
+            constexpr int kMaxDrawnItems = 1200;
+            const int stride = app::compute::drawnProfileStride(
+                numProfiles, 2 * numSegments, kMaxDrawnItems);
             std::vector<float> xBuf(static_cast<size_t>(numRadii));
             std::vector<float> yBuf(static_cast<size_t>(numRadii));
             std::vector<float> zBuf(static_cast<size_t>(numRadii));
@@ -118,13 +130,6 @@ namespace gui {
 
                 float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
                 bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
-                // A precise map (thousands of sections) submits hundreds of
-                // thousands of plot items per frame and overruns the 16-bit
-                // ImDrawIdx range. Draw a thinned set; the worst section always
-                // stays so the highlight never disappears. The underlying data
-                // keeps its full resolution.
-                constexpr int kMaxDrawnProfiles = 360;
-                const int stride = std::max(1, numProfiles / kMaxDrawnProfiles);
                 if (!isWorst && (profileIdx % stride) != 0) {
                     continue;
                 }
@@ -147,7 +152,6 @@ namespace gui {
                     snprintf(worstLabel, sizeof(worstLabel), "##sw%d", j);
                     ImPlot3D::PlotLine(worstLabel, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
                 } else {
-                    int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
                     for (int seg = 0; seg < numSegments; ++seg) {
                         int start = seg * SEGMENT_SIZE;
                         int end = std::min(start + SEGMENT_SIZE + 1, numRadii);
@@ -157,10 +161,11 @@ namespace gui {
                         int midIdx = start + len / 2;
                         float t = (zBuf[midIdx] - sagMin) / sagRange;
                         ImVec4 color = ImPlot3D::SampleColormap(t);
+                        color.w = 1.0f;   // the colormap must not fade the sections out
 
                         ImPlot3DSpec spec;
                         spec.LineColor = color;
-                        spec.LineWeight = 1.5f;
+                        spec.LineWeight = 2.0f;
                         char segLabel[32];
                         snprintf(segLabel, sizeof(segLabel), "##sg%d_%d", j, seg);
                         ImPlot3D::PlotLine(segLabel, xBuf.data() + start, yBuf.data() + start, zBuf.data() + start, len, spec);
@@ -227,6 +232,13 @@ namespace gui {
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 
             constexpr int SEGMENT_SIZE = 3;
+            const int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
+            // Same thinning as the surface plot: the item budget is what keeps
+            // ImPlot3D from being flooded every frame. The worst section is
+            // always kept so its highlight never disappears.
+            constexpr int kMaxDrawnItems = 1200;
+            const int stride = app::compute::drawnProfileStride(
+                numProfiles, 2 * numSegments, kMaxDrawnItems);
             std::vector<float> xBuf(static_cast<size_t>(numRadii));
             std::vector<float> yBuf(static_cast<size_t>(numRadii));
             std::vector<float> zBuf(static_cast<size_t>(numRadii));
@@ -239,11 +251,6 @@ namespace gui {
 
                 float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
                 bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
-                // Same thinning as the surface plot: a precise map would flood
-                // ImPlot3D with plot items every frame. The worst section is
-                // always kept so its highlight never disappears.
-                constexpr int kMaxDrawnProfiles = 360;
-                const int stride = std::max(1, numProfiles / kMaxDrawnProfiles);
                 if (!isWorst && (profileIdx % stride) != 0) {
                     continue;
                 }
@@ -271,7 +278,6 @@ namespace gui {
                     snprintf(worstLabel, sizeof(worstLabel), "##dw%d", j);
                     ImPlot3D::PlotLine(worstLabel, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
                 } else {
-                    int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
                     for (int seg = 0; seg < numSegments; ++seg) {
                         int start = seg * SEGMENT_SIZE;
                         int end = std::min(start + SEGMENT_SIZE + 1, numRadii);
@@ -281,10 +287,11 @@ namespace gui {
                         int midIdx = start + len / 2;
                         float t = (zBuf[midIdx] - devMin) / devRange;
                         ImVec4 color = ImPlot3D::SampleColormap(t);
+                        color.w = 1.0f;   // the colormap must not fade the sections out
 
                         ImPlot3DSpec spec;
                         spec.LineColor = color;
-                        spec.LineWeight = 1.5f;
+                        spec.LineWeight = 2.0f;
                         char segLabel[32];
                         snprintf(segLabel, sizeof(segLabel), "##dg%d_%d", j, seg);
                         ImPlot3D::PlotLine(segLabel, xBuf.data() + start, yBuf.data() + start, zBuf.data() + start, len, spec);

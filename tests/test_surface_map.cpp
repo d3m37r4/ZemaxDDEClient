@@ -183,5 +183,24 @@ TEST(SemiDiameter, NegativeRadiusIsIgnored) {
     EXPECT_FLOAT_EQ(maxSemiDiameter(profiles), 3.0f);
 }
 
+TEST(ProfileStride, KeepsEverythingWhenItFitsTheBudget) {
+    EXPECT_EQ(drawnProfileStride(10, 12, 1200), 1);
+    EXPECT_EQ(drawnProfileStride(100, 12, 1200), 1);
+}
+
+TEST(ProfileStride, ThinsByTheItemBudget) {
+    // 180 sections of 12 items each do not fit into 1200 items.
+    EXPECT_EQ(drawnProfileStride(180, 12, 1200), 2);
+    EXPECT_EQ(drawnProfileStride(180000, 12, 1200), 1800);
+}
+
+TEST(ProfileStride, NeverZeroAndNeverDropsEverything) {
+    EXPECT_EQ(drawnProfileStride(0, 12, 1200), 1);
+    EXPECT_EQ(drawnProfileStride(180, 0, 1200), 1);
+    EXPECT_EQ(drawnProfileStride(180, 12, 0), 1);
+    // A budget below one section still leaves one section drawn.
+    EXPECT_EQ(drawnProfileStride(5, 12, 4), 5);
+}
+
 } // namespace
 } // namespace app::compute

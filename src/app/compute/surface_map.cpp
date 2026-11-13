@@ -92,4 +92,12 @@ namespace app::compute {
         return widest;
     }
 
+    int drawnProfileStride(int numProfiles, int itemsPerProfile, int maxItems) {
+        if (numProfiles <= 0 || itemsPerProfile <= 0 || maxItems <= 0) {
+            return 1;
+        }
+        const int maxProfiles = std::max(1, maxItems / itemsPerProfile);
+        return std::max(1, (numProfiles + maxProfiles - 1) / maxProfiles);
+    }
+
 }
