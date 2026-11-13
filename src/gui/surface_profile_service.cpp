@@ -100,7 +100,8 @@ namespace gui {
     static constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
     void SurfaceProfileService::renderToolbar(app::services::AxisUnits& units, bool is3D,
-                                               int* colormapIdx, bool* showWorst, float* worstColor) {
+                                               int* colormapIdx, bool* showWorst, float* worstColor,
+                                               int* renderMode) {
         if (!ImGui::BeginMenuBar()) return;
 
         if (ImGui::BeginMenu(ICON_FA_GEARS " Settings")) {
@@ -127,6 +128,19 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::ColorEdit3("##WorstColor", worstColor,
                     ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+            }
+
+            if (is3D && renderMode) {
+                // How the 3D map draws its sections. The modes are compared
+                // side by side, so the choice lives in the window itself.
+                ImGui::Separator();
+                static const char* kRenderModes[] = { "Profiles", "Wireframe" };
+                ImGui::TextUnformatted("Rendering");
+                ImGui::SameLine(ImGui::GetFontSize() * 6.0f);
+                int mode = *renderMode;
+                if (ImGui::Combo("##RenderMode", &mode, kRenderModes, IM_ARRAYSIZE(kRenderModes))) {
+                    *renderMode = mode;
+                }
             }
 
             ImGui::EndMenu();

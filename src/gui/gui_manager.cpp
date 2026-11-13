@@ -285,7 +285,8 @@ void GuiManager::render() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapSurface,
                         &mapService->m_windowState.highlightWorstSurface,
-                        mapService->m_windowState.worstColorSurface);
+                        mapService->m_windowState.worstColorSurface,
+                        &mapService->m_windowState.renderMode);
                     mapService->renderSurfacePlotLines(ImVec2(-1, -1));
                 });
             } else {
@@ -302,7 +303,8 @@ void GuiManager::render() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapDeviation,
                         &mapService->m_windowState.highlightWorstDeviation,
-                        mapService->m_windowState.worstColorDeviation);
+                        mapService->m_windowState.worstColorDeviation,
+                        &mapService->m_windowState.renderMode);
                     mapService->renderDeviationSurfacePlotLines(ImVec2(-1, -1));
                 });
             } else {

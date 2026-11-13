@@ -457,4 +457,12 @@ namespace app::services {
             }
         }
     }
+
+    const char* mapRenderModeName(MapRenderMode mode) {
+        switch (mode) {
+            case MapRenderMode::Wireframe: return "Wireframe";
+            case MapRenderMode::Profiles:  return "Profiles";
+        }
+        return "Profiles";
+    }
 }

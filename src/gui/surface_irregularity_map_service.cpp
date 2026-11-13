@@ -51,6 +51,104 @@ namespace {
     }
 
     constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
+
+    // Wireframe rendering: rings (constant radius) and spokes (constant angle)
+    // instead of the colour-banded profile segments. Both maps share it - the
+    // surface map uses the sag, the deviation map the difference to the
+    // nominal surface.
+    void drawWireframe(int numRadii, int numAngles, int numProfiles,
+                       double rStep, int centerIdx, double angleStepDeg,
+                       double scaleX, double scaleY,
+                       float valueMin, float valueRange,
+                       const std::vector<app::models::SurfaceData>& profiles,
+                       const app::models::SurfaceData* nominal,
+                       float worstAngle, bool highlightWorst, const float* worstColor) {
+        std::vector<float> xBuf(static_cast<size_t>(numRadii));
+        std::vector<float> yBuf(static_cast<size_t>(numRadii));
+        std::vector<float> zBuf(static_cast<size_t>(numRadii));
+        std::vector<float> ringX;
+        std::vector<float> ringY;
+        std::vector<float> ringZ;
+
+        // One point of the map: the radius runs from the centre outwards, the
+        // angle is fixed.
+        const auto pointAt = [&](int angleIndex, int radiusIndex, float& x, float& y, float& z) {
+            const int profileIdx = std::min(angleIndex / 2, numProfiles - 1);
+            const bool positiveHalf = (angleIndex % 2 == 0);
+            double angleRad = profileIdx * std::numbers::pi / numProfiles;
+            if (!positiveHalf) angleRad += std::numbers::pi;
+            const double r = radiusIndex * rStep;
+            x = static_cast<float>(r * std::cos(angleRad) * scaleX);
+            y = static_cast<float>(r * std::sin(angleRad) * scaleY);
+            const int count = static_cast<int>(profiles[profileIdx].sagDataPoints.size());
+            int srcIdx = positiveHalf ? centerIdx + radiusIndex : centerIdx - radiusIndex;
+            srcIdx = std::max(0, std::min(count - 1, srcIdx));
+            float value = static_cast<float>(profiles[profileIdx].sagDataPoints[srcIdx].sag);
+            if (nominal != nullptr && srcIdx < static_cast<int>(nominal->sagDataPoints.size())) {
+                value -= static_cast<float>(nominal->sagDataPoints[srcIdx].sag);
+            }
+            z = value;
+        };
+
+        // Spokes: one polyline per angle.
+        for (int j = 0; j < numAngles; ++j) {
+            for (int i = 0; i < numRadii; ++i) {
+                pointAt(j, i, xBuf[i], yBuf[i], zBuf[i]);
+            }
+            const int profileIdx = std::min(j / 2, numProfiles - 1);
+            const float profileAngle = static_cast<float>(profileIdx * angleStepDeg);
+            const bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+
+            ImPlot3DSpec spec;
+            if (isWorst && highlightWorst) {
+                spec.LineColor = ImVec4(worstColor[0], worstColor[1], worstColor[2], 1.0f);
+                spec.LineWeight = 3.0f;
+            } else {
+                const float t = (zBuf[numRadii / 2] - valueMin) / valueRange;
+                ImVec4 color = ImPlot3D::SampleColormap(t);
+                color.w = 1.0f;
+                spec.LineColor = color;
+                spec.LineWeight = 2.0f;
+            }
+            char label[16];
+            snprintf(label, sizeof(label), "##wsp%d", j);
+            ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
+        }
+
+        // Rings: one polyline per radius, through every angle. The positive
+        // halves run forward and the negative halves back, so the polyline
+        // closes into a circle instead of zig-zagging across the centre.
+        const int ringStep = std::max(1, numRadii / 12);
+        for (int i = ringStep; i < numRadii; i += ringStep) {
+            ringX.clear();
+            ringY.clear();
+            ringZ.clear();
+            for (int j = 0; j < numAngles; j += 2) {
+                float x = 0.0f, y = 0.0f, z = 0.0f;
+                pointAt(j, i, x, y, z);
+                ringX.push_back(x);
+                ringY.push_back(y);
+                ringZ.push_back(z);
+            }
+            for (int j = numAngles - 1; j >= 1; j -= 2) {
+                float x = 0.0f, y = 0.0f, z = 0.0f;
+                pointAt(j, i, x, y, z);
+                ringX.push_back(x);
+                ringY.push_back(y);
+                ringZ.push_back(z);
+            }
+            const float t = (ringZ[ringZ.size() / 2] - valueMin) / valueRange;
+            ImVec4 color = ImPlot3D::SampleColormap(t);
+            color.w = 1.0f;
+            ImPlot3DSpec spec;
+            spec.LineColor = color;
+            spec.LineWeight = 1.0f;
+            char label[16];
+            snprintf(label, sizeof(label), "##wrg%d", i);
+            ImPlot3D::PlotLine(label, ringX.data(), ringY.data(), ringZ.data(),
+                               static_cast<int>(ringX.size()), spec);
+        }
+    }
 }
 
 namespace gui {
@@ -106,6 +204,16 @@ namespace gui {
             }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
 
+            const bool wireframe = m_windowState.renderMode ==
+                static_cast<int>(app::services::MapRenderMode::Wireframe);
+            if (wireframe) {
+                drawWireframe(numRadii, numAngles, numProfiles, rStep, centerIdx,
+                              getAngleStepDeg(), scaleX, scaleY, sagMin, sagRange,
+                              getProfiles(), nullptr, worstAngle,
+                              m_windowState.highlightWorstSurface,
+                              m_windowState.worstColorSurface);
+            }
+
             constexpr int SEGMENT_SIZE = 3;
             const int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
             // A precise map (thousands of sections) submits hundreds of
@@ -122,7 +230,7 @@ namespace gui {
             std::vector<float> yBuf(static_cast<size_t>(numRadii));
             std::vector<float> zBuf(static_cast<size_t>(numRadii));
 
-            for (int j = 0; j < numAngles; ++j) {
+            for (int j = 0; j < numAngles && !wireframe; ++j) {
                 int profileIdx = std::min(j / 2, numProfiles - 1);
                 bool positiveHalf = (j % 2 == 0);
                 double angleRad = profileIdx * std::numbers::pi / numProfiles;
@@ -231,6 +339,16 @@ namespace gui {
             }
             ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
 
+            const bool wireframe = m_windowState.renderMode ==
+                static_cast<int>(app::services::MapRenderMode::Wireframe);
+            if (wireframe) {
+                drawWireframe(numRadii, numAngles, numProfiles, rStep, centerIdx,
+                              getAngleStepDeg(), scaleX, scaleY, devMin, devRange,
+                              getProfiles(), &m_nominalSurfaceData, worstAngle,
+                              m_windowState.highlightWorstDeviation,
+                              m_windowState.worstColorDeviation);
+            }
+
             constexpr int SEGMENT_SIZE = 3;
             const int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
             // Same thinning as the surface plot: the item budget is what keeps
@@ -243,7 +361,7 @@ namespace gui {
             std::vector<float> yBuf(static_cast<size_t>(numRadii));
             std::vector<float> zBuf(static_cast<size_t>(numRadii));
 
-            for (int j = 0; j < numAngles; ++j) {
+            for (int j = 0; j < numAngles && !wireframe; ++j) {
                 int profileIdx = std::min(j / 2, numProfiles - 1);
                 bool positiveHalf = (j % 2 == 0);
                 double angleRad = profileIdx * std::numbers::pi / numProfiles;

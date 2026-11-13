@@ -21,6 +21,15 @@ namespace app::services {
     // The guard rails of a surface map (step and sampling limits, request budget)
     // live in app::compute::surface_map.h — the service and the UI share them.
 
+    /// How the 3D map draws its sections.
+    enum class MapRenderMode {
+        Profiles = 0,   ///< radial profiles, split into colour-coded segments
+        Wireframe = 1,  ///< rings (constant radius) and spokes (constant angle)
+    };
+
+    /// Display name of a render mode (Settings menu of the map window).
+    const char* mapRenderModeName(MapRenderMode mode);
+
     struct MapWindowState {
         int nominalSurfaceIndex = 0;
         int nominalSampling = 65;
@@ -32,6 +41,8 @@ namespace app::services {
 
         int selectedColormapSurface = 0;
         int selectedColormapDeviation = 0;
+        /// Which way the 3D map draws its sections (MapRenderMode values).
+        int renderMode = 0;
 
         bool highlightWorstSurface = true;
         bool highlightWorstDeviation = true;
