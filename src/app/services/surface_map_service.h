@@ -97,6 +97,9 @@ namespace app::services {
                 bool devValid = false;
                 float devMin = 0.0f;
                 float devMax = 0.0f;
+                /// Radius of the map sections: the widest semi-diameter among
+                /// them. Zero means the data carries no radius at all.
+                float semiDiameter = 0.0f;
             };
             [[nodiscard]] const DataRanges& dataRanges() const { return m_ranges; }
             std::optional<MaxPVResult> findMaxPVSection() const;

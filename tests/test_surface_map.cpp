@@ -164,5 +164,24 @@ TEST(MapPlan, RejectsStepAboveHalfTurn) {
     EXPECT_TRUE(plan.adjusted);
 }
 
+TEST(SemiDiameter, TakesTheWidestSection) {
+    std::vector<app::models::SurfaceData> profiles(3);
+    profiles[0].semiDiameter = 0.0;   // a section without a radius
+    profiles[1].semiDiameter = 5.5;
+    profiles[2].semiDiameter = 4.25;
+    EXPECT_FLOAT_EQ(maxSemiDiameter(profiles), 5.5f);
+}
+
+TEST(SemiDiameter, NoProfilesMeansNoRadius) {
+    EXPECT_FLOAT_EQ(maxSemiDiameter({}), 0.0f);
+}
+
+TEST(SemiDiameter, NegativeRadiusIsIgnored) {
+    std::vector<app::models::SurfaceData> profiles(2);
+    profiles[0].semiDiameter = -1.0;
+    profiles[1].semiDiameter = 3.0;
+    EXPECT_FLOAT_EQ(maxSemiDiameter(profiles), 3.0f);
+}
+
 } // namespace
 } // namespace app::compute

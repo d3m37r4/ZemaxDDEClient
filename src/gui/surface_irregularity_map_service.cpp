@@ -59,8 +59,16 @@ namespace gui {
         int numRadii = (getTargetSampling() + 1) / 2;
         int numAngles = getTotalAngles() * 2;
         int numProfiles = static_cast<int>(getProfiles().size());
-        double semiDiameter = getProfiles()[0].semiDiameter;
+        // Cached extents: recomputed only when the data changes instead of
+        // walking every point of every section on every frame.
+        const auto& ranges = dataRanges();
+        double semiDiameter = ranges.semiDiameter;
         double rStep = semiDiameter / (numRadii - 1);
+        if (!(rStep > 0.0)) {
+            // No radius in the data: every section would collapse onto the Z
+            // axis, so there is nothing meaningful to draw.
+            return;
+        }
         int centerIdx = (getTargetSampling() - 1) / 2;
 
         float worstAngle = getMaxPVResult().has_value() ? static_cast<float>(getMaxPVResult()->angle) : -1.0f;
@@ -69,9 +77,6 @@ namespace gui {
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
         const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
 
-        // Cached extents: recomputed only when the data changes instead of
-        // walking every point of every section on every frame.
-        const auto& ranges = dataRanges();
         const float sagMin = ranges.sagValid ? ranges.sagMin * static_cast<float>(scaleZ) : 0.0f;
         const float sagMax = ranges.sagValid ? ranges.sagMax * static_cast<float>(scaleZ) : 1.0f;
         float sagRange = sagMax - sagMin;
@@ -175,8 +180,16 @@ namespace gui {
         int numRadii = (getTargetSampling() + 1) / 2;
         int numAngles = getTotalAngles() * 2;
         int numProfiles = static_cast<int>(getProfiles().size());
-        double semiDiameter = getProfiles()[0].semiDiameter;
+        // Cached deviation extents: recomputed only when the data changes instead
+        // of walking every point of every section on every frame.
+        const auto& ranges = dataRanges();
+        double semiDiameter = ranges.semiDiameter;
         double rStep = semiDiameter / (numRadii - 1);
+        if (!(rStep > 0.0)) {
+            // No radius in the data: every section would collapse onto the Z
+            // axis, so there is nothing meaningful to draw.
+            return;
+        }
         int centerIdx = (getTargetSampling() - 1) / 2;
 
         float worstAngle = getMaxPVResult().has_value() ? static_cast<float>(getMaxPVResult()->angle) : -1.0f;
@@ -185,9 +198,6 @@ namespace gui {
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
         const double scaleZ = gui::unitScaleFactor(m_windowState.units.z);
 
-        // Cached deviation extents: recomputed only when the data changes instead
-        // of walking every point of every section on every frame.
-        const auto& ranges = dataRanges();
         const float devMin = ranges.devValid ? ranges.devMin * static_cast<float>(scaleZ) : 0.0f;
         const float devMax = ranges.devValid ? ranges.devMax * static_cast<float>(scaleZ) : 1.0f;
         float devRange = devMax - devMin;

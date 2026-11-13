@@ -53,6 +53,13 @@ namespace app::compute {
     /// requests.
     MapPlan planSurfaceMap(double stepDeg, int sampling);
 
+    /// The widest semi-diameter among the sections.
+    ///
+    /// The 3D map draws its sections with this radius. Taking it from a single
+    /// section let one profile without a radius collapse the whole map onto
+    /// the Z axis, so the widest section wins.
+    float maxSemiDiameter(const std::vector<app::models::SurfaceData>& profiles);
+
     class SurfaceMap {
         public:
             std::optional<app::models::MaxPVResult> findMaxPVSection(

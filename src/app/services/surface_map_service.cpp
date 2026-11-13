@@ -414,6 +414,7 @@ namespace app::services {
 
     void SurfaceMapService::recomputeRanges() {
         m_ranges = {};
+        m_ranges.semiDiameter = app::compute::maxSemiDiameter(m_profiles);
 
         if (!m_profiles.empty()) {
             float lo = std::numeric_limits<float>::max();

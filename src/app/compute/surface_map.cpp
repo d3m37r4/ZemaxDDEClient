@@ -84,4 +84,12 @@ namespace app::compute {
         return best;
     }
 
+    float maxSemiDiameter(const std::vector<app::models::SurfaceData>& profiles) {
+        float widest = 0.0f;
+        for (const auto& profile : profiles) {
+            widest = std::max(widest, static_cast<float>(profile.semiDiameter));
+        }
+        return widest;
+    }
+
 }
