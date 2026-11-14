@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <limits>
+#include <cmath>
+#include <numbers>
 #include <vector>
 
 #include "app/compute/surface_map.h"
@@ -200,6 +202,125 @@ TEST(ProfileStride, NeverZeroAndNeverDropsEverything) {
     EXPECT_EQ(drawnProfileStride(180, 12, 0), 1);
     // A budget below one section still leaves one section drawn.
     EXPECT_EQ(drawnProfileStride(5, 12, 4), 5);
+}
+
+namespace {
+    std::vector<app::models::SurfaceData> makeProfiles(size_t count, double sag = 0.01) {
+        std::vector<app::models::SurfaceData> profiles(count);
+        for (auto& profile : profiles) {
+            profile.semiDiameter = 5.0;
+            profile.sagDataPoints.resize(33);
+            for (size_t i = 0; i < profile.sagDataPoints.size(); ++i) {
+                profile.sagDataPoints[i].sag = sag * static_cast<double>(i);
+            }
+        }
+        return profiles;
+    }
+} // namespace
+
+TEST(MapMesh, EmptyDataGivesNoMesh) {
+    EXPECT_TRUE(buildMapMesh({}, 33, 5.0, nullptr, 1000).empty());
+    EXPECT_TRUE(buildMapMesh(makeProfiles(4), 33, 0.0, nullptr, 1000).empty());
+}
+
+TEST(MapMesh, VerticesAndIndicesAreConsistent) {
+    const MapMesh mesh = buildMapMesh(makeProfiles(4), 33, 5.0, nullptr, 100000);
+    ASSERT_FALSE(mesh.empty());
+    EXPECT_EQ(mesh.x.size(), mesh.y.size());
+    EXPECT_EQ(mesh.x.size(), mesh.z.size());
+    EXPECT_EQ(mesh.indices.size() % 3, 0u);
+    for (const unsigned int index : mesh.indices) {
+        EXPECT_LT(index, mesh.vertexCount());
+    }
+    // Four sections, both halves each, seventeen radii.
+    EXPECT_EQ(mesh.vertexCount(), 8u * 17u);
+}
+
+TEST(MapMesh, DecimatesToTheVertexBudget) {
+    const MapMesh mesh = buildMapMesh(makeProfiles(180), 33, 5.0, nullptr, 6000);
+    ASSERT_FALSE(mesh.empty());
+    EXPECT_LE(mesh.vertexCount(), 6000u);
+    // A generous budget keeps every section.
+    const MapMesh full = buildMapMesh(makeProfiles(180), 33, 5.0, nullptr, 1000000);
+    EXPECT_GT(full.vertexCount(), mesh.vertexCount());
+}
+
+TEST(MapMesh, TheNominalSurfaceGivesTheDeviation) {
+    std::vector<app::models::SurfaceData> profiles = makeProfiles(4, 0.02);
+    for (auto& profile : profiles) {
+        for (auto& point : profile.sagDataPoints) {
+            point.sag = 0.02;
+        }
+    }
+    app::models::SurfaceData nominal;
+    nominal.semiDiameter = 5.0;
+    nominal.sagDataPoints.resize(33);
+    for (size_t i = 0; i < nominal.sagDataPoints.size(); ++i) {
+        nominal.sagDataPoints[i].sag = 0.01;
+    }
+    const MapMesh mesh = buildMapMesh(profiles, 33, 5.0, &nominal, 100000);
+    ASSERT_FALSE(mesh.empty());
+    for (const float z : mesh.z) {
+        EXPECT_NEAR(z, 0.01f, 1e-5f);
+    }
+}
+
+TEST(MapMesh, TheVerticesFollowTheAngleAroundTheDisc) {
+    // The sections contribute two halves each (the section and its opposite),
+    // so the vertices must be laid out in angle order - otherwise the
+    // triangles jump between the halves and fan out into spikes.
+    const MapMesh mesh = buildMapMesh(makeProfiles(8), 33, 5.0, nullptr, 1000000);
+    ASSERT_FALSE(mesh.empty());
+    const size_t numRadii = 17;
+    ASSERT_EQ(mesh.vertexCount() % numRadii, 0u);
+
+    std::vector<double> angles;
+    // The rim of every ring (the innermost vertex is the centre of the disc
+    // and has no angle of its own).
+    for (size_t v = numRadii - 1; v < mesh.vertexCount(); v += numRadii) {
+        angles.push_back(std::atan2(static_cast<double>(mesh.y[v]), static_cast<double>(mesh.x[v])));
+    }
+    // Every angle step must be small: no vertex may jump across the disc.
+    for (size_t i = 1; i < angles.size(); ++i) {
+        double delta = angles[i] - angles[i - 1];
+        while (delta < 0.0) delta += 2.0 * std::numbers::pi;
+        EXPECT_LT(delta, std::numbers::pi / 2.0);
+    }
+}
+
+TEST(MapMesh, TheCentreIsConnected) {
+    // The innermost cells fan out from the shared centre vertex. Leaving them
+    // out left a hole in the middle of the surface.
+    const MapMesh mesh = buildMapMesh(makeProfiles(8), 33, 5.0, nullptr, 1000000);
+    ASSERT_FALSE(mesh.empty());
+    const size_t numRadii = 17;
+    bool touchesCentre = false;
+    for (const unsigned int index : mesh.indices) {
+        if (index < numRadii) touchesCentre = true;
+    }
+    EXPECT_TRUE(touchesCentre);
+}
+
+TEST(MapMesh, TheRingIsClosed) {
+    const MapMesh mesh = buildMapMesh(makeProfiles(8), 33, 5.0, nullptr, 1000000);
+    ASSERT_FALSE(mesh.empty());
+    // The last angle is connected back to the first one, so the surface has no
+    // seam: the triangle set must cover the whole ring.
+    const size_t numRadii = 17;
+    const size_t rings = mesh.vertexCount() / numRadii;
+    EXPECT_GT(rings, 2u);
+    // Every triangle of the last ring reaches into the first ring.
+    bool wraps = false;
+    for (size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+        const unsigned int a = mesh.indices[i];
+        const unsigned int b = mesh.indices[i + 1];
+        const unsigned int c = mesh.indices[i + 2];
+        const bool touchesLast = a >= (rings - 1) * numRadii || b >= (rings - 1) * numRadii
+                              || c >= (rings - 1) * numRadii;
+        const bool touchesFirst = a < numRadii || b < numRadii || c < numRadii;
+        if (touchesLast && touchesFirst) wraps = true;
+    }
+    EXPECT_TRUE(wraps);
 }
 
 } // namespace

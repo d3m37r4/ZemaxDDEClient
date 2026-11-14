@@ -69,6 +69,31 @@ namespace app::compute {
     /// everything fits.
     int drawnProfileStride(int numProfiles, int itemsPerProfile, int maxItems);
 
+    /// A triangulated map surface: vertices in cartesian coordinates plus an
+    /// index buffer (three indices per triangle).
+    struct MapMesh {
+        std::vector<float> x;
+        std::vector<float> y;
+        std::vector<float> z;
+        std::vector<unsigned int> indices;
+
+        [[nodiscard]] size_t vertexCount() const { return x.size(); }
+        [[nodiscard]] bool empty() const { return x.empty() || indices.empty(); }
+    };
+
+    /// Builds the triangulated surface of a map from its sections.
+    ///
+    /// The sections are a polar grid (angle x radius), so the vertices are
+    /// placed in cartesian coordinates and the cells of the grid become
+    /// triangles. The sections are decimated to stay within @p maxVertices: a
+    /// precise map has hundreds of thousands of them and every vertex costs a
+    /// triangle. Pass the nominal surface to get the deviation instead of the
+    /// sag.
+    MapMesh buildMapMesh(const std::vector<app::models::SurfaceData>& profiles,
+                          int sampling, double semiDiameter,
+                          const app::models::SurfaceData* nominal,
+                          int maxVertices);
+
     class SurfaceMap {
         public:
             std::optional<app::models::MaxPVResult> findMaxPVSection(

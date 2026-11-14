@@ -134,13 +134,23 @@ namespace gui {
                 // How the 3D map draws its sections. The modes are compared
                 // side by side, so the choice lives in the window itself.
                 ImGui::Separator();
-                static const char* kRenderModes[] = { "Profiles", "Wireframe" };
+                static const char* kRenderModes[] = {
+                    app::services::mapRenderModeName(app::services::MapRenderMode::Profiles),
+                    app::services::mapRenderModeName(app::services::MapRenderMode::Wireframe),
+                    app::services::mapRenderModeName(app::services::MapRenderMode::Surface),
+                };
                 ImGui::TextUnformatted("Rendering");
                 ImGui::SameLine(ImGui::GetFontSize() * 6.0f);
                 int mode = *renderMode;
                 if (ImGui::Combo("##RenderMode", &mode, kRenderModes, IM_ARRAYSIZE(kRenderModes))) {
                     *renderMode = mode;
                 }
+                // What the selected mode shows, so the name alone is enough.
+                const char* hint = mode == 1
+                    ? "Rings and spokes of the sections"
+                    : (mode == 2 ? "One filled, triangulated surface"
+                                 : "Radial profiles, coloured by radius");
+                ImGui::TextDisabled("%s", hint);
             }
 
             ImGui::EndMenu();

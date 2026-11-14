@@ -25,7 +25,12 @@ namespace app::services {
     enum class MapRenderMode {
         Profiles = 0,   ///< radial profiles, split into colour-coded segments
         Wireframe = 1,  ///< rings (constant radius) and spokes (constant angle)
+        Surface = 2,    ///< one filled, triangulated surface
     };
+
+    /// Vertex budget of the triangulated surface. A precise map has hundreds
+    /// of thousands of sections and every vertex costs two triangles.
+    inline constexpr int kMaxMapMeshVertices = 60000;
 
     /// Display name of a render mode (Settings menu of the map window).
     const char* mapRenderModeName(MapRenderMode mode);
@@ -113,6 +118,13 @@ namespace app::services {
                 float semiDiameter = 0.0f;
             };
             [[nodiscard]] const DataRanges& dataRanges() const { return m_ranges; }
+            /// The triangulated surface of the map, built when the data
+            /// changes. Empty when there is nothing to draw.
+            /// @param deviation true for the deviation against the nominal
+            ///                   surface, false for the plain sag.
+            [[nodiscard]] const app::compute::MapMesh& mapMesh(bool deviation) const {
+                return deviation ? m_deviationMesh : m_mesh;
+            }
             std::optional<MaxPVResult> findMaxPVSection() const;
             bool calculateDeviations();
 
@@ -157,6 +169,10 @@ namespace app::services {
             std::vector<app::models::SurfaceData> m_profiles;
             std::optional<MaxPVResult> m_maxPVResult;
             DataRanges m_ranges;
+            /// Cached triangulated surfaces, rebuilt with the ranges: the plain
+            /// sag and the deviation against the nominal surface.
+            app::compute::MapMesh m_mesh;
+            app::compute::MapMesh m_deviationMesh;
 
             int m_targetSurface = 0;
             int m_targetSampling = 0;

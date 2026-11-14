@@ -415,6 +415,17 @@ namespace app::services {
     void SurfaceMapService::recomputeRanges() {
         m_ranges = {};
         m_ranges.semiDiameter = app::compute::maxSemiDiameter(m_profiles);
+        // The triangulated surfaces are built together with the extents: they
+        // depend on the same data and change with it. The map draws either the
+        // plain sag or the deviation against the nominal surface, so both are
+        // needed.
+        m_mesh = app::compute::buildMapMesh(m_profiles, m_targetSampling,
+                                             m_ranges.semiDiameter, nullptr,
+                                             kMaxMapMeshVertices);
+        m_deviationMesh = app::compute::buildMapMesh(
+            m_profiles, m_targetSampling, m_ranges.semiDiameter,
+            m_nominalSurfaceData.isValid() ? &m_nominalSurfaceData : nullptr,
+            kMaxMapMeshVertices);
 
         if (!m_profiles.empty()) {
             float lo = std::numeric_limits<float>::max();
@@ -460,9 +471,10 @@ namespace app::services {
 
     const char* mapRenderModeName(MapRenderMode mode) {
         switch (mode) {
+            case MapRenderMode::Surface:   return "Solid surface";
             case MapRenderMode::Wireframe: return "Wireframe";
-            case MapRenderMode::Profiles:  return "Profiles";
+            case MapRenderMode::Profiles:  return "Radial profiles";
         }
-        return "Profiles";
+        return "Radial profiles";
     }
 }
