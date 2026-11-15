@@ -25,6 +25,17 @@ class Logger {
             return m_revision.load(std::memory_order_relaxed);
         }
 
+        struct LogSyncCursor {
+            uint64_t epoch = 0;
+            size_t droppedPrefix = 0;
+        };
+
+        /// Incrementally updates @p entries with lines appended since the last
+        /// call. Returns SIZE_MAX when @p entries was rebuilt from scratch
+        /// (first call or after clearLogs()), or the number of oldest entries
+        /// trimmed from the front of @p entries before appending the new tail.
+        size_t syncLogs(std::vector<std::string>& entries, LogSyncCursor& cursor) const;
+
         /// Copies the tail of the buffered entries into @p buffer without
         /// allocating and without blocking. The crash handler uses it: a
         /// crashed process may hold the mutex, and a blocking lock there would
@@ -43,6 +54,8 @@ class Logger {
         static constexpr size_t TRIM_BATCH = 2000;
 
         std::deque<std::string> m_logs;
+        uint64_t m_epoch = 1;
+        size_t m_droppedPrefix = 0;
         std::atomic<uint64_t> m_revision{0};
         mutable std::mutex m_mutex;
         static constexpr std::string_view TIME_FORMAT = "[%d.%m.%Y - %H:%M:%S]";

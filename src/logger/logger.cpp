@@ -137,12 +137,46 @@ std::string Logger::getCurrentLogPath() const {
 void Logger::clearLogs() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_logs.clear();
+    ++m_epoch;
+    m_droppedPrefix = 0;
     m_revision.fetch_add(1, std::memory_order_relaxed);
 }
 
 std::vector<std::string> Logger::getLogs() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return {m_logs.begin(), m_logs.end()};
+}
+
+size_t Logger::syncLogs(std::vector<std::string>& entries, LogSyncCursor& cursor) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (cursor.epoch != m_epoch || m_droppedPrefix < cursor.droppedPrefix) {
+        entries.assign(m_logs.begin(), m_logs.end());
+        cursor.epoch = m_epoch;
+        cursor.droppedPrefix = m_droppedPrefix;
+        return static_cast<size_t>(-1);
+    }
+
+    const size_t trimmed = m_droppedPrefix - cursor.droppedPrefix;
+    if (trimmed > 0) {
+        if (trimmed >= entries.size()) {
+            entries.clear();
+        } else {
+            entries.erase(entries.begin(), entries.begin() + static_cast<std::ptrdiff_t>(trimmed));
+        }
+    }
+
+    if (entries.size() > m_logs.size()) {
+        entries.assign(m_logs.begin(), m_logs.end());
+        cursor.droppedPrefix = m_droppedPrefix;
+        return static_cast<size_t>(-1);
+    }
+
+    const size_t start = entries.size();
+    for (size_t i = start; i < m_logs.size(); ++i) {
+        entries.push_back(m_logs[i]);
+    }
+    cursor.droppedPrefix = m_droppedPrefix;
+    return trimmed;
 }
 
 bool Logger::tryCopyLogTail(char* buffer, size_t capacity, size_t& written) const {
@@ -206,6 +240,7 @@ void Logger::addLog(std::string_view message) {
     // of lines. Trim in batches so the erase cost stays amortized.
     if (m_logs.size() > MAX_MEMORY_LOGS) {
         m_logs.erase(m_logs.begin(), m_logs.begin() + static_cast<std::ptrdiff_t>(TRIM_BATCH));
+        m_droppedPrefix += TRIM_BATCH;
     }
     m_revision.fetch_add(1, std::memory_order_relaxed);
 
