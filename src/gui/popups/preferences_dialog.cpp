@@ -389,7 +389,7 @@ namespace gui {
         ImGui::Spacing();
 
         if (ImGui::BeginChild("##perf_map", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 4), ImGuiChildFlags_Borders)) {
-            ImGui::TextUnformatted("Surface Irregularity Map");
+            ImGui::TextUnformatted("Irregularity Map");
             ImGui::Spacing();
             changed |= inputMs("GetSurfaceData", "##t M GetSurf", &m_working.dde.getSurfaceDataMapTimeoutMs);
             changed |= inputMs("GetSag",         "##t M GetSag",  &m_working.dde.getSagMapTimeoutMs);
@@ -423,7 +423,7 @@ namespace gui {
 
         constexpr const char* cmapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
-        ImGui::TextUnformatted("Surface Irregularity Map");
+        ImGui::TextUnformatted("Irregularity Map");
         ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##cmap_surface", &m_working.map.defaultColormapSurface, cmapNames, IM_ARRAYSIZE(cmapNames))) {
             applyWorkingMap();

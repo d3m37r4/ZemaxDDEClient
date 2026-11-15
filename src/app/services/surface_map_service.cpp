@@ -195,7 +195,7 @@ namespace app::services {
         // cancellable; beginMapRun() adopts the same id on success.
         if (m_uiOpMonitor) {
             m_mapRefreshTaskId = m_uiOpMonitor->startTask(
-                app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map",
+                app::models::TaskSource::SurfaceIrregularityMap, "Irregularity Map",
                 plan.sections * (plan.sampling + 2), m_mapCalcSlot,
                 client->getOperationMonitor());
         }
@@ -255,7 +255,7 @@ namespace app::services {
         if (m_uiOpMonitor && m_mapTaskId == 0) {
             // Fallback for callers that did not pre-register a task.
             m_mapTaskId = m_uiOpMonitor->startTask(
-                app::models::TaskSource::SurfaceIrregularityMap, "Surface Irregularity Map",
+                app::models::TaskSource::SurfaceIrregularityMap, "Irregularity Map",
                 m_totalAngles * (m_targetSampling + 2), m_mapCalcSlot);
         }
 

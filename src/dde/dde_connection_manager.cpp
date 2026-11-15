@@ -283,7 +283,7 @@ int DDEConnectionManager::findActiveTaskSlot(app::models::TaskSource source) con
                     labelMatch = op.serviceId == "Toleranced Profile";
                     break;
                 case app::models::TaskSource::SurfaceIrregularityMap:
-                    labelMatch = op.serviceId == "Surface Irregularity Map"
+                    labelMatch = op.serviceId == "Irregularity Map"
                               || op.serviceId.starts_with("Section ");
                     break;
                 default:

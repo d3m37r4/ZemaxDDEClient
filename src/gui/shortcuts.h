@@ -54,7 +54,7 @@ inline constexpr Entry kEntries[] = {
     {"view-dde-status", "View", Key::Digit1, Mod_Ctrl, "Ctrl+1", "Toggle DDE Status panel"},
     {"view-system-info", "View", Key::Digit2, Mod_Ctrl, "Ctrl+2", "Toggle Optical System Information panel"},
     {"view-profile", "View", Key::Digit3, Mod_Ctrl, "Ctrl+3", "Toggle Surface Profile Inspector panel"},
-    {"view-map", "View", Key::Digit4, Mod_Ctrl, "Ctrl+4", "Toggle Surface Irregularity Map panel"},
+    {"view-map", "View", Key::Digit4, Mod_Ctrl, "Ctrl+4", "Toggle Irregularity Map panel"},
     {"view-logs", "View", Key::Digit5, Mod_Ctrl, "Ctrl+5", "Toggle Logs panel"},
     {"check-updates", "Info", Key::U, Mod_Ctrl, "Ctrl+U", "Check for Updates"},
     {"about", "Info", Key::I, Mod_Ctrl, "Ctrl+I", "Open About dialog"},

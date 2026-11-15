@@ -9,6 +9,7 @@
 #include "lib/implot/implot.h"
 
 #include "gui/surface_profile_service.h"
+#include "app/services/surface_map_service.h"
 #include "gui/imgui_utils.h"
 #include "gui/notifications.h"
 #include "gui/plot_image_exporter.h"
@@ -128,6 +129,8 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::ColorEdit3("##WorstColor", worstColor,
                     ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                // The worst section only exists once it was computed.
+                ImGui::TextDisabled("%s", "Shown after \"Find MaxPV\" computes the worst section");
             }
 
             if (is3D && renderMode) {

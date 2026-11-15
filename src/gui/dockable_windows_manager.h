@@ -36,7 +36,7 @@ inline constexpr DockableWindowData DockableWindows[] = {
     { WindowID::DDEStatus, WindowCategory::DDE, "DDE Status", true, 0 },
     { WindowID::SystemInfo, WindowCategory::Tools, "Optical System Information", true, 0 },
     { WindowID::SurfaceProfileInspector, WindowCategory::Tools, "Surface Profile Inspector", false, 1 },
-    { WindowID::SurfaceIrregularityMap, WindowCategory::Tools, "Surface Irregularity Map", false, 2 },
+    { WindowID::SurfaceIrregularityMap, WindowCategory::Tools, "Irregularity Map", false, 2 },
     { WindowID::Logs, WindowCategory::Info, "Logs", true, 0 },
 };
 
