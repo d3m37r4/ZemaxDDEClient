@@ -52,23 +52,32 @@ namespace {
 
     constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
-    // Wireframe rendering: rings (constant radius) and spokes (constant angle)
-    // instead of the colour-banded profile segments. Both maps share it - the
-    // surface map uses the sag, the deviation map the difference to the
-    // nominal surface.
+    // Wireframe rendering: rings (constant radius) and spokes (constant angle),
+    // coloured per vertex from the active colormap so the gradient matches the
+    // other modes and the spokes meet cleanly in the centre without a hole or
+    // a filled cap.
     void drawWireframe(int numRadii, int numAngles, int numProfiles,
-                       double rStep, int centerIdx, double angleStepDeg,
-                       double scaleX, double scaleY,
+                       double rStep, int centerIdx, int stride,
+                       double scaleX, double scaleY, double scaleZ,
                        float valueMin, float valueRange,
                        const std::vector<app::models::SurfaceData>& profiles,
                        const app::models::SurfaceData* nominal,
-                       float worstAngle, bool highlightWorst, const float* worstColor) {
+                       int worstIndex, bool highlightWorst, const float* worstColor) {
         std::vector<float> xBuf(static_cast<size_t>(numRadii));
         std::vector<float> yBuf(static_cast<size_t>(numRadii));
         std::vector<float> zBuf(static_cast<size_t>(numRadii));
+        std::vector<ImU32> spokeColors(static_cast<size_t>(numRadii));
         std::vector<float> ringX;
         std::vector<float> ringY;
         std::vector<float> ringZ;
+        std::vector<ImU32> ringColors;
+
+        const auto sampleColorU32 = [&](float z) {
+            const float t = (z - valueMin) / valueRange;
+            ImVec4 color = ImPlot3D::SampleColormap(t);
+            color.w = 1.0f;
+            return ImGui::ColorConvertFloat4ToU32(color);
+        };
 
         // One point of the map: the radius runs from the centre outwards, the
         // angle is fixed.
@@ -83,67 +92,76 @@ namespace {
             const int count = static_cast<int>(profiles[profileIdx].sagDataPoints.size());
             int srcIdx = positiveHalf ? centerIdx + radiusIndex : centerIdx - radiusIndex;
             srcIdx = std::max(0, std::min(count - 1, srcIdx));
-            float value = static_cast<float>(profiles[profileIdx].sagDataPoints[srcIdx].sag);
+            double value = profiles[profileIdx].sagDataPoints[srcIdx].sag;
             if (nominal != nullptr && srcIdx < static_cast<int>(nominal->sagDataPoints.size())) {
-                value -= static_cast<float>(nominal->sagDataPoints[srcIdx].sag);
+                value -= nominal->sagDataPoints[srcIdx].sag;
             }
-            z = value;
+            z = static_cast<float>(value * scaleZ);
         };
 
-        // Spokes: one polyline per angle. They start at the first non-zero
-        // radius - all spokes meet in the centre, and the colour of that
-        // meeting point painted a blob there.
+        // Spokes: one polyline per angle from the centre (i = 0) to the rim,
+        // shaded per vertex so the centre has the true apex colour.
         for (int j = 0; j < numAngles; ++j) {
-            for (int i = 1; i < numRadii; ++i) {
-                pointAt(j, i, xBuf[i - 1], yBuf[i - 1], zBuf[i - 1]);
-            }
             const int profileIdx = std::min(j / 2, numProfiles - 1);
-            const float profileAngle = static_cast<float>(profileIdx * angleStepDeg);
-            const bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+            const bool isWorst = worstIndex >= 0 && profileIdx == worstIndex;
+            if (!isWorst && (profileIdx % stride) != 0) {
+                continue;
+            }
+
+            for (int i = 0; i < numRadii; ++i) {
+                pointAt(j, i, xBuf[i], yBuf[i], zBuf[i]);
+                spokeColors[i] = sampleColorU32(zBuf[i]);
+            }
 
             ImPlot3DSpec spec;
             if (isWorst && highlightWorst) {
                 spec.LineColor = ImVec4(worstColor[0], worstColor[1], worstColor[2], 1.0f);
                 spec.LineWeight = 3.0f;
             } else {
-                const float t = (zBuf[numRadii / 2] - valueMin) / valueRange;
-                ImVec4 color = ImPlot3D::SampleColormap(t);
-                color.w = 1.0f;
-                spec.LineColor = color;
-                spec.LineWeight = 2.0f;
+                spec.LineColors = spokeColors.data();
+                spec.LineWeight = 1.5f;
             }
             char label[16];
             snprintf(label, sizeof(label), "##wsp%d", j);
-            ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii - 1, spec);
+            ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
         }
 
-        // Rings: one polyline per radius, through every angle. The positive
-        // halves run forward and the negative halves back, so the polyline
-        // closes into a circle instead of zig-zagging across the centre.
+        // Rings: one closed polyline per radius through all kept angles.
         const int ringStep = std::max(1, numRadii / 12);
         for (int i = ringStep; i < numRadii; i += ringStep) {
             ringX.clear();
             ringY.clear();
             ringZ.clear();
+            ringColors.clear();
             for (int j = 0; j < numAngles; j += 2) {
+                const int profileIdx = std::min(j / 2, numProfiles - 1);
+                if ((profileIdx % stride) != 0) continue;
                 float x = 0.0f, y = 0.0f, z = 0.0f;
                 pointAt(j, i, x, y, z);
                 ringX.push_back(x);
                 ringY.push_back(y);
                 ringZ.push_back(z);
+                ringColors.push_back(sampleColorU32(z));
             }
-            for (int j = numAngles - 1; j >= 1; j -= 2) {
+            for (int j = 1; j < numAngles; j += 2) {
+                const int profileIdx = std::min(j / 2, numProfiles - 1);
+                if ((profileIdx % stride) != 0) continue;
                 float x = 0.0f, y = 0.0f, z = 0.0f;
                 pointAt(j, i, x, y, z);
                 ringX.push_back(x);
                 ringY.push_back(y);
                 ringZ.push_back(z);
+                ringColors.push_back(sampleColorU32(z));
             }
-            const float t = (ringZ[ringZ.size() / 2] - valueMin) / valueRange;
-            ImVec4 color = ImPlot3D::SampleColormap(t);
-            color.w = 1.0f;
+            if (ringX.size() >= 3) {
+                ringX.push_back(ringX.front());
+                ringY.push_back(ringY.front());
+                ringZ.push_back(ringZ.front());
+                ringColors.push_back(ringColors.front());
+            }
+            if (ringX.size() < 2) continue;
             ImPlot3DSpec spec;
-            spec.LineColor = color;
+            spec.LineColors = ringColors.data();
             spec.LineWeight = 1.0f;
             char label[16];
             snprintf(label, sizeof(label), "##wrg%d", i);
@@ -189,40 +207,46 @@ namespace {
                            static_cast<int>(mesh.indices.size()), spec);
     }
 
-    // The worst section on top of the surface: the highlighted profile as a
-    // line, so the worst spot stays visible in the filled rendering too.
-    void drawWorstSection(int numRadii, int numProfiles, int centerIdx, double rStep,
-                          double angleStepDeg, double scaleX, double scaleY, double scaleZ,
-                          float worstAngle, const float* worstColor,
-                          const std::vector<app::models::SurfaceData>& profiles,
-                          const app::models::SurfaceData* nominal) {
-        if (worstAngle < 0.0f || worstColor == nullptr) return;
-        const int profileIdx = static_cast<int>(std::lround(worstAngle / angleStepDeg));
-        if (profileIdx < 0 || profileIdx >= numProfiles) return;
-        const auto& points = profiles[profileIdx].sagDataPoints;
+    // The worst section projected into screen pixels across the full diameter
+    // (-semiDiameter to +semiDiameter). The filled surface hides a 3D line on
+    // the surface because the depth test gives the triangles the tie, so
+    // drawing it over the plot keeps the highlight visible end-to-end.
+    void collectWorstSectionOverlay(int numRadii, int centerIdx, double rStep,
+                                    double scaleX, double scaleY, double scaleZ,
+                                    int profileIndex,
+                                    const std::vector<app::models::SurfaceData>& profiles,
+                                    const app::models::SurfaceData* nominal,
+                                    std::vector<ImVec2>& out) {
+        if (profileIndex < 0 || profileIndex >= static_cast<int>(profiles.size())) return;
+        const auto& points = profiles[profileIndex].sagDataPoints;
         if (points.empty()) return;
 
-        const double angleRad = profileIdx * std::numbers::pi / numProfiles;
-        std::vector<float> x(static_cast<size_t>(numRadii));
-        std::vector<float> y(static_cast<size_t>(numRadii));
-        std::vector<float> z(static_cast<size_t>(numRadii));
-        for (int i = 0; i < numRadii; ++i) {
+        const double angleRad = profileIndex * std::numbers::pi / static_cast<double>(profiles.size());
+        out.clear();
+        out.reserve(static_cast<size_t>(2 * numRadii - 1));
+        for (int i = -(numRadii - 1); i < numRadii; ++i) {
             const double r = i * rStep;
-            x[i] = static_cast<float>(r * std::cos(angleRad) * scaleX);
-            y[i] = static_cast<float>(r * std::sin(angleRad) * scaleY);
+            const double x = r * std::cos(angleRad) * scaleX;
+            const double y = r * std::sin(angleRad) * scaleY;
             int srcIdx = centerIdx + i;
             srcIdx = std::max(0, std::min(static_cast<int>(points.size()) - 1, srcIdx));
-            float value = static_cast<float>(points[srcIdx].sag);
+            double value = points[srcIdx].sag;
             if (nominal != nullptr && srcIdx < static_cast<int>(nominal->sagDataPoints.size())) {
-                value -= static_cast<float>(nominal->sagDataPoints[srcIdx].sag);
+                value -= nominal->sagDataPoints[srcIdx].sag;
             }
-            z[i] = static_cast<float>(value * scaleZ);
+            out.push_back(ImPlot3D::PlotToPixels(x, y, value * scaleZ));
         }
+    }
 
-        ImPlot3DSpec spec;
-        spec.LineColor = ImVec4(worstColor[0], worstColor[1], worstColor[2], 1.0f);
-        spec.LineWeight = 3.0f;
-        ImPlot3D::PlotLine("##worstSection", x.data(), y.data(), z.data(), numRadii, spec);
+    // Draws the projected worst section over the plot.
+    void drawOverlayLine(const std::vector<ImVec2>& points, const ImVec4& color,
+                         const ImVec2& rectMin, const ImVec2& rectMax) {
+        if (points.size() < 2) return;
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->PushClipRect(rectMin, rectMax, true);
+        drawList->AddPolyline(points.data(), static_cast<int>(points.size()),
+                              ImGui::ColorConvertFloat4ToU32(color), ImDrawFlags_None, 3.0f);
+        drawList->PopClipRect();
     }
 }
 
@@ -230,8 +254,9 @@ namespace gui {
 
     void SurfaceIrregularityMapService::renderSurfacePlotLines(const ImVec2& size) {
         if (getProfiles().empty()) return;
+        registerAppColormaps();
+
         int numRadii = (getTargetSampling() + 1) / 2;
-        int numAngles = getTotalAngles() * 2;
         int numProfiles = static_cast<int>(getProfiles().size());
         // Cached extents: recomputed only when the data changes instead of
         // walking every point of every section on every frame.
@@ -245,7 +270,9 @@ namespace gui {
         }
         int centerIdx = (getTargetSampling() - 1) / 2;
 
-        float worstAngle = getMaxPVResult().has_value() ? static_cast<float>(getMaxPVResult()->angle) : -1.0f;
+        // The worst section is addressed by its index: matching it by angle
+        // breaks as soon as the angle rounding or the step differs.
+        const int worstIndex = getMaxPVResult().has_value() ? getMaxPVResult()->profileIndex : -1;
 
         const double scaleX = gui::unitScaleFactor(m_windowState.units.x);
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
@@ -259,6 +286,11 @@ namespace gui {
         const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
         if (ImPlot3D::BeginPlot("##Surface3D_Lines", size, ImPlot3DFlags_NoLegend)) {
+            const int numAngles = getTotalAngles() * 2;
+            // The worst section of the surface, projected over the plot.
+            std::vector<ImVec2> overlay;
+            ImVec2 overlayRectMin(0.0f, 0.0f);
+            ImVec2 overlayRectMax(0.0f, 0.0f);
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
             const char* unitY = gui::displayUnitName(m_windowState.units.y);
             const char* unitZ = gui::displayUnitName(m_windowState.units.z);
@@ -277,42 +309,38 @@ namespace gui {
                                          ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize(),
                                          ImGuiUtils::PlotExportResolution());
             }
-            ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapSurface]);
+            const int cmapIdx = std::clamp(m_windowState.selectedColormapSurface,
+                                           0, static_cast<int>(std::size(kColormapNames)) - 1);
+            ImPlot3D::PushColormap(kColormapNames[cmapIdx]);
 
             const bool wireframe = m_windowState.renderMode ==
                 static_cast<int>(app::services::MapRenderMode::Wireframe);
             const bool surface = m_windowState.renderMode ==
                 static_cast<int>(app::services::MapRenderMode::Surface);
+
+            // A precise map (thousands of sections) submits hundreds of
+            // thousands of plot items per frame and overruns the 16-bit
+            // ImDrawIdx range. Thin the drawn set by an item budget: with
+            // per-vertex LineColors each half-profile is a single PlotLine
+            // item (2 items per section).
+            constexpr int kMaxDrawnItems = 1200;
+            const int stride = app::compute::drawnProfileStride(
+                numProfiles, 2, kMaxDrawnItems);
+
             if (wireframe) {
                 drawWireframe(numRadii, numAngles, numProfiles, rStep, centerIdx,
-                              getAngleStepDeg(), scaleX, scaleY, sagMin, sagRange,
-                              getProfiles(), nullptr, worstAngle,
+                              stride, scaleX, scaleY, scaleZ, sagMin, sagRange,
+                              getProfiles(), nullptr, worstIndex,
                               m_windowState.highlightWorstSurface,
                               m_windowState.worstColorSurface);
             } else if (surface) {
                 drawSurfaceMesh(mapMesh(false), scaleX, scaleY, scaleZ, sagMin, sagRange);
-                if (m_windowState.highlightWorstSurface) {
-                    drawWorstSection(numRadii, numProfiles, centerIdx, rStep,
-                                     getAngleStepDeg(), scaleX, scaleY, scaleZ, worstAngle,
-                                     m_windowState.worstColorSurface, getProfiles(), nullptr);
-                }
             }
 
-            constexpr int SEGMENT_SIZE = 3;
-            const int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
-            // A precise map (thousands of sections) submits hundreds of
-            // thousands of plot items per frame and overruns the 16-bit
-            // ImDrawIdx range. Thin the drawn set by an item budget - the
-            // items are what floods ImPlot3D, not the sections, and counting
-            // sections left the thinning off exactly when the map grew. The
-            // worst section always stays so the highlight never disappears.
-            // The underlying data keeps its full resolution.
-            constexpr int kMaxDrawnItems = 1200;
-            const int stride = app::compute::drawnProfileStride(
-                numProfiles, 2 * numSegments, kMaxDrawnItems);
             std::vector<float> xBuf(static_cast<size_t>(numRadii));
             std::vector<float> yBuf(static_cast<size_t>(numRadii));
             std::vector<float> zBuf(static_cast<size_t>(numRadii));
+            std::vector<ImU32> lineColors(static_cast<size_t>(numRadii));
 
             for (int j = 0; j < numAngles && !wireframe && !surface; ++j) {
                 int profileIdx = std::min(j / 2, numProfiles - 1);
@@ -320,8 +348,7 @@ namespace gui {
                 double angleRad = profileIdx * std::numbers::pi / numProfiles;
                 if (!positiveHalf) angleRad += std::numbers::pi;
 
-                float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
-                bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+                bool isWorst = worstIndex >= 0 && profileIdx == worstIndex;
                 if (!isWorst && (profileIdx % stride) != 0) {
                     continue;
                 }
@@ -334,39 +361,45 @@ namespace gui {
                     int srcIdx = positiveHalf ? centerIdx + i : centerIdx - i;
                     srcIdx = std::max(0, std::min(static_cast<int>(getProfiles()[profileIdx].sagDataPoints.size()) - 1, srcIdx));
                     zBuf[i] = static_cast<float>(getProfiles()[profileIdx].sagDataPoints[srcIdx].sag * scaleZ);
+
+                    float t = (zBuf[i] - sagMin) / sagRange;
+                    ImVec4 color = ImPlot3D::SampleColormap(t);
+                    color.w = 1.0f;
+                    lineColors[i] = ImGui::ColorConvertFloat4ToU32(color);
                 }
 
+                ImPlot3DSpec spec;
                 if (isWorst && m_windowState.highlightWorstSurface) {
-                    ImPlot3DSpec spec;
                     spec.LineColor = ImVec4(m_windowState.worstColorSurface[0], m_windowState.worstColorSurface[1], m_windowState.worstColorSurface[2], 1.0f);
                     spec.LineWeight = 3.0f;
-                    char worstLabel[16];
-                    snprintf(worstLabel, sizeof(worstLabel), "##sw%d", j);
-                    ImPlot3D::PlotLine(worstLabel, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
                 } else {
-                    for (int seg = 0; seg < numSegments; ++seg) {
-                        int start = seg * SEGMENT_SIZE;
-                        int end = std::min(start + SEGMENT_SIZE + 1, numRadii);
-                        int len = end - start;
-                        if (len < 2) continue;
-
-                        int midIdx = start + len / 2;
-                        float t = (zBuf[midIdx] - sagMin) / sagRange;
-                        ImVec4 color = ImPlot3D::SampleColormap(t);
-                        color.w = 1.0f;   // the colormap must not fade the sections out
-
-                        ImPlot3DSpec spec;
-                        spec.LineColor = color;
-                        spec.LineWeight = 2.0f;
-                        char segLabel[32];
-                        snprintf(segLabel, sizeof(segLabel), "##sg%d_%d", j, seg);
-                        ImPlot3D::PlotLine(segLabel, xBuf.data() + start, yBuf.data() + start, zBuf.data() + start, len, spec);
-                    }
+                    spec.LineColors = lineColors.data();
+                    spec.LineWeight = 2.0f;
                 }
+                char label[24];
+                snprintf(label, sizeof(label), "##sp%d", j);
+                ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
+            }
+
+            // Collect the full-diameter worst-section overlay after the plot
+            // items have been submitted so the auto-fitted axis ranges are up
+            // to date when PlotToPixels projects the points.
+            if (m_windowState.highlightWorstSurface && worstIndex >= 0) {
+                const ImVec2 rectSize = ImPlot3D::GetPlotRectSize();
+                overlayRectMin = ImPlot3D::GetPlotRectPos();
+                overlayRectMax = ImVec2(overlayRectMin.x + rectSize.x,
+                                        overlayRectMin.y + rectSize.y);
+                collectWorstSectionOverlay(numRadii, centerIdx, rStep,
+                                           scaleX, scaleY, scaleZ, worstIndex,
+                                           getProfiles(), nullptr, overlay);
             }
 
             ImPlot3D::PopColormap();
             ImPlot3D::EndPlot();
+            drawOverlayLine(overlay,
+                            ImVec4(m_windowState.worstColorSurface[0], m_windowState.worstColorSurface[1],
+                                   m_windowState.worstColorSurface[2], 1.0f),
+                            overlayRectMin, overlayRectMax);
         }
     }
 
@@ -375,7 +408,6 @@ namespace gui {
         registerAppColormaps();
 
         int numRadii = (getTargetSampling() + 1) / 2;
-        int numAngles = getTotalAngles() * 2;
         int numProfiles = static_cast<int>(getProfiles().size());
         // Cached deviation extents: recomputed only when the data changes instead
         // of walking every point of every section on every frame.
@@ -389,7 +421,9 @@ namespace gui {
         }
         int centerIdx = (getTargetSampling() - 1) / 2;
 
-        float worstAngle = getMaxPVResult().has_value() ? static_cast<float>(getMaxPVResult()->angle) : -1.0f;
+        // The worst section is addressed by its index: matching it by angle
+        // breaks as soon as the angle rounding or the step differs.
+        const int worstIndex = getMaxPVResult().has_value() ? getMaxPVResult()->profileIndex : -1;
 
         const double scaleX = gui::unitScaleFactor(m_windowState.units.x);
         const double scaleY = gui::unitScaleFactor(m_windowState.units.y);
@@ -403,6 +437,11 @@ namespace gui {
         const int plotRequest = ImGuiUtils::ConsumePlotRequest();
 
         if (ImPlot3D::BeginPlot("##Deviation3D_Lines", size, ImPlot3DFlags_NoLegend)) {
+            const int numAngles = getTotalAngles() * 2;
+            // The worst section of the surface, projected over the plot.
+            std::vector<ImVec2> overlay;
+            ImVec2 overlayRectMin(0.0f, 0.0f);
+            ImVec2 overlayRectMax(0.0f, 0.0f);
             const char* unitX = gui::displayUnitName(m_windowState.units.x);
             const char* unitY = gui::displayUnitName(m_windowState.units.y);
             const char* unitZ = gui::displayUnitName(m_windowState.units.z);
@@ -421,39 +460,35 @@ namespace gui {
                                          ImPlot3D::GetPlotRectPos(), ImPlot3D::GetPlotRectSize(),
                                          ImGuiUtils::PlotExportResolution());
             }
-            ImPlot3D::PushColormap(kColormapNames[m_windowState.selectedColormapDeviation]);
+            const int cmapIdx = std::clamp(m_windowState.selectedColormapDeviation,
+                                           0, static_cast<int>(std::size(kColormapNames)) - 1);
+            ImPlot3D::PushColormap(kColormapNames[cmapIdx]);
 
             const bool wireframe = m_windowState.renderMode ==
                 static_cast<int>(app::services::MapRenderMode::Wireframe);
             const bool surface = m_windowState.renderMode ==
                 static_cast<int>(app::services::MapRenderMode::Surface);
+
+            // Same thinning as the surface plot: with per-vertex LineColors
+            // each half-profile is a single PlotLine item (2 items per section).
+            constexpr int kMaxDrawnItems = 1200;
+            const int stride = app::compute::drawnProfileStride(
+                numProfiles, 2, kMaxDrawnItems);
+
             if (wireframe) {
                 drawWireframe(numRadii, numAngles, numProfiles, rStep, centerIdx,
-                              getAngleStepDeg(), scaleX, scaleY, devMin, devRange,
-                              getProfiles(), &m_nominalSurfaceData, worstAngle,
+                              stride, scaleX, scaleY, scaleZ, devMin, devRange,
+                              getProfiles(), &m_nominalSurfaceData, worstIndex,
                               m_windowState.highlightWorstDeviation,
                               m_windowState.worstColorDeviation);
             } else if (surface) {
                 drawSurfaceMesh(mapMesh(true), scaleX, scaleY, scaleZ, devMin, devRange);
-                if (m_windowState.highlightWorstDeviation) {
-                    drawWorstSection(numRadii, numProfiles, centerIdx, rStep,
-                                     getAngleStepDeg(), scaleX, scaleY, scaleZ, worstAngle,
-                                     m_windowState.worstColorDeviation, getProfiles(),
-                                     &m_nominalSurfaceData);
-                }
             }
 
-            constexpr int SEGMENT_SIZE = 3;
-            const int numSegments = (numRadii - 1) / SEGMENT_SIZE + 1;
-            // Same thinning as the surface plot: the item budget is what keeps
-            // ImPlot3D from being flooded every frame. The worst section is
-            // always kept so its highlight never disappears.
-            constexpr int kMaxDrawnItems = 1200;
-            const int stride = app::compute::drawnProfileStride(
-                numProfiles, 2 * numSegments, kMaxDrawnItems);
             std::vector<float> xBuf(static_cast<size_t>(numRadii));
             std::vector<float> yBuf(static_cast<size_t>(numRadii));
             std::vector<float> zBuf(static_cast<size_t>(numRadii));
+            std::vector<ImU32> lineColors(static_cast<size_t>(numRadii));
 
             for (int j = 0; j < numAngles && !wireframe && !surface; ++j) {
                 int profileIdx = std::min(j / 2, numProfiles - 1);
@@ -461,8 +496,7 @@ namespace gui {
                 double angleRad = profileIdx * std::numbers::pi / numProfiles;
                 if (!positiveHalf) angleRad += std::numbers::pi;
 
-                float profileAngle = static_cast<float>(profileIdx * getAngleStepDeg());
-                bool isWorst = worstAngle >= 0.0f && std::abs(profileAngle - worstAngle) < 0.01f;
+                bool isWorst = worstIndex >= 0 && profileIdx == worstIndex;
                 if (!isWorst && (profileIdx % stride) != 0) {
                     continue;
                 }
@@ -480,39 +514,42 @@ namespace gui {
                         sag -= static_cast<float>(m_nominalSurfaceData.sagDataPoints[srcIdx].sag);
                     }
                     zBuf[i] = sag * static_cast<float>(scaleZ);
+
+                    float t = (zBuf[i] - devMin) / devRange;
+                    ImVec4 color = ImPlot3D::SampleColormap(t);
+                    color.w = 1.0f;
+                    lineColors[i] = ImGui::ColorConvertFloat4ToU32(color);
                 }
 
+                ImPlot3DSpec spec;
                 if (isWorst && m_windowState.highlightWorstDeviation) {
-                    ImPlot3DSpec spec;
                     spec.LineColor = ImVec4(m_windowState.worstColorDeviation[0], m_windowState.worstColorDeviation[1], m_windowState.worstColorDeviation[2], 1.0f);
                     spec.LineWeight = 3.0f;
-                    char worstLabel[16];
-                    snprintf(worstLabel, sizeof(worstLabel), "##dw%d", j);
-                    ImPlot3D::PlotLine(worstLabel, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
                 } else {
-                    for (int seg = 0; seg < numSegments; ++seg) {
-                        int start = seg * SEGMENT_SIZE;
-                        int end = std::min(start + SEGMENT_SIZE + 1, numRadii);
-                        int len = end - start;
-                        if (len < 2) continue;
-
-                        int midIdx = start + len / 2;
-                        float t = (zBuf[midIdx] - devMin) / devRange;
-                        ImVec4 color = ImPlot3D::SampleColormap(t);
-                        color.w = 1.0f;   // the colormap must not fade the sections out
-
-                        ImPlot3DSpec spec;
-                        spec.LineColor = color;
-                        spec.LineWeight = 2.0f;
-                        char segLabel[32];
-                        snprintf(segLabel, sizeof(segLabel), "##dg%d_%d", j, seg);
-                        ImPlot3D::PlotLine(segLabel, xBuf.data() + start, yBuf.data() + start, zBuf.data() + start, len, spec);
-                    }
+                    spec.LineColors = lineColors.data();
+                    spec.LineWeight = 2.0f;
                 }
+                char label[24];
+                snprintf(label, sizeof(label), "##dp%d", j);
+                ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
+            }
+
+            if (m_windowState.highlightWorstDeviation && worstIndex >= 0) {
+                const ImVec2 rectSize = ImPlot3D::GetPlotRectSize();
+                overlayRectMin = ImPlot3D::GetPlotRectPos();
+                overlayRectMax = ImVec2(overlayRectMin.x + rectSize.x,
+                                        overlayRectMin.y + rectSize.y);
+                collectWorstSectionOverlay(numRadii, centerIdx, rStep,
+                                           scaleX, scaleY, scaleZ, worstIndex,
+                                           getProfiles(), &m_nominalSurfaceData, overlay);
             }
 
             ImPlot3D::PopColormap();
             ImPlot3D::EndPlot();
+            drawOverlayLine(overlay,
+                            ImVec4(m_windowState.worstColorDeviation[0], m_windowState.worstColorDeviation[1],
+                                   m_windowState.worstColorDeviation[2], 1.0f),
+                            overlayRectMin, overlayRectMax);
         }
     }
 }

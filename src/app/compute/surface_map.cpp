@@ -56,7 +56,8 @@ namespace app::compute {
 
         std::optional<app::models::MaxPVResult> best;
 
-        for (const auto& profile : profiles) {
+        for (size_t index = 0; index < profiles.size(); ++index) {
+            const auto& profile = profiles[index];
             if (profile.sagDataPoints.size() != numPoints) continue;
 
             // Track whether any sample in this section is non-finite; if so the
@@ -78,7 +79,8 @@ namespace app::compute {
             if (!std::isfinite(pv)) continue;
 
             if (!best.has_value() || pv > best->pv) {
-                best = app::models::MaxPVResult{profile.angle, P, V, pv};
+                best = app::models::MaxPVResult{profile.angle, P, V, pv,
+                                               static_cast<int>(index)};
             }
         }
 
@@ -113,7 +115,6 @@ namespace app::compute {
         const int centerIdx = (sampling - 1) / 2;
         const double rStep = semiDiameter / (numRadii - 1);
         const int numProfiles = static_cast<int>(profiles.size());
-        const int numAngles = numProfiles * 2;
 
         // Decimate the sections so the mesh stays inside the vertex budget.
         const int verticesPerProfile = numRadii * 2;
