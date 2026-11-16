@@ -288,8 +288,72 @@ TEST(MapMesh, TheVerticesFollowTheAngleAroundTheDisc) {
     }
 }
 
-TEST(MapMesh, TheCentreIsConnected) {
-    // The innermost cells fan out from the shared centre vertex. Leaving them
+namespace {
+    std::vector<app::models::SurfaceData> makeMapProfiles(size_t sections, int sampling,
+                                                         double semiDiameter) {
+        std::vector<app::models::SurfaceData> profiles(sections);
+        for (size_t s = 0; s < sections; ++s) {
+            profiles[s].semiDiameter = semiDiameter;
+            profiles[s].sagDataPoints.resize(static_cast<size_t>(sampling));
+            for (int i = 0; i < sampling; ++i) {
+                // A sag that differs per section: a flat surface would hide
+                // gaps in the mesh.
+                profiles[s].sagDataPoints[static_cast<size_t>(i)].sag =
+                    0.01 * static_cast<double>(s) + 0.001 * static_cast<double>(i);
+            }
+        }
+        return profiles;
+    }
+} // namespace
+
+TEST(MapMesh, CoversEveryAngleWithoutGaps) {
+    const size_t sections = 24;
+    const int sampling = 33;
+    const MapMesh mesh = buildMapMesh(makeMapProfiles(sections, sampling, 5.0),
+                                      sampling, 5.0, nullptr, 60000);
+    ASSERT_FALSE(mesh.empty());
+
+    // Every vertex must sit on a ring of the grid, and the angular positions of
+    // the rings must follow each other without a jump: a gap in the coverage
+    // is what showed up as a missing sector of the surface.
+    const size_t numRadii = static_cast<size_t>((sampling + 1) / 2);
+    ASSERT_EQ(mesh.vertexCount() % numRadii, 0u);
+    const size_t angles = mesh.vertexCount() / numRadii;
+
+    std::vector<double> angleOfRing;
+    angleOfRing.reserve(angles);
+    for (size_t a = 0; a < angles; ++a) {
+        // The first vertex of a ring is the centre (radius 0), so the angle of
+        // the ring is taken from its first real vertex.
+        const size_t v = a * numRadii + 1;
+        const double x = mesh.x[v];
+        const double y = mesh.y[v];
+        EXPECT_TRUE(std::isfinite(x));
+        EXPECT_TRUE(std::isfinite(y));
+        EXPECT_TRUE(std::isfinite(mesh.z[v]));
+        angleOfRing.push_back(std::atan2(y, x));
+    }
+
+    // The angles run once around the circle; between two neighbours the step
+    // must stay within one section angle (plus the opposite half).
+    const double maxStep = std::numbers::pi / static_cast<double>(sections) * 1.5;
+    for (size_t a = 1; a < angles; ++a) {
+        double step = angleOfRing[a] - angleOfRing[a - 1];
+        while (step < 0.0) step += 2.0 * std::numbers::pi;
+        EXPECT_LE(step, maxStep) << "gap between ring " << (a - 1) << " and " << a;
+    }
+}
+
+TEST(MapMesh, IndicesStayInsideTheVertexArray) {
+    const MapMesh mesh = buildMapMesh(makeMapProfiles(12, 33, 5.0), 33, 5.0, nullptr, 60000);
+    ASSERT_FALSE(mesh.empty());
+    EXPECT_EQ(mesh.indices.size() % 3, 0u);
+    for (const unsigned int index : mesh.indices) {
+        ASSERT_LT(index, mesh.vertexCount());
+    }
+}
+
+TEST(MapMesh, TheCentreIsConnected) {    // The innermost cells fan out from the shared centre vertex. Leaving them
     // out left a hole in the middle of the surface.
     const MapMesh mesh = buildMapMesh(makeProfiles(8), 33, 5.0, nullptr, 1000000);
     ASSERT_FALSE(mesh.empty());
