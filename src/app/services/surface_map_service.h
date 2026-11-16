@@ -28,9 +28,14 @@ namespace app::services {
         Surface = 2,    ///< one filled, triangulated surface
     };
 
-    /// Vertex budget of the triangulated surface. A precise map has hundreds
-    /// of thousands of sections and every vertex costs two triangles.
-    inline constexpr int kMaxMapMeshVertices = 60000;
+    /// Budget of unrolled triangle vertices (the size of the mesh index
+    /// buffer) for the triangulated surface. ImPlot3D's RendererTriangleFill
+    /// emits 3 ImDrawVert vertices per triangle into a 16-bit ImDrawIdx buffer
+    /// (65 535 entries, shared with the axes, the grid and the box of the
+    /// plot), so the index buffer has to stay clearly below that limit -
+    /// otherwise the tail of the surface is silently dropped and a sector of
+    /// the map disappears.
+    inline constexpr int kMaxMapMeshVertices = 48000;
 
     /// Display name of a render mode (Settings menu of the map window).
     const char* mapRenderModeName(MapRenderMode mode);

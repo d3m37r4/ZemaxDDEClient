@@ -239,10 +239,30 @@ TEST(MapMesh, VerticesAndIndicesAreConsistent) {
 TEST(MapMesh, DecimatesToTheVertexBudget) {
     const MapMesh mesh = buildMapMesh(makeProfiles(180), 33, 5.0, nullptr, 6000);
     ASSERT_FALSE(mesh.empty());
-    EXPECT_LE(mesh.vertexCount(), 6000u);
-    // A generous budget keeps every section.
+    // The budget counts the unrolled triangle vertices (the index buffer),
+    // because that is what ImPlot3D puts into the 16-bit ImDrawIdx buffer.
+    EXPECT_LE(mesh.indices.size(), 6000u);
+
+    // The case that clipped a sector: 180 sections with 65 points per section
+    // unrolled to 69 120 vertices, past the 65 535 limit of ImDrawIdx.
+    std::vector<app::models::SurfaceData> denseProfiles(180);
+    for (auto& profile : denseProfiles) {
+        profile.semiDiameter = 5.0;
+        profile.sagDataPoints.resize(65);
+        for (size_t i = 0; i < profile.sagDataPoints.size(); ++i) {
+            profile.sagDataPoints[i].sag = 0.01 * static_cast<double>(i);
+        }
+    }
+    const MapMesh dense = buildMapMesh(denseProfiles, 65, 5.0, nullptr, 48000);
+    ASSERT_FALSE(dense.empty());
+    EXPECT_LE(dense.indices.size(), 48000u);
+    // The angular resolution survives: every one of the 180 sections (360
+    // halves) is still in the mesh, the radial steps were thinned instead.
+    EXPECT_GE(dense.vertexCount(), 360u);
+
+    // A generous budget keeps every section and every radius.
     const MapMesh full = buildMapMesh(makeProfiles(180), 33, 5.0, nullptr, 1000000);
-    EXPECT_GT(full.vertexCount(), mesh.vertexCount());
+    EXPECT_GT(full.indices.size(), mesh.indices.size());
 }
 
 TEST(MapMesh, TheNominalSurfaceGivesTheDeviation) {

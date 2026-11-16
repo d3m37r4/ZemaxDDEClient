@@ -199,9 +199,11 @@ namespace {
         }
 
         ImPlot3DSpec spec;
+        // Only the filled triangles: the edges of every triangle would be
+        // unrolled into the same 16-bit vertex buffer and push the surface
+        // over the limit.
+        spec.Flags = ImPlot3DMeshFlags_NoLines | ImPlot3DMeshFlags_NoMarkers;
         spec.FillColors = colors.data();
-        spec.LineColors = colors.data();
-        spec.LineWeight = 1.0f;
         ImPlot3D::PlotMesh("##mapSurface", x.data(), y.data(), z.data(),
                            mesh.indices.data(), static_cast<int>(vertexCount),
                            static_cast<int>(mesh.indices.size()), spec);

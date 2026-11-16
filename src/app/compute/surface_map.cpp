@@ -116,8 +116,33 @@ namespace app::compute {
         const double rStep = semiDiameter / (numRadii - 1);
         const int numProfiles = static_cast<int>(profiles.size());
 
-        // Decimate the sections so the mesh stays inside the vertex budget.
-        const int verticesPerProfile = numRadii * 2;
+        // ImPlot3D's RendererTriangleFill unrolls every triangle into three
+        // separate ImDrawVert vertices in a 16-bit ImDrawIdx buffer, so the
+        // budget counts unrolled vertices and not mesh vertices: one angular
+        // cell (1 angle step x 1 radial step) costs 6 of them (2 triangles),
+        // one profile (2 halves) with R radial steps costs 12 * R.
+        // Decimating the radii first keeps the angular resolution of the map
+        // (every section stays visible) and only then thins the sections.
+        constexpr int kMinRadialSteps = 16;
+        const int totalRadialSteps = std::max(1, numRadii - 1);
+        int radialStride = 1;
+        const long long fullCost = 12LL * numProfiles * totalRadialSteps;
+        if (fullCost > maxVertices && totalRadialSteps > kMinRadialSteps) {
+            const int neededStride = static_cast<int>((fullCost + maxVertices - 1) / maxVertices);
+            const int maxRadialStride = std::max(1, totalRadialSteps / kMinRadialSteps);
+            radialStride = std::clamp(neededStride, 1, maxRadialStride);
+        }
+
+        std::vector<int> keptRadii;
+        for (int i = 0; i < numRadii - 1; i += radialStride) {
+            keptRadii.push_back(i);
+        }
+        keptRadii.push_back(numRadii - 1);
+        const int meshRadii = static_cast<int>(keptRadii.size());
+        const int radialSteps = std::max(1, meshRadii - 1);
+
+        // Each kept profile (its two halves) costs 12 * radialSteps vertices.
+        const int verticesPerProfile = 12 * radialSteps;
         const int maxProfiles = std::max(1, maxVertices / std::max(1, verticesPerProfile));
         const int stride = std::max(1, (numProfiles + maxProfiles - 1) / maxProfiles);
 
@@ -134,9 +159,9 @@ namespace app::compute {
             keptAngles.push_back(2 * k + 1);
         }
 
-        mesh.x.reserve(keptAngles.size() * static_cast<size_t>(numRadii));
-        mesh.y.reserve(keptAngles.size() * static_cast<size_t>(numRadii));
-        mesh.z.reserve(keptAngles.size() * static_cast<size_t>(numRadii));
+        mesh.x.reserve(keptAngles.size() * static_cast<size_t>(meshRadii));
+        mesh.y.reserve(keptAngles.size() * static_cast<size_t>(meshRadii));
+        mesh.z.reserve(keptAngles.size() * static_cast<size_t>(meshRadii));
 
         for (const int j : keptAngles) {
             const int profileIdx = std::min(j / 2, numProfiles - 1);
@@ -145,7 +170,7 @@ namespace app::compute {
             if (points.empty()) continue;
             double angleRad = profileIdx * std::numbers::pi / numProfiles;
             if (!positiveHalf) angleRad += std::numbers::pi;
-            for (int i = 0; i < numRadii; ++i) {
+            for (const int i : keptRadii) {
                 const double r = i * rStep;
                 mesh.x.push_back(static_cast<float>(r * std::cos(angleRad)));
                 mesh.y.push_back(static_cast<float>(r * std::sin(angleRad)));
@@ -160,16 +185,15 @@ namespace app::compute {
         }
 
         // Connect the kept angles into triangles, closing the ring so the
-        // surface has no seam. The innermost ring collapses into the centre,
-        // so its cells are skipped.
+        // surface has no seam. The innermost cells fan out from the shared
+        // centre vertex, so they are real triangles - skipping them left a
+        // hole in the middle.
         const int kept = static_cast<int>(keptAngles.size());
         for (int a = 0; a < kept; ++a) {
             const int next = (a + 1) % kept;
-            const unsigned int base0 = static_cast<unsigned int>(a * numRadii);
-            const unsigned int base1 = static_cast<unsigned int>(next * numRadii);
-            // The innermost cells fan out from the shared centre vertex, so
-            // they are real triangles - skipping them left a hole in the middle.
-            for (int i = 0; i + 1 < numRadii; ++i) {
+            const unsigned int base0 = static_cast<unsigned int>(a * meshRadii);
+            const unsigned int base1 = static_cast<unsigned int>(next * meshRadii);
+            for (int i = 0; i + 1 < meshRadii; ++i) {
                 mesh.indices.push_back(base0 + static_cast<unsigned int>(i));
                 mesh.indices.push_back(base0 + static_cast<unsigned int>(i + 1));
                 mesh.indices.push_back(base1 + static_cast<unsigned int>(i));
