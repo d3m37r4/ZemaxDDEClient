@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <ctime>
 #include <deque>
 #include <fstream>
 #include <string>
@@ -42,7 +43,7 @@ class Logger {
         /// deadlock the report. Returns false when the mutex is held.
         [[nodiscard]] bool tryCopyLogTail(char* buffer, size_t capacity, size_t& written) const;
 
-        void setEnabled(bool enabled) noexcept { m_enabled = enabled; }
+        void setEnabled(bool enabled);
         void setMaxFileSize(size_t bytes) noexcept { m_maxFileSize = bytes; }
         [[nodiscard]] std::string getCurrentLogPath() const;
 
@@ -52,6 +53,11 @@ class Logger {
         /// Oldest entries are dropped in batches so trimming stays amortized.
         static constexpr size_t MAX_MEMORY_LOGS = 20000;
         static constexpr size_t TRIM_BATCH = 2000;
+        /// File flush cadence: flushing on every line costs thousands of
+        /// synchronous WriteFile calls on the DDE/UI thread during a map run.
+        /// A crash report reads the in-memory tail through tryCopyLogTail(),
+        /// so an unflushed file buffer cannot lose the diagnostics.
+        static constexpr size_t FLUSH_BATCH = 64;
 
         std::deque<std::string> m_logs;
         uint64_t m_epoch = 1;
@@ -63,11 +69,12 @@ class Logger {
         std::ofstream m_logFile;
         size_t m_currentFileSize = 0;
         size_t m_maxFileSize = 5 * 1024 * 1024;
+        size_t m_unflushedLines = 0;
         bool m_enabled = false;
         std::string m_currentLogDate;
         int m_rotationIndex = 0;
 
-        void openLogFile();
+        void openLogFile(const tm& ltm);
         void rotateLogFile();
         std::string getLogDir() const;
         std::string getLogPath(const std::string& date, int rotation) const;

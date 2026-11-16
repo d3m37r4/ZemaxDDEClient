@@ -56,21 +56,19 @@ std::string Logger::getLogPath(const std::string& date, int rotation) const {
     return dir + "\\L" + date + suffix + ".log";
 }
 
-void Logger::openLogFile() {
-    time_t now = std::time(nullptr);
-    tm ltm{};
-    localtime_s(&ltm, &now);
-
+void Logger::openLogFile(const tm& ltm) {
     char dateBuf[16];
     std::strftime(dateBuf, sizeof(dateBuf), "%d%m%Y", &ltm);
     std::string today(dateBuf);
 
-    std::string logDir = getLogDir();
-    std::filesystem::create_directories(logDir);
-
+    // The file is already open for today: skip the directory work below, which
+    // otherwise ran a filesystem syscall on every single log line.
     if (today == m_currentLogDate && m_logFile.is_open()) {
         return;
     }
+
+    std::string logDir = getLogDir();
+    std::filesystem::create_directories(logDir);
 
     m_currentLogDate = today;
 
@@ -93,6 +91,7 @@ void Logger::openLogFile() {
         path = getLogPath(today, 0);
     }
     m_logFile.open(path, std::ios::app);
+    m_unflushedLines = 0;
     if (m_logFile.is_open()) {
         m_logFile.seekp(0, std::ios::end);
         m_currentFileSize = static_cast<size_t>(m_logFile.tellp());
@@ -103,6 +102,7 @@ void Logger::rotateLogFile() {
     if (m_logFile.is_open()) {
         m_logFile.close();
     }
+    m_unflushedLines = 0;
     // Skip to the first slot with room instead of truncating an existing
     // archive: a restart within the same day used to erase -01.log.
     std::string path;
@@ -127,6 +127,17 @@ void Logger::rotateLogFile() {
     } else {
         m_currentFileSize = 0;
     }
+}
+
+void Logger::setEnabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    // Turning file logging off has to persist the tail: nothing flushes the
+    // stream afterwards.
+    if (!enabled && m_logFile.is_open() && m_unflushedLines > 0) {
+        m_logFile.flush();
+        m_unflushedLines = 0;
+    }
+    m_enabled = enabled;
 }
 
 std::string Logger::getCurrentLogPath() const {
@@ -216,11 +227,13 @@ bool Logger::tryCopyLogTail(char* buffer, size_t capacity, size_t& written) cons
 
 void Logger::addLog(std::string_view message) {
     std::string logEntry;
+    tm ltm{};
+    bool hasLocalTime = false;
 
     try {
         time_t now = std::time(nullptr);
-        tm ltm{};
         if (localtime_s(&ltm, &now) == 0) {
+            hasLocalTime = true;
             char timestamp[32];
             if (std::strftime(timestamp, sizeof(timestamp), TIME_FORMAT.data(), &ltm) > 0) {
                 logEntry = std::format("{} {}", timestamp, message);
@@ -248,13 +261,17 @@ void Logger::addLog(std::string_view message) {
     std::cout << m_logs.back() << '\n';
     #endif
 
-    if (!m_enabled) return;
+    if (!m_enabled || !hasLocalTime) return;
 
-    openLogFile();
+    openLogFile(ltm);
     if (m_logFile.is_open()) {
         m_logFile << m_logs.back() << '\n';
-        m_logFile.flush();
         m_currentFileSize += m_logs.back().size() + 1;
+        ++m_unflushedLines;
+        if (m_unflushedLines >= FLUSH_BATCH) {
+            m_logFile.flush();
+            m_unflushedLines = 0;
+        }
         if (m_currentFileSize >= m_maxFileSize) {
             rotateLogFile();
         }
