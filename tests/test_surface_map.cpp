@@ -407,5 +407,29 @@ TEST(MapMesh, TheRingIsClosed) {
     EXPECT_TRUE(wraps);
 }
 
+TEST(MapMesh, TheCentreFollowsTheSectionData) {
+    // A section can end up with fewer points than the sampling setting (a point
+    // skipped by a timeout), so its centre is not where the sampling setting
+    // says. The sag doubles as the point index, which makes the centre readable
+    // from the mesh: the first vertex of a ring is radius 0 of that section.
+    const std::vector<int> pointCounts = {33, 33, 25, 33};
+    std::vector<app::models::SurfaceData> profiles(pointCounts.size());
+    for (size_t s = 0; s < profiles.size(); ++s) {
+        profiles[s].semiDiameter = 5.0;
+        profiles[s].sagDataPoints.resize(static_cast<size_t>(pointCounts[s]));
+        for (int i = 0; i < pointCounts[s]; ++i) {
+            profiles[s].sagDataPoints[static_cast<size_t>(i)].sag = static_cast<double>(i);
+        }
+    }
+
+    const MapMesh mesh = buildMapMesh(profiles, 33, 5.0, nullptr, 1000000);
+    ASSERT_FALSE(mesh.empty());
+    const size_t numRadii = 17;
+    // The rings run as the positive halves of the sections, then the opposite
+    // halves, so ring 2 opens the short section.
+    ASSERT_EQ(mesh.vertexCount(), 4u * 2u * numRadii);
+    EXPECT_FLOAT_EQ(mesh.z[2 * numRadii], 12.0f);
+}
+
 } // namespace
 } // namespace app::compute

@@ -112,7 +112,6 @@ namespace app::compute {
             return mesh;
         }
         const int numRadii = (sampling + 1) / 2;
-        const int centerIdx = (sampling - 1) / 2;
         const double rStep = semiDiameter / (numRadii - 1);
         const int numProfiles = static_cast<int>(profiles.size());
 
@@ -168,13 +167,16 @@ namespace app::compute {
             const bool positiveHalf = (j % 2 == 0);
             const auto& points = profiles[profileIdx].sagDataPoints;
             if (points.empty()) continue;
+            // The centre belongs to the section's own data: a section may end
+            // up with fewer points than the sampling setting.
+            const int profileCenter = (static_cast<int>(points.size()) - 1) / 2;
             double angleRad = profileIdx * std::numbers::pi / numProfiles;
             if (!positiveHalf) angleRad += std::numbers::pi;
             for (const int i : keptRadii) {
                 const double r = i * rStep;
                 mesh.x.push_back(static_cast<float>(r * std::cos(angleRad)));
                 mesh.y.push_back(static_cast<float>(r * std::sin(angleRad)));
-                int srcIdx = positiveHalf ? centerIdx + i : centerIdx - i;
+                int srcIdx = positiveHalf ? profileCenter + i : profileCenter - i;
                 srcIdx = std::max(0, std::min(static_cast<int>(points.size()) - 1, srcIdx));
                 float value = static_cast<float>(points[srcIdx].sag);
                 if (nominal != nullptr && srcIdx < static_cast<int>(nominal->sagDataPoints.size())) {

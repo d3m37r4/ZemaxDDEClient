@@ -57,7 +57,7 @@ namespace {
     // other modes and the spokes meet cleanly in the centre without a hole or
     // a filled cap.
     void drawWireframe(int numRadii, int numAngles, int numProfiles,
-                       double rStep, int centerIdx, int stride,
+                       double rStep, int stride,
                        double scaleX, double scaleY, double scaleZ,
                        float valueMin, float valueRange,
                        const std::vector<app::models::SurfaceData>& profiles,
@@ -90,7 +90,12 @@ namespace {
             x = static_cast<float>(r * std::cos(angleRad) * scaleX);
             y = static_cast<float>(r * std::sin(angleRad) * scaleY);
             const int count = static_cast<int>(profiles[profileIdx].sagDataPoints.size());
-            int srcIdx = positiveHalf ? centerIdx + radiusIndex : centerIdx - radiusIndex;
+            // The centre belongs to the section's own data: a section can end
+            // up with fewer points than the sampling setting (a point skipped
+            // by a timeout), and the shared index would then shift the whole
+            // spoke onto its neighbours.
+            const int profileCenter = (count - 1) / 2;
+            int srcIdx = positiveHalf ? profileCenter + radiusIndex : profileCenter - radiusIndex;
             srcIdx = std::max(0, std::min(count - 1, srcIdx));
             double value = profiles[profileIdx].sagDataPoints[srcIdx].sag;
             if (nominal != nullptr && srcIdx < static_cast<int>(nominal->sagDataPoints.size())) {
@@ -213,7 +218,7 @@ namespace {
     // (-semiDiameter to +semiDiameter). The filled surface hides a 3D line on
     // the surface because the depth test gives the triangles the tie, so
     // drawing it over the plot keeps the highlight visible end-to-end.
-    void collectWorstSectionOverlay(int numRadii, int centerIdx, double rStep,
+    void collectWorstSectionOverlay(int numRadii, double rStep,
                                     double scaleX, double scaleY, double scaleZ,
                                     int profileIndex,
                                     const std::vector<app::models::SurfaceData>& profiles,
@@ -222,6 +227,7 @@ namespace {
         if (profileIndex < 0 || profileIndex >= static_cast<int>(profiles.size())) return;
         const auto& points = profiles[profileIndex].sagDataPoints;
         if (points.empty()) return;
+        const int profileCenter = (static_cast<int>(points.size()) - 1) / 2;
 
         const double angleRad = profileIndex * std::numbers::pi / static_cast<double>(profiles.size());
         out.clear();
@@ -230,7 +236,7 @@ namespace {
             const double r = i * rStep;
             const double x = r * std::cos(angleRad) * scaleX;
             const double y = r * std::sin(angleRad) * scaleY;
-            int srcIdx = centerIdx + i;
+            int srcIdx = profileCenter + i;
             srcIdx = std::max(0, std::min(static_cast<int>(points.size()) - 1, srcIdx));
             double value = points[srcIdx].sag;
             if (nominal != nullptr && srcIdx < static_cast<int>(nominal->sagDataPoints.size())) {
@@ -270,8 +276,6 @@ namespace gui {
             // axis, so there is nothing meaningful to draw.
             return;
         }
-        int centerIdx = (getTargetSampling() - 1) / 2;
-
         // The worst section is addressed by its index: matching it by angle
         // breaks as soon as the angle rounding or the step differs.
         const int worstIndex = getMaxPVResult().has_value() ? getMaxPVResult()->profileIndex : -1;
@@ -322,15 +326,14 @@ namespace gui {
 
             // A precise map (thousands of sections) submits hundreds of
             // thousands of plot items per frame and overruns the 16-bit
-            // ImDrawIdx range. Thin the drawn set by an item budget: with
-            // per-vertex LineColors each half-profile is a single PlotLine
-            // item (2 items per section).
+            // ImDrawIdx range. Thin the drawn set by an item budget; the
+            // wireframe submits two spokes per section.
             constexpr int kMaxDrawnItems = 1200;
             const int stride = app::compute::drawnProfileStride(
                 numProfiles, 2, kMaxDrawnItems);
 
             if (wireframe) {
-                drawWireframe(numRadii, numAngles, numProfiles, rStep, centerIdx,
+                drawWireframe(numRadii, numAngles, numProfiles, rStep,
                               stride, scaleX, scaleY, scaleZ, sagMin, sagRange,
                               getProfiles(), nullptr, worstIndex,
                               m_windowState.highlightWorstSurface,
@@ -339,32 +342,42 @@ namespace gui {
                 drawSurfaceMesh(mapMesh(false), scaleX, scaleY, scaleZ, sagMin, sagRange);
             }
 
-            std::vector<float> xBuf(static_cast<size_t>(numRadii));
-            std::vector<float> yBuf(static_cast<size_t>(numRadii));
-            std::vector<float> zBuf(static_cast<size_t>(numRadii));
-            std::vector<ImU32> lineColors(static_cast<size_t>(numRadii));
+            // A section is stored as one full cross-section (-R..+R), so it is
+            // drawn as a single line through the centre, exactly as measured.
+            // Splitting it into two rays under theta and theta+180 made the map
+            // read as two mirrored halves, and 360 nearly coincident lines beat
+            // into a moire instead of a surface. The number of points follows
+            // the data (sampling setting, minus any point skipped by a timeout),
+            // so nothing here depends on a fixed count.
+            size_t maxPoints = 2;
+            for (const auto& profile : getProfiles()) {
+                maxPoints = std::max(maxPoints, profile.sagDataPoints.size());
+            }
+            std::vector<float> xBuf(maxPoints);
+            std::vector<float> yBuf(maxPoints);
+            std::vector<float> zBuf(maxPoints);
+            std::vector<ImU32> lineColors(maxPoints);
 
-            for (int j = 0; j < numAngles && !wireframe && !surface; ++j) {
-                int profileIdx = std::min(j / 2, numProfiles - 1);
-                bool positiveHalf = (j % 2 == 0);
-                double angleRad = profileIdx * std::numbers::pi / numProfiles;
-                if (!positiveHalf) angleRad += std::numbers::pi;
+            const int lineStride = app::compute::drawnProfileStride(
+                numProfiles, 1, kMaxDrawnItems);
 
-                bool isWorst = worstIndex >= 0 && profileIdx == worstIndex;
-                if (!isWorst && (profileIdx % stride) != 0) {
+            for (int k = 0; k < numProfiles && !wireframe && !surface; ++k) {
+                const bool isWorst = worstIndex >= 0 && k == worstIndex;
+                if (!isWorst && (k % lineStride) != 0) {
+                    continue;
+                }
+                const auto& points = getProfiles()[k].sagDataPoints;
+                const int count = static_cast<int>(points.size());
+                if (count < 2) {
                     continue;
                 }
 
-                for (int i = 0; i < numRadii; ++i) {
-                    double r = i * rStep;
-                    xBuf[i] = static_cast<float>(r * std::cos(angleRad) * scaleX);
-                    yBuf[i] = static_cast<float>(r * std::sin(angleRad) * scaleY);
+                for (int i = 0; i < count; ++i) {
+                    xBuf[i] = static_cast<float>(points[i].x * scaleX);
+                    yBuf[i] = static_cast<float>(points[i].y * scaleY);
+                    zBuf[i] = static_cast<float>(points[i].sag * scaleZ);
 
-                    int srcIdx = positiveHalf ? centerIdx + i : centerIdx - i;
-                    srcIdx = std::max(0, std::min(static_cast<int>(getProfiles()[profileIdx].sagDataPoints.size()) - 1, srcIdx));
-                    zBuf[i] = static_cast<float>(getProfiles()[profileIdx].sagDataPoints[srcIdx].sag * scaleZ);
-
-                    float t = (zBuf[i] - sagMin) / sagRange;
+                    const float t = (zBuf[i] - sagMin) / sagRange;
                     ImVec4 color = ImPlot3D::SampleColormap(t);
                     color.w = 1.0f;
                     lineColors[i] = ImGui::ColorConvertFloat4ToU32(color);
@@ -379,8 +392,8 @@ namespace gui {
                     spec.LineWeight = 2.0f;
                 }
                 char label[24];
-                snprintf(label, sizeof(label), "##sp%d", j);
-                ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
+                snprintf(label, sizeof(label), "##sp%d", k);
+                ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), count, spec);
             }
 
             // Collect the full-diameter worst-section overlay after the plot
@@ -391,7 +404,7 @@ namespace gui {
                 overlayRectMin = ImPlot3D::GetPlotRectPos();
                 overlayRectMax = ImVec2(overlayRectMin.x + rectSize.x,
                                         overlayRectMin.y + rectSize.y);
-                collectWorstSectionOverlay(numRadii, centerIdx, rStep,
+                collectWorstSectionOverlay(numRadii, rStep,
                                            scaleX, scaleY, scaleZ, worstIndex,
                                            getProfiles(), nullptr, overlay);
             }
@@ -421,8 +434,6 @@ namespace gui {
             // axis, so there is nothing meaningful to draw.
             return;
         }
-        int centerIdx = (getTargetSampling() - 1) / 2;
-
         // The worst section is addressed by its index: matching it by angle
         // breaks as soon as the angle rounding or the step differs.
         const int worstIndex = getMaxPVResult().has_value() ? getMaxPVResult()->profileIndex : -1;
@@ -471,14 +482,14 @@ namespace gui {
             const bool surface = m_windowState.renderMode ==
                 static_cast<int>(app::services::MapRenderMode::Surface);
 
-            // Same thinning as the surface plot: with per-vertex LineColors
-            // each half-profile is a single PlotLine item (2 items per section).
+            // Same thinning as the surface plot: the wireframe submits two
+            // spokes per section.
             constexpr int kMaxDrawnItems = 1200;
             const int stride = app::compute::drawnProfileStride(
                 numProfiles, 2, kMaxDrawnItems);
 
             if (wireframe) {
-                drawWireframe(numRadii, numAngles, numProfiles, rStep, centerIdx,
+                drawWireframe(numRadii, numAngles, numProfiles, rStep,
                               stride, scaleX, scaleY, scaleZ, devMin, devRange,
                               getProfiles(), &m_nominalSurfaceData, worstIndex,
                               m_windowState.highlightWorstDeviation,
@@ -487,37 +498,43 @@ namespace gui {
                 drawSurfaceMesh(mapMesh(true), scaleX, scaleY, scaleZ, devMin, devRange);
             }
 
-            std::vector<float> xBuf(static_cast<size_t>(numRadii));
-            std::vector<float> yBuf(static_cast<size_t>(numRadii));
-            std::vector<float> zBuf(static_cast<size_t>(numRadii));
-            std::vector<ImU32> lineColors(static_cast<size_t>(numRadii));
+            // Same as the surface plot: one measured cross-section per line,
+            // drawn through the centre, with the point count taken from the
+            // data instead of the sampling setting.
+            size_t maxPoints = 2;
+            for (const auto& profile : getProfiles()) {
+                maxPoints = std::max(maxPoints, profile.sagDataPoints.size());
+            }
+            std::vector<float> xBuf(maxPoints);
+            std::vector<float> yBuf(maxPoints);
+            std::vector<float> zBuf(maxPoints);
+            std::vector<ImU32> lineColors(maxPoints);
 
-            for (int j = 0; j < numAngles && !wireframe && !surface; ++j) {
-                int profileIdx = std::min(j / 2, numProfiles - 1);
-                bool positiveHalf = (j % 2 == 0);
-                double angleRad = profileIdx * std::numbers::pi / numProfiles;
-                if (!positiveHalf) angleRad += std::numbers::pi;
+            const int lineStride = app::compute::drawnProfileStride(
+                numProfiles, 1, kMaxDrawnItems);
 
-                bool isWorst = worstIndex >= 0 && profileIdx == worstIndex;
-                if (!isWorst && (profileIdx % stride) != 0) {
+            for (int k = 0; k < numProfiles && !wireframe && !surface; ++k) {
+                const bool isWorst = worstIndex >= 0 && k == worstIndex;
+                if (!isWorst && (k % lineStride) != 0) {
+                    continue;
+                }
+                const auto& points = getProfiles()[k].sagDataPoints;
+                const int count = static_cast<int>(points.size());
+                if (count < 2) {
                     continue;
                 }
 
-                for (int i = 0; i < numRadii; ++i) {
-                    double r = i * rStep;
-                    xBuf[i] = static_cast<float>(r * std::cos(angleRad) * scaleX);
-                    yBuf[i] = static_cast<float>(r * std::sin(angleRad) * scaleY);
+                for (int i = 0; i < count; ++i) {
+                    xBuf[i] = static_cast<float>(points[i].x * scaleX);
+                    yBuf[i] = static_cast<float>(points[i].y * scaleY);
 
-                    int srcIdx = positiveHalf ? centerIdx + i : centerIdx - i;
-                    srcIdx = std::max(0, std::min(static_cast<int>(getProfiles()[profileIdx].sagDataPoints.size()) - 1, srcIdx));
-
-                    float sag = static_cast<float>(getProfiles()[profileIdx].sagDataPoints[srcIdx].sag);
-                    if (srcIdx < static_cast<int>(m_nominalSurfaceData.sagDataPoints.size())) {
-                        sag -= static_cast<float>(m_nominalSurfaceData.sagDataPoints[srcIdx].sag);
+                    float sag = static_cast<float>(points[i].sag);
+                    if (i < static_cast<int>(m_nominalSurfaceData.sagDataPoints.size())) {
+                        sag -= static_cast<float>(m_nominalSurfaceData.sagDataPoints[i].sag);
                     }
                     zBuf[i] = sag * static_cast<float>(scaleZ);
 
-                    float t = (zBuf[i] - devMin) / devRange;
+                    const float t = (zBuf[i] - devMin) / devRange;
                     ImVec4 color = ImPlot3D::SampleColormap(t);
                     color.w = 1.0f;
                     lineColors[i] = ImGui::ColorConvertFloat4ToU32(color);
@@ -532,8 +549,8 @@ namespace gui {
                     spec.LineWeight = 2.0f;
                 }
                 char label[24];
-                snprintf(label, sizeof(label), "##dp%d", j);
-                ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), numRadii, spec);
+                snprintf(label, sizeof(label), "##dp%d", k);
+                ImPlot3D::PlotLine(label, xBuf.data(), yBuf.data(), zBuf.data(), count, spec);
             }
 
             if (m_windowState.highlightWorstDeviation && worstIndex >= 0) {
@@ -541,7 +558,7 @@ namespace gui {
                 overlayRectMin = ImPlot3D::GetPlotRectPos();
                 overlayRectMax = ImVec2(overlayRectMin.x + rectSize.x,
                                         overlayRectMin.y + rectSize.y);
-                collectWorstSectionOverlay(numRadii, centerIdx, rStep,
+                collectWorstSectionOverlay(numRadii, rStep,
                                            scaleX, scaleY, scaleZ, worstIndex,
                                            getProfiles(), &m_nominalSurfaceData, overlay);
             }
