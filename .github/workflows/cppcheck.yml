@@ -22,12 +22,10 @@ jobs:
           install: |
             mingw-w64-x86_64-cppcheck
 
-      - name: Make cppcheck.sh executable
-        run: git update-index --chmod=+x cppcheck.sh
-        shell: msys2 {0}
-
       - name: Run cppcheck
-        run: ./cppcheck.sh --check
+        # Invoked through bash on purpose: a Windows checkout does not keep the
+        # executable bit, and the job has no git to fix the index with.
+        run: bash cppcheck.sh --check
         shell: msys2 {0}
 
       - name: Upload the report
