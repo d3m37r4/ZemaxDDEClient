@@ -16,7 +16,7 @@ enum class OperationStatus {
 };
 
 struct OperationInfo {
-    uint64_t id;
+    uint64_t id{0};
     std::string serviceId;
     std::string command;
     OperationStatus status = OperationStatus::Pending;

@@ -431,7 +431,6 @@ void renderShelf() {
         const float y = rowGap
             + float(l.rows - 1 - rowFromBottom) * rowStep;
         const ImVec2 tileMin(x, y);
-        const ImVec2 tileMax(x + l.tileWidth, y + tileH);
         const ImVec2 absMin(winPos.x + tileMin.x, winPos.y + tileMin.y);
         // Right-edge control strip (Zemax taskbar order): restore, maximize
         // and close squares, vertically centered inside the tile row.

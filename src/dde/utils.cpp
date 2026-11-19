@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <format>
+#include <iterator>
 #include <windows.h>
 
 namespace ZemaxDDE {
@@ -95,5 +96,43 @@ namespace ZemaxDDE {
         if (value == "0") return UpdateStatus::Updated;
         if (value == "-1") return UpdateStatus::NotUpdated;
         return UpdateStatus::Unknown;
+    }
+
+    AckVerdict classifyAck(UINT_PTR status, bool statusReadable) {
+        if (!statusReadable) {
+            return AckVerdict::Unspecified;
+        }
+        if ((status & kDdeAckFAck) != 0) {
+            return AckVerdict::Accepted;
+        }
+        if ((status & kDdeAckFBusy) != 0) {
+            return AckVerdict::Busy;
+        }
+        return AckVerdict::Rejected;
+    }
+
+    std::string atomName(ATOM itemAtom) {
+        if (itemAtom == 0) {
+            return {};
+        }
+        // Both buffers are zero-initialised and every conversion is checked:
+        // a failed lookup must not leave uninitialised bytes to be read later.
+        wchar_t name[512] = {};
+        if (GlobalGetAtomNameW(itemAtom, name, static_cast<int>(std::size(name))) == 0) {
+            return {};
+        }
+        char narrow[512] = {};
+        if (WideCharToMultiByte(CP_ACP, 0, name, -1, narrow,
+                static_cast<int>(std::size(narrow)), nullptr, nullptr) == 0) {
+            return {};
+        }
+        return std::string(narrow);
+    }
+
+    bool itemNameMatches(std::string_view itemName, std::string_view command) {
+        if (itemName.empty() || command.empty()) {
+            return false;
+        }
+        return itemName == command;
     }
 }

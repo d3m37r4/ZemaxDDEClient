@@ -29,6 +29,10 @@ namespace app::models {
         double peak;
         double valley;
         double pv;
+        /// Index of the section in the profile list. The highlight of the worst
+        /// section is drawn by index: matching it by angle breaks as soon as
+        /// the angle rounding or the step differs.
+        int profileIndex = -1;
     };
 
 }

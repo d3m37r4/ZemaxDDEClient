@@ -92,6 +92,7 @@ set(SOURCES
     ${SRC_DIR}/main.cpp
     ${SRC_DIR}/app/app_init.cpp
     ${SRC_DIR}/app/config_path.cpp
+    ${SRC_DIR}/app/crash_handler.cpp
     ${SRC_DIR}/app/settings.cpp
     ${SRC_DIR}/app/utils.cpp
     ${SRC_DIR}/app/zemax_window_enumerator.cpp

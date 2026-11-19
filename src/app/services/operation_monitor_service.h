@@ -15,10 +15,10 @@ namespace app::services {
     class OperationMonitorService {
     public:
         struct TaskRecord {
-            uint64_t taskId;
+            uint64_t taskId{0};
             app::models::TaskSource source;
             std::string label;
-            uint64_t ddeOperationId;
+            uint64_t ddeOperationId{0};
             int clientSlot{-1};
             ZemaxDDE::OperationMonitor* boundMonitor{nullptr};
             /// Task start moment: the status bar ETA derives it from the
@@ -48,8 +48,8 @@ namespace app::services {
         void failAllTasksOnSlot(int slot);
 
         struct TaskProgress {
-            int currentStep;
-            int totalSteps;
+            int currentStep{0};
+            int totalSteps{0};
             int clientSlot{-1};
         };
 

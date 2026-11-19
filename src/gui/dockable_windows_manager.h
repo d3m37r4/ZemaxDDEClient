@@ -36,7 +36,7 @@ inline constexpr DockableWindowData DockableWindows[] = {
     { WindowID::DDEStatus, WindowCategory::DDE, "DDE Status", true, 0 },
     { WindowID::SystemInfo, WindowCategory::Tools, "Optical System Information", true, 0 },
     { WindowID::SurfaceProfileInspector, WindowCategory::Tools, "Surface Profile Inspector", false, 1 },
-    { WindowID::SurfaceIrregularityMap, WindowCategory::Tools, "Surface Irregularity Map", false, 2 },
+    { WindowID::SurfaceIrregularityMap, WindowCategory::Tools, "Irregularity Map", false, 2 },
     { WindowID::Logs, WindowCategory::Info, "Logs", true, 0 },
 };
 
@@ -68,12 +68,12 @@ class DockableWindowsManager {
 
     private:
         struct WindowEntry {
-            WindowID id;
-            WindowCategory category;
+            WindowID id{};
+            WindowCategory category{};
             std::function<void()> render;
             std::string name;
-            bool isVisible;
-            int order;
+            bool isVisible{false};
+            int order{0};
         };
 
         std::vector<WindowEntry> windows_;

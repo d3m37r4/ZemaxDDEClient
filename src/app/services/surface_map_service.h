@@ -21,6 +21,25 @@ namespace app::services {
     // The guard rails of a surface map (step and sampling limits, request budget)
     // live in app::compute::surface_map.h — the service and the UI share them.
 
+    /// How the 3D map draws its sections.
+    enum class MapRenderMode {
+        Profiles = 0,   ///< radial profiles, split into colour-coded segments
+        Wireframe = 1,  ///< rings (constant radius) and spokes (constant angle)
+        Surface = 2,    ///< one filled, triangulated surface
+    };
+
+    /// Budget of unrolled triangle vertices (the size of the mesh index
+    /// buffer) for the triangulated surface. ImPlot3D's RendererTriangleFill
+    /// emits 3 ImDrawVert vertices per triangle into a 16-bit ImDrawIdx buffer
+    /// (65 535 entries, shared with the axes, the grid and the box of the
+    /// plot), so the index buffer has to stay clearly below that limit -
+    /// otherwise the tail of the surface is silently dropped and a sector of
+    /// the map disappears.
+    inline constexpr int kMaxMapMeshVertices = 48000;
+
+    /// Display name of a render mode (Settings menu of the map window).
+    const char* mapRenderModeName(MapRenderMode mode);
+
     struct MapWindowState {
         int nominalSurfaceIndex = 0;
         int nominalSampling = 65;
@@ -32,6 +51,8 @@ namespace app::services {
 
         int selectedColormapSurface = 0;
         int selectedColormapDeviation = 0;
+        /// Which way the 3D map draws its sections (MapRenderMode values).
+        int renderMode = 0;
 
         bool highlightWorstSurface = true;
         bool highlightWorstDeviation = true;
@@ -97,8 +118,18 @@ namespace app::services {
                 bool devValid = false;
                 float devMin = 0.0f;
                 float devMax = 0.0f;
+                /// Radius of the map sections: the widest semi-diameter among
+                /// them. Zero means the data carries no radius at all.
+                float semiDiameter = 0.0f;
             };
             [[nodiscard]] const DataRanges& dataRanges() const { return m_ranges; }
+            /// The triangulated surface of the map, built when the data
+            /// changes. Empty when there is nothing to draw.
+            /// @param deviation true for the deviation against the nominal
+            ///                   surface, false for the plain sag.
+            [[nodiscard]] const app::compute::MapMesh& mapMesh(bool deviation) const {
+                return deviation ? m_deviationMesh : m_mesh;
+            }
             std::optional<MaxPVResult> findMaxPVSection() const;
             bool calculateDeviations();
 
@@ -143,6 +174,10 @@ namespace app::services {
             std::vector<app::models::SurfaceData> m_profiles;
             std::optional<MaxPVResult> m_maxPVResult;
             DataRanges m_ranges;
+            /// Cached triangulated surfaces, rebuilt with the ranges: the plain
+            /// sag and the deviation against the nominal surface.
+            app::compute::MapMesh m_mesh;
+            app::compute::MapMesh m_deviationMesh;
 
             int m_targetSurface = 0;
             int m_targetSampling = 0;

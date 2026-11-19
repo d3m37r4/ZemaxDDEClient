@@ -46,11 +46,12 @@ namespace gui {
         }
 
         std::string joinEntries(const std::vector<std::string>& entries,
-                                const std::vector<bool>& visible,
+                                const std::vector<bool>* visible,
                                 const std::set<size_t>* selection) {
             std::string text;
             for (size_t i = 0; i < entries.size(); ++i) {
-                const bool include = selection ? selection->count(i) != 0 : visible[i];
+                const bool include = selection ? (selection->count(i) != 0)
+                                               : (visible ? (*visible)[i] : true);
                 if (!include) {
                     continue;
                 }
@@ -80,14 +81,43 @@ namespace gui {
     void Logs::render(Logger& logger, const ThemeManager* themeManager) {
         const auto& sem = themeManager->semantic();
 
-        // Snapshot + metadata are refreshed only when the logger actually changed:
-        // copying tens of thousands of strings every frame was the main reason the
-        // panel dragged the whole application down after a big map run.
+        // Snapshot + metadata are refreshed incrementally when the logger changed:
+        // during a DDE map calculation new lines arrive on every frame, so copying
+        // and re-parsing all 20 000 entries from scratch on every revision bump
+        // throttled the main loop and slowed down the DDE calculation itself.
         const uint64_t revision = logger.revision();
         if (revision != m_cacheRevision) {
-            m_entries = logger.getLogs();
+            Logger::LogSyncCursor cursor{m_syncEpoch, m_syncDroppedPrefix};
+            const size_t trimmed = logger.syncLogs(m_entries, cursor);
+            m_syncEpoch = cursor.epoch;
+            m_syncDroppedPrefix = cursor.droppedPrefix;
+
+            if (trimmed == static_cast<size_t>(-1)) {
+                m_cache.clear();
+                m_selected.clear();
+                m_hasSelectionAnchor = false;
+            } else if (trimmed > 0) {
+                const size_t drop = std::min(trimmed, m_cache.size());
+                m_cache.erase(m_cache.begin(), m_cache.begin() + static_cast<std::ptrdiff_t>(drop));
+                std::set<size_t> shifted;
+                for (const size_t idx : m_selected) {
+                    if (idx >= trimmed) {
+                        shifted.insert(idx - trimmed);
+                    }
+                }
+                m_selected = std::move(shifted);
+                if (m_hasSelectionAnchor) {
+                    if (m_selectionAnchor >= trimmed) {
+                        m_selectionAnchor -= trimmed;
+                    } else {
+                        m_hasSelectionAnchor = false;
+                    }
+                }
+            }
+
+            const size_t oldCacheSize = m_cache.size();
             m_cache.resize(m_entries.size());
-            for (size_t i = 0; i < m_entries.size(); ++i) {
+            for (size_t i = oldCacheSize; i < m_entries.size(); ++i) {
                 m_cache[i].time = logs::parseLogTimestamp(m_entries[i]);
                 m_cache[i].level = logs::levelOf(m_entries[i]);
                 m_cache[i].tone = logs::looksLikeProblem(m_entries[i]) ? RowTone::Problem
@@ -111,46 +141,52 @@ namespace gui {
         const std::string_view search(m_searchText.data());
         const bool searchActive = !search.empty();
         const bool levelFiltering = !(m_showApp && m_showDde && m_showGui && m_showService && m_showOther);
-        auto levelVisible = [this](logs::LogLevel level) {
-            switch (level) {
-                case logs::LogLevel::App:     return m_showApp;
-                case logs::LogLevel::Dde:     return m_showDde;
-                case logs::LogLevel::Gui:     return m_showGui;
-                case logs::LogLevel::Service: return m_showService;
-                case logs::LogLevel::Unknown: return m_showOther;
-            }
-            return true;
-        };
-
-        std::vector<bool> visible(entries.size(), true);
-        std::vector<size_t> visibleIndices;
-        for (size_t i = 0; i < entries.size(); ++i) {
-            const bool timeOk = !timeFiltering ||
-                (m_cache[i].time && logs::inTimeRange(*m_cache[i].time, rangeFrom, rangeTo));
-            const bool shown = timeOk &&
-                levelVisible(m_cache[i].level) &&
-                (!searchActive || logs::containsNoCase(entries[i], search));
-            visible[i] = shown;
-            if (shown) {
-                visibleIndices.push_back(i);
-            }
-        }
-        for (auto it = m_selected.begin(); it != m_selected.end();) {
-            if (*it >= entries.size() || !visible[*it]) {
-                it = m_selected.erase(it);
-            } else {
-                ++it;
-            }
-        }
-        const size_t visibleCount = visibleIndices.size();
         const bool filtering = timeFiltering || levelFiltering || searchActive;
+
+        std::vector<bool> visible;
+        std::vector<size_t> visibleIndices;
+        if (filtering) {
+            auto levelVisible = [this](logs::LogLevel level) {
+                switch (level) {
+                    case logs::LogLevel::App:     return m_showApp;
+                    case logs::LogLevel::Dde:     return m_showDde;
+                    case logs::LogLevel::Gui:     return m_showGui;
+                    case logs::LogLevel::Service: return m_showService;
+                    case logs::LogLevel::Unknown: return m_showOther;
+                }
+                return true;
+            };
+
+            visible.assign(entries.size(), true);
+            visibleIndices.reserve(entries.size());
+            for (size_t i = 0; i < entries.size(); ++i) {
+                const bool timeOk = !timeFiltering ||
+                    (m_cache[i].time && logs::inTimeRange(*m_cache[i].time, rangeFrom, rangeTo));
+                const bool shown = timeOk &&
+                    levelVisible(m_cache[i].level) &&
+                    (!searchActive || logs::containsNoCase(entries[i], search));
+                visible[i] = shown;
+                if (shown) {
+                    visibleIndices.push_back(i);
+                }
+            }
+            for (auto it = m_selected.begin(); it != m_selected.end();) {
+                if (*it >= entries.size() || !visible[*it]) {
+                    it = m_selected.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+        const size_t visibleCount = filtering ? visibleIndices.size() : entries.size();
+        const std::vector<bool>* visiblePtr = filtering ? &visible : nullptr;
 
         ImGui::BeginChild("LogsHeader", ImVec2(-1.0f, 0.0f), ImGuiChildFlags_AutoResizeY,
             ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
 
         const char* filterHint = filtering ? "Export visible log entries" : "Export logs to a temporary text file and open it";
         if (ImGui::Button(ICON_FA_FILE_EXPORT)) {
-            const std::string content = joinEntries(entries, visible, nullptr);
+            const std::string content = joinEntries(entries, visiblePtr, nullptr);
             auto tempPathOpt = gui::writeToTemporaryFile("ZemaxDDE_Logs_Temp.txt", content);
             if (tempPathOpt) {
                 ShellExecuteW(nullptr, L"open", tempPathOpt->c_str(), nullptr, nullptr, SW_SHOW);
@@ -168,7 +204,7 @@ namespace gui {
         // Build the clipboard text only on click: it used to be assembled on
         // every frame, which alone could allocate megabytes per second.
         if (ImGui::Button(ICON_FA_COPY "##logs_copy_all")) {
-            copyToClipboard(joinEntries(entries, visible, nullptr), visibleCount);
+            copyToClipboard(joinEntries(entries, visiblePtr, nullptr), visibleCount);
             logger.addLog("[GUI] Logs copied to clipboard");
         }
         if (ImGui::IsItemHovered()) {
@@ -336,11 +372,11 @@ namespace gui {
                 bool valid = true;
                 if (!fromText.empty()) {
                     from = logs::parseLogTimestamp(fromText);
-                    valid = valid && from.has_value();
+                    if (!from) valid = false;
                 }
                 if (!toText.empty()) {
                     to = logs::parseLogTimestamp(toText);
-                    valid = valid && to.has_value();
+                    if (!to) valid = false;
                 }
                 if (!valid) {
                     m_filterError = "Expected dd.mm.yyyy - HH:MM:SS";
@@ -398,13 +434,21 @@ namespace gui {
         const bool wasAtBottom = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - bottomSlack;
 
         auto copySelection = [&]() {
-            copyToClipboard(joinEntries(entries, visible, &m_selected), m_selected.size());
+            copyToClipboard(joinEntries(entries, visiblePtr, &m_selected), m_selected.size());
         };
         auto clearSelection = [&]() {
             m_selected.clear();
             m_hasSelectionAnchor = false;
         };
         auto selectRange = [&](size_t anchorIndex, size_t targetIndex) {
+            if (!filtering) {
+                const size_t first = std::min(anchorIndex, targetIndex);
+                const size_t last = std::max(anchorIndex, targetIndex);
+                for (size_t pos = first; pos <= last && pos < entries.size(); ++pos) {
+                    m_selected.insert(pos);
+                }
+                return;
+            }
             const auto anchorIt = std::find(visibleIndices.begin(), visibleIndices.end(), anchorIndex);
             const auto targetIt = std::find(visibleIndices.begin(), visibleIndices.end(), targetIndex);
             if (anchorIt == visibleIndices.end() || targetIt == visibleIndices.end()) {
@@ -422,10 +466,11 @@ namespace gui {
         // thousands of entries the old loop built every row and its draw
         // commands on every frame, which is what dragged the app down.
         ImGuiListClipper clipper;
-        clipper.Begin(static_cast<int>(visibleIndices.size()));
+        clipper.Begin(static_cast<int>(visibleCount));
         while (clipper.Step()) {
             for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row) {
-                const size_t index = visibleIndices[static_cast<size_t>(row)];
+                const size_t index = filtering ? visibleIndices[static_cast<size_t>(row)]
+                                               : static_cast<size_t>(row);
                 const bool selected = m_selected.count(index) != 0;
                 ImGui::PushID(static_cast<int>(index));
                 // Empty label + overlay text: log lines may contain "##", which
@@ -473,7 +518,7 @@ namespace gui {
                         copySelection();
                     }
                     if (ImGui::MenuItem("Copy all visible")) {
-                        copyToClipboard(joinEntries(entries, visible, nullptr), visibleCount);
+                        copyToClipboard(joinEntries(entries, visiblePtr, nullptr), visibleCount);
                     }
                     if (ImGui::MenuItem("Clear selection", nullptr, false, !m_selected.empty())) {
                         clearSelection();
