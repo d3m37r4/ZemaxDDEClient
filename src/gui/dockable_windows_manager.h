@@ -68,12 +68,12 @@ class DockableWindowsManager {
 
     private:
         struct WindowEntry {
-            WindowID id;
-            WindowCategory category;
+            WindowID id{};
+            WindowCategory category{};
             std::function<void()> render;
             std::string name;
-            bool isVisible;
-            int order;
+            bool isVisible{false};
+            int order{0};
         };
 
         std::vector<WindowEntry> windows_;

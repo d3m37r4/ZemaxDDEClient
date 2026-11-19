@@ -6,8 +6,8 @@
 
 namespace app {
     struct ZemaxWindowInfo {
-        DWORD pid;
-        HWND hwnd;
+        DWORD pid{0};
+        HWND hwnd{nullptr};
         std::wstring title;
     };
 

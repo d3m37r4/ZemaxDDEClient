@@ -372,11 +372,11 @@ namespace gui {
                 bool valid = true;
                 if (!fromText.empty()) {
                     from = logs::parseLogTimestamp(fromText);
-                    valid = valid && from.has_value();
+                    if (!from) valid = false;
                 }
                 if (!toText.empty()) {
                     to = logs::parseLogTimestamp(toText);
-                    valid = valid && to.has_value();
+                    if (!to) valid = false;
                 }
                 if (!valid) {
                     m_filterError = "Expected dd.mm.yyyy - HH:MM:SS";

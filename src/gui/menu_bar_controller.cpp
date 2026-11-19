@@ -122,7 +122,7 @@ namespace gui {
             if (m_pWndMgr && ImGui::BeginMenu(ICON_FA_EYE " View")) {
                 struct ViewEntry {
                     WindowID id;
-                    const char* hint;
+                    const char* hint{nullptr};
                 };
                 static constexpr ViewEntry kViewPanels[] = {
                     {WindowID::DDEStatus, "Ctrl+1"},
