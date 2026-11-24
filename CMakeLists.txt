@@ -124,6 +124,9 @@ set(SOURCES
     ${SRC_DIR}/gui/settings_manager.cpp
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/window_chrome.cpp
+    ${SRC_DIR}/gui/placement_geometry.cpp
+    ${SRC_DIR}/gui/viewport_placement.cpp
+    ${SRC_DIR}/gui/viewport_drag_snap.cpp
     ${SRC_DIR}/gui/utils.cpp
     ${SRC_DIR}/gui/popups/about_dialog.cpp
     ${SRC_DIR}/gui/popups/shortcuts_help_dialog.cpp

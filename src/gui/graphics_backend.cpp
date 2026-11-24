@@ -23,7 +23,21 @@
 #include "assets/icons/fa/fa_compressed.h"
 #include "app/config_path.h"
 #include <cmath>
+#include <unordered_map>
 #include "logger/logger.h"
+
+namespace {
+    /// Window signature the diagnostic below compares against: the OS rewrites
+    /// parts of it on minimize/restore, and a style lost there is invisible
+    /// from inside ImGui.
+    struct WindowTrace {
+        LONG_PTR style = 0;
+        LONG_PTR exStyle = 0;
+        BOOL zoomed = FALSE;
+        RECT rect{};
+    };
+    std::unordered_map<HWND, WindowTrace> g_windowTrace;
+} // namespace
 
 namespace gui {
 
@@ -228,6 +242,9 @@ namespace gui {
         // main context must be restored afterwards - the app loop swaps
         // buffers on m_window right after endFrame().
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            // Snap runs before ImGui copies the platform geometry back into the
+            // windows: after a release the new rect is picked up on this frame.
+            m_dragSnap.update();
             ImGui::UpdatePlatformWindows();
             syncPlatformWindows(anyModalOpen);
             // nullptr here: the GLFW platform callbacks ignore it. `this`
@@ -251,7 +268,36 @@ namespace gui {
         for (ImGuiViewport* viewport : platformIO.Viewports) {
             if (viewport->ID == ImGui::GetMainViewport()->ID) continue;
             auto* hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
-            if (hwnd) secondaryPanels.push_back(hwnd);
+            if (!hwnd) continue;
+            secondaryPanels.push_back(hwnd);
+
+            // The OS rewrites window styles on minimize/restore, and a lost
+            // tool-window or no-decoration bit cannot be seen from ImGui. The
+            // rect is printed as context but deliberately left out of the
+            // comparison: it changes on every drag frame and would flood the
+            // log.
+            WindowTrace trace;
+            trace.style = ::GetWindowLongPtrW(hwnd, GWL_STYLE);
+            trace.exStyle = ::GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            trace.zoomed = ::IsZoomed(hwnd);
+            ::GetWindowRect(hwnd, &trace.rect);
+            WindowTrace& previous = g_windowTrace[hwnd];
+            const bool changed = previous.style != trace.style ||
+                                 previous.exStyle != trace.exStyle ||
+                                 previous.zoomed != trace.zoomed;
+            previous = trace;
+            if (changed && m_logger != nullptr) {
+                m_logger->addLog(std::format(
+                    "[GUI] Secondary window {:#x}: style={:#x} ex={:#x} zoomed={} rect=({},{} {}x{}) viewportFlags={:#x}",
+                    reinterpret_cast<uintptr_t>(hwnd),
+                    static_cast<long long>(trace.style),
+                    static_cast<long long>(trace.exStyle),
+                    trace.zoomed != FALSE ? 1 : 0,
+                    trace.rect.left, trace.rect.top,
+                    trace.rect.right - trace.rect.left,
+                    trace.rect.bottom - trace.rect.top,
+                    static_cast<unsigned>(viewport->Flags)));
+            }
         }
 
         // Band contract: our windows live directly around the main window and

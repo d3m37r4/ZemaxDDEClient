@@ -6,11 +6,13 @@
 
 #include "gui/constants.h"
 #include "gui/imgui_utils.h"
+#include "gui/viewport_placement.h"
 #include "app/config_path.h"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <unordered_map>
 #include <vector>
@@ -237,6 +239,11 @@ bool minimizedAndShelved(const void* token, std::string_view title) {
 
 void applyFrameRect(const void* token) {
     State& st = state(token);
+    // A window in its own OS window owns its rect: the platform places it and
+    // ImGui follows the platform geometry, so nothing is forced here.
+    if (st.ownWindow) {
+        return;
+    }
     if (st.maximized) {
         // Dock area: below the menu bar, above the status bar + shelf. The
         // bottom block height is reported by the status bar every frame.
@@ -281,6 +288,58 @@ void drawTitleBarButtons(const void* token, bool* open) {
     }
 
     ImGuiWindow* window = ImGui::GetCurrentWindow();
+    // A window in its own OS window is placed by the platform helpers, not by
+    // the dock-area rect: a maximize state taken in the main viewport must not
+    // drag it back there.
+    ImGuiViewport* windowViewport = ImGui::GetWindowViewport();
+    const bool ownWindow = windowViewport != nullptr &&
+                           windowViewport != ImGui::GetMainViewport();
+    if (ownWindow) {
+        st.maximized = false;
+        st.wantRestoreRect = false;
+    }
+    st.ownWindow = ownWindow;
+    if (ownWindow) {
+        // The ImGui window is the source of truth here: ImGui moves and resizes
+        // the platform window itself, which keeps viewport->Pos in step, and
+        // io.MousePos is derived from that - driving the OS window directly left
+        // it stale and the hit areas drifted from the cursor.
+        const placement::Rect work = placement::workAreaOf(windowViewport);
+        placement::Rect rect{};
+        if (!placement::takePlacement(windowViewport, rect)) {
+            // Only a rect that does not fit the monitor is corrected: a stored
+            // layout can be larger than the screen, putting the title bar and
+            // the resize grip out of reach.
+            const int w = static_cast<int>(window->SizeFull.x);
+            const int h = static_cast<int>(window->SizeFull.y);
+            if (work.w > 0 && work.h > 0 &&
+                (w > work.w || h > work.h || window->Pos.x < work.x ||
+                 window->Pos.y < work.y)) {
+                rect = {static_cast<int>(window->Pos.x), static_cast<int>(window->Pos.y), w, h};
+                if (rect.w > work.w) rect.w = work.w;
+                if (rect.h > work.h) rect.h = work.h;
+                if (rect.x < work.x) rect.x = work.x;
+                if (rect.y < work.y) rect.y = work.y;
+                if (rect.x + rect.w > work.x + work.w) rect.x = work.x + work.w - rect.w;
+                if (rect.y + rect.h > work.y + work.h) rect.y = work.y + work.h - rect.h;
+            }
+        }
+        if (rect.w > 0 && rect.h > 0) {
+            const ImVec2 decorations(window->SizeFull.x - window->Size.x,
+                                     window->SizeFull.y - window->Size.y);
+            const ImVec2 target(static_cast<float>(rect.w) - decorations.x,
+                                static_cast<float>(rect.h) - decorations.y);
+            if (std::fabs(target.x - window->Size.x) > 0.5f ||
+                std::fabs(target.y - window->Size.y) > 0.5f) {
+                ImGui::SetWindowSize(target);
+            }
+            const ImVec2 position(static_cast<float>(rect.x), static_cast<float>(rect.y));
+            if (std::fabs(position.x - window->Pos.x) > 0.5f ||
+                std::fabs(position.y - window->Pos.y) > 0.5f) {
+                ImGui::SetWindowPos(position);
+            }
+        }
+    }
     const ImGuiStyle& style = ImGui::GetStyle();
     const ImRect title = window->TitleBarRect();
     const float btnSz = ImGui::GetFontSize();
@@ -316,7 +375,14 @@ void drawTitleBarButtons(const void* token, bool* open) {
     ImGui::PushClipRect(winPos, winMax, false);
 
     if (titleBarButton(maximizePos, "##Maximize", btnSz)) {
-        if (!st.maximized) {
+        if (ownWindow) {
+            // The panel's own screen rect is what a later restore returns to;
+            // the queued work-area rect is applied by the block above on the
+            // next frame, so ImGui resizes its platform window itself.
+            placement::toggleMaximize(windowViewport,
+                {static_cast<int>(window->Pos.x), static_cast<int>(window->Pos.y),
+                 static_cast<int>(window->SizeFull.x), static_cast<int>(window->SizeFull.y)});
+        } else if (!st.maximized) {
             st.restorePos = window->Pos;
             st.restoreSize = window->Size;
             st.maximized = true;
@@ -339,7 +405,8 @@ void drawTitleBarButtons(const void* token, bool* open) {
     // list has after Begin(); the full-window clip pushed above also covers
     // them.
     ImDrawList* dl = window->DrawList;
-    drawWindowRects(dl, maximizeCenter, extent, glyphColor, st.maximized);
+    drawWindowRects(dl, maximizeCenter, extent, glyphColor,
+                    ownWindow ? placement::isMaximized(windowViewport) : st.maximized);
     drawMinimizeGlyph(dl, minimizeCenter, extent, glyphColor);
     ImGui::PopClipRect();
 }

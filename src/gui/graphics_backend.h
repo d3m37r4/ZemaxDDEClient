@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "gui/theme_manager.h"
+#include "gui/viewport_drag_snap.h"
 
 class Logger;
 
@@ -63,5 +64,8 @@ namespace gui {
             /// style + DWM rounding). Stored as void* per the header rule about
             /// not including windows.h here.
             std::vector<void*> m_preparedViewports;
+            /// Sends a secondary window dragged to a monitor edge into the same
+            /// half or quarter Windows itself would use.
+            placement::DragSnap m_dragSnap;
     };
 }
