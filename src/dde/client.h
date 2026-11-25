@@ -18,12 +18,12 @@ namespace ZemaxDDE {
     class OperationMonitor;
 
     struct DdeRequest {
-        uint64_t id;
+        uint64_t id{0};
         std::string command;
         std::function<void(const std::string&)> onSuccess;
         std::function<void(const std::string&)> onError;
-        DWORD timeoutMs;
-        int retriesLeft;
+        DWORD timeoutMs{0};
+        int retriesLeft{0};
         std::string serviceId;
         std::chrono::steady_clock::time_point startTime{};
         ATOM itemAtom = 0;

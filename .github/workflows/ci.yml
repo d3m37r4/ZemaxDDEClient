@@ -9,6 +9,8 @@ on:
       - 'tests/**'
       - 'CMakeLists.txt'
       - 'build.sh'
+      - 'cppcheck.sh'
+      - 'ci/**'
       - '.github/workflows/**'
   pull_request:
     branches:
@@ -18,6 +20,8 @@ on:
       - 'tests/**'
       - 'CMakeLists.txt'
       - 'build.sh'
+      - 'cppcheck.sh'
+      - 'ci/**'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -40,3 +44,9 @@ jobs:
   # job builds everything itself, so it runs in parallel with run-tests.
   gui-tests:
     uses: ./.github/workflows/gui-tests.yml
+
+  # Static analysis of the own sources. Compares the findings against a
+  # checked-in baseline and fails only on new ones, so a regression is caught
+  # while the existing noise does not block the pipeline.
+  cppcheck:
+    uses: ./.github/workflows/cppcheck.yml

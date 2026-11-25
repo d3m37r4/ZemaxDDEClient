@@ -18,7 +18,7 @@ constexpr PanelEntry kPanels[] = {
     { WindowID::DDEStatus,               "DDE Status",                 ImGuiKey_1 },
     { WindowID::SystemInfo,              "Optical System Information", ImGuiKey_2 },
     { WindowID::SurfaceProfileInspector, "Surface Profile Inspector",  ImGuiKey_3 },
-    { WindowID::SurfaceIrregularityMap,  "Surface Irregularity Map",    ImGuiKey_4 },
+    { WindowID::SurfaceIrregularityMap,  "Irregularity Map",         ImGuiKey_4 },
     { WindowID::Logs,                    "Logs",                       ImGuiKey_5 },
 };
 

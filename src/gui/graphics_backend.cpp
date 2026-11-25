@@ -17,13 +17,28 @@
 
 #include "gui/graphics_backend.h"
 #include "gui/constants.h"
+#include "gui/font_catalog.h"
 #include "gui/plot_image_exporter.h"
 #include "app/settings.h"
 #include "assets/icons/fa/IconsFontAwesome6.h"
 #include "assets/icons/fa/fa_compressed.h"
 #include "app/config_path.h"
 #include <cmath>
+#include <unordered_map>
 #include "logger/logger.h"
+
+namespace {
+    /// Window signature the diagnostic below compares against: the OS rewrites
+    /// parts of it on minimize/restore, and a style lost there is invisible
+    /// from inside ImGui.
+    struct WindowTrace {
+        LONG_PTR style = 0;
+        LONG_PTR exStyle = 0;
+        BOOL zoomed = FALSE;
+        RECT rect{};
+    };
+    std::unordered_map<HWND, WindowTrace> g_windowTrace;
+} // namespace
 
 namespace gui {
 
@@ -124,37 +139,8 @@ namespace gui {
         io.ConfigDpiScaleFonts = true;
         io.ConfigDpiScaleViewports = true;
 
-        // Load Segoe UI with Cyrillic support
-        {
-            std::filesystem::path fontPath = std::filesystem::path{L"C:\\Windows\\Fonts"} / L"segoeui.ttf";
-            const std::string fontPathStr = fontPath.string();
-
-            float baseFontSize = BASE_FONT_SIZE;
-            ImFontConfig fontCfg;
-            fontCfg.OversampleH = 2;
-            fontCfg.OversampleV = 1;
-            fontCfg.PixelSnapH = true;
-            ImFont* font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize, &fontCfg, io.Fonts->GetGlyphRangesCyrillic());
-
-            if (!font) {
-                font = io.Fonts->AddFontFromFileTTF(fontPathStr.c_str(), baseFontSize);
-            }
-
-            if (!font) {
-                logger.addLog("[GUI] Failed to load font 'segoeui.ttf'. Using default font.");
-            }
-        }
-
-        // Merge mode: Font Awesome Regular is grafted onto the base font
-        {
-            ImFontConfig faCfg;
-            faCfg.MergeMode = true;
-            faCfg.PixelSnapH = true;
-            faCfg.FontNo = 0;
-            io.Fonts->AddFontFromMemoryCompressedTTF(
-                fa_compressed_compressed_data, fa_compressed_compressed_size,
-                BASE_FONT_SIZE * 0.8f, &faCfg);
-        }
+        // Load the interface font with Cyrillic support, then merge the icons.
+        loadFonts(std::string{});
 
         ImGuiStyle& style = ImGui::GetStyle();
         style.FontScaleDpi = dpiScale;
@@ -198,16 +184,107 @@ namespace gui {
         m_themeManager.apply(m_themeManager.currentThemeName());
     }
 
+    void GraphicsBackend::loadFonts(const std::string& requestedPath) {
+        ImGuiIO& io = ImGui::GetIO();
+        const std::string fallback = fonts::defaultFontPath();
+        const std::string file = requestedPath.empty() ? fallback : requestedPath;
+
+        // A font with no glyph in the requested ranges crashes the atlas build
+        // (a symbol font such as Wingdings does exactly that), so the cmap is
+        // checked first and a rejected font never reaches ImGui.
+        if (file != fallback && !fonts::hasCyrillic(file)) {
+            if (m_logger != nullptr) {
+                m_logger->addLog(std::format(
+                    "[GUI] Interface font '{}' has no Cyrillic glyphs; using Segoe UI", file));
+            }
+            m_fontPath = requestedPath;
+            if (!requestedPath.empty()) {
+                loadFonts(std::string{});
+            }
+            return;
+        }
+
+        // The icons are a second source merged into the base font, so any
+        // interface font keeps them: the merge order is base first, Font
+        // Awesome Regular on top.
+        const auto addFonts = [&io](const std::string& ttf) -> ImFont* {
+            io.Fonts->Clear();
+            ImFontConfig cfg;
+            cfg.OversampleH = 2;
+            cfg.OversampleV = 1;
+            cfg.PixelSnapH = true;
+            ImFont* font = io.Fonts->AddFontFromFileTTF(
+                ttf.c_str(), BASE_FONT_SIZE, &cfg, io.Fonts->GetGlyphRangesCyrillic());
+            if (font == nullptr) {
+                font = io.Fonts->AddFontFromFileTTF(ttf.c_str(), BASE_FONT_SIZE);
+            }
+            ImFontConfig faCfg;
+            faCfg.MergeMode = true;
+            faCfg.PixelSnapH = true;
+            faCfg.FontNo = 0;
+            io.Fonts->AddFontFromMemoryCompressedTTF(
+                fa_compressed_compressed_data, fa_compressed_compressed_size,
+                BASE_FONT_SIZE * 0.8f, &faCfg);
+            io.Fonts->Build();
+            return font;
+        };
+
+        ImFont* font = addFonts(file);
+        if (font == nullptr && file != fallback) {
+            if (m_logger != nullptr) {
+                m_logger->addLog(std::format(
+                    "[GUI] Interface font '{}' could not be loaded; using Segoe UI", file));
+            }
+            font = addFonts(fallback);
+        }
+        // The UI is Russian: a font without Cyrillic glyphs renders boxes.
+        // ImGui 1.92 splits the font into sources (ImFont) and baked glyphs
+        // (ImFontBaked), and only the baked set answers glyph queries.
+        const auto hasCyrillic = [](ImFont* font) {
+            if (font == nullptr) {
+                return false;
+            }
+            ImFontBaked* baked = font->GetFontBaked(BASE_FONT_SIZE);
+            return baked != nullptr && baked->FindGlyphNoFallback(0x042F) != nullptr;
+        };
+        if (font != nullptr && file != fallback && !hasCyrillic(font)) {
+            if (m_logger != nullptr) {
+                m_logger->addLog(std::format(
+                    "[GUI] Interface font '{}' has no Cyrillic glyphs; using Segoe UI", file));
+            }
+            font = addFonts(fallback);
+        }
+        if (font == nullptr && m_logger != nullptr) {
+            m_logger->addLog("[GUI] Failed to load the interface font; using the built-in one");
+        }
+        m_fontPath = requestedPath;
+    }
+
+    void GraphicsBackend::setFontPath(const std::string& path) {
+        if (path == m_fontPath && !m_fontReloadPending) {
+            return;
+        }
+        // Queued, not applied: rebuilding the atlas destroys every ImFont,
+        // including the ones the frame in flight is using. It runs at the next
+        // frame boundary instead.
+        m_pendingFontPath = path;
+        m_fontReloadPending = true;
+    }
+
+    void GraphicsBackend::beginFrame() {
+        if (m_fontReloadPending) {
+            m_fontReloadPending = false;
+            loadFonts(m_pendingFontPath);
+        }
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+    }
+
     void GraphicsBackend::setFontScale(float scale) {
         if (!std::isfinite(scale)) scale = app::kDefaultFontScale;
         scale = std::clamp(scale, app::kMinFontScale, app::kMaxFontScale);
         ImGui::GetIO().FontGlobalScale = scale;
-    }
-
-    void GraphicsBackend::beginFrame() {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
     }
 
     void GraphicsBackend::endFrame(bool anyModalOpen) {
@@ -228,6 +305,9 @@ namespace gui {
         // main context must be restored afterwards - the app loop swaps
         // buffers on m_window right after endFrame().
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            // Snap runs before ImGui copies the platform geometry back into the
+            // windows: after a release the new rect is picked up on this frame.
+            m_dragSnap.update();
             ImGui::UpdatePlatformWindows();
             syncPlatformWindows(anyModalOpen);
             // nullptr here: the GLFW platform callbacks ignore it. `this`
@@ -251,7 +331,36 @@ namespace gui {
         for (ImGuiViewport* viewport : platformIO.Viewports) {
             if (viewport->ID == ImGui::GetMainViewport()->ID) continue;
             auto* hwnd = static_cast<HWND>(viewport->PlatformHandleRaw);
-            if (hwnd) secondaryPanels.push_back(hwnd);
+            if (!hwnd) continue;
+            secondaryPanels.push_back(hwnd);
+
+            // The OS rewrites window styles on minimize/restore, and a lost
+            // tool-window or no-decoration bit cannot be seen from ImGui. The
+            // rect is printed as context but deliberately left out of the
+            // comparison: it changes on every drag frame and would flood the
+            // log.
+            WindowTrace trace;
+            trace.style = ::GetWindowLongPtrW(hwnd, GWL_STYLE);
+            trace.exStyle = ::GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+            trace.zoomed = ::IsZoomed(hwnd);
+            ::GetWindowRect(hwnd, &trace.rect);
+            WindowTrace& previous = g_windowTrace[hwnd];
+            const bool changed = previous.style != trace.style ||
+                                 previous.exStyle != trace.exStyle ||
+                                 previous.zoomed != trace.zoomed;
+            previous = trace;
+            if (changed && m_logger != nullptr) {
+                m_logger->addLog(std::format(
+                    "[GUI] Secondary window {:#x}: style={:#x} ex={:#x} zoomed={} rect=({},{} {}x{}) viewportFlags={:#x}",
+                    reinterpret_cast<uintptr_t>(hwnd),
+                    static_cast<long long>(trace.style),
+                    static_cast<long long>(trace.exStyle),
+                    trace.zoomed != FALSE ? 1 : 0,
+                    trace.rect.left, trace.rect.top,
+                    trace.rect.right - trace.rect.left,
+                    trace.rect.bottom - trace.rect.top,
+                    static_cast<unsigned>(viewport->Flags)));
+            }
         }
 
         // Band contract: our windows live directly around the main window and

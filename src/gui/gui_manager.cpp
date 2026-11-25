@@ -279,13 +279,14 @@ void GuiManager::render() {
 
         if (mapService->m_showTolerancedSurfaceMap) {
             if (mapService->hasData()) {
-                std::string title = std::format("Surface Irregularity Map 3D{}",
+                std::string title = std::format("Surface Map 3D{}",
                     slotTag(mapService->getProfiles().front().sourceSlot));
                 renderToolbarWindow(title.c_str(), &mapService->m_showTolerancedSurfaceMap, "plot:ShowTolerancedSurfaceMap", [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapSurface,
                         &mapService->m_windowState.highlightWorstSurface,
-                        mapService->m_windowState.worstColorSurface);
+                        mapService->m_windowState.worstColorSurface,
+                        &mapService->m_windowState.renderMode);
                     mapService->renderSurfacePlotLines(ImVec2(-1, -1));
                 });
             } else {
@@ -295,14 +296,15 @@ void GuiManager::render() {
 
         if (mapService->m_showDeviationSurfaceMap) {
             if (mapService->hasData() && mapService->m_nominalSurfaceData.isValid()) {
-                std::string title = std::format("Surface Irregularity Map 3D Deviation{}",
+                std::string title = std::format("Surface Deviation Map 3D{}",
                     slotTag(mapService->m_nominalSurfaceData.sourceSlot,
                         mapService->getProfiles().front().sourceSlot));
                 renderToolbarWindow(title.c_str(), &mapService->m_showDeviationSurfaceMap, "plot:ShowDeviationSurfaceMap", [&]() {
                     m_profileService->renderToolbar(mapUnits, true,
                         &mapService->m_windowState.selectedColormapDeviation,
                         &mapService->m_windowState.highlightWorstDeviation,
-                        mapService->m_windowState.worstColorDeviation);
+                        mapService->m_windowState.worstColorDeviation,
+                        &mapService->m_windowState.renderMode);
                     mapService->renderDeviationSurfacePlotLines(ImVec2(-1, -1));
                 });
             } else {

@@ -197,6 +197,15 @@ namespace ZemaxDDE {
         wItem[wideCharCount] = L'\0';
 
         ATOM aItem = GlobalAddAtomW(wItem.data());
+        if (aItem == 0) {
+            // The global atom table can refuse a new atom (ACCESS_DENIED when
+            // it is exhausted or unreachable). Posting the request without an
+            // item would make the server answer "BAD COMMAND", so the request
+            // is failed right here instead.
+            m_logger.addLog(std::format("[DDE] GlobalAddAtom failed for request #{}: '{}'",
+                req.id, req.command));
+            return false;
+        }
         req.itemAtom = aItem;
 
         if (!PostMessageW(m_hwndZemaxServer, WM_DDE_REQUEST,
@@ -437,20 +446,18 @@ namespace ZemaxDDE {
                 } else {
                     UINT_PTR wStatus = 0;
                     UINT_PTR aItemAck = 0;
+                    // The status word only carries meaning when the packed
+                    // block actually holds the DDEACK flags. Zemax 13 answers
+                    // with an empty block (measured against a live instance),
+                    // so the status reads back as zero - an acknowledgement
+                    // must never be read as a rejection because of that.
+                    const bool statusReadable =
+                        GlobalSize(reinterpret_cast<HGLOBAL>(lParam)) > 0;
                     UnpackDDElParam(WM_DDE_ACK, lParam, &wStatus, &aItemAck);
                     FreeDDElParam(WM_DDE_ACK, lParam);
 
                     if (m_activeRequest) {
-                        // NOTE (verify): the DDEACK structure defines fAck as bit 15
-                        // (0x8000) and fBusy as bit 14 (0x4000). Here the code tests
-                        // 0x2000/0x1000 instead, which deviates from the DDE spec but
-                        // appears to match what Zemax's server actually sends. Any
-                        // change requires verification against a real Zemax instance;
-                        // only the semantics (ack/busy flags) are consumed below.
-                        bool isAck = (wStatus & 0x2000) != 0;
-                        bool isBusy = (wStatus & 0x1000) != 0;
-
-                        if (!isAck && !isBusy) {
+                        if (classifyAck(wStatus, statusReadable) == AckVerdict::Rejected) {
                             m_logger.addLog(std::format("[DDE] Request #{} rejected by server (Negative ACK)", m_activeRequest->id));
                             DdeRequest rejected = takeActiveRequest();
                             if (rejected.onError) {
@@ -463,6 +470,11 @@ namespace ZemaxDDE {
                                 }
                             }
                             dispatchNext();
+                        } else {
+                            m_logger.addLog(std::format(
+                                "[DDE] Acknowledgement for request #{} (status=0x{:X}, readable={})",
+                                m_activeRequest->id,
+                                static_cast<unsigned long long>(wStatus), statusReadable));
                         }
                     }
 
@@ -514,12 +526,7 @@ namespace ZemaxDDE {
                 bool requestFulfilled = false;
                 std::string payload;
                 if (m_activeRequest && textFormat) {
-                    char item[512];
-                    wchar_t wItem[512];
-                    GlobalGetAtomNameW(aItem, wItem, std::size(wItem));
-                    WideCharToMultiByte(CP_ACP, 0, wItem, -1, item, sizeof(item), NULL, NULL);
-
-                    if (std::string(item) == m_activeRequest->command) {
+                    if (itemNameMatches(atomName(aItem), m_activeRequest->command)) {
                         requestFulfilled = true;
 
                         #ifdef DEBUG_LOG
@@ -547,9 +554,10 @@ namespace ZemaxDDE {
                         "DDEACK must be 2 bytes; PackDDElParam requires WORD for WM_DDE_ACK");
                     DDEACK clientAck{};
                     clientAck.fAck = requestFulfilled ? TRUE : FALSE;
+                    // dde.h lays the flags out as fAck = bit 15, fBusy = bit 14.
                     const WORD wStatus = static_cast<WORD>(
-                        (clientAck.fAck  ? 0x2000 : 0) |
-                        (clientAck.fBusy ? 0x1000 : 0)
+                        (clientAck.fAck  ? kDdeAckFAck  : 0) |
+                        (clientAck.fBusy ? kDdeAckFBusy : 0)
                     );
                     const LPARAM ackParam = PackDDElParam(WM_DDE_ACK, wStatus, aItem);
                     if (!PostMessageW(reinterpret_cast<HWND>(wParam), WM_DDE_ACK,

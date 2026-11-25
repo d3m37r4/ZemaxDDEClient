@@ -57,6 +57,9 @@ namespace app {
         // Interface font scale multiplier over BASE_FONT_SIZE (1.0 = 100%).
         // Applied via ImGui::GetIO().FontGlobalScale; clamped on load.
         float fontScale = kDefaultFontScale;
+        /// Full path of the interface font; empty means the built-in default
+        /// (Segoe UI). Icons are merged separately, so any font keeps them.
+        std::string fontPath;
     };
 
     struct DDESettings {

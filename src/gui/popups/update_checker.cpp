@@ -273,7 +273,7 @@ namespace gui {
                 if (ImGuiUtils::SpinnerButton(UPDATE_POPUP_NAME, m_isChecking, ImVec2(actionBtnW, 0))) {
                     checkForUpdates();
                 }
-            } else if (hasUpdate && m_isCheckComplete) {
+            } else {
                 if (ImGuiUtils::SpinnerButton("Download Update", false, ImVec2(actionBtnW, 0))) {
                     // Use the snapshot: the worker may overwrite m_updateInfo
                     // between the frame read and this click handler.

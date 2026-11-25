@@ -9,6 +9,7 @@
 #include "lib/implot/implot.h"
 
 #include "gui/surface_profile_service.h"
+#include "app/services/surface_map_service.h"
 #include "gui/imgui_utils.h"
 #include "gui/notifications.h"
 #include "gui/plot_image_exporter.h"
@@ -100,7 +101,8 @@ namespace gui {
     static constexpr const char* kColormapNames[] = { "Cool", "Aqua-Purple", "Ocean", "Aurora" };
 
     void SurfaceProfileService::renderToolbar(app::services::AxisUnits& units, bool is3D,
-                                               int* colormapIdx, bool* showWorst, float* worstColor) {
+                                               int* colormapIdx, bool* showWorst, float* worstColor,
+                                               int* renderMode) {
         if (!ImGui::BeginMenuBar()) return;
 
         if (ImGui::BeginMenu(ICON_FA_GEARS " Settings")) {
@@ -127,6 +129,31 @@ namespace gui {
                 ImGui::SameLine();
                 ImGui::ColorEdit3("##WorstColor", worstColor,
                     ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+                // The worst section only exists once it was computed.
+                ImGui::TextDisabled("%s", "Shown after \"Find MaxPV\" computes the worst section");
+            }
+
+            if (is3D && renderMode) {
+                // How the 3D map draws its sections. The modes are compared
+                // side by side, so the choice lives in the window itself.
+                ImGui::Separator();
+                static const char* kRenderModes[] = {
+                    app::services::mapRenderModeName(app::services::MapRenderMode::Profiles),
+                    app::services::mapRenderModeName(app::services::MapRenderMode::Wireframe),
+                    app::services::mapRenderModeName(app::services::MapRenderMode::Surface),
+                };
+                ImGui::TextUnformatted("Rendering");
+                ImGui::SameLine(ImGui::GetFontSize() * 6.0f);
+                int mode = *renderMode;
+                if (ImGui::Combo("##RenderMode", &mode, kRenderModes, IM_ARRAYSIZE(kRenderModes))) {
+                    *renderMode = mode;
+                }
+                // What the selected mode shows, so the name alone is enough.
+                const char* hint = mode == 1
+                    ? "Rings and spokes of the sections"
+                    : (mode == 2 ? "One filled, triangulated surface"
+                                 : "Radial profiles, coloured by radius");
+                ImGui::TextDisabled("%s", hint);
             }
 
             ImGui::EndMenu();

@@ -23,7 +23,8 @@ namespace gui {
             void renderProfileDeviationPlot(const char* plotLabel, const app::models::SurfaceData& nominal, const app::models::SurfaceData& toleranced, const ImVec2& size);
 
             void renderToolbar(app::services::AxisUnits& units, bool is3D,
-                               int* colormapIdx = nullptr, bool* showWorst = nullptr, float* worstColor = nullptr);
+                               int* colormapIdx = nullptr, bool* showWorst = nullptr, float* worstColor = nullptr,
+                               int* renderMode = nullptr);
 
             app::models::OpticalSystemData m_frozenNominalOpticalSystem;
             app::models::OpticalSystemData m_frozenTolerancedOpticalSystem;

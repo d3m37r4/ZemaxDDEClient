@@ -57,6 +57,7 @@ namespace gui {
         // effect when the resolved theme is unchanged (startup, Cancel).
         if (m_graphicsBackend) {
             m_graphicsBackend->setFontScale(appearance.fontScale);
+            m_graphicsBackend->setFontPath(appearance.fontPath);
         }
         if (!m_themeManager) return;
 

@@ -241,9 +241,7 @@ void DDEConnectionManager::checkAllConnectionHealth() {
         // Sync the slot's externally-visible state with the actual client state
         // (covers asynchronous WM_DDE_ACK handshakes promoted during pump/glfw).
         ZemaxDDE::ConnectionState actual = conn.client->connectionState();
-        if (conn.connectionState != actual) {
-            conn.connectionState = actual;
-        }
+        conn.connectionState = actual;
 
         conn.client->checkConnectionHealth();
 
@@ -285,7 +283,7 @@ int DDEConnectionManager::findActiveTaskSlot(app::models::TaskSource source) con
                     labelMatch = op.serviceId == "Toleranced Profile";
                     break;
                 case app::models::TaskSource::SurfaceIrregularityMap:
-                    labelMatch = op.serviceId == "Surface Irregularity Map"
+                    labelMatch = op.serviceId == "Irregularity Map"
                               || op.serviceId.starts_with("Section ");
                     break;
                 default:

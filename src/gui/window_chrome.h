@@ -27,6 +27,9 @@ struct State {
     bool minimized = false;
     bool maximized = false;
     bool wantRestoreRect = false;
+    /// Last frame the window lived in its own OS window: the dock-area rect
+    /// must not be forced onto it then.
+    bool ownWindow = false;
     ImVec2 restorePos{0.0f, 0.0f};
     ImVec2 restoreSize{0.0f, 0.0f};
 };

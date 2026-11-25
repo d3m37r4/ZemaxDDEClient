@@ -1,0 +1,39 @@
+name: Static Analysis (cppcheck)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  cppcheck:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          # MINGW64 is deprecated and MSYS2 drops leaf packages from it
+          # (cppcheck and glfw already went): the installer no longer ships
+          # a mingw64 DB that knows them, so pacman fails with "target not found".
+          msystem: UCRT64
+          install: |
+            mingw-w64-ucrt-x86_64-cppcheck
+
+      - name: Run cppcheck
+        # Invoked through bash on purpose: a Windows checkout does not keep the
+        # executable bit, and the job has no git to fix the index with.
+        run: bash cppcheck.sh --check
+        shell: msys2 {0}
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report-${{ github.sha }}
+          path: build-audit/

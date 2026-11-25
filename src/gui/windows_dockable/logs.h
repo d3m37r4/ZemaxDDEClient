@@ -66,10 +66,12 @@ namespace gui {
             logs::LogLevel level = logs::LogLevel::Unknown;
             RowTone tone = RowTone::Normal;
         };
-        /// Snapshot of the logger buffer, refreshed only on revision changes.
+        /// Snapshot of the logger buffer, refreshed incrementally on revision changes.
         std::vector<std::string> m_entries;
         std::vector<CacheEntry> m_cache;
         uint64_t m_cacheRevision = static_cast<uint64_t>(-1);
+        uint64_t m_syncEpoch = 0;
+        size_t m_syncDroppedPrefix = 0;
 
         // Multi-selection over visible entries, stored by original index.
         std::set<size_t> m_selected;
