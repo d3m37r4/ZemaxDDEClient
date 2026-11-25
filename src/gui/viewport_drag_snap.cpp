@@ -14,25 +14,43 @@ namespace gui::placement {
 
         ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         ImGuiPlatformIO& platform = ImGui::GetPlatformIO();
+        const bool buttonDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            m_pressPos.clear();
-            for (ImGuiViewport* viewport : platform.Viewports) {
-                if (viewport->ID != mainViewport->ID) {
-                    m_pressPos.emplace(viewport->ID, viewport->Pos);
-                }
+        // Which secondary window the user is actually moving. Following the
+        // movement instead of the click covers the panel that is dragged out of
+        // the main window: ImGui hands it a new platform viewport mid-drag, and
+        // that viewport did not exist when the button went down.
+        for (ImGuiViewport* viewport : platform.Viewports) {
+            if (viewport->ID == mainViewport->ID) {
+                continue;
             }
+            const auto previous = m_lastPos.find(viewport->ID);
+            if (previous == m_lastPos.end()) {
+                m_lastPos.emplace(viewport->ID, viewport->Pos);
+                continue;
+            }
+            if (buttonDown && (previous->second.x != viewport->Pos.x ||
+                               previous->second.y != viewport->Pos.y)) {
+                m_dragCandidate = viewport->ID;
+            }
+            previous->second = viewport->Pos;
         }
+
         if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
             return;
         }
+        const ImGuiID candidate = m_dragCandidate;
+        m_dragCandidate = 0;
+        m_lastPos.clear();
 
+        if (candidate == 0) {
+            return;
+        }
         const ImVec2 mouse = ImGui::GetIO().MousePos;
         const int px = static_cast<int>(mouse.x);
         const int py = static_cast<int>(mouse.y);
         const Rect work = workAreaAt(px, py);
         if (work.w <= 0 || work.h <= 0) {
-            m_pressPos.clear();
             return;
         }
         // Same DPI factor the GUI uses for every size: style.FontScaleDpi is
@@ -42,24 +60,11 @@ namespace gui::placement {
             ? ImGui::GetStyle().FontScaleDpi : 1.0f;
         const int margin = static_cast<int>(kSnapMarginDip * dpiScale);
         const std::optional<Target> zone = edgeZoneAt(work, px, py, margin);
-
-        for (ImGuiViewport* viewport : platform.Viewports) {
-            const auto pressed = m_pressPos.find(viewport->ID);
-            if (pressed == m_pressPos.end()) {
-                continue;
-            }
-            // A move started elsewhere (layout restore, our own apply()) is not
-            // a drag: only a position that changed while the button was down
-            // may snap.
-            const bool dragged = pressed->second.x != viewport->Pos.x ||
-                                 pressed->second.y != viewport->Pos.y;
-            if (!dragged || viewport->PlatformHandle == nullptr) {
-                continue;
-            }
-            if (zone.has_value()) {
-                requestPlacement(viewport, rectFor(work, *zone));
-            }
+        if (!zone.has_value()) {
+            return;
         }
-        m_pressPos.clear();
+        if (ImGuiViewport* viewport = ImGui::FindViewportByID(candidate)) {
+            requestPlacement(viewport, rectFor(work, *zone));
+        }
     }
 } // namespace gui::placement
