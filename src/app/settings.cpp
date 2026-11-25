@@ -57,6 +57,7 @@ namespace app {
 
         appearance.themeMode = ThemeMode::System;
         appearance.fontScale = kDefaultFontScale;
+        appearance.fontPath.clear();
 
         dde.connectionTimeoutMs = 5000;
         dde.maxRetryCount = 3;
@@ -150,6 +151,8 @@ namespace app {
             if (a.contains("fontScale") && a["fontScale"].is_number())
                 appearance.fontScale = clampValue(
                     a["fontScale"].get<float>(), kMinFontScale, kMaxFontScale, kDefaultFontScale);
+            if (a.contains("fontPath") && a["fontPath"].is_string())
+                appearance.fontPath = a["fontPath"].get<std::string>();
         }
 
         // DDE
@@ -302,6 +305,7 @@ namespace app {
 
         j["appearance"]["themeMode"]      = std::string{themeModeToString(appearance.themeMode)};
         j["appearance"]["fontScale"]      = appearance.fontScale;
+        j["appearance"]["fontPath"]       = appearance.fontPath;
 
         j["dde"]["connectionTimeoutMs"] = dde.connectionTimeoutMs;
         j["dde"]["maxRetryCount"]       = dde.maxRetryCount;

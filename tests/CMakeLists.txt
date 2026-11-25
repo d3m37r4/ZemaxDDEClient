@@ -21,6 +21,7 @@ set(TEST_SOURCES
     test_layout_snapshot.cpp
     test_dde_utils.cpp
     test_placement_geometry.cpp
+    test_font_catalog.cpp
 )
 
 set(TEST_LIB_SOURCES
@@ -34,6 +35,7 @@ set(TEST_LIB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/gui/log_filter_util.cpp
     ${CMAKE_SOURCE_DIR}/src/gui/layout_snapshot.cpp
     ${CMAKE_SOURCE_DIR}/src/gui/placement_geometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/gui/font_catalog.cpp
 )
 
 add_executable(tests ${TEST_SOURCES} ${TEST_LIB_SOURCES})

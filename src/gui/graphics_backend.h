@@ -24,6 +24,9 @@ namespace gui {
             /// User font-scale multiplier over BASE_FONT_SIZE (Preferences → Appearance).
             /// Independent from DPI scaling; clamps to app::kMin/MaxFontScale.
             void setFontScale(float scale);
+            /// Interface font file (empty = built-in default). Rebuilds the font
+            /// atlas; the icon font is merged again, so icons keep working.
+            void setFontPath(const std::string& path);
             void beginFrame();
             /// @param anyModalOpen While a modal dialog is open the secondary
             /// platform windows lose their ownership for that time (see
@@ -48,6 +51,9 @@ namespace gui {
             /// never cross the z-order of unrelated applications.
             /// Call after UpdatePlatformWindows().
             void syncPlatformWindows(bool anyModalOpen);
+            /// (Re)builds the atlas: base font (Cyrillic ranges) plus the merged
+            /// Font Awesome icon font.
+            void loadFonts(const std::string& requestedPath);
 
             GLFWwindow* m_window = nullptr;
             Logger* m_logger = nullptr;
@@ -64,6 +70,12 @@ namespace gui {
             /// style + DWM rounding). Stored as void* per the header rule about
             /// not including windows.h here.
             std::vector<void*> m_preparedViewports;
+            /// Interface font currently requested by the settings ("" = default).
+            std::string m_fontPath;
+            /// Font change requested during a frame; applied before the next
+            /// NewFrame(), where no ImFont is in use any more.
+            std::string m_pendingFontPath;
+            bool m_fontReloadPending = false;
             /// Sends a secondary window dragged to a monitor edge into the same
             /// half or quarter Windows itself would use.
             placement::DragSnap m_dragSnap;

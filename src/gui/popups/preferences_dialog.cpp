@@ -1,6 +1,8 @@
 #include "gui/popups/preferences_dialog.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cfloat>
 #include <cmath>
 #include <cstring>
 #include <format>
@@ -17,6 +19,74 @@
 #include "logger/logger.h"
 
 namespace gui {
+
+    namespace {
+        std::string toLowerCopy(std::string text) {
+            std::transform(text.begin(), text.end(), text.begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return text;
+        }
+
+        /// Combo with a search box: the system font list runs into hundreds of
+        /// entries, and typing part of the name beats scrolling. Returns true
+        /// when the choice changed. Enter in the search box takes the first
+        /// match, Esc closes the popup unchanged.
+        bool searchableFontCombo(const char* id,
+                                 const std::vector<fonts::FontEntry>& fonts,
+                                 std::string& path) {
+            const auto current = std::find_if(fonts.begin(), fonts.end(),
+                [&path](const fonts::FontEntry& font) { return font.path == path; });
+            const std::string preview = current != fonts.end()
+                ? current->name
+                : (path.empty() ? std::string{"Default (Segoe UI)"} : path);
+
+            bool changed = false;
+            ImGui::SetNextWindowSizeConstraints(
+                ImVec2(ImGuiUtils::DpiScale(240.0f), ImGuiUtils::DpiScale(180.0f)),
+                ImVec2(ImGuiUtils::DpiScale(520.0f), ImGuiUtils::DpiScale(420.0f)));
+            if (!ImGui::BeginCombo(id, preview.c_str())) {
+                return false;
+            }
+
+            static char filter[64] = "";
+            static bool focusFilter = false;
+            if (ImGui::IsWindowAppearing()) {
+                filter[0] = '\0';
+                focusFilter = true;
+            }
+            if (focusFilter) {
+                ImGui::SetKeyboardFocusHere();
+                focusFilter = false;
+            }
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::InputTextWithHint("##font_filter",
+                ICON_FA_MAGNIFYING_GLASS " type to filter", filter, sizeof(filter));
+            const bool submit = ImGui::IsItemFocused() &&
+                                ImGui::IsKeyPressed(ImGuiKey_Enter, false);
+
+            const std::string needle = toLowerCopy(filter);
+            bool taken = false;
+            for (const fonts::FontEntry& font : fonts) {
+                if (!needle.empty() && toLowerCopy(font.name).find(needle) == std::string::npos) {
+                    continue;
+                }
+                const bool selected = font.path == path;
+                if (ImGui::Selectable(font.name.c_str(), selected) ||
+                    (submit && !taken)) {
+                    path = font.path;
+                    changed = true;
+                    taken = true;
+                    ImGui::CloseCurrentPopup();
+                    break;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+            return changed;
+        }
+    } // namespace
 
     namespace {
         /// Sidebar entries and the width measurement share one list: the old
@@ -57,6 +127,19 @@ namespace gui {
         m_closedByAction = false;
         m_resetConfirmDialog->close();
         m_cleanLogsConfirmDialog->close();
+        // The folder scan is not free and the list does not change while the
+        // app runs, so it is read once per opening.
+        if (m_systemFonts.empty()) {
+            m_systemFonts = fonts::listSystemFonts();
+        }
+        // A saved path can point at a font the atlas refuses (no Cyrillic):
+        // drop it here so the combo never shows a font that is not in use.
+        if (!m_working.appearance.fontPath.empty() &&
+            !fonts::hasCyrillic(m_working.appearance.fontPath)) {
+            notify::warning("Font '" + m_working.appearance.fontPath +
+                            "' has no Cyrillic glyphs — using Segoe UI");
+            m_working.appearance.fontPath.clear();
+        }
         m_open = true;
     }
 
@@ -273,12 +356,21 @@ namespace gui {
     }
 
     void PreferencesDialog::renderSectionAppearance() {
-        ImGuiUtils::SectionHeader("Appearance", "Theme and interface scale apply immediately.");
+        ImGuiUtils::SectionHeader("Appearance",
+            "Theme, scale and font apply immediately. Icons stay: they come from the bundled icon font.");
 
         int mode = static_cast<int>(m_working.appearance.themeMode);
-        if (ImGui::RadioButton(ICON_FA_SUN " Light",  &mode, static_cast<int>(app::ThemeMode::Light)))  { m_working.appearance.themeMode = app::ThemeMode::Light;  applyWorkingTheme(); }
-        if (ImGui::RadioButton(ICON_FA_MOON " Dark",   &mode, static_cast<int>(app::ThemeMode::Dark)))   { m_working.appearance.themeMode = app::ThemeMode::Dark;   applyWorkingTheme(); }
-        if (ImGui::RadioButton(ICON_FA_DISPLAY " System", &mode, static_cast<int>(app::ThemeMode::System))) { m_working.appearance.themeMode = app::ThemeMode::System; applyWorkingTheme(); }
+        const auto themeRadio = [&](const char* label, app::ThemeMode value) {
+            if (ImGui::RadioButton(label, &mode, static_cast<int>(value))) {
+                m_working.appearance.themeMode = value;
+                applyWorkingTheme();
+            }
+        };
+        themeRadio(ICON_FA_SUN " Light", app::ThemeMode::Light);
+        ImGui::SameLine();
+        themeRadio(ICON_FA_MOON " Dark", app::ThemeMode::Dark);
+        ImGui::SameLine();
+        themeRadio(ICON_FA_DISPLAY " System", app::ThemeMode::System);
 
         ImGui::Spacing();
         ImGui::TextUnformatted("Interface scale");
@@ -299,6 +391,27 @@ namespace gui {
         ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
         if (ImGui::Combo("##font_scale", &current, kScaleLabels, kScaleCount)) {
             m_working.appearance.fontScale = kScaleValues[current];
+            applyWorkingTheme();
+        }
+
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Interface font");
+        ImGui::SetNextItemWidth(ImGuiUtils::DpiScale(PREFS_COMBO_WIDTH));
+        if (searchableFontCombo("##interface_font", m_systemFonts,
+                                m_working.appearance.fontPath)) {
+            // Reject before applying: silently falling back to Segoe UI would
+            // leave the combo showing a font that is not actually used.
+            if (!m_working.appearance.fontPath.empty() &&
+                !fonts::hasCyrillic(m_working.appearance.fontPath)) {
+                notify::warning("Font '" + m_working.appearance.fontPath +
+                                "' has no Cyrillic glyphs — using Segoe UI");
+                m_working.appearance.fontPath.clear();
+            }
+            applyWorkingTheme();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Default")) {
+            m_working.appearance.fontPath.clear();
             applyWorkingTheme();
         }
     }

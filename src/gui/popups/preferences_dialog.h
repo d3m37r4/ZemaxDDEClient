@@ -3,8 +3,10 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "app/settings.h"
+#include "gui/font_catalog.h"
 #include "gui/popups/clean_logs_confirm_dialog.h"
 #include "gui/popups/reset_confirm_dialog.h"
 
@@ -100,6 +102,9 @@ namespace gui {
             bool m_wasOpen = false;
             bool m_closedByAction = false;
             std::string m_activeLogPath;
+            /// System fonts, read once when the dialog opens (the folder scan is
+            /// not free and the list does not change during a session).
+            std::vector<gui::fonts::FontEntry> m_systemFonts;
             Logger* m_logger = nullptr;
             ThemeManager* m_themeManager = nullptr;
             std::function<void()> m_onSaveLayout;

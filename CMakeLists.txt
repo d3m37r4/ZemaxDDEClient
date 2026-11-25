@@ -124,6 +124,7 @@ set(SOURCES
     ${SRC_DIR}/gui/settings_manager.cpp
     ${SRC_DIR}/gui/ui_operation_monitor.cpp
     ${SRC_DIR}/gui/window_chrome.cpp
+    ${SRC_DIR}/gui/font_catalog.cpp
     ${SRC_DIR}/gui/placement_geometry.cpp
     ${SRC_DIR}/gui/viewport_placement.cpp
     ${SRC_DIR}/gui/viewport_drag_snap.cpp
