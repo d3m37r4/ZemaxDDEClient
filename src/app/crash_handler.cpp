@@ -273,6 +273,10 @@ namespace {
         if (logFolder != nullptr && logFolder[0] != '\0') {
             MultiByteToWideChar(CP_UTF8, 0, logFolder, -1, path, static_cast<int>(capacity));
         }
+        // CreateFileW does not create missing parents, and CreateDirectoryW of
+        // "logs\crash" fails while "logs" itself does not exist: the report was
+        // silently lost on a first run with file logging disabled.
+        CreateDirectoryW(path, nullptr);
         appendWide(path, capacity, L"\\crash");
         CreateDirectoryW(path, nullptr);
 
