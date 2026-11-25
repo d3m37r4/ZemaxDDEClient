@@ -34,7 +34,7 @@ namespace app::compute {
             /// Adopts a task created by the caller for the next run. The refresh
             /// phase is already visible in the monitor, so startCalculation()
             /// must not register a second task. Consumed once.
-            void adoptTask(uint64_t taskId) noexcept { m_taskId = taskId; m_adoptedTask = true; }
+            void adoptTask(uint64_t id) noexcept { m_taskId = id; m_adoptedTask = true; }
             void cancel();
 
             bool isCalculating() const { return m_state == State::FetchingSurfaceData || m_state == State::FetchingSagPoints; }
