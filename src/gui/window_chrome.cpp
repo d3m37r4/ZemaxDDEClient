@@ -307,21 +307,24 @@ void drawTitleBarButtons(const void* token, bool* open) {
         const placement::Rect work = placement::workAreaOf(windowViewport);
         placement::Rect rect{};
         if (!placement::takePlacement(windowViewport, rect)) {
-            // Only a rect that does not fit the monitor is corrected: a stored
-            // layout can be larger than the screen, putting the title bar and
-            // the resize grip out of reach.
-            const int w = static_cast<int>(window->SizeFull.x);
-            const int h = static_cast<int>(window->SizeFull.y);
-            if (work.w > 0 && work.h > 0 &&
-                (w > work.w || h > work.h || window->Pos.x < work.x ||
-                 window->Pos.y < work.y)) {
-                rect = {static_cast<int>(window->Pos.x), static_cast<int>(window->Pos.y), w, h};
-                if (rect.w > work.w) rect.w = work.w;
-                if (rect.h > work.h) rect.h = work.h;
-                if (rect.x < work.x) rect.x = work.x;
-                if (rect.y < work.y) rect.y = work.y;
-                if (rect.x + rect.w > work.x + work.w) rect.x = work.x + work.w - rect.w;
-                if (rect.y + rect.h > work.y + work.h) rect.y = work.y + work.h - rect.h;
+            // Only an oversized window is corrected: a layout stored by an
+            // earlier session can be larger than the monitor, which leaves the
+            // title bar and the resize grip out of reach. A window that is
+            // merely dragged past the edge must stay under the mouse - pinning
+            // it there would leave the content standing while the OS window
+            // keeps moving, and never while the button is down.
+            if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                const int w = static_cast<int>(window->SizeFull.x);
+                const int h = static_cast<int>(window->SizeFull.y);
+                if (work.w > 0 && work.h > 0 && (w > work.w || h > work.h)) {
+                    rect = {static_cast<int>(window->Pos.x), static_cast<int>(window->Pos.y), w, h};
+                    if (rect.w > work.w) rect.w = work.w;
+                    if (rect.h > work.h) rect.h = work.h;
+                    if (rect.x < work.x) rect.x = work.x;
+                    if (rect.y < work.y) rect.y = work.y;
+                    if (rect.x + rect.w > work.x + work.w) rect.x = work.x + work.w - rect.w;
+                    if (rect.y + rect.h > work.y + work.h) rect.y = work.y + work.h - rect.h;
+                }
             }
         }
         if (rect.w > 0 && rect.h > 0) {
